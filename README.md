@@ -61,5 +61,5 @@ js/main.js        mặt màn, điều khiển, phím
 tests/smoke.js    smoke test headless (chạy cùng npm test)
 ```
 
-Giấy phép mã nguồn: MIT.  Tất cả nội dung sáng tạo trong `js/data.js` và các chuỗi
-văn bản do dự án giữ quyền riêng của chính nó.
+Giấy phép: xem tệp [`LICENSE`](LICENSE) — **mã nguồn MIT**; nội dung ngôn ngữ
+(tên quái, lời văn trong `js/data.js`) do chủ dự án giữ quyền riêng.
