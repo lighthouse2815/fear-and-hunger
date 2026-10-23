@@ -1,0 +1,6 @@
+# Bản game bản quyền của nhà sản xuất khác — không đưa vào repo
+Fear.and.Hunger.v1.4.1/
+
+node_modules/
+*.log
+.DS_Store

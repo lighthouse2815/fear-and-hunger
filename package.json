@@ -1,0 +1,12 @@
+{
+  "name": "coi-ham",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cối Hầm — game web dungeon horror gốc, lấy cảm hứng từ thể loại Fear & Hunger",
+  "scripts": {
+    "start": "python3 -m http.server 8137",
+    "start:node": "npx -y http-server -p 8137 -c-1",
+    "check": "node --check js/utils.js && node --check js/sound.js && node --check js/data.js && node --check js/combat.js && node --check js/game.js && node --check js/main.js",
+    "test": "npm run check && node tests/smoke.js"
+  }
+}
