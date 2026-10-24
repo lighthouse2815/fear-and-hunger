@@ -20,6 +20,20 @@ npm start          # python3 -m http.server 8137
 
 Mở `http://localhost:8137` và chơi. Hoặc dùng `npm run start:node` nếu chỉ có Node.
 
+## Chạy Fear & Hunger bản gốc trên trình duyệt
+
+Repo cũng có công cụ chạy **bản Fear & Hunger 1.4.1 do bạn sở hữu** trực tiếp trong
+trình duyệt, dùng chính thư mục `www` của bản RPG Maker MV gốc:
+
+```sh
+npm run fnh        # mở http://127.0.0.1:8138/
+npm run fnh:open   # tự mở trình duyệt
+```
+
+Đây là phần tách biệt với game Cối Hầm ở trên. Công cụ không chứa, không tải và không
+sao chép asset của Fear & Hunger; thư mục game đã được ignore trong Git. Xem hướng dẫn
+đầy đủ, cách lưu game, kiểm thử và các giới hạn tại [`PORT.md`](PORT.md).
+
 ## Cách chơi
 
 | Phím | Việc |
@@ -59,6 +73,8 @@ js/combat.js      trận đấu theo lệnh (xu + vùng cơ thể)
 js/game.js        lõi chơi: mê cung, sương mù, HUD, lưu/đọc
 js/main.js        mặt màn, điều khiển, phím
 tests/smoke.js    smoke test headless (chạy cùng npm test)
+tools/fnh-browser/  máy chủ HTTP + lớp tương thích cho bản Fear & Hunger gốc
+tests/fnh-browser-smoke.js  kiểm tra bản chạy trình duyệt (npm run test:fnh)
 ```
 
 Giấy phép: xem tệp [`LICENSE`](LICENSE) — **mã nguồn MIT**; nội dung ngôn ngữ
