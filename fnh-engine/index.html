@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#050505">
+    <title>Fear &amp; Hunger — Engine web</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23050505'/%3E%3Cpath d='M16 16h32v6H22v10h20v6H22v16h-6z' fill='%23c8b17d'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/engine.css">
+</head>
+<body>
+    <main id="fnh-shell">
+        <canvas id="fnh-canvas" width="816" height="624" tabindex="0" aria-label="Fear and Hunger — engine web"></canvas>
+
+        <section id="fnh-engine-overlay" aria-live="polite">
+            <div class="fnh-overlay-card">
+                <p class="fnh-eyebrow">FEAR &amp; HUNGER · ENGINE WEB</p>
+                <h1>BƯỚC VÀO<br>NGỤC ĐỊA</h1>
+                <p class="fnh-lead">
+                    Một engine web độc lập đọc trực tiếp dữ liệu, hình ảnh và âm thanh
+                    từ bản cài gốc của bạn. Không chạy runtime RPG Maker MV.
+                </p>
+                <button id="fnh-engine-start" type="button">BẮT ĐẦU</button>
+                <div id="fnh-engine-progress" class="fnh-progress" hidden>
+                    <div id="fnh-engine-progress-bar" class="fnh-progress-bar"></div>
+                </div>
+                <p id="fnh-engine-status" class="fnh-status">Cần thư mục <code>www</code> gốc trong máy.</p>
+                <p class="fnh-fineprint">
+                    Asset không được sao chép vào repo. Hãy sở hữu bản game gốc trước khi chạy.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/core.js"></script>
+    <script src="js/assets.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/scene_title.js"></script>
+    <script src="js/scene_creation.js"></script>
+    <script src="js/scene_map.js"></script>
+    <script src="js/scene_battle.js"></script>
+    <script src="js/scene_gameover.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
