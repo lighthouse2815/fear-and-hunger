@@ -546,9 +546,13 @@
         }
 
         draw(ctx) {
+            ctx.save();
+            if (this.game.screenEffects) ctx.translate(this.game.screenEffects.shakeX, 0);
             this.drawBattleback(ctx);
             this.drawEnemy(ctx);
             this.drawDamageNumbers(ctx);
+            ctx.restore();
+            if (this.game.screenEffects) this.game.screenEffects.apply(ctx);
             this.drawEnemyHud(ctx);
             this.drawActorPanel(ctx);
             this.drawOverlay(ctx);

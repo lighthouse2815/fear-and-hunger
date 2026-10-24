@@ -53,6 +53,7 @@
             this.audio = new FNH.AudioManager(this.assets);
             this.storage = new FNH.Storage();
             this.transition = new FNH.Transition();
+            this.screenEffects = new FNH.ScreenEffects();
 
             this.scene = null;
             this.sceneName = 'boot';
@@ -119,6 +120,8 @@
             if (this.sceneName === 'map' || this.sceneName === 'battle') {
                 this.playtime += dt;
             }
+            if (this.screenEffects && (this.sceneName === 'map' || this.sceneName === 'battle') &&
+                !(this.scene && this.scene.paused)) this.screenEffects.update(dt);
             if (this.scene) this.scene.update(dt);
             this.transition.update(dt);
             if (this.toastTimer > 0) {
@@ -189,6 +192,7 @@
             this.mapId = 1;
             this.guardDefeated = false;
             this.flags = {};
+            this.screenEffects = new FNH.ScreenEffects();
             this.changeScene(FNH.Scene_Map, { fresh: true });
         }
 
@@ -202,7 +206,8 @@
                 player: this.player,
                 gold: this.gold,
                 guardDefeated: this.guardDefeated,
-                flags: this.flags
+                flags: this.flags,
+                screenEffects: this.screenEffects
             };
             return this.storage.save(this.saveSlot, payload);
         }
@@ -237,6 +242,7 @@
             this.mapId = save.mapId || 1;
             this.guardDefeated = !!save.guardDefeated;
             this.flags = save.flags || {};
+            this.screenEffects = new FNH.ScreenEffects(save.screenEffects);
             this.changeScene(FNH.Scene_Map, { fromSave: true });
             return true;
         }

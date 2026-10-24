@@ -140,7 +140,7 @@
                         break;
                     default: {
                         const result = this.handlers.execute(command);
-                        if (result && result.type === 'route') this.wait = result;
+                        if (result && ['route', 'time'].includes(result.type)) this.wait = result;
                         if (result === false) {
                             this.frames = [];
                             this.done = true;

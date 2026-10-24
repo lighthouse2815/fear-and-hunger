@@ -514,6 +514,34 @@ async function main() {
         ));
         await screenshot('map');
 
+        check('hiệu ứng màu, độ sáng và flash dựng đúng pixel Canvas', await evalPage(cdp, `(() => {
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 2;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgb(100,150,200)';
+            ctx.fillRect(0, 0, 2, 2);
+            const effect = new FNH.ScreenEffects();
+            effect.tint([-20, 10, 0, 0], 0);
+            effect.apply(ctx);
+            let pixel = ctx.getImageData(0, 0, 1, 1).data;
+            if (Math.abs(pixel[0] - 80) > 1 || Math.abs(pixel[1] - 160) > 1 || pixel[2] !== 200) return false;
+            effect.tint([0, 0, 0, 0], 0);
+            effect.fade(127.5, 0);
+            effect.apply(ctx);
+            pixel = ctx.getImageData(0, 0, 1, 1).data;
+            if (Math.abs(pixel[0] - 40) > 1 || Math.abs(pixel[1] - 80) > 1 || Math.abs(pixel[2] - 100) > 1) return false;
+            effect.fade(255, 0);
+            effect.tint([0, 0, 0, 255], 0);
+            effect.apply(ctx);
+            pixel = ctx.getImageData(0, 0, 1, 1).data;
+            if (Math.abs(pixel[0] - pixel[1]) > 1 || Math.abs(pixel[1] - pixel[2]) > 1) return false;
+            effect.tint([0, 0, 0, 0], 0);
+            effect.startFlash([255, 0, 0, 255], 60);
+            effect.apply(ctx);
+            pixel = ctx.getImageData(0, 0, 1, 1).data;
+            return pixel[0] === 255 && pixel[1] === 0 && pixel[2] === 0 && ctx.globalCompositeOperation === 'source-over';
+        })()`, false, false));
+
         check('common event gốc được nạp', await evalPage(cdp,
             'FNH.game.data.commonEvents.length > 1', false, false));
         await evalPage(cdp, `(() => {

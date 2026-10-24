@@ -154,6 +154,7 @@ fnh-engine/
   js/game.js              vòng lặp, chuyển cảnh, preload, lưu/đọc
   js/scene_title.js       tiêu đề
   js/scene_creation.js    chọn nghề
+  js/screen_effects.js    tint, fade, flash, shake và trạng thái hiệu ứng
   js/move_route.js        interpreter cho lệnh di chuyển event/người chơi
   js/scene_map.js         bản đồ, di chuyển, va chạm, menu tạm dừng
   js/scene_battle.js      trận đấu theo lượt
@@ -238,7 +239,12 @@ Route vẫn chạy khi event chính đang chờ và đóng băng trong menu tạ
 hủy route; lệnh định vị hủy nội suy để tránh kéo hình về tọa độ cũ. Script route (45)
 bị từ chối trước khi khởi chạy, không thực thi mã tùy ý hoặc bỏ qua lỗi. Chưa có di chuyển
 tự động theo moveType của trang event và bản đồ cuộn vòng.
-Chưa có script/plugin command, hiệu ứng màn hình,
+Hiệu ứng màn hình hỗ trợ Fadeout/Fadein (221/222), Tint (223), Flash (224) và Shake
+(225), bao gồm nội suy và tùy chọn chờ của event. Tông màu, độ sáng và hiệu ứng đang
+chạy theo game khi chuyển bản đồ/trận đấu, được lưu/đọc cùng save; save cũ dùng ánh
+sáng mặc định. Hiệu ứng áp dụng lên cảnh, không làm rung hoặc đổi màu HUD/hội thoại.
+Menu tạm dừng đóng băng thời gian hiệu ứng. Chưa có weather và picture event.
+Chưa có script/plugin command,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 
 ## Kiểm chứng

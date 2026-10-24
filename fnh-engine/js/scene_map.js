@@ -915,6 +915,18 @@
                 } else if (total > 0) {
                     inventory.push(kind === 'item' ? { id: itemId, amount: total } : { id: itemId, amount: total, kind });
                 }
+            } else if (command.code >= 221 && command.code <= 225) {
+                const screen = this.game.screenEffects || (this.game.screenEffects = new FNH.ScreenEffects());
+                if (command.code === 221 || command.code === 222) {
+                    screen.fade(command.code === 221 ? 0 : 255, 24);
+                    return { type: 'time', seconds: 24 / 60 };
+                }
+                if (command.code === 223) screen.tint(p[0], p[1]);
+                if (command.code === 224) screen.startFlash(p[0], p[1]);
+                if (command.code === 225) screen.shake(p[0], p[1], p[2]);
+                const frames = command.code === 225 ? p[2] : p[1];
+                const wait = command.code === 225 ? p[3] : p[2];
+                if (wait && frames > 0) return { type: 'time', seconds: frames / 60 };
             } else if (command.code === 205) {
                 const character = this.mapCharacter(p[0]);
                 if (!character) return;
@@ -1434,6 +1446,8 @@
 
             ctx.fillStyle = '#050505';
             ctx.fillRect(0, 0, FNH.WIDTH, FNH.HEIGHT);
+            ctx.save();
+            if (this.game.screenEffects) ctx.translate(this.game.screenEffects.shakeX, 0);
             this.drawTiles(ctx, false);
             this.drawCharacters(ctx);
             this.drawTiles(ctx, true);
@@ -1451,6 +1465,8 @@
             FNH.drawVignette(ctx, FNH.WIDTH, FNH.HEIGHT, 0.55);
             FNH.drawGrain(ctx, FNH.WIDTH, FNH.HEIGHT, this.time);
 
+            ctx.restore();
+            if (this.game.screenEffects) this.game.screenEffects.apply(ctx);
             this.drawHud(ctx);
             this.drawBanner(ctx);
             this.drawEventDialog(ctx);
