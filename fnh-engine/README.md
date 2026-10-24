@@ -338,7 +338,8 @@ enemy dùng kỹ năng, chọn mục tiêu chỉ định/ngẫu nhiên/gần nh�
 trước khi interpreter tiếp tục. Thay đổi tổ đội (129) trong trận đồng bộ danh sách
 thành viên, giữ lượt đã dùng và chuyển người điều khiển khi actor rời nhóm. Lệnh 337 phát animation từ `Animations.json`, giải mã
 hai sprite sheet, dựng cell theo frame 15 fps với scale/góc/mirror/hue/blend, phát SE
-và flash/ẩn mục tiêu theo timing. Chưa hỗ trợ đầy đủ plugin chiến đấu; cơ chế này chưa xác nhận toàn bộ cốt truyện chơi xuyên suốt.
+và flash/ẩn mục tiêu theo timing. Lệnh 212 tái sử dụng bộ dựng này trên nhân vật/NPC
+bản đồ, bám theo tọa độ runtime và chờ cả tải asset lẫn vòng đời hiệu ứng khi bật wait. Chưa hỗ trợ đầy đủ plugin chiến đấu; cơ chế này chưa xác nhận toàn bộ cốt truyện chơi xuyên suốt.
 
 ## Kiểm chứng
 

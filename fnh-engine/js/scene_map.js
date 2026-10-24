@@ -34,6 +34,7 @@
             this.tileset = null;
             this.tileImages = new Map();
             this.eventImages = new Map();
+            this.animations = [];
             this.eventPending = new Set();
             this.events = [];
             this.camera = { x: 0, y: 0 };
@@ -673,6 +674,8 @@
                 return;
             }
 
+            for (const animation of this.animations) animation.update(dt);
+            this.animations = this.animations.filter((animation) => !animation.done);
             this.updateMoveRoutes(dt);
             this.updateParallelEvents(dt);
             if (this.leaving) return;
@@ -1268,6 +1271,18 @@
                 if (!this.eventId) return;
                 const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + String(p[0] || 'A');
                 this.game.flags[key] = p[1] === 0;
+            } else if (command.code === 212) {
+                if (this.battle) return;
+                const target = this.mapCharacter(p[0]);
+                if (!target) return;
+                const data = this.game.data.animations[p[1]];
+                if (!data) throw new Error('Không tìm thấy animation ' + p[1]);
+                const animation = new FNH.BattleAnimation(data, this.game.assets, this.game.audio, target, (error) => {
+                    this.game.lastError = error;
+                    this.game.showToast(error.message, 6);
+                });
+                this.animations.push(animation);
+                if (p[2]) return { type: 'animation', animation };
             } else if (command.code === 337) {
                 if (!this.battle) return;
                 const targets = this.battle.enemies.filter((enemy, index) =>
@@ -1578,6 +1593,11 @@
 
         drawCharacter(ctx, image, name, imageIndex, direction, pattern, footX, footY, options) {
             if (!image || (options && options.transparent)) return;
+            for (const animation of this.animations) {
+                if (!options || animation.target.id !== options.characterId) continue;
+                if (animation.hidden) return;
+                image = animation.tint(image);
+            }
             const frame = this.characterFrame(image, name, imageIndex, direction, pattern);
             const opts = options || {};
             ctx.save();
@@ -1639,7 +1659,7 @@
             this.drawShadow(ctx, footX, footY, event.imageName.charAt(0) === '$' ? 52 : 38, 0.3 * (event.opacity ?? 255) / 255);
             this.drawCharacter(ctx, image, event.imageName, event.imageIndex, event.direction, pattern, footX,
                 footY - (event.jumpHeight || 0), { alpha: (event.opacity ?? 255) / 255,
-                    transparent: event.transparent, blendMode: event.blendMode });
+                    transparent: event.transparent, blendMode: event.blendMode, characterId: event.id });
         }
 
         drawGuard(ctx) {
@@ -1682,8 +1702,8 @@
                         playerFootX,
                         playerFootY - (this.playerRouteState && this.playerRouteState.jumpHeight || 0),
                         this.playerRouteState ? { alpha: this.playerRouteState.opacity / 255,
-                            transparent: player.transparent || this.playerRouteState.transparent, blendMode: this.playerRouteState.blendMode }
-                            : { transparent: player.transparent }
+                            transparent: player.transparent || this.playerRouteState.transparent, blendMode: this.playerRouteState.blendMode, characterId: -1 }
+                            : { transparent: player.transparent, characterId: -1 }
                     );
                 }
             });
@@ -1983,6 +2003,16 @@
             this.drawCharacters(ctx);
             this.drawTiles(ctx, true);
             this.drawAboveCharacters(ctx);
+            for (const animation of this.animations) {
+                const target = animation.target;
+                const x = target.id === -1 ? this.playerVisual.x : (target.realX ?? target.x);
+                const y = target.id === -1 ? this.playerVisual.y : (target.realY ?? target.y);
+                const name = target.id === -1 ? this.game.player.characterName : target.imageName;
+                const image = this.game.assets.imageCache.get('characters/' + name);
+                const frame = image ? this.characterFrame(image, name, 0, 2, 1) : null;
+                animation.draw(ctx, { x: x * FNH.TILE + FNH.TILE / 2 - this.camera.x,
+                    y: y * FNH.TILE + FNH.TILE - this.camera.y, height: frame ? frame.sh : FNH.TILE });
+            }
 
             const light = ctx.createRadialGradient(
                 FNH.WIDTH / 2, FNH.HEIGHT / 2, 70,

@@ -468,3 +468,18 @@ positioning.executeEventCommand(command(203, [1, 2, -1, 0, 0]));
 positioning.executeEventCommand(command(203, [999, 0, 5, 5, 0]));
 assert.equal(positioning.eventDataOperand(5, 1, 1), 2);
 console.log('ĐẠT: định vị event bằng hằng số/biến, đổi chỗ, hướng, va chạm và tương tác.');
+
+const animationToken = { done: false };
+let continuedAfterAnimation = false;
+const animationRunner = new FNH.EventInterpreter([{ code: 212 }, { code: 121 }], {
+    execute: (cmd) => cmd.code === 212 ? { type: 'animation', animation: animationToken } : (continuedAfterAnimation = true)
+});
+animationRunner.update(0);
+assert.equal(continuedAfterAnimation, false);
+animationRunner.update(100);
+assert.equal(continuedAfterAnimation, false, 'Chờ animation thật thay vì đoán thời gian tải asset');
+animationToken.done = true;
+animationRunner.update(0);
+assert.equal(continuedAfterAnimation, true);
+assert.equal(animationRunner.done, true);
+console.log('ĐẠT: interpreter chờ vòng đời animation rồi tiếp tục đúng con trỏ.');

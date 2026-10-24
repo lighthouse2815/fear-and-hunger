@@ -690,6 +690,13 @@ async function main() {
             scene.refreshEvents();
         })()`, false, false);
 
+        await evalPage(cdp, 'FNH.game.scene.startEventList({list:[{code:212,parameters:[-1,7,true]},{code:121,parameters:[999989,999989,0]}]},0)', false, false);
+        await waitFor(cdp, 'FNH.game.scene.animations.some(a => a.ready && a.frame >= 0)', 15000, 'animation bản đồ');
+        check('event bản đồ chờ animation trước lệnh tiếp theo', await evalPage(cdp,
+            'FNH.game.scene.eventRunner.wait.type === "animation" && !FNH.game.flags["switch:999989"]', false, false));
+        await waitFor(cdp, 'FNH.game.flags["switch:999989"] && !FNH.game.scene.eventRunner', 15000, 'tiếp tục sau animation bản đồ');
+        await evalPage(cdp, 'delete FNH.game.flags["switch:999989"]', false, false);
+
         await evalPage(cdp, `(() => {
             const mapScene = FNH.game.scene;
             window.__eventBattleMap = mapScene;
