@@ -102,6 +102,24 @@
             return null;
         }
 
+        messageAt(map, x, y) {
+            for (const event of ((map && map.events) || [])) {
+                if (!event || event.x !== x || event.y !== y) continue;
+                for (const page of event.pages || []) {
+                    const list = page.list || [];
+                    for (let i = 0; i < list.length; i += 1) {
+                        if (list[i].code !== 101) continue;
+                        const lines = [];
+                        for (let j = i + 1; j < list.length && list[j].code === 401; j += 1) {
+                            if (list[j].parameters && list[j].parameters[0]) lines.push(String(list[j].parameters[0]));
+                        }
+                        if (lines.length) return lines.join(' ');
+                    }
+                }
+            }
+            return null;
+        }
+
         playable() {
             const self = this;
             return PLAYABLE.map(function (entry) {

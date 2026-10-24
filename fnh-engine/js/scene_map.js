@@ -410,6 +410,11 @@
                 this.triggerGuard();
                 return;
             }
+            const message = this.game.data.messageAt(this.map, front.x, front.y);
+            if (message) {
+                this.game.showToast(message, Math.max(2.5, Math.min(8, message.length / 14)));
+                return;
+            }
             this.game.showToast('Không có gì trong bóng tối.', 1.4);
         }
 
