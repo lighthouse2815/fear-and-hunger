@@ -26,7 +26,7 @@ scene.game = {
 
 function changeItem(parameters) {
     commands = [{ code: 126, parameters }];
-    scene.interact();
+    commands.forEach((command) => scene.executeEventCommand(command));
 }
 
 changeItem([1, 0, 0, 3]);
@@ -49,21 +49,22 @@ changeItem([2, 0, 0, -5]);
 assert.equal(scene.game.player.inventory.length, 0, 'Phép cộng số âm trừ vật phẩm');
 console.log('ĐẠT: event vật phẩm dùng đúng tham số gốc, cộng/trừ và xóa mục rỗng.');
 
+scene.eventId = 3;
 scene.map.events = [{ id: 3, x: 0, y: 1 }];
 commands = [{ code: 123, parameters: ['A', 0] }];
-scene.interact();
+commands.forEach((command) => scene.executeEventCommand(command));
 assert.equal(scene.game.flags['self:1:3:A'], true, 'Bật self-switch theo bản đồ');
 commands[0].parameters[1] = 1;
-scene.interact();
+commands.forEach((command) => scene.executeEventCommand(command));
 assert.equal(scene.game.flags['self:1:3:A'], false, 'Tắt self-switch');
 scene.game.mapId = 2;
 commands[0].parameters[1] = 0;
-scene.interact();
+commands.forEach((command) => scene.executeEventCommand(command));
 assert.equal(scene.game.flags['self:2:3:A'], true);
 assert.equal(scene.game.flags['self:1:3:A'], false, 'Không đổi self-switch bản đồ khác');
 
 commands = [{ code: 122, parameters: [10, 12, 0, 2, 8, 8] }];
-scene.interact();
+commands.forEach((command) => scene.executeEventCommand(command));
 for (let id = 10; id <= 12; id += 1) {
     assert.equal(scene.game.flags['variable:' + id], 8, 'Ngẫu nhiên tôn trọng cận dưới và trên');
 }

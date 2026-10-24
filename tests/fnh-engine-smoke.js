@@ -514,6 +514,33 @@ async function main() {
         ));
         await screenshot('map');
 
+        check('common event gốc được nạp', await evalPage(cdp,
+            'FNH.game.data.commonEvents.length > 1', false, false));
+        await evalPage(cdp, `(() => {
+            const scene = FNH.game.scene;
+            const c = (code, parameters = [], indent = 0) => ({code, parameters, indent});
+            scene.startEvent({id: 999999, pages: [{list: [
+                c(101, ['', 0]), c(401, ['Kiểm tra hội thoại và lựa chọn']),
+                c(102, [['Nhánh A', 'Nhánh B'], -1, 0]),
+                c(402, [0]), c(121, [999997, 999997, 0], 1),
+                c(402, [1]), c(121, [999998, 999998, 0], 1), c(404),
+                c(111, [0, 999998, 0]), c(121, [999999, 999999, 0], 1), c(412)
+            ]}]});
+        })()`, false, false);
+        await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
+        check('hội thoại khóa di chuyển và chờ xác nhận', await evalPage(cdp,
+            'FNH.game.player.mapY === 67 && FNH.game.scene.eventRunner.wait.type === "message"', false, false));
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.scene.eventRunner && FNH.game.scene.eventRunner.wait.type === "choice"',
+            5000, 'bảng lựa chọn event');
+        await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, '!FNH.game.scene.eventRunner', 5000, 'event hoàn tất');
+        check('lựa chọn và điều kiện chỉ thực thi nhánh được chọn', await evalPage(cdp,
+            '!FNH.game.flags["switch:999997"] && FNH.game.flags["switch:999998"] && FNH.game.flags["switch:999999"]',
+            false, false));
+        await evalPage(cdp, '[999997, 999998, 999999].forEach(id => delete FNH.game.flags["switch:" + id])', false, false);
+
         await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
         await sleep(500);
         check('nhân vật bước lên ô 27,66', await evalPage(

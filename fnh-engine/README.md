@@ -151,6 +151,25 @@ MV. Ảnh được giải mã vào `Blob` URL rồi nạp vào `Image`; âm than
 Chỉ số nhân vật lấy từ class + trang bị gốc ở level khởi đầu. Tile passability lấy từ
 `Tilesets.json`; thứ tự vẽ tôn trọng cờ upper-layer `0x10`.
 
+### Event interpreter
+
+`js/interpreter.js` thực thi event theo từng frame, với con trỏ và nhánh riêng cho mỗi
+common event. Có hỗ trợ nhánh điều kiện lồng nhau, lựa chọn (kể cả hủy), hội thoại nhiều
+dòng chờ xác nhận, chờ theo frame, vòng lặp/thoát vòng lặp, nhãn và gọi common event.
+Trong hội thoại dùng `Z`/`Enter`; dùng mũi tên để chọn câu trả lời. Di chuyển và menu
+tạm dừng bị khóa trong lúc event đang chạy.
+
+Các lệnh thay đổi switch, biến (hằng số/biến/ngẫu nhiên), self-switch, vàng, vật phẩm,
+chuyển bản đồ và SE được thực thi tại vị trí của chúng trong luồng event. Self-switch
+được tách theo bản đồ; khóa save cũ chỉ được đọc lại ở bản đồ 1. Hình ảnh event được
+chọn lại theo điều kiện sau khi thực thi xong. Cửa chạm chỉ chạy từ trang đang hoạt động.
+
+Đây chưa phải interpreter đầy đủ của MV. Điều kiện hiện hỗ trợ switch, biến,
+self-switch, vàng và vật phẩm. Lệnh hoặc điều kiện chưa hỗ trợ sẽ dừng event, hiển thị
+thông báo và lưu lỗi vào `FNH.game.lastError`, thay vì chạy tiếp các hệ quả sai.
+Chưa có autorun/parallel event, script/plugin command, move route, hiệu ứng màn hình,
+định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
+
 ## Kiểm chứng
 
 ```sh
@@ -179,7 +198,8 @@ tạm và in đường dẫn.
 - Chỉ có **bản đồ 1** và **một encounter Guard**. Chưa có toàn bộ bản đồ, cốt truyện,
   hội thoại, inventory, kỹ năng, vật phẩm, cấp máu từng bộ phận hay hệ thống đói/kinh hoàng.
 - Các event hình ảnh trên bản đồ được vẽ để giữ không khí, nhưng **chưa chạy event command**
-  gốc. Guard encounter là kịch bản riêng của vertical slice.
+  gốc đầy đủ; chỉ tập lệnh mô tả ở mục Event interpreter được thực thi.
+  Guard encounter vẫn là kịch bản riêng của vertical slice.
 - Trận đấu là bản đơn giản hoá: một nhân vật, một kẻ địch, ba lệnh; chưa mô phỏng đầy đủ
   công thức, trạng thái, vũ khí và animation của bản gốc.
 - Chưa có âm thanh môi trường theo vị trí, video intro, Steamworks, thành tựu hay save

@@ -52,6 +52,10 @@
             this.pauseIndex = 0;
             this.pauseSaveInfo = null;
             this.pauseHover = -1;
+            this.eventRunner = null;
+            this.eventChoice = 0;
+            this.eventWait = null;
+            this.eventId = 0;
             this.guard = { x: GUARD_X, y: GUARD_Y, alive: true };
         }
 
@@ -70,7 +74,7 @@
             this.moveT = 0;
             this.moveCooldown = 0;
             this.stepPattern = 1;
-            this.guard.alive = !this.game.guardDefeated;
+            this.guard.alive = this.game.mapId === 1 && !this.game.guardDefeated;
             this.playerVisual.x = this.game.player.mapX;
             this.playerVisual.y = this.game.player.mapY;
             this.loadMap().catch((error) => {
@@ -110,23 +114,7 @@
                 console.warn('[FNH] Không nạp được guard:', error.message);
             }
 
-            this.events = this.map.events.filter(Boolean).map((event) => {
-                const page = game.data.eventPage(event, game.flags, game.mapId);
-                if (!page || !page.image || !(page.image.characterName || page.image.tileId > 0)) return null;
-                return {
-                    id: event.id,
-                    name: event.name,
-                    x: event.x,
-                    y: event.y,
-                    page: page,
-                    imageName: page.image.characterName,
-                    imageIndex: page.image.characterIndex,
-                    direction: page.image.direction || 2,
-                    pattern: page.image.pattern || 0,
-                    priority: page.priorityType || 1,
-                    animated: /flame|fire/i.test(page.image.characterName || '')
-                };
-            }).filter(Boolean);
+            this.refreshEvents();
 
             // Ưu tiên vị trí event gốc cho encounter Guard; bản đồ tùy biến
             // hoặc bản dump thiếu tên vẫn dùng tọa độ vertical slice hiện tại.
@@ -148,6 +136,26 @@
             game.audio.stopBgm(0.5);
             game.audio.playBgs('minor_terror', { volume: 0.34, loop: true });
             this.updateEventImages();
+        }
+
+        refreshEvents() {
+            this.events = this.map.events.filter(Boolean).map((event) => {
+                const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId);
+                if (!page || !page.image || !(page.image.characterName || page.image.tileId > 0)) return null;
+                return {
+                    id: event.id,
+                    name: event.name,
+                    x: event.x,
+                    y: event.y,
+                    page: page,
+                    imageName: page.image.characterName,
+                    imageIndex: page.image.characterIndex,
+                    direction: page.image.direction || 2,
+                    pattern: page.image.pattern || 0,
+                    priority: page.priorityType || 1,
+                    animated: /flame|fire/i.test(page.image.characterName || '')
+                };
+            }).filter(Boolean);
         }
 
         clampCameraX(value) {
@@ -173,15 +181,13 @@
         }
 
         checkTransfer() {
-            const transfer = this.game.data.transferAt(this.map, this.game.player.mapX, this.game.player.mapY, this.game.flags, this.game.mapId);
-            if (!transfer || !transfer.mapId || transfer.mapId === this.game.mapId) return false;
-            this.game.mapId = transfer.mapId;
-            this.game.player.mapX = transfer.x;
-            this.game.player.mapY = transfer.y;
-            this.game.player.direction = transfer.direction;
-            this.leaving = true;
-            this.game.changeScene(FNH.Scene_Map, { fromTransfer: true });
-            return true;
+            const player = this.game.player;
+            for (const event of this.map.events || []) {
+                if (!event || event.x !== player.mapX || event.y !== player.mapY) continue;
+                const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId);
+                if (page && (page.trigger === 1 || page.trigger === 2)) return this.startEvent(event);
+            }
+            return false;
         }
 
         openPause() {
@@ -320,6 +326,11 @@
                 return;
             }
 
+            if (this.eventRunner) {
+                this.updateEvent(dt);
+                this.updateEventImages();
+                return;
+            }
             const input = this.input;
             if (input.isPressed('Escape', 'x', 'X')) {
                 this.openPause();
@@ -419,77 +430,173 @@
                 this.triggerGuard();
                 return;
             }
-            const commands = this.game.data.commandsAt(this.map, front.x, front.y, this.game.flags, this.game.mapId);
-            const transfer = this.game.data.transferAt(this.map, front.x, front.y, this.game.flags, this.game.mapId);
-            const message = this.game.data.messageAt(this.map, front.x, front.y, this.game.flags, this.game.mapId);
-            const eventAtFront = (this.map.events || []).find((event) => event && event.x === front.x && event.y === front.y);
-            for (const command of commands) {
-                const p = command.parameters || [];
-                if (command.code === 121) {
-                    const from = Number(p[0] || 0);
-                    const to = Number(p[1] || from);
-                    for (let id = from; id <= to; id += 1) {
-                        const key = 'switch:' + id;
-                        if (p[2] === 2) this.game.flags[key] = !this.game.flags[key];
-                        else this.game.flags[key] = p[2] === 0;
-                    }
-                } else if (command.code === 122) {
-                    const from = Number(p[0] || 0);
-                    const to = Number(p[1] || from);
-                    let operand = Number(p[4] || 0);
-                    if (p[3] === 1) operand = Number(this.game.flags['variable:' + operand] || 0);
-                    for (let id = from; id <= to; id += 1) {
-                        const key = 'variable:' + id;
-                        const old = Number(this.game.flags[key] || 0);
-                        if (p[3] === 2) operand = Number(p[4] || 0) + Math.floor(Math.random() * (Number(p[5] || 0) - Number(p[4] || 0) + 1));
-                        if (p[2] === 0) this.game.flags[key] = operand;
-                        else if (p[2] === 1) this.game.flags[key] = old + operand;
-                        else if (p[2] === 2) this.game.flags[key] = old - operand;
-                        else if (p[2] === 3) this.game.flags[key] = old * operand;
-                        else if (p[2] === 4 && operand !== 0) this.game.flags[key] = Math.floor(old / operand);
-                        else if (p[2] === 5 && operand !== 0) this.game.flags[key] = old % operand;
-                    }
-                } else if (command.code === 123 && eventAtFront) {
-                    const key = 'self:' + (this.game.mapId || 1) + ':' + eventAtFront.id + ':' + String(p[0] || 'A');
-                    this.game.flags[key] = p[1] === 0;
-                } else if (command.code === 125) {
-                    const operation = Number(p[0] || 0);
-                    let amount = Number(p[2] || 0);
-                    if (p[1] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
-                    this.game.gold = Math.max(0, this.game.gold + (operation === 0 ? amount : -amount));
-                } else if (command.code === 126) {
-                    const itemId = Number(p[0] || 0);
-                    let amount = Number(p[3] || 0);
-                    if (p[2] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
-                    const inventory = this.game.player.inventory || (this.game.player.inventory = []);
-                    const entry = inventory.find((item) => item.id === itemId);
-                    const delta = p[1] === 0 ? amount : -amount;
-                    const total = Math.max(0, (entry ? entry.amount : 0) + delta);
-                    if (entry) {
-                        entry.amount = total;
-                        if (!total) inventory.splice(inventory.indexOf(entry), 1);
-                    } else if (total > 0) {
-                        inventory.push({ id: itemId, amount: total });
-                    }
-                } else if (command.code === 250 && p[0] && p[0].name) {
-                    this.game.audio.playSe(p[0].name, { volume: (Number(p[0].volume) || 90) / 100 });
-                }
+            const event = (this.map.events || []).find((entry) => entry && entry.x === front.x && entry.y === front.y);
+            if (!event || !this.startEvent(event)) this.game.showToast('Không có gì trong bóng tối.', 1.4);
+        }
+
+        startEvent(event) {
+            const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId);
+            if (!page || !page.list || !page.list.some((command) => command.code !== 0)) return false;
+            this.finishMove();
+            this.eventId = event.id;
+            this.eventRunner = new FNH.EventInterpreter(page.list, {
+                condition: (parameters) => this.eventCondition(parameters),
+                commonEvent: (id) => this.game.data.commonEvents[id],
+                execute: (command) => this.executeEventCommand(command)
+            });
+            this.updateEvent(0);
+            return true;
+        }
+
+        eventCondition(p) {
+            const flags = this.game.flags;
+            if (p[0] === 0) return !!flags['switch:' + p[1]] === (p[2] === 0);
+            if (p[0] === 1) {
+                const left = Number(flags['variable:' + p[1]] || 0);
+                const right = p[2] === 0 ? p[3] : Number(flags['variable:' + p[3]] || 0);
+                const results = [left === right, left >= right, left <= right, left > right, left < right, left !== right];
+                if (p[4] >= 0 && p[4] < results.length) return results[p[4]];
             }
-            if (transfer && transfer.mapId && transfer.mapId !== this.game.mapId) {
-                this.game.mapId = transfer.mapId;
-                this.game.player.mapX = transfer.x;
-                this.game.player.mapY = transfer.y;
-                this.game.player.direction = transfer.direction;
+            if (p[0] === 2) {
+                const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + p[1];
+                const value = Object.prototype.hasOwnProperty.call(flags, key) ? flags[key]
+                    : (this.game.mapId || 1) === 1 && flags['self:' + this.eventId + ':' + p[1]];
+                return !!value === (p[2] === 0);
+            }
+            if (p[0] === 7) {
+                const gold = this.game.gold;
+                if (p[2] === 0) return gold >= p[1];
+                if (p[2] === 1) return gold <= p[1];
+                if (p[2] === 2) return gold < p[1];
+            }
+            if (p[0] === 8) return (this.game.player.inventory || []).some((item) => item.id === p[1] && item.amount > 0);
+            throw new Error('Chưa hỗ trợ điều kiện event ' + p[0]);
+        }
+
+        updateEvent(dt) {
+            const runner = this.eventRunner;
+            if (!runner) return;
+            try {
+                const wait = runner.wait;
+                if (wait && wait.type !== 'time' && this.eventWait === wait) {
+                    const input = this.input;
+                    if (wait.type === 'choice') {
+                        const count = wait.choices.length;
+                        if (input.isPressed('ArrowUp', 'w', 'W')) this.eventChoice = (this.eventChoice + count - 1) % count;
+                        if (input.isPressed('ArrowDown', 's', 'S')) this.eventChoice = (this.eventChoice + 1) % count;
+                        if (input.isPressed('Escape', 'x', 'X') && wait.cancel !== -1) {
+                            runner.resume(wait.cancel);
+                        }
+                    }
+                    if (runner.wait && input.isPressed('Enter', ' ', 'z', 'Z')) {
+                        runner.resume(wait.type === 'choice' ? this.eventChoice : undefined);
+                    }
+                }
+                runner.update(dt);
+                if (runner.wait !== this.eventWait) {
+                    this.eventWait = runner.wait;
+                    this.eventChoice = runner.wait && runner.wait.type === 'choice'
+                        ? Math.max(0, Math.min(runner.wait.choices.length - 1, runner.wait.defaultIndex || 0)) : 0;
+                }
+                if (runner.done) {
+                    this.eventRunner = null;
+                    this.eventWait = null;
+                    this.refreshEvents();
+                }
+            } catch (error) {
+                this.game.lastError = error;
+                this.game.showToast(error.message, 6);
+                this.eventRunner = null;
+                this.eventWait = null;
+                this.refreshEvents();
+            }
+        }
+
+        drawEventDialog(ctx) {
+            const wait = this.eventRunner && this.eventRunner.wait;
+            if (!wait || wait.type === 'time') return;
+            if (wait.type === 'message') {
+                FNH.panel(ctx, 20, 420, FNH.WIDTH - 40, 170);
+                FNH.wrapText(ctx, wait.text, 40, 450, FNH.WIDTH - 80, 25, { size: 18 });
+                FNH.text(ctx, 'Z / ENTER · TIẾP TỤC', FNH.WIDTH - 40, 575, { size: 11, align: 'right' });
+            } else {
+                const height = wait.choices.length * 38 + 32;
+                const y = Math.max(20, 590 - height);
+                FNH.panel(ctx, 180, y, FNH.WIDTH - 200, height);
+                wait.choices.forEach((choice, index) => {
+                    FNH.text(ctx, (index === this.eventChoice ? '› ' : '  ') + choice, 200, y + 30 + index * 38, {
+                        size: 18, color: index === this.eventChoice ? '#f4deb0' : '#b9b09e'
+                    });
+                });
+            }
+        }
+
+        executeEventCommand(command) {
+            const p = command.parameters || [];
+            if (command.code === 121) {
+                const from = Number(p[0] || 0);
+                const to = Number(p[1] || from);
+                for (let id = from; id <= to; id += 1) {
+                    const key = 'switch:' + id;
+                    if (p[2] === 2) this.game.flags[key] = !this.game.flags[key];
+                    else this.game.flags[key] = p[2] === 0;
+                }
+            } else if (command.code === 122) {
+                if (p[3] !== 0 && p[3] !== 1 && p[3] !== 2) throw new Error('Chưa hỗ trợ toán hạng biến ' + p[3]);
+                const from = Number(p[0] || 0);
+                const to = Number(p[1] || from);
+                let operand = Number(p[4] || 0);
+                if (p[3] === 1) operand = Number(this.game.flags['variable:' + operand] || 0);
+                for (let id = from; id <= to; id += 1) {
+                    const key = 'variable:' + id;
+                    const old = Number(this.game.flags[key] || 0);
+                    if (p[3] === 2) operand = Number(p[4] || 0) + Math.floor(Math.random() * (Number(p[5] || 0) - Number(p[4] || 0) + 1));
+                    if (p[2] === 0) this.game.flags[key] = operand;
+                    else if (p[2] === 1) this.game.flags[key] = old + operand;
+                    else if (p[2] === 2) this.game.flags[key] = old - operand;
+                    else if (p[2] === 3) this.game.flags[key] = old * operand;
+                    else if (p[2] === 4 && operand !== 0) this.game.flags[key] = Math.floor(old / operand);
+                    else if (p[2] === 5 && operand !== 0) this.game.flags[key] = old % operand;
+                }
+            } else if (command.code === 123 && this.eventId) {
+                const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + String(p[0] || 'A');
+                this.game.flags[key] = p[1] === 0;
+            } else if (command.code === 125) {
+                const operation = Number(p[0] || 0);
+                let amount = Number(p[2] || 0);
+                if (p[1] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
+                this.game.gold = Math.max(0, this.game.gold + (operation === 0 ? amount : -amount));
+            } else if (command.code === 126) {
+                const itemId = Number(p[0] || 0);
+                let amount = Number(p[3] || 0);
+                if (p[2] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
+                const inventory = this.game.player.inventory || (this.game.player.inventory = []);
+                const entry = inventory.find((item) => item.id === itemId);
+                const delta = p[1] === 0 ? amount : -amount;
+                const total = Math.max(0, (entry ? entry.amount : 0) + delta);
+                if (entry) {
+                    entry.amount = total;
+                    if (!total) inventory.splice(inventory.indexOf(entry), 1);
+                } else if (total > 0) {
+                    inventory.push({ id: itemId, amount: total });
+                }
+            } else if (command.code === 250 && p[0] && p[0].name) {
+                this.game.audio.playSe(p[0].name, { volume: (Number(p[0].volume) || 90) / 100 });
+            } else if (command.code === 201) {
+                const value = (index) => p[0] === 1
+                    ? Number(this.game.flags['variable:' + p[index]] || 0) : Number(p[index]);
+                this.game.mapId = value(1);
+                this.game.player.mapX = value(2);
+                this.game.player.mapY = value(3);
+                if (p[4]) this.game.player.direction = Number(p[4]);
                 this.leaving = true;
                 this.game.changeScene(FNH.Scene_Map, { fromTransfer: true });
-                return;
+                return false;
+            } else {
+                throw new Error('Chưa hỗ trợ lệnh event ' + command.code);
             }
-            if (message) {
-                this.game.showToast(message, Math.max(2.5, Math.min(8, message.length / 14)));
-                return;
-            }
-            this.game.showToast('Không có gì trong bóng tối.', 1.4);
         }
+
 
         triggerGuard() {
             if (this.leaving) return;
@@ -966,6 +1073,7 @@
 
             this.drawHud(ctx);
             this.drawBanner(ctx);
+            this.drawEventDialog(ctx);
             if (this.paused) this.drawPause(ctx);
         }
     };
