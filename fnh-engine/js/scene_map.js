@@ -904,6 +904,7 @@
                 this.playerRouteState = null;
                 this.loadActorImages(this.game.player);
             }
+            if (this.battle) this.battle.syncParty();
             this.refreshEvents();
         }
 

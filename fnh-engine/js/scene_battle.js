@@ -32,6 +32,7 @@
             this.members = [];
             this.memberIndex = 0;
             this.guardedActors = new Set();
+            this.completedActors = new Set();
         }
 
         enter(options) {
@@ -44,6 +45,7 @@
             this.memberIndex = Math.max(0, this.members.findIndex((actor) => actor.hp > 0));
             this.player = this.members[this.memberIndex] || this.game.player;
             this.guardedActors.clear();
+            this.completedActors.clear();
             this.encounter = opts.encounter || null;
             this.returnScene = opts.returnScene || null;
             this.battleToken = opts.token || null;
@@ -204,6 +206,7 @@
                         if (result.commonEvent) this.game.reservedCommonEvent = result.commonEvent;
                         if (result.hp) this.addDamage(Math.abs(result.hp), 226, 398, result.hp < 0 ? '#a9d99c' : '#ff9a86', true);
                     }
+                    if (target) enemy.lastTargetIndex = (this.enemies.includes(target) ? this.enemies : this.members).indexOf(target);
                     if (target && this.members.includes(target)) this.player = target;
                 }
                 this.log = enemy.name + ' dùng ' + skill.name + '.';
@@ -214,6 +217,30 @@
                 this.enemyQueue.length = 0;
             }
             return true;
+        }
+
+        syncParty() {
+            const previous = this.player;
+            const ids = this.game.partyIds || [this.game.player.id];
+            this.members = ids.map((id) => id === this.game.player.id ? this.game.player : this.game.actorStates[id]).filter(Boolean);
+            this.guardedActors = new Set([...this.guardedActors].filter((id) => ids.includes(id)));
+            const current = this.members.findIndex((actor) => actor.id === previous.id);
+            if (current >= 0) {
+                this.memberIndex = current;
+                this.player = this.members[current];
+                return;
+            }
+            const next = this.members.findIndex((actor) => actor.hp > 0 && !this.completedActors.has(actor.id));
+            this.actionMenu = null;
+            this.pendingAction = null;
+            if (['command', 'player', 'actionMenu', 'actionTarget'].includes(this.phase)) {
+                if (next >= 0) this.selectMember(next);
+                else if (this.members.some((actor) => actor.hp > 0)) this.enemyTurn();
+                else this.defeat();
+            } else {
+                this.memberIndex = Math.max(0, next);
+                this.player = this.members[this.memberIndex] || this.game.player;
+            }
         }
 
         selectMember(index) {
@@ -238,7 +265,8 @@
 
         finishActorAction() {
             this.game.data.actorTurnEnd(this.player, 1);
-            const next = this.members.findIndex((actor, index) => index > this.memberIndex && actor.hp > 0);
+            this.completedActors.add(this.player.id);
+            const next = this.members.findIndex((actor) => actor.hp > 0 && !this.completedActors.has(actor.id));
             if (next >= 0) this.selectMember(next);
             else this.enemyTurn();
         }
@@ -703,6 +731,7 @@
                     return;
                 }
                 this.guardedActors.clear();
+                this.completedActors.clear();
                 const index = this.members.findIndex((actor) => actor.hp > 0);
                 if (index < 0) this.defeat();
                 else {

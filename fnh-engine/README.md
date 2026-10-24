@@ -334,7 +334,8 @@ HP/MP/state, hồi phục, xuất hiện và TP của một hoặc cả nhóm en
 và toán hạng dữ liệu enemy đọc trạng thái runtime. Lệnh 336 biến hình cập nhật chỉ số, sprite, AI và phần thưởng, giữ vị trí cùng
 trạng thái hiện tại; 340 kết thúc trận và trả về nhánh thoát. Lệnh 339 ép actor hoặc
 enemy dùng kỹ năng, chọn mục tiêu chỉ định/ngẫu nhiên/gần nhất và chờ hành động
-trước khi interpreter tiếp tục. Lệnh 337 phát animation từ `Animations.json`, giải mã
+trước khi interpreter tiếp tục. Thay đổi tổ đội (129) trong trận đồng bộ danh sách
+thành viên, giữ lượt đã dùng và chuyển người điều khiển khi actor rời nhóm. Lệnh 337 phát animation từ `Animations.json`, giải mã
 hai sprite sheet, dựng cell theo frame 15 fps với scale/góc/mirror/hue/blend, phát SE
 và flash/ẩn mục tiêu theo timing. Chưa hỗ trợ đầy đủ plugin chiến đấu; cơ chế này chưa xác nhận toàn bộ cốt truyện chơi xuyên suốt.
 
