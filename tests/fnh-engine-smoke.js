@@ -697,6 +697,12 @@ async function main() {
         await waitFor(cdp, 'FNH.game.flags["switch:999989"] && !FNH.game.scene.eventRunner', 15000, 'tiếp tục sau animation bản đồ');
         await evalPage(cdp, 'delete FNH.game.flags["switch:999989"]', false, false);
 
+        await evalPage(cdp, 'FNH.game.scene.startEventList({list:[{code:236,parameters:["rain",4,30,true]},{code:121,parameters:[999988,999988,0]}]},0)', false, false);
+        await waitFor(cdp, 'FNH.game.flags["switch:999988"] && !FNH.game.scene.eventRunner', 15000, 'event chuyển thời tiết');
+        check('event thời tiết chuyển cường độ và tiếp tục đúng thời gian', await evalPage(cdp,
+            'FNH.game.screenEffects.weatherType === "rain" && Math.abs(FNH.game.screenEffects.weatherPower-4) < 0.01', false, false));
+        await evalPage(cdp, 'FNH.game.scene.executeEventCommand({code:236,parameters:["none",0,0,false]}); delete FNH.game.flags["switch:999988"]', false, false);
+
         await evalPage(cdp, `(() => {
             const mapScene = FNH.game.scene;
             window.__eventBattleMap = mapScene;

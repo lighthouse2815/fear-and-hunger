@@ -1502,6 +1502,11 @@
                     this.erasedEvents.add(this.eventId);
                     this.refreshEvents();
                 }
+            } else if (command.code === 236) {
+                if (this.battle || this.game.sceneName === 'battle') return;
+                const screen = this.game.screenEffects || (this.game.screenEffects = new FNH.ScreenEffects());
+                screen.changeWeather(p[0], p[1], p[2]);
+                if (p[3] && p[2] > 0) return { type: 'time', seconds: p[2] / 60 };
             } else if (command.code === 282) {
                 const scene = this.battle && this.battle.returnScene || this;
                 const token = { done: false, error: null };
@@ -2070,7 +2075,10 @@
             FNH.drawGrain(ctx, FNH.WIDTH, FNH.HEIGHT, this.time);
 
             ctx.restore();
-            if (this.game.screenEffects) this.game.screenEffects.apply(ctx);
+            if (this.game.screenEffects) {
+                this.game.screenEffects.drawWeather(ctx, this.camera.x, this.camera.y);
+                this.game.screenEffects.apply(ctx);
+            }
             if (this.game.pictures) this.game.pictures.draw(ctx, 'map');
             this.drawHud(ctx);
             this.drawBanner(ctx);

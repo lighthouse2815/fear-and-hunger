@@ -406,3 +406,11 @@ flags va chạm của tileset. Interpreter chờ tải asset trước lệnh ti�
 ảnh giữ tileset cũ và được báo qua cơ chế lỗi event. Yêu cầu tải mới hơn có quyền
 ưu tiên nếu nhiều event cùng đổi tileset. Override được lưu cùng flags, khôi phục
 khi đọc save và bỏ khi chuyển sang bản đồ khác; database bản đồ không bị sửa.
+
+### Thời tiết
+
+Lệnh 236 hiển thị mưa, bão hoặc tuyết trên bản đồ, chuyển cường độ trong số frame
+được chỉ định và cho interpreter chờ nếu bật wait. Tắt thời tiết có thời gian sẽ
+giảm dần loại hiện tại tới 0. Hạt bám theo tọa độ thế giới khi camera di chuyển;
+hiệu ứng nằm dưới picture/HUD và không hiển thị trong trận. Trạng thái cùng thời
+gian chuyển còn lại được lưu/đọc với screen effects; menu tạm dừng đóng băng hiệu ứng.

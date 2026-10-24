@@ -21,6 +21,11 @@
             this.shakeSeconds = Math.max(0, Number(data.shakeSeconds) || 0);
             this.shakePhase = Number(data.shakePhase) || 0;
             this.shakeX = Number(data.shakeX) || 0;
+            this.weatherType = ['rain', 'storm', 'snow'].includes(data.weatherType) ? data.weatherType : 'none';
+            this.weatherPower = clamp(data.weatherPower, 0, 9);
+            this.weatherTarget = clamp(data.weatherTarget, 0, 9);
+            this.weatherSeconds = Math.max(0, Number(data.weatherSeconds) || 0);
+            this.weatherTime = Math.max(0, Number(data.weatherTime) || 0);
         }
 
         tint(value, frames) {
@@ -49,7 +54,48 @@
             this.shakeX = 0;
         }
 
+        changeWeather(type, power, frames) {
+            if (!['none', 'rain', 'storm', 'snow'].includes(type)) throw new Error('Không hỗ trợ thời tiết ' + type);
+            const duration = seconds(frames);
+            if (type !== 'none' || !duration) this.weatherType = type;
+            this.weatherTarget = type === 'none' ? 0 : clamp(power, 0, 9);
+            this.weatherSeconds = duration;
+            if (!duration) this.weatherPower = this.weatherTarget;
+        }
+
+        drawWeather(ctx, cameraX = 0, cameraY = 0) {
+            if (this.weatherType === 'none' || this.weatherPower <= 0) return;
+            const width = ctx.canvas.width, height = ctx.canvas.height;
+            const spanX = width + 160, spanY = height + 160;
+            const wrap = (value, span) => ((value % span) + span) % span - 80;
+            const snow = this.weatherType === 'snow', storm = this.weatherType === 'storm';
+            const speed = snow ? 120 : storm ? 480 : 360;
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,' + this.weatherPower * 6 / 255 + ')';
+            ctx.fillRect(0, 0, width, height);
+            ctx.strokeStyle = 'rgba(235,245,255,0.65)';
+            ctx.fillStyle = 'rgba(245,250,255,0.8)';
+            ctx.lineWidth = storm ? 2 : 1;
+            ctx.beginPath();
+            for (let index = 0; index < Math.floor(this.weatherPower * 10); index += 1) {
+                const drift = snow ? Math.sin(this.weatherTime + index) * 18 : -this.weatherTime * speed / 2;
+                const x = wrap(index * 173.41 + drift - cameraX, spanX);
+                const y = wrap(index * 97.73 + this.weatherTime * speed - cameraY, spanY);
+                if (snow) { ctx.moveTo(x + 2, y); ctx.arc(x, y, 2, 0, Math.PI * 2); }
+                else { ctx.moveTo(x, y); ctx.lineTo(x - (storm ? 16 : 6), y + (storm ? 48 : 18)); }
+            }
+            if (snow) ctx.fill();
+            else ctx.stroke();
+            ctx.restore();
+        }
+
         update(dt) {
+            this.weatherTime += dt;
+            if (this.weatherSeconds) {
+                this.weatherPower += (this.weatherTarget - this.weatherPower) * Math.min(1, dt / this.weatherSeconds);
+                this.weatherSeconds = Math.max(0, this.weatherSeconds - dt);
+                if (!this.weatherSeconds && this.weatherTarget === 0) this.weatherType = 'none';
+            }
             const toneRatio = this.toneSeconds ? Math.min(1, dt / this.toneSeconds) : 0;
             this.tone = this.tone.map((value, i) => value + (this.toneTarget[i] - value) * toneRatio);
             this.toneSeconds = Math.max(0, this.toneSeconds - dt);
