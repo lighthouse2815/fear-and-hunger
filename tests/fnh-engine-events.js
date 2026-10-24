@@ -111,3 +111,24 @@ event.pages.push({ conditions: { actorValid: true, actorId: 3 }, list: [] });
 assert.equal(data.eventPage(event, {}, 1, { id: 1 }), originalPage);
 assert.equal(data.eventPage(event, {}, 1, { id: 3 }), event.pages[4], 'Trang yêu cầu nhân vật trong tổ đội hiện tại');
 console.log('ĐẠT: điều kiện cửa, hội thoại, self-switch và biến ngẫu nhiên.');
+
+scene.game.player.inventory = [];
+for (const code of [126, 127, 128]) {
+    scene.executeEventCommand({ code, parameters: [8, 0, 0, 3] });
+}
+assert.equal(scene.game.player.inventory.length, 3, 'Ba loại cùng ID không gộp chung');
+for (const type of [8, 9, 10]) assert.equal(scene.eventCondition([type, 8, false]), true);
+scene.executeEventCommand({ code: 126, parameters: [8, 1, 0, 9] });
+assert.equal(scene.eventCondition([8, 8]), false, 'Vũ khí không được tính là vật phẩm');
+assert.equal(scene.eventDataOperand(1, 8), 3);
+assert.equal(scene.eventDataOperand(2, 8), 3);
+scene.executeEventCommand({ code: 127, parameters: [8, 1, 1, 7, false] });
+assert.equal(scene.eventCondition([9, 8, false]), false);
+assert.equal(scene.eventDataOperand(2, 8), 3, 'Trừ vũ khí không thay đổi giáp cùng ID');
+scene.game.player.equipment = [{ id: 8, type: 'weapon' }];
+assert.equal(scene.eventCondition([9, 8, false]), false);
+assert.equal(scene.eventCondition([9, 8, true]), true, 'Tùy chọn tính trang bị đang mặc');
+assert.equal(scene.eventCondition([10, 99, true]), false);
+assert.throws(() => scene.executeEventCommand({ code: 127, parameters: [8, 1, 0, 1, true] }), /Chưa hỗ trợ tháo trang bị/);
+assert.equal(scene.game.player.equipment.length, 1, 'Không sửa trang bị và chỉ số khi chưa hỗ trợ tháo');
+console.log('ĐẠT: túi đồ phân biệt vật phẩm, vũ khí, giáp và điều kiện trang bị.');

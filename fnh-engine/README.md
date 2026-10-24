@@ -205,7 +205,10 @@ ID bản đồ, số thành viên, vàng và thời gian chơi. Những dữ li�
 ứng (nhân vật ngoài tổ đội, timer, số trận, v.v.) được báo chưa hỗ trợ.
 
 Đây chưa phải interpreter đầy đủ của MV. Điều kiện hiện hỗ trợ switch, biến,
-self-switch, vàng, vật phẩm, nhân vật chính có trong tổ đội và hướng nhân vật/event.
+self-switch, vàng, vật phẩm/vũ khí/giáp (có tùy chọn tính trang bị đang mặc), nhân vật
+chính có trong tổ đội và hướng nhân vật/event. Lệnh 126–128 cộng/trừ riêng từng loại
+trong túi, kể cả khi trùng ID; việc trừ cả trang bị đang mặc vẫn báo chưa hỗ trợ để
+tránh làm sai chỉ số nhân vật.
 Lệnh hoặc điều kiện chưa hỗ trợ sẽ dừng event, hiển thị
 thông báo và lưu lỗi vào `FNH.game.lastError`, thay vì chạy tiếp các hệ quả sai.
 Có autorun bản đồ (trigger 3), chạy trước điều khiển người chơi và chờ hội thoại như event

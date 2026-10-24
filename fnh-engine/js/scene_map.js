@@ -287,7 +287,9 @@
                     this.game.showToast('Túi đồ đang trống.', 2);
                 } else {
                     const names = inventory.map((item) => {
-                        const data = this.game.data.items[item.id];
+                        const table = item.kind === 'weapon' ? this.game.data.weapons
+                            : item.kind === 'armor' ? this.game.data.armors : this.game.data.items;
+                        const data = table[item.id];
                         return (data ? data.name : 'Item ' + item.id) + ' ×' + item.amount;
                     });
                     this.game.showToast(names.join(' · '), 4.5);
@@ -511,7 +513,13 @@
                 if (p[2] === 1) return gold <= p[1];
                 if (p[2] === 2) return gold < p[1];
             }
-            if (p[0] === 8) return (this.game.player.inventory || []).some((item) => item.id === p[1] && item.amount > 0);
+            if (p[0] >= 8 && p[0] <= 10) {
+                const kind = ['item', 'weapon', 'armor'][p[0] - 8];
+                if ((this.game.player.inventory || []).some((item) =>
+                    item.id === p[1] && (item.kind || 'item') === kind && item.amount > 0)) return true;
+                return kind !== 'item' && !!p[2] && (this.game.player.equipment || []).some((item) =>
+                    item.id === p[1] && item.type === kind);
+            }
             throw new Error('Chưa hỗ trợ điều kiện event ' + p[0]);
         }
 
@@ -660,19 +668,23 @@
                 let amount = Number(p[2] || 0);
                 if (p[1] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
                 this.game.gold = Math.max(0, this.game.gold + (operation === 0 ? amount : -amount));
-            } else if (command.code === 126) {
+            } else if (command.code >= 126 && command.code <= 128) {
+                const kind = ['item', 'weapon', 'armor'][command.code - 126];
+                if (kind !== 'item' && p[1] === 1 && p[4]) {
+                    throw new Error('Chưa hỗ trợ tháo trang bị khi trừ ' + kind);
+                }
                 const itemId = Number(p[0] || 0);
                 let amount = Number(p[3] || 0);
                 if (p[2] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
                 const inventory = this.game.player.inventory || (this.game.player.inventory = []);
-                const entry = inventory.find((item) => item.id === itemId);
+                const entry = inventory.find((item) => item.id === itemId && (item.kind || 'item') === kind);
                 const delta = p[1] === 0 ? amount : -amount;
                 const total = Math.max(0, (entry ? entry.amount : 0) + delta);
                 if (entry) {
                     entry.amount = total;
                     if (!total) inventory.splice(inventory.indexOf(entry), 1);
                 } else if (total > 0) {
-                    inventory.push({ id: itemId, amount: total });
+                    inventory.push(kind === 'item' ? { id: itemId, amount: total } : { id: itemId, amount: total, kind });
                 }
             } else if (command.code === 214) {
                 this.erasedEvents.add(this.eventId);
