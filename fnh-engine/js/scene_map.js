@@ -204,6 +204,7 @@
                 { id: 'resume', label: 'TIẾP TỤC', enabled: true },
                 { id: 'save', label: 'LƯU GAME', enabled: true },
                 { id: 'load', label: 'TẢI GAME', enabled: !!this.pauseSaveInfo },
+                { id: 'items', label: 'VẬT PHẨM', enabled: true },
                 { id: 'sound', label: this.game.audio.muted ? 'ÂM THANH: TẮT' : 'ÂM THANH: BẬT', enabled: true },
                 { id: 'title', label: 'VỀ MÀN HÌNH CHÍNH', enabled: true }
             ];
@@ -255,6 +256,17 @@
             } else if (entry.id === 'load') {
                 this.leaving = true;
                 this.game.loadGame();
+            } else if (entry.id === 'items') {
+                const inventory = this.game.player.inventory || [];
+                if (!inventory.length) {
+                    this.game.showToast('Túi đồ đang trống.', 2);
+                } else {
+                    const names = inventory.map((item) => {
+                        const data = this.game.data.items[item.id];
+                        return (data ? data.name : 'Item ' + item.id) + ' ×' + item.amount;
+                    });
+                    this.game.showToast(names.join(' · '), 4.5);
+                }
             } else if (entry.id === 'sound') {
                 this.game.toggleMute();
             } else if (entry.id === 'title') {
