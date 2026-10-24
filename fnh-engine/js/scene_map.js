@@ -153,8 +153,22 @@
             this.camera.y = this.clampCameraY(this.playerVisual.y * FNH.TILE + FNH.TILE - FNH.HEIGHT / 2);
             this.ready = true;
 
-            game.audio.stopBgm(0.5);
-            game.audio.playBgs('minor_terror', { volume: 0.34, loop: true });
+            if (game.mapId === 1 && !this.map.autoplayBgm) game.audio.stopBgm(0.5);
+            for (const [enabled, sound, play, stop] of [
+                [this.map.autoplayBgm, this.map.bgm, 'playBgm', 'stopBgm'],
+                [this.map.autoplayBgs, this.map.bgs, 'playBgs', 'stopBgs']
+            ]) {
+                if (!enabled) continue;
+                if (!sound || !sound.name) game.audio[stop](0);
+                else game.audio[play](sound.name, {
+                    volume: (sound.volume === undefined ? 90 : sound.volume) / 100,
+                    pitch: sound.pitch === undefined ? 100 : sound.pitch,
+                    pan: sound.pan || 0, loop: true
+                }).catch((error) => {
+                    game.lastError = error;
+                    game.showToast(error.message, 6);
+                });
+            }
             this.updateEventImages();
         }
 
@@ -1183,8 +1197,39 @@
                     this.erasedEvents.add(this.eventId);
                     this.refreshEvents();
                 }
-            } else if (command.code === 250 && p[0] && p[0].name) {
-                this.game.audio.playSe(p[0].name, { volume: (Number(p[0].volume) || 90) / 100 });
+            } else if ([241, 242, 243, 244, 245, 246, 250, 251].includes(command.code)) {
+                const audio = this.game.audio;
+                const play = (method) => {
+                    const sound = p[0] || {};
+                    if (!sound.name) {
+                        if (method === 'playBgm') audio.stopBgm(0);
+                        if (method === 'playBgs') audio.stopBgs(0);
+                        return;
+                    }
+                    const result = audio[method](sound.name, {
+                        volume: (sound.volume === undefined ? 90 : Number(sound.volume)) / 100,
+                        pitch: sound.pitch === undefined ? 100 : sound.pitch,
+                        pan: sound.pan || 0
+                    });
+                    if (result && result.catch) result.catch((error) => {
+                        this.game.lastError = error;
+                        this.game.showToast(error.message, 6);
+                    });
+                };
+                if (command.code === 241) play('playBgm');
+                if (command.code === 242) audio.stopBgm(Math.max(0, Number(p[0]) || 0));
+                if (command.code === 243) this.game.savedBgm = audio.saveBgm();
+                if (command.code === 244 && this.game.savedBgm) {
+                    const sound = this.game.savedBgm;
+                    audio.playBgm(sound.name, sound).catch((error) => {
+                        this.game.lastError = error;
+                        this.game.showToast(error.message, 6);
+                    });
+                }
+                if (command.code === 245) play('playBgs');
+                if (command.code === 246) audio.stopBgs(Math.max(0, Number(p[0]) || 0));
+                if (command.code === 250) play('playSe');
+                if (command.code === 251) audio.stopSe();
             } else if (command.code === 201) {
                 const value = (index) => p[0] === 1
                     ? Number(this.game.flags['variable:' + p[index]] || 0) : Number(p[index]);

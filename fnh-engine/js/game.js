@@ -66,6 +66,7 @@
             this.lastFrame = 0;
             this.player = null;
             this.actorStates = {};
+            this.savedBgm = null;
             this.gold = 0;
             this.mapId = 1;
             this.guardDefeated = false;
@@ -197,6 +198,7 @@
         newGame(actorId) {
             this.player = this.data.createPlayer(actorId);
             this.actorStates = {};
+            this.savedBgm = null;
             this.player.mapX = 27;
             this.player.mapY = 67;
             this.player.direction = 8;
@@ -220,6 +222,7 @@
                 mapId: this.mapId,
                 player: this.player,
                 actorStates: this.actorStates,
+                savedBgm: this.savedBgm,
                 gold: this.gold,
                 guardDefeated: this.guardDefeated,
                 flags: this.flags,
@@ -251,6 +254,7 @@
             }
             this.player = save.player;
             this.actorStates = save.actorStates || {};
+            this.savedBgm = save.savedBgm || null;
             this.player.mapX = Number.isFinite(this.player.mapX) ? this.player.mapX : 27;
             this.player.mapY = Number.isFinite(this.player.mapY) ? this.player.mapY : 67;
             this.player.direction = this.player.direction || 2;

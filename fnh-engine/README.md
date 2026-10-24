@@ -272,7 +272,13 @@ bằng kỹ năng; Recover All gặp trạng thái chưa hỗ trợ vẫn báo l
 Script event 355/655 hỗ trợ một tập API literal: đổi ảnh character/face/battler của
 actor, refresh người chơi, setValue switch/biến bằng hằng số. Đoạn nhiều dòng được
 kiểm tra toàn bộ trước khi thay đổi trạng thái; câu lệnh hoặc biểu thức ngoài tập này
-báo chưa hỗ trợ. Không dùng eval hoặc tải runtime MV. Chưa có JavaScript tùy ý,
+báo chưa hỗ trợ. Không dùng eval hoặc tải runtime MV. Âm thanh event hỗ trợ BGM/BGS play/fade (241/242/245/246), lưu/phát lại BGM
+(243/244), SE play/stop (250/251), gồm volume 0, pitch và stereo pan. Phát lại nhạc
+khôi phục vị trí; đổi tham số cùng bản nhạc không khởi động lại từ đầu. Lệnh dừng
+hủy cả yêu cầu decode đang chờ để âm thanh không tự phát lại sau đó. BGM đã ghi nhớ
+được lưu cùng save. Bản đồ đọc cấu hình autoplay BGM/BGS từ JSON gốc. Chưa có ME
+và âm thanh theo vị trí từ plugin.
+Chưa có JavaScript tùy ý,
 script move route và các plugin command khác,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 

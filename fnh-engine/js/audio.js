@@ -16,6 +16,8 @@
             this._bgmToken = 0;
             this._bgsToken = 0;
             this.unlocked = false;
+            this.seSources = new Set();
+            this._seToken = 0;
         }
 
         get state() {
@@ -52,11 +54,45 @@
             return this.muted;
         }
 
+        connectSound(source, gain, options) {
+            source.playbackRate.value = options.pitch === undefined ? 1 : Math.max(0.01, options.pitch / 100);
+            source.connect(gain);
+            if (this.context.createStereoPanner) {
+                const pan = this.context.createStereoPanner();
+                pan.pan.value = Math.max(-1, Math.min(1, (options.pan || 0) / 100));
+                gain.connect(pan);
+                pan.connect(this.master);
+                return pan;
+            }
+            gain.connect(this.master);
+            return null;
+        }
+
+        updateLoop(entry, options) {
+            const now = this.context.currentTime;
+            const oldRate = entry.source.playbackRate.value;
+            entry.position = (entry.position + (now - entry.startedAt) * oldRate) % entry.duration;
+            entry.startedAt = now;
+            entry.options = { ...entry.options, ...options };
+            const opts = entry.options;
+            entry.source.playbackRate.value = opts.pitch === undefined ? 1 : Math.max(0.01, opts.pitch / 100);
+            if (entry.pan) entry.pan.pan.value = Math.max(-1, Math.min(1, (opts.pan || 0) / 100));
+            entry.gain.gain.setTargetAtTime(opts.volume * 0.55, now, 0.02);
+        }
+
+        saveBgm() {
+            const entry = this.currentBgm;
+            if (!entry || !entry.playing) return null;
+            return { name: entry.name, ...entry.options,
+                position: (entry.position + (this.context.currentTime - entry.startedAt) * entry.source.playbackRate.value) % entry.duration };
+        }
+
         async playBgm(name, options) {
             if (!name) return null;
             const opts = options || {};
             if (!this.context) await this.unlock();
             if (this.currentBgm && this.currentBgm.name === name && this.currentBgm.playing) {
+                this.updateLoop(this.currentBgm, opts);
                 return this.currentBgm;
             }
 
@@ -70,9 +106,9 @@
             source.loop = opts.loop !== false;
             const gain = this.context.createGain();
             gain.gain.value = 0;
-            source.connect(gain);
-            gain.connect(this.master);
-            source.start();
+            const pan = this.connectSound(source, gain, opts);
+            const position = Math.max(0, Number(opts.position) || 0) % buffer.duration;
+            source.start(0, position);
             const target = (opts.volume === undefined ? 0.7 : opts.volume) * 0.55;
             gain.gain.setTargetAtTime(target, this.context.currentTime, 0.08);
 
@@ -80,6 +116,10 @@
                 name: name,
                 source: source,
                 gain: gain,
+                pan: pan,
+                startedAt: this.context.currentTime,
+                position: position,
+                options: { volume: 0.7, ...opts },
                 playing: true,
                 duration: buffer.duration
             };
@@ -110,6 +150,7 @@
             const opts = options || {};
             if (!this.context) await this.unlock();
             if (this.currentBgs && this.currentBgs.name === name && this.currentBgs.playing) {
+                this.updateLoop(this.currentBgs, opts);
                 return this.currentBgs;
             }
             const token = ++this._bgsToken;
@@ -121,15 +162,19 @@
             source.loop = opts.loop !== false;
             const gain = this.context.createGain();
             gain.gain.value = 0;
-            source.connect(gain);
-            gain.connect(this.master);
-            source.start();
+            const pan = this.connectSound(source, gain, opts);
+            const position = Math.max(0, Number(opts.position) || 0) % buffer.duration;
+            source.start(0, position);
             const target = (opts.volume === undefined ? 0.42 : opts.volume) * 0.55;
             gain.gain.setTargetAtTime(target, this.context.currentTime, 0.15);
             const entry = {
                 name: name,
                 source: source,
                 gain: gain,
+                pan: pan,
+                startedAt: this.context.currentTime,
+                position: position,
+                options: { volume: 0.42, ...opts },
                 playing: true,
                 duration: buffer.duration
             };
@@ -158,21 +203,33 @@
         async playSe(name, options) {
             if (!name || !this.context) return;
             const opts = options || {};
+            const token = this._seToken;
             try {
                 const buffer = await this.assets.decodeAudio('se/' + name, this.context);
+                if (token !== this._seToken) return;
                 const source = this.context.createBufferSource();
                 source.buffer = buffer;
                 const gain = this.context.createGain();
                 gain.gain.value = (opts.volume === undefined ? 0.7 : opts.volume) * 0.6;
-                source.connect(gain);
-                gain.connect(this.master);
+                this.connectSound(source, gain, opts);
+                this.seSources.add(source);
+                source.onended = () => { this.seSources.delete(source); };
                 source.start();
             } catch (error) {
                 console.warn('[FNH] Không phát được SE ' + name + ':', error.message);
             }
         }
 
+        stopSe() {
+            this._seToken += 1;
+            for (const source of this.seSources) {
+                try { source.stop(); } catch (error) {}
+            }
+            this.seSources.clear();
+        }
+
         stopAll() {
+            this.stopSe();
             this.stopBgm(0.08);
             this.stopBgs(0.08);
         }
