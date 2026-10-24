@@ -262,6 +262,13 @@ wait chờ toàn bộ hàng đợi. Nội dung soạn nằm riêng trên từng 
 parallel không ghi đè nhau. Hàng đợi tạm thời không ghi vào save; thời lượng dùng mặc
 định plugin (90 frame + 4 frame/ký tự), chưa đọc tham số tùy chỉnh, hình đại diện và
 định dạng escape code. Plugin khác vẫn báo lỗi rõ ràng, không bỏ qua lệnh.
+Event nhân vật hỗ trợ Change HP/MP/TP (311/312/326), Recover All (314), học/quên kỹ
+năng (318), đổi tên/hình/biệt danh/tiểu sử (320/322/324/325). Chọn actor bằng ID hoặc
+biến; ID 0 áp dụng tổ đội một người hiện tại. Actor ngoài tổ đội có trạng thái riêng và
+được lưu/đọc cùng save. Kỹ năng ban đầu lấy từ learning của class ở cấp khởi đầu.
+Điều kiện actor hỗ trợ tên, class, kỹ năng và trang bị; biến đọc được chỉ số actor đã
+khởi tạo. Chưa mô phỏng trạng thái, party nhiều người, công thức trait hoặc chiến đấu
+bằng kỹ năng; Recover All gặp trạng thái chưa hỗ trợ vẫn báo lỗi.
 Chưa có script hoặc các plugin command khác,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 

@@ -1,0 +1,64 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const FNH = { Scene: class {}, clamp: (v, min, max) => Math.max(min, Math.min(max, v)) };
+for (const file of ['data', 'scene_map']) {
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/' + file + '.js'), 'utf8'), { window: { FNH } });
+}
+const data = new FNH.DataStore();
+data.actors = [null, { id: 1, name: 'A', classId: 1, initialLevel: 1, equips: [], characterName: 'A', faceName: 'F', faceIndex: 0 },
+    { id: 2, name: 'B', classId: 1, initialLevel: 1, equips: [] }];
+data.classes = [null, { id: 1, name: 'Class', params: [[0, 100], [0, 40], [0, 10], [0, 10], [0, 10], [0, 10], [0, 10], [0, 10]],
+    learnings: [{ level: 1, skillId: 2 }, { level: 2, skillId: 3 }] }];
+data.skills = [null, { id: 1 }, { id: 2 }];
+const scene = new FNH.Scene_Map();
+const loaded = [];
+scene.game = { player: data.createPlayer(1), data, flags: { 'variable:8': 2, 'variable:9': 30 },
+    assets: { loadImage: (name) => { loaded.push(name); return Promise.resolve(); } }, showToast() {} };
+const execute = (code, parameters) => scene.executeEventCommand({ code, parameters });
+assert.equal(scene.game.player.skills[0], 2);
+assert.equal(scene.eventActor(1), scene.game.player);
+assert.equal(scene.eventActor(2), scene.eventActor(2), 'Actor ngoài tổ đội giữ cùng trạng thái');
+execute(311, [0, 1, 1, 0, 500, false]);
+assert.equal(scene.game.player.hp, 1, 'Không cho chết giữ HP tối thiểu 1');
+execute(311, [1, 8, 1, 1, 9, true]);
+assert.equal(scene.eventActor(2).hp, 70, 'Chọn actor và mức giảm bằng biến');
+execute(311, [0, 1, 1, 0, 1, true]);
+assert.equal(scene.game.player.hp, 0);
+execute(311, [0, 1, 0, 0, 50, false]);
+assert.equal(scene.game.player.hp, 0, 'Change HP không hồi sinh actor đã chết');
+execute(314, [0, 0]);
+assert.equal(scene.game.player.hp, 100);
+assert.equal(scene.eventActor(2).hp, 70, 'Actor 0 chỉ áp dụng tổ đội hiện tại');
+execute(312, [0, 1, 1, 0, 99]);
+assert.equal(scene.game.player.mp, 0);
+execute(312, [0, 1, 0, 1, 9]);
+assert.equal(scene.game.player.mp, 30);
+execute(326, [0, 1, 0, 0, 150]);
+assert.equal(scene.game.player.tp, 100);
+execute(326, [0, 1, 1, 0, 200]);
+assert.equal(scene.game.player.tp, 0);
+execute(318, [0, 1, 0, 1]);
+execute(318, [0, 1, 0, 1]);
+assert.equal(scene.game.player.skills.length, 2);
+assert.equal(scene.eventCondition([4, 1, 3, 1]), true);
+execute(318, [0, 1, 1, 1]);
+assert.equal(scene.eventCondition([4, 1, 3, 1]), false);
+execute(320, [2, 'Đổi tên']);
+execute(324, [2, 'Biệt danh']);
+execute(325, [2, 'Tiểu sử']);
+assert.equal(scene.eventCondition([4, 2, 1, 'Đổi tên']), true);
+assert.equal(scene.eventCondition([4, 2, 2, 1]), true);
+assert.equal(scene.eventActor(2).nickname, 'Biệt danh');
+assert.equal(scene.eventActor(2).profile, 'Tiểu sử');
+execute(322, [1, 'Sprite', 3, 'Face', 4, 'Battler']);
+assert.equal(scene.game.player.characterName, 'Sprite');
+assert.equal(scene.game.player.faceIndex, 4);
+assert.equal(scene.game.player.battlerName, 'Battler');
+assert.deepEqual(loaded, ['characters/Sprite', 'faces/Face']);
+assert.equal(scene.eventDataOperand(3, 2, 2), 70);
+execute(320, [999, 'Không tồn tại']);
+assert.equal(scene.eventActor(999), null);
+console.log('ĐẠT: HP/MP/TP, hồi phục, kỹ năng, hình ảnh, actor ngoài tổ đội và điều kiện actor.');

@@ -820,6 +820,33 @@
             return true;
         }
 
+        eventActor(id) {
+            if (this.game.player.id === id) return this.game.player;
+            if (!this.game.data.actor(id)) return null;
+            const actors = this.game.actorStates || (this.game.actorStates = {});
+            if (!actors[id]) actors[id] = this.game.data.createPlayer(id);
+            return actors[id];
+        }
+
+        eventActorTargets(mode, id) {
+            const actorId = mode === 1 ? Number(this.game.flags['variable:' + id] || 0) : id;
+            if (actorId === 0) return [this.game.player];
+            const actor = this.eventActor(actorId);
+            return actor ? [actor] : [];
+        }
+
+        loadActorImages(actor) {
+            if (actor !== this.game.player) return;
+            for (const name of [actor.characterName && 'characters/' + actor.characterName,
+                actor.faceName && 'faces/' + actor.faceName]) {
+                if (!name) continue;
+                this.game.assets.loadImage(name).catch((error) => {
+                    this.game.lastError = error;
+                    this.game.showToast(error.message, 6);
+                });
+            }
+        }
+
         eventCondition(p) {
             const flags = this.game.flags;
             if (p[0] === 0) return !!flags['switch:' + p[1]] === (p[2] === 0);
@@ -836,7 +863,16 @@
                     : (this.game.mapId || 1) === 1 && flags['self:' + this.eventId + ':' + p[1]];
                 return !!value === (p[2] === 0);
             }
-            if (p[0] === 4 && p[2] === 0) return this.game.player.id === p[1];
+            if (p[0] === 4) {
+                if (p[2] === 0) return this.game.player.id === p[1];
+                const actor = this.eventActor(p[1]);
+                if (!actor) return false;
+                if (p[2] === 1) return actor.name === p[3];
+                if (p[2] === 2) return actor.classId === p[3];
+                if (p[2] === 3) return (actor.skills || []).includes(p[3]);
+                if (p[2] === 4 || p[2] === 5) return (actor.equipment || []).some((item) =>
+                    item.type === (p[2] === 4 ? 'weapon' : 'armor') && item.id === p[3]);
+            }
             if (p[0] === 6) {
                 const character = this.eventCharacter(p[1]);
                 return !!character && character.direction === p[2];
@@ -870,9 +906,10 @@
                 const entry = (player.inventory || []).find((item) => item.id === id && (item.kind || 'item') === kind);
                 return entry ? entry.amount : 0;
             }
-            if (type === 3 && player.id === id) {
+            if (type === 3) {
+                const actor = this.eventActor(id);
                 const fields = ['level', 'exp', 'hp', 'mp', 'maxHp', 'maxMp', 'atk', 'def', 'mat', 'mdf', 'agi', 'luk'];
-                if (fields[parameter]) return Number(player[fields[parameter]] || 0);
+                if (actor && fields[parameter]) return Number(actor[fields[parameter]] || 0);
             }
             if (type === 5) {
                 const character = this.eventCharacter(id);
@@ -1016,6 +1053,41 @@
                 if (!this.eventId) return;
                 const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + String(p[0] || 'A');
                 this.game.flags[key] = p[1] === 0;
+            } else if ([311, 312, 314, 318, 326].includes(command.code)) {
+                const actors = this.eventActorTargets(p[0], p[1]);
+                let value = p[3] === 1 ? Number(this.game.flags['variable:' + p[4]] || 0) : Number(p[4] || 0);
+                if (p[2] === 1) value = -value;
+                for (const actor of actors) {
+                    if (command.code === 311 && actor.hp > 0) {
+                        actor.hp = Math.max(p[5] ? 0 : 1, Math.min(actor.maxHp, actor.hp + value));
+                    }
+                    if (command.code === 312) actor.mp = Math.max(0, Math.min(actor.maxMp, actor.mp + value));
+                    if (command.code === 326) actor.tp = Math.max(0, Math.min(100, (actor.tp || 0) + value));
+                    if (command.code === 314) {
+                        if (actor.states && actor.states.length) throw new Error('Chưa hỗ trợ hồi phục trạng thái actor');
+                        actor.hp = actor.maxHp;
+                        actor.mp = actor.maxMp;
+                    }
+                    if (command.code === 318) {
+                        const skills = actor.skills || (actor.skills = []);
+                        const index = skills.indexOf(p[3]);
+                        if (p[2] === 0 && index < 0 && this.game.data.skill(p[3])) skills.push(p[3]);
+                        if (p[2] === 1 && index >= 0) skills.splice(index, 1);
+                        skills.sort((a, b) => a - b);
+                    }
+                }
+            } else if ([320, 322, 324, 325].includes(command.code)) {
+                const actor = this.eventActor(p[0]);
+                if (!actor) return;
+                if (command.code === 320) actor.name = String(p[1]);
+                if (command.code === 324) actor.nickname = String(p[1]);
+                if (command.code === 325) actor.profile = String(p[1]);
+                if (command.code === 322) {
+                    actor.characterName = p[1]; actor.characterIndex = p[2];
+                    actor.faceName = p[3]; actor.faceIndex = p[4]; actor.battlerName = p[5];
+                    actor.portrait = 'pictures/' + actor.faceName + '_' + (actor.faceIndex + 1);
+                    this.loadActorImages(actor);
+                }
             } else if (command.code === 125) {
                 const operation = Number(p[0] || 0);
                 let amount = Number(p[2] || 0);

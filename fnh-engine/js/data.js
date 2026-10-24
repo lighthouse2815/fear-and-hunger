@@ -233,8 +233,12 @@
                 characterIndex: actor.characterIndex,
                 battlerName: actor.battlerName,
                 portrait: 'pictures/' + actor.faceName + '_' + (actor.faceIndex + 1),
-                equipment: equipment
-                ,inventory: []
+                skills: (cls.learnings || []).filter((entry) => entry.level <= level).map((entry) => entry.skillId),
+                nickname: actor.nickname || '',
+                profile: actor.profile || '',
+                tp: 0,
+                equipment: equipment,
+                inventory: []
             };
         }
 
