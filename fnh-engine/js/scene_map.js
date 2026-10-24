@@ -51,6 +51,8 @@
             this.bannerTimer = 0;
             this.paused = false;
             this.pauseIndex = 0;
+            this.pauseMode = 'menu';
+            this.pauseContinuation = null;
             this.pauseSaveInfo = null;
             this.pauseHover = -1;
             this.eventRunner = null;
@@ -62,6 +64,7 @@
             this.playerRouteState = null;
             this.failedAutorunPages = new Set();
             this.parallelEvents = new Map();
+            this.resumedParallelKey = null;
             this.dialogRunner = null;
             this.eventChoice = 0;
             this.eventWait = null;
@@ -236,6 +239,15 @@
                     game.lastError = error;
                     game.showToast(error.message, 6);
                 });
+            }
+            const continuation = game.pendingEventContinuation;
+            game.pendingEventContinuation = null;
+            if (continuation && continuation.mapId === game.mapId) {
+                const event = this.map.events.find((entry) => entry && entry.id === continuation.eventId);
+                const page = continuation.commonEventId ? game.data.commonEvents[continuation.commonEventId]
+                    : event && this.eventPage(event);
+                this.resumedParallelKey = continuation.parallelKey;
+                this.startEventList(page || { list: continuation.state.frames[0].list }, continuation.eventId, true, continuation.state);
             }
             this.updateEventImages();
         }
@@ -509,6 +521,7 @@
         }
 
         updateParallelEvents(dt) {
+            if (!this.eventRunner) this.resumedParallelKey = null;
             const active = new Map();
             for (const event of this.map.events || []) {
                 if (!event) continue;
@@ -528,6 +541,7 @@
             }
             for (const [key, entry] of active) {
                 if (this.leaving) break;
+                if (key === this.resumedParallelKey && this.eventRunner) continue;
                 // Các event trước có thể vừa đổi switch, đổi trang hoặc xóa event này.
                 const valid = entry.eventId ? this.eventPage(this.map.events.find((event) => event && event.id === entry.eventId)) === entry.page
                     : this.game.flags['switch:' + entry.page.switchId];
@@ -599,7 +613,14 @@
             return false;
         }
 
-        openPause() {
+        openPause(saveOnly = false) {
+            this.pauseMode = saveOnly ? 'save' : 'menu';
+            const parallel = [...this.parallelEvents].find(([, context]) =>
+                context.runningEventPage === this.runningEventPage && context.eventId === this.eventId);
+            const common = (this.game.data.commonEvents || []).find((event) => event && event === this.runningEventPage);
+            this.pauseContinuation = saveOnly && this.eventRunner ? { mapId: this.game.mapId,
+                eventId: this.eventId, commonEventId: common && common.id || 0,
+                parallelKey: parallel ? parallel[0] : null, state: this.eventRunner.snapshot() } : null;
             this.finishMove();
             this.paused = true;
             this.pauseIndex = 0;
@@ -610,10 +631,16 @@
 
         closePause() {
             this.paused = false;
+            this.pauseMode = 'menu';
+            this.pauseContinuation = null;
             this.game.audio.playSe('fnh_cancel', { volume: 0.4 });
         }
 
         pauseEntries() {
+            if (this.pauseMode === 'save') return [
+                { id: 'save', label: 'LƯU GAME', enabled: true },
+                { id: 'resume', label: 'HỦY', enabled: true }
+            ];
             return [
                 { id: 'resume', label: 'TIẾP TỤC', enabled: true },
                 { id: 'save', label: 'LƯU GAME', enabled: !this.game.flags['system:saveDisabled'] },
@@ -661,9 +688,11 @@
             if (entry.id === 'resume') {
                 this.closePause();
             } else if (entry.id === 'save') {
-                if (this.game.saveGame()) {
+                const fromEvent = this.pauseMode === 'save';
+                if (this.game.saveGame({ fromEvent, eventContinuation: this.pauseContinuation })) {
                     this.pauseSaveInfo = this.game.getSaveInfo();
                     this.game.showToast('Đã lưu: ' + this.game.player.name + ' · ' + FNH.formatTime(this.game.playtime), 2.2);
+                    if (fromEvent) { this.paused = false; this.pauseMode = 'menu'; this.pauseContinuation = null; }
                 } else {
                     this.game.showToast('Không lưu được game.', 2.5);
                 }
@@ -900,13 +929,14 @@
             return this.startEventList(page, event.id);
         }
 
-        startEventList(page, eventId, lockMovement = true) {
-            if (this.eventRunner || this.leaving || !page || !page.list ||
-                !page.list.some((command) => command.code !== 0)) return false;
+        startEventList(page, eventId, lockMovement = true, state) {
+            const list = state ? state.frames[0].list : page && page.list;
+            if (this.eventRunner || this.leaving || !page || !list ||
+                !list.some((command) => command.code !== 0)) return false;
             if (lockMovement) this.finishMove();
             this.eventId = eventId;
             this.runningEventPage = page;
-            const runner = new FNH.EventInterpreter(page.list, {
+            const runner = new FNH.EventInterpreter(list, {
                 canShowMessage: () => {
                     if (this.dialogRunner && this.dialogRunner !== runner) return false;
                     this.dialogRunner = runner;
@@ -921,7 +951,7 @@
                 condition: (parameters) => this.eventCondition(parameters),
                 commonEvent: (id) => this.game.data.commonEvents[id],
                 execute: (command) => this.executeEventCommand(command)
-            });
+            }, state);
             this.eventRunner = runner;
             if (lockMovement && this.lockedEventId === eventId && eventId) this.lockedEventRunner = runner;
             this.updateEvent(0);
@@ -1175,7 +1205,7 @@
                         this.eventChoice = runner.wait.disabled.findIndex((disabled) => !disabled);
                     }
                 }
-                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice', 'number', 'item', 'name', 'scroll'].includes(runner.wait.type))) {
+                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice', 'number', 'item', 'name', 'scroll', 'pause'].includes(runner.wait.type))) {
                     this.dialogRunner = null;
                 }
                 if (runner.done) {
@@ -1347,9 +1377,9 @@
                 this.game.flags[key] = p[0] === 0;
             } else if (command.code === 211) {
                 this.game.player.transparent = p[0] === 0;
-            } else if (command.code === 351) {
-                if (this.game.sceneName === 'battle') return;
-                this.openPause();
+            } else if (command.code === 351 || command.code === 352) {
+                if (this.battle || this.game.sceneName === 'battle') return;
+                this.openPause(command.code === 352);
                 return { type: 'pause', scene: this };
             } else if (command.code === 353 || command.code === 354) {
                 this.leaving = true;
@@ -2027,7 +2057,7 @@
                 fillBottom: 'rgba(5,5,5,0.99)',
                 border: 'rgba(192,168,116,0.62)'
             });
-            FNH.text(ctx, 'TẠM DỪNG · ' + this.partyIds().length + ' THÀNH VIÊN', panel.x + 24, panel.y + 34, {
+            FNH.text(ctx, this.pauseMode === 'save' ? 'LƯU GAME' : 'TẠM DỪNG · ' + this.partyIds().length + ' THÀNH VIÊN', panel.x + 24, panel.y + 34, {
                 size: 22,
                 weight: 600,
                 color: '#eee0c4'

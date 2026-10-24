@@ -69,6 +69,7 @@
             this.partyIds = null;
             this.savedBgm = null;
             this.reservedCommonEvent = null;
+            this.pendingEventContinuation = null;
             this.eventTimer = { seconds: 0, working: false };
             this.gold = 0;
             this.mapId = 1;
@@ -214,6 +215,7 @@
             this.actorStates = {};
             this.savedBgm = null;
             this.reservedCommonEvent = null;
+            this.pendingEventContinuation = null;
             this.eventTimer = { seconds: 0, working: false };
             this.player.mapX = 27;
             this.player.mapY = 67;
@@ -229,8 +231,8 @@
             this.changeScene(FNH.Scene_Map, { fresh: true });
         }
 
-        saveGame() {
-            if (!this.player || this.flags['system:saveDisabled']) return false;
+        saveGame(options) {
+            if (!this.player || (this.flags['system:saveDisabled'] && !(options && options.fromEvent))) return false;
             const payload = {
                 version: 1,
                 savedAt: Date.now(),
@@ -241,6 +243,7 @@
                 partyIds: this.partyIds,
                 savedBgm: this.savedBgm,
                 reservedCommonEvent: this.reservedCommonEvent,
+                eventContinuation: options && options.eventContinuation || null,
                 eventTimer: this.eventTimer,
                 gold: this.gold,
                 guardDefeated: this.guardDefeated,
@@ -287,6 +290,7 @@
             this.gold = save.gold || 0;
             this.playtime = save.playtime || 0;
             this.mapId = save.mapId || 1;
+            this.pendingEventContinuation = save.eventContinuation || null;
             this.guardDefeated = !!save.guardDefeated;
             this.flags = save.flags || {};
             this.screenEffects = new FNH.ScreenEffects(save.screenEffects);

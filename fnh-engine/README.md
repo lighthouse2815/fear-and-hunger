@@ -236,7 +236,8 @@ Có parallel event bản đồ (trigger 4) và common parallel (trigger 2, đi�
 Mỗi event có con trỏ, nhánh, thời gian chờ và ID ngữ cảnh riêng. Parallel tiếp tục chạy
 khi event chính đang chờ; đổi trang, xóa event hoặc tắt switch common parallel sẽ hủy
 interpreter tương ứng. Event hoàn tất lặp lại từ frame sau. Menu tạm dừng đóng băng cả
-các event nền. Interpreter đang chạy không được ghi vào save, được tạo lại khi tải bản đồ.
+các event nền. Save từ lệnh 352 giữ continuation của event đang mở điểm lưu; các
+interpreter nền khác được tạo lại khi tải bản đồ.
 Các event dùng chung một khung thoại; event khác chờ tới lượt, và người chơi chỉ bị khóa
 di chuyển khi có hội thoại hoặc event chính đang chạy. Lỗi một event nền không dừng
 các event còn lại; trang lỗi không thử lại trong lần tải bản đồ đó.
@@ -443,3 +444,14 @@ event; giữ xác nhận, Shift hoặc chuột tăng tốc ba lần trừ khi b�
 không bỏ qua đoạn văn. Interpreter chỉ chạy tiếp sau khi dòng cuối ra khỏi màn hình;
 khóa hội thoại dùng chung ngăn event khác chen vào. Cơ chế dùng được trên bản đồ và
 trong battle event, giữ nguyên vị trí khi scene tạm dừng.
+
+### Điểm lưu từ event
+
+Lệnh 352 mở màn hình lưu dùng lại giao diện và một slot của game, với hai lựa chọn
+lưu/hủy. Event chờ người chơi đóng màn hình; lỗi ghi dữ liệu giữ màn hình để thử lại
+hoặc hủy. Điểm lưu do event mở được phép lưu khi menu lưu bị khóa, giữ nguyên cờ khóa;
+lệnh không mở trong trận đấu. Save này lưu con trỏ và nhánh của event, các frame common
+event đang gọi cùng ngữ cảnh event ID. Tải lại tiếp tục ngay sau lệnh mở lưu, kể cả
+các lệnh bật lại menu lưu hoặc đổi self-switch, và không mở lại màn hình lưu. Save cũ
+không có continuation vẫn tải như trước. Event nền mở điểm lưu không chạy trùng phần
+đã lưu khi continuation còn hoạt động; các event nền khác khởi tạo lại từ bản đồ.

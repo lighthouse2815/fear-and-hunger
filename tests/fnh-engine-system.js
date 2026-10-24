@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const FNH = { Scene: class {} };
-for (const file of ['interpreter', 'scene_map', 'game']) {
+for (const file of ['core', 'interpreter', 'scene_map', 'game']) {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/' + file + '.js'), 'utf8'), { window: { FNH } });
 }
 const scene = new FNH.Scene_Map();
@@ -92,3 +92,64 @@ assert.equal(returned, 1);
 game.update(2);
 assert.equal(returned, 1, 'Hết giờ không thoát trận nhiều lần');
 console.log('ĐẠT: timer đếm ngược, điều kiện/biến, dừng menu và kết thúc trận khi hết giờ.');
+
+const saveScene = new FNH.Scene_Map();
+let saveFailure = false;
+const snapshots = [];
+saveScene.map = { events: [] };
+saveScene.input = { isPressed: () => false };
+saveScene.game = { flags: { 'system:saveDisabled': true }, player: { id: 1, name: 'Cahara', hp: 100 }, gold: 0,
+    saveSlot: 1, playtime: 0, mapId: 1, data: {}, audio: { playSe() {} }, showToast() {},
+    getSaveInfo: () => snapshots.length ? { savedAt: 1, playerName: 'Cahara', level: 1 } : null,
+    storage: { save(slot, payload) {
+        if (saveFailure) return false;
+        snapshots.push(JSON.parse(JSON.stringify(payload)));
+        return true;
+    } }, saveGame(options) { return FNH.Game.prototype.saveGame.call(this, options); } };
+assert.equal(saveScene.game.saveGame(), false, 'Cờ khóa vẫn chặn lưu thông thường');
+saveScene.startEventList({ list: [command(352), command(125, [0, 0, 7])] }, 0);
+assert.equal(saveScene.paused, true);
+assert.equal(saveScene.pauseMode, 'save');
+assert.equal(saveScene.pauseEntries().map((entry) => entry.id).join(','), 'save,resume');
+assert.equal(saveScene.pauseEntries()[0].enabled, true, 'Event lưu được mở dù menu lưu bị khóa như MV');
+saveScene.updateEvent(100);
+assert.equal(saveScene.game.gold, 0);
+saveScene.activatePause(0);
+assert.equal(snapshots.length, 1);
+assert.equal(snapshots[0].gold, 0, 'Lưu diễn ra trước hậu quả ở lệnh kế tiếp');
+assert.equal(snapshots[0].flags['system:saveDisabled'], true, 'Không tắt cờ khóa lưu để thực hiện event');
+assert.equal(saveScene.paused, false);
+saveScene.updateEvent(0);
+assert.equal(saveScene.game.gold, 7);
+assert.equal(saveScene.dialogRunner, null);
+assert.equal(saveScene.game.saveGame(), false);
+saveScene.startEventList({ list: [command(352), command(125, [0, 0, 10])] }, 0);
+saveScene.activatePause(1);
+saveScene.updateEvent(0);
+assert.equal(saveScene.game.gold, 17);
+assert.equal(snapshots.length, 1, 'Hủy không tạo hoặc ghi đè save');
+saveFailure = true;
+saveScene.startEventList({ list: [command(352), command(125, [0, 0, 20])] }, 0);
+saveScene.activatePause(0);
+saveScene.updateEvent(10);
+assert.equal(saveScene.paused, true, 'Lưu thất bại giữ màn hình để thử lại hoặc hủy');
+assert.equal(saveScene.game.gold, 17);
+saveFailure = false;
+saveScene.activatePause(0);
+saveScene.updateEvent(0);
+assert.equal(saveScene.game.gold, 37);
+assert.equal(snapshots.length, 2);
+saveScene.game.sceneName = 'battle';
+assert.equal(saveScene.executeEventCommand(command(352)), undefined);
+assert.equal(saveScene.paused, false, 'Lệnh mở lưu không chạy trong trận');
+saveScene.game.sceneName = 'map';
+saveScene.dialogRunner = {};
+saveScene.startEventList({ list: [command(352)] }, 0);
+assert.equal(saveScene.paused, false, 'Màn hình lưu chờ quyền dùng hội thoại');
+saveScene.dialogRunner = null;
+saveScene.updateEvent(0);
+assert.equal(saveScene.paused, true);
+saveScene.closePause();
+saveScene.updateEvent(0);
+assert.equal(saveScene.eventRunner, null);
+console.log('ĐẠT: mở lưu từ event, xác nhận/hủy, thử lại, khóa lưu menu và luồng hội thoại.');

@@ -883,6 +883,26 @@ async function main() {
             '})()'
         ].join('\n'), false, false));
 
+        await evalPage(cdp, 'window.__beforeEventSave=JSON.stringify(FNH.game.storage.load(FNH.game.saveSlot));FNH.game.scene.startEventList({list:[{code:352,parameters:[]},{code:121,parameters:[999985,999985,0]}]},0)', false, false);
+        await waitFor(cdp, 'FNH.game.scene.paused && FNH.game.scene.pauseMode === "save"', 10000, 'màn hình lưu từ event');
+        check('event mở màn hình chỉ có lưu và hủy, chưa chạy lệnh sau', await evalPage(cdp,
+            'FNH.game.scene.pauseEntries().map(e=>e.id).join(",") === "save,resume" && !FNH.game.flags["switch:999985"]', false, false));
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        await waitFor(cdp, 'FNH.game.flags["switch:999985"] && !FNH.game.scene.eventRunner', 10000, 'hủy lưu tiếp tục event');
+        check('hủy màn hình lưu không ghi đè dữ liệu', await evalPage(cdp,
+            'JSON.stringify(FNH.game.storage.load(FNH.game.saveSlot)) === window.__beforeEventSave && !FNH.game.scene.paused', false, false));
+        await evalPage(cdp, 'delete window.__beforeEventSave;delete FNH.game.flags["switch:999985"];FNH.game.scene.startEventList({list:[{code:134,parameters:[0]},{code:352,parameters:[]},{code:121,parameters:[999984,999984,0]},{code:134,parameters:[1]}]},0)', false, false);
+        await waitFor(cdp, 'FNH.game.scene.paused && FNH.game.scene.pauseMode === "save"', 10000, 'lưu từ điểm lưu event');
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.flags["switch:999984"] && !FNH.game.scene.eventRunner', 10000, 'lưu thành công tiếp tục event');
+        check('điểm lưu event ghi save và con trỏ kịch bản khi menu lưu bị khóa', await evalPage(cdp,
+            'FNH.game.storage.load(FNH.game.saveSlot).guardDefeated && FNH.game.storage.load(FNH.game.saveSlot).eventContinuation.state.frames.length === 1 && !FNH.game.flags["system:saveDisabled"] && !FNH.game.scene.paused', false, false));
+        await evalPage(cdp, 'FNH.game.loadGame()', false, false);
+        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready && FNH.game.flags["switch:999984"] && !FNH.game.scene.eventRunner', 20000, 'tải lại tiếp tục sau điểm lưu event');
+        check('tải save từ event chạy tiếp kịch bản và mở lại lưu menu', await evalPage(cdp,
+            '!FNH.game.flags["system:saveDisabled"] && !FNH.game.scene.paused && !FNH.game.pendingEventContinuation', false, false));
+        await evalPage(cdp, 'delete FNH.game.flags["switch:999984"]', false, false);
+
         // ---------------------------------------------------------
         // 7. Lưu game qua menu tạm dừng.
         // ---------------------------------------------------------

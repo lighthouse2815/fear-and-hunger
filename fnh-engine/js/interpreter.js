@@ -4,14 +4,23 @@
 
     // Giữ con trỏ và nhánh riêng cho từng common event; không dùng runtime MV.
     FNH.EventInterpreter = class EventInterpreter {
-        constructor(list, handlers) {
+        constructor(list, handlers, state) {
             this.handlers = handlers;
-            this.frames = [{ list: list || [], index: 0, branches: {} }];
+            this.frames = state ? state.frames.map((frame) => ({ list: frame.list, index: frame.index,
+                branches: { ...frame.branches } })) : [{ list: list || [], index: 0, branches: {} }];
+            if (this.frames.some((frame) => !Array.isArray(frame.list) || !Number.isInteger(frame.index) ||
+                frame.index < 0 || frame.index > frame.list.length)) throw new Error('Con trỏ event trong save không hợp lệ');
             this.wait = null;
             this.done = false;
-            this.gabText = '';
-            this.choiceText = {};
-            this.disabledChoices = new Set();
+            this.gabText = state && state.gabText || '';
+            this.choiceText = state ? { ...state.choiceText } : {};
+            this.disabledChoices = new Set(state && state.disabledChoices || []);
+        }
+
+        snapshot() {
+            return { frames: this.frames.map((frame) => ({ list: frame.list, index: frame.index,
+                branches: { ...frame.branches } })), gabText: this.gabText,
+                choiceText: { ...this.choiceText }, disabledChoices: [...this.disabledChoices] };
         }
 
         seek(frame, indent, codes) {
@@ -114,13 +123,13 @@
                             offset: 0, height: null, done: false };
                         break;
                     }
-                    case 303: {
+                    case 303: case 352: {
                         if (this.handlers.canShowMessage && !this.handlers.canShowMessage()) {
                             frame.index -= 1;
                             return;
                         }
                         const result = this.handlers.execute(command);
-                        if (result && result.type === 'name') this.wait = result;
+                        if (result && ['name', 'pause'].includes(result.type)) this.wait = result;
                         break;
                     }
                     case 102:
