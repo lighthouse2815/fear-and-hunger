@@ -138,6 +138,14 @@
                         }
                         break;
                     }
+                    case 355: {
+                        const lines = [String(p[0] || '')];
+                        while (frame.list[frame.index] && frame.list[frame.index].code === 655) {
+                            lines.push(String(frame.list[frame.index++].parameters[0] || ''));
+                        }
+                        this.handlers.execute({ code: 355, parameters: [lines.join('\n')] });
+                        break;
+                    }
                     case 230:
                         this.wait = { type: 'time', seconds: Math.max(0, Number(p[0]) || 0) / 60 };
                         break;

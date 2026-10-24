@@ -269,7 +269,11 @@ biến; ID 0 áp dụng tổ đội một người hiện tại. Actor ngoài t�
 Điều kiện actor hỗ trợ tên, class, kỹ năng và trang bị; biến đọc được chỉ số actor đã
 khởi tạo. Chưa mô phỏng trạng thái, party nhiều người, công thức trait hoặc chiến đấu
 bằng kỹ năng; Recover All gặp trạng thái chưa hỗ trợ vẫn báo lỗi.
-Chưa có script hoặc các plugin command khác,
+Script event 355/655 hỗ trợ một tập API literal: đổi ảnh character/face/battler của
+actor, refresh người chơi, setValue switch/biến bằng hằng số. Đoạn nhiều dòng được
+kiểm tra toàn bộ trước khi thay đổi trạng thái; câu lệnh hoặc biểu thức ngoài tập này
+báo chưa hỗ trợ. Không dùng eval hoặc tải runtime MV. Chưa có JavaScript tùy ý,
+script move route và các plugin command khác,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 
 ## Kiểm chứng

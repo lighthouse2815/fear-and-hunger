@@ -1004,7 +1004,9 @@
 
         executeEventCommand(command) {
             const p = command.parameters || [];
-            if (command.code === 356) {
+            if (command.code === 355) {
+                FNH.executeEventScript(this, String(p[0] || ''));
+            } else if (command.code === 356) {
                 const match = /^(\S+)(?:\s+([\s\S]*))?$/.exec(String(p[0] || '').trim());
                 if (!match) return;
                 const name = match[1], argument = match[2] || '';

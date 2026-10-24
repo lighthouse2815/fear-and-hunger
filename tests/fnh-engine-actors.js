@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const FNH = { Scene: class {}, clamp: (v, min, max) => Math.max(min, Math.min(max, v)) };
-for (const file of ['data', 'scene_map']) {
+for (const file of ['data', 'event_script', 'interpreter', 'scene_map']) {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/' + file + '.js'), 'utf8'), { window: { FNH } });
 }
 const data = new FNH.DataStore();
@@ -62,3 +62,23 @@ assert.equal(scene.eventDataOperand(3, 2, 2), 70);
 execute(320, [999, 'Không tồn tại']);
 assert.equal(scene.eventActor(999), null);
 console.log('ĐẠT: HP/MP/TP, hồi phục, kỹ năng, hình ảnh, actor ngoài tổ đội và điều kiện actor.');
+
+execute(355, ["$gameActors.actor(0001).setCharacterImage('Other', 7);\n$gameActors.actor(0001).setBattlerImage('OtherBattler');\n$gamePlayer.refresh();"]);
+assert.equal(scene.game.player.characterName, 'Other');
+assert.equal(scene.game.player.characterIndex, 7);
+assert.equal(scene.game.player.battlerName, 'OtherBattler');
+assert.throws(() => execute(355, ["$gameSwitches.setValue(10, true); unknown();"]), /Chưa hỗ trợ script/);
+assert.equal(scene.game.flags['switch:10'], undefined, 'Xác thực toàn đoạn trước khi thay đổi trạng thái');
+execute(355, ['$gameVariables.setValue(11, -2.5); $gameSwitches.setValue(10, false);']);
+assert.equal(scene.game.flags['variable:11'], -2.5);
+assert.equal(scene.game.flags['switch:10'], false);
+scene.map = { events: [] };
+scene.input = { isPressed: () => false };
+scene.startEventList({ list: [
+    { code: 355, parameters: ["$gameActors.actor(2).setFaceImage('OtherFace', 3);"] },
+    { code: 655, parameters: ["$gameActors.actor(2).setBattlerImage('OtherBattler');"] }
+] }, 0);
+assert.equal(scene.eventActor(2).faceName, 'OtherFace');
+assert.equal(scene.eventActor(2).battlerName, 'OtherBattler');
+assert.equal(scene.eventRunner, null);
+console.log('ĐẠT: script API đổi hình, refresh, switch/biến và xác thực đoạn nhiều dòng.');
