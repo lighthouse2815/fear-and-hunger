@@ -175,6 +175,18 @@
             this.stepPattern = 1;
         }
 
+        checkTransfer() {
+            const transfer = this.game.data.transferAt(this.map, this.game.player.mapX, this.game.player.mapY);
+            if (!transfer || !transfer.mapId || transfer.mapId === this.game.mapId) return false;
+            this.game.mapId = transfer.mapId;
+            this.game.player.mapX = transfer.x;
+            this.game.player.mapY = transfer.y;
+            this.game.player.direction = transfer.direction;
+            this.leaving = true;
+            this.game.changeScene(FNH.Scene_Map, { fromTransfer: true });
+            return true;
+        }
+
         openPause() {
             this.finishMove();
             this.paused = true;
@@ -337,6 +349,7 @@
                     this.playerVisual.y = this.toY;
                     this.stepPattern = 1;
                     this.moveCooldown = 0.045;
+                    this.checkTransfer();
                 } else {
                     this.playerVisual.x = FNH.lerp(this.fromX, this.toX, this.moveT);
                     this.playerVisual.y = FNH.lerp(this.fromY, this.toY, this.moveT);

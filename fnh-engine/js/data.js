@@ -86,6 +86,22 @@
             return this.mapInfos[Number(id)] || null;
         }
 
+        transferAt(map, x, y) {
+            const events = (map && map.events) || [];
+            for (const event of events) {
+                if (!event || event.x !== x || event.y !== y) continue;
+                for (const page of event.pages || []) {
+                    for (const command of (page.list || [])) {
+                        if (command && command.code === 201 && Array.isArray(command.parameters)) {
+                            const p = command.parameters;
+                            return { mapId: Number(p[1]), x: Number(p[2]), y: Number(p[3]), direction: Number(p[4]) || 2 };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
         playable() {
             const self = this;
             return PLAYABLE.map(function (entry) {
