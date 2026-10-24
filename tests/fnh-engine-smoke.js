@@ -690,6 +690,30 @@ async function main() {
             scene.refreshEvents();
         })()`, false, false);
 
+        await evalPage(cdp, `(() => {
+            window.__nameBeforeInput = FNH.game.player.name;
+            FNH.game.scene.startEventList({list:[{code:303,parameters:[FNH.game.player.id,12]},
+                {code:121,parameters:[999987,999987,0]}]},0);
+        })()`, false, false);
+        await waitFor(cdp, 'document.querySelector(".fnh-name-dialog[open]")', 15000, 'giao diện đặt tên');
+        check('event đặt tên khóa điều khiển và chờ xác nhận', await evalPage(cdp,
+            'FNH.game.scene.paused && !FNH.game.input.enabled && FNH.game.scene.eventRunner.wait.type === "name" && document.querySelector(".fnh-name-dialog input").maxLength === 12', false, false));
+        await evalPage(cdp, 'document.querySelector(".fnh-name-dialog input").value="   ";document.querySelector(".fnh-name-dialog form").requestSubmit()', false, false);
+        check('tên trống không đổi actor hoặc chạy tiếp event', await evalPage(cdp,
+            'FNH.game.player.name === window.__nameBeforeInput && !FNH.game.flags["switch:999987"] && !!document.querySelector(".fnh-name-dialog[open]")', false, false));
+        await evalPage(cdp, 'document.querySelector(".fnh-name-dialog input").focus();document.querySelector(".fnh-name-dialog input").select()', false, false);
+        await cdp.send('Input.insertText', { text: 'Tên mới' });
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+        await cdp.send('Input.dispatchKeyEvent', { type: 'char', text: '\r', key: 'Enter', windowsVirtualKeyCode: 13 });
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+        await waitFor(cdp, 'FNH.game.flags["switch:999987"] && !FNH.game.scene.eventRunner', 15000, 'xác nhận tên nhân vật');
+        check('nhập tên tiếng Việt và khôi phục điều khiển sau xác nhận', await evalPage(cdp,
+            'FNH.game.player.name === "Tên mới" && FNH.game.input.enabled && !FNH.game.scene.paused && !document.querySelector(".fnh-name-dialog")', false, false));
+        await evalPage(cdp, 'FNH.game.scene.executeEventCommand({code:303,parameters:[FNH.game.player.id,12]});document.querySelector(".fnh-name-dialog input").value="Chưa lưu";FNH.game.scene.exit()', false, false);
+        check('rời scene dọn giao diện và không ghi tên chưa xác nhận', await evalPage(cdp,
+            'FNH.game.player.name === "Tên mới" && FNH.game.input.enabled && !FNH.game.scene.paused && !document.querySelector(".fnh-name-dialog")', false, false));
+        await evalPage(cdp, 'FNH.game.player.name=window.__nameBeforeInput;delete window.__nameBeforeInput;delete FNH.game.flags["switch:999987"]', false, false);
+
         await evalPage(cdp, 'FNH.game.scene.startEventList({list:[{code:212,parameters:[-1,7,true]},{code:121,parameters:[999989,999989,0]}]},0)', false, false);
         await waitFor(cdp, 'FNH.game.scene.animations.some(a => a.ready && a.frame >= 0)', 15000, 'animation bản đồ');
         check('event bản đồ chờ animation trước lệnh tiếp theo', await evalPage(cdp,

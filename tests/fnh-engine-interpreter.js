@@ -483,3 +483,25 @@ animationRunner.update(0);
 assert.equal(continuedAfterAnimation, true);
 assert.equal(animationRunner.done, true);
 console.log('ĐẠT: interpreter chờ vòng đời animation rồi tiếp tục đúng con trỏ.');
+
+const nameToken = { done: false };
+let nameAvailable = false, namesOpened = 0, afterName = false;
+const nameRunner = new FNH.EventInterpreter([command(303, [1, 12]), command(125)], {
+    canShowMessage: () => nameAvailable,
+    execute: (cmd) => {
+        if (cmd.code === 303) { namesOpened += 1; return { type: 'name', token: nameToken }; }
+        afterName = true;
+    }
+});
+nameRunner.update(0);
+assert.equal(namesOpened, 0, 'Đặt tên chờ khung hội thoại chung rảnh');
+nameAvailable = true;
+nameRunner.update(0);
+assert.equal(namesOpened, 1);
+nameRunner.update(100);
+assert.equal(afterName, false, 'Không bỏ qua nhập tên theo thời gian');
+nameToken.done = true;
+nameRunner.update(0);
+assert.equal(afterName, true);
+assert.equal(nameRunner.done, true);
+console.log('ĐẠT: đặt tên khóa luồng event và tiếp tục đúng con trỏ sau xác nhận.');

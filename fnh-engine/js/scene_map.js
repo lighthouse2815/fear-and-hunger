@@ -112,6 +112,64 @@
             });
         }
 
+        exit() {
+            if (this.closeNameInput) this.closeNameInput();
+        }
+
+        openNameInput(actor, maxLength) {
+            const limit = Math.max(1, Math.floor(Number(maxLength) || 1));
+            const token = { done: false };
+            const dialog = document.createElement('dialog');
+            dialog.className = 'fnh-name-dialog';
+            dialog.setAttribute('aria-label', 'Đặt tên nhân vật');
+            dialog.innerHTML = '<form><h2>Đặt tên nhân vật</h2><label>Tên nhân vật<input name="actorName" autocomplete="off" required></label><p></p><button type="submit">XÁC NHẬN</button></form>';
+            const form = dialog.querySelector('form');
+            const field = dialog.querySelector('input');
+            field.maxLength = limit;
+            field.value = String(actor.name || '').slice(0, limit);
+            dialog.querySelector('p').textContent = 'Tối đa ' + limit + ' ký tự · Enter để xác nhận';
+            const enabled = this.input.enabled;
+            const paused = this.paused;
+            this.input.enabled = false;
+            this.input.down.clear();
+            this.input.clearFrame();
+            this.paused = true;
+            this.nameInputDialog = dialog;
+            const finish = (name) => {
+                if (token.done) return;
+                if (name !== undefined) actor.name = name;
+                token.done = true;
+                this.input.enabled = enabled;
+                this.input.down.clear();
+                this.input.clearFrame();
+                this.paused = paused;
+                this.nameInputDialog = null;
+                this.closeNameInput = null;
+                dialog.close();
+                dialog.remove();
+                if (this.game.canvas) this.game.canvas.focus();
+            };
+            this.closeNameInput = () => finish();
+            dialog.addEventListener('cancel', (event) => event.preventDefault());
+            dialog.addEventListener('close', () => finish());
+            field.addEventListener('input', () => field.setCustomValidity(''));
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const value = field.value.trim();
+                if (!value || value.length > limit) {
+                    field.setCustomValidity('Hãy nhập tên từ 1 đến ' + limit + ' ký tự.');
+                    field.reportValidity();
+                    return;
+                }
+                finish(value);
+            });
+            document.body.appendChild(dialog);
+            dialog.showModal();
+            field.focus();
+            field.select();
+            return { type: 'name', token };
+        }
+
         async loadTileset(id) {
             const tileset = this.game.data.tileset(id);
             if (!tileset) throw new Error('Không tìm thấy tileset ' + id);
@@ -675,6 +733,7 @@
             if (this.bump > 0) this.bump = Math.max(0, this.bump - dt * 4);
             if (!this.ready || this.leaving) return;
             if (this.paused) {
+                if (this.nameInputDialog) return;
                 this.updatePause(dt);
                 return;
             }
@@ -1110,7 +1169,7 @@
                         this.eventChoice = runner.wait.disabled.findIndex((disabled) => !disabled);
                     }
                 }
-                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice', 'number', 'item'].includes(runner.wait.type))) {
+                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice', 'number', 'item', 'name'].includes(runner.wait.type))) {
                     this.dialogRunner = null;
                 }
                 if (runner.done) {
@@ -1379,6 +1438,10 @@
                         skills.sort((a, b) => a - b);
                     }
                 }
+            } else if (command.code === 303) {
+                if (this.battle || this.game.sceneName === 'battle') return;
+                const actor = this.eventActor(p[0]);
+                if (actor) return this.openNameInput(actor, p[1]);
             } else if (command.code === 321) {
                 const actor = this.eventActor(p[0]);
                 if (actor) this.game.data.changeActorClass(actor, p[1], !!p[2],
@@ -2084,7 +2147,7 @@
             this.drawBanner(ctx);
             if (this.game.gabs) this.game.gabs.draw(ctx);
             this.drawEventDialog(ctx);
-            if (this.paused) this.drawPause(ctx);
+            if (this.paused && !this.nameInputDialog) this.drawPause(ctx);
         }
     };
 })();

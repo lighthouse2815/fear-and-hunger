@@ -56,6 +56,8 @@
                     if (this.wait.scene.paused) return;
                 } else if (this.wait.type === 'gab') {
                     if (this.wait.queue.busy) return;
+                } else if (this.wait.type === 'name') {
+                    if (!this.wait.token.done) return;
                 } else if (this.wait.type === 'asset') {
                     if (this.wait.token.error) throw this.wait.token.error;
                     if (!this.wait.token.done) return;
@@ -94,6 +96,15 @@
                             lines.push(String(frame.list[frame.index++].parameters[0] || ''));
                         }
                         this.wait = { type: 'message', text: lines.join('\n'), faceName: p[0], faceIndex: p[1] };
+                        break;
+                    }
+                    case 303: {
+                        if (this.handlers.canShowMessage && !this.handlers.canShowMessage()) {
+                            frame.index -= 1;
+                            return;
+                        }
+                        const result = this.handlers.execute(command);
+                        if (result && result.type === 'name') this.wait = result;
                         break;
                     }
                     case 102:

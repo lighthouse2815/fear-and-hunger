@@ -414,3 +414,12 @@ Lệnh 236 hiển thị mưa, bão hoặc tuyết trên bản đồ, chuyển c�
 giảm dần loại hiện tại tới 0. Hạt bám theo tọa độ thế giới khi camera di chuyển;
 hiệu ứng nằm dưới picture/HUD và không hiển thị trong trận. Trạng thái cùng thời
 gian chuyển còn lại được lưu/đọc với screen effects; menu tạm dừng đóng băng hiệu ứng.
+
+### Đặt tên nhân vật
+
+Lệnh 303 mở ô nhập tên chuẩn của trình duyệt cho actor được chỉ định, với tên hiện
+tại và giới hạn ký tự từ event. Hỗ trợ nhập tiếng Việt/IME, không chấp nhận tên rỗng;
+Enter hoặc nút xác nhận cập nhật actor rồi cho interpreter tiếp tục. Giao diện giữ
+khóa hội thoại, tạm dừng bản đồ/hiệu ứng/timer và ngăn phím nhập tên điều khiển game.
+Đổi scene đóng giao diện, trả điều khiển và không ghi tên chưa xác nhận. Lệnh này
+không mở trong trận đấu. Tên được lưu cùng dữ liệu actor như các thay đổi actor khác.
