@@ -1124,6 +1124,12 @@
             if (!runner) return;
             try {
                 const wait = runner.wait;
+                if (wait && wait.type === 'scroll' && wait.height !== null) {
+                    const fast = !wait.noFastForward && (this.input.isDown('Enter', ' ', 'z', 'Z', 'Shift') ||
+                        this.input.mouse && this.input.mouse.down);
+                    wait.offset += dt * wait.speed * 30 * (fast ? 3 : 1);
+                    if (wait.offset >= FNH.HEIGHT + wait.height) wait.done = true;
+                }
                 if (wait && ['message', 'choice', 'number', 'item'].includes(wait.type) && this.eventWait === wait &&
                     (!this.dialogRunner || this.dialogRunner === runner)) {
                     const input = this.input;
@@ -1169,7 +1175,7 @@
                         this.eventChoice = runner.wait.disabled.findIndex((disabled) => !disabled);
                     }
                 }
-                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice', 'number', 'item', 'name'].includes(runner.wait.type))) {
+                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice', 'number', 'item', 'name', 'scroll'].includes(runner.wait.type))) {
                     this.dialogRunner = null;
                 }
                 if (runner.done) {
@@ -1195,8 +1201,16 @@
         drawEventDialog(ctx) {
             const dialog = this.dialogState();
             const wait = dialog.eventRunner && dialog.eventRunner.wait;
-            if (!wait || !['message', 'choice', 'number', 'item'].includes(wait.type)) return;
-            if (wait.type === 'message') {
+            if (!wait || !['message', 'choice', 'number', 'item', 'scroll'].includes(wait.type)) return;
+            if (wait.type === 'scroll') {
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(0, 0, FNH.WIDTH, FNH.HEIGHT);
+                ctx.clip();
+                wait.height = FNH.wrapText(ctx, wait.text, 40, FNH.HEIGHT - wait.offset,
+                    FNH.WIDTH - 80, 36, { size: 24, shadow: true });
+                ctx.restore();
+            } else if (wait.type === 'message') {
                 FNH.panel(ctx, 20, 420, FNH.WIDTH - 40, 170);
                 FNH.wrapText(ctx, wait.text, 40, 450, FNH.WIDTH - 80, 25, { size: 18 });
                 FNH.text(ctx, 'Z / ENTER · TIẾP TỤC', FNH.WIDTH - 40, 575, { size: 11, align: 'right' });

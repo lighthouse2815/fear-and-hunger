@@ -714,6 +714,18 @@ async function main() {
             'FNH.game.player.name === "Tên mới" && FNH.game.input.enabled && !FNH.game.scene.paused && !document.querySelector(".fnh-name-dialog")', false, false));
         await evalPage(cdp, 'FNH.game.player.name=window.__nameBeforeInput;delete window.__nameBeforeInput;delete FNH.game.flags["switch:999987"]', false, false);
 
+        await evalPage(cdp, 'FNH.game.scene.startEventList({list:[{code:105,parameters:[8,false]},{code:405,parameters:["Một đoạn văn bản cuộn."]},{code:405,parameters:["Dòng cuối trước khi event tiếp tục."]},{code:121,parameters:[999986,999986,0]}]},0)', false, false);
+        await waitFor(cdp, 'FNH.game.scene.eventRunner && FNH.game.scene.eventRunner.wait.type === "scroll" && FNH.game.scene.eventRunner.wait.height > 0', 15000, 'văn bản cuộn');
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        check('văn bản cuộn giữ event và không bị bỏ qua bằng Enter', await evalPage(cdp,
+            'FNH.game.scene.eventRunner.wait.type === "scroll" && !FNH.game.flags["switch:999986"] && FNH.game.scene.dialogRunner === FNH.game.scene.eventRunner', false, false));
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16 });
+        await waitFor(cdp, 'FNH.game.flags["switch:999986"] && !FNH.game.scene.eventRunner', 15000, 'cuộn xong tiếp tục event');
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16 });
+        check('cuộn xong trả khóa hội thoại và chạy đúng lệnh tiếp theo', await evalPage(cdp,
+            '!FNH.game.scene.dialogRunner && FNH.game.flags["switch:999986"]', false, false));
+        await evalPage(cdp, 'delete FNH.game.flags["switch:999986"]', false, false);
+
         await evalPage(cdp, 'FNH.game.scene.startEventList({list:[{code:212,parameters:[-1,7,true]},{code:121,parameters:[999989,999989,0]}]},0)', false, false);
         await waitFor(cdp, 'FNH.game.scene.animations.some(a => a.ready && a.frame >= 0)', 15000, 'animation bản đồ');
         check('event bản đồ chờ animation trước lệnh tiếp theo', await evalPage(cdp,

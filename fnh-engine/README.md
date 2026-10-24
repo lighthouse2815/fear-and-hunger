@@ -434,3 +434,12 @@ mới; lỗi tải trả quyền phát cho BGM. Lệnh 133 đổi nhạc hiệu 
 cùng flags. Trận troop phát cấu hình này hoặc `System.victoryMe` đúng một lần và
 dừng ME khi quay lại bản đồ trước khi khôi phục âm thanh bản đồ. Mở trận cũng dừng
 ME bản đồ để tránh nhạc hiệu phát chồng lên nhạc chiến đấu.
+
+### Văn bản cuộn
+
+Lệnh 105 gom các dòng 405 và cuộn chúng qua toàn bộ khung nhìn, giữ dòng trống và
+xuống dòng theo chiều rộng thực tế bằng bộ dựng hội thoại hiện có. Tốc độ đọc từ
+event; giữ xác nhận, Shift hoặc chuột tăng tốc ba lần trừ khi bật no-fast. Enter
+không bỏ qua đoạn văn. Interpreter chỉ chạy tiếp sau khi dòng cuối ra khỏi màn hình;
+khóa hội thoại dùng chung ngăn event khác chen vào. Cơ chế dùng được trên bản đồ và
+trong battle event, giữ nguyên vị trí khi scene tạm dừng.
