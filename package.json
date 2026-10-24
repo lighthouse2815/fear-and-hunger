@@ -7,8 +7,10 @@
     "start": "python3 -m http.server 8137",
     "start:node": "npx -y http-server -p 8137 -c-1",
     "check": "node --check js/utils.js && node --check js/sound.js && node --check js/data.js && node --check js/combat.js && node --check js/game.js && node --check js/main.js",
+    "check:fnh": "node --check tools/fnh-browser/server.js && node --check tools/fnh-browser/compat.js && node --check tests/fnh-browser-smoke.js",
     "fnh": "node tools/fnh-browser/server.js",
     "fnh:open": "node tools/fnh-browser/server.js --open",
-    "test": "npm run check && node tests/smoke.js"
+    "test": "npm run check && node tests/smoke.js",
+    "test:fnh": "npm run check:fnh && node tests/fnh-browser-smoke.js"
   }
 }
