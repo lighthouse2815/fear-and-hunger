@@ -15,6 +15,6 @@
     "fnh:engine:open": "node tools/fnh-engine/server.js --open",
     "test": "npm run check && node tests/smoke.js",
     "test:fnh": "npm run check:fnh && node tests/fnh-browser-smoke.js",
-    "test:fnh-engine": "npm run check:fnh-engine && node tests/fnh-engine-smoke.js"
+    "test:fnh-engine": "npm run check:fnh-engine && node tests/fnh-engine-events.js && node tests/fnh-engine-smoke.js"
   }
 }

@@ -457,16 +457,17 @@
                     this.game.gold = Math.max(0, this.game.gold + (operation === 0 ? amount : -amount));
                 } else if (command.code === 126) {
                     const itemId = Number(p[0] || 0);
-                    let amount = Number(p[2] || 0);
-                    if (p[1] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
+                    let amount = Number(p[3] || 0);
+                    if (p[2] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
                     const inventory = this.game.player.inventory || (this.game.player.inventory = []);
                     const entry = inventory.find((item) => item.id === itemId);
-                    if (p[3] === 0) {
-                        if (entry) entry.amount += amount;
-                        else inventory.push({ id: itemId, amount: amount });
-                    } else if (entry) {
-                        entry.amount = Math.max(0, entry.amount - amount);
-                        if (!entry.amount) inventory.splice(inventory.indexOf(entry), 1);
+                    const delta = p[1] === 0 ? amount : -amount;
+                    const total = Math.max(0, (entry ? entry.amount : 0) + delta);
+                    if (entry) {
+                        entry.amount = total;
+                        if (!total) inventory.splice(inventory.indexOf(entry), 1);
+                    } else if (total > 0) {
+                        inventory.push({ id: itemId, amount: total });
                     }
                 } else if (command.code === 250 && p[0] && p[0].name) {
                     this.game.audio.playSe(p[0].name, { volume: (Number(p[0].volume) || 90) / 100 });
