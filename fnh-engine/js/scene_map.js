@@ -111,7 +111,7 @@
             }
 
             this.events = this.map.events.filter(Boolean).map((event) => {
-                const page = game.data.eventPage(event, game.flags);
+                const page = game.data.eventPage(event, game.flags, game.mapId);
                 if (!page || !page.image || !(page.image.characterName || page.image.tileId > 0)) return null;
                 return {
                     id: event.id,
@@ -173,7 +173,7 @@
         }
 
         checkTransfer() {
-            const transfer = this.game.data.transferAt(this.map, this.game.player.mapX, this.game.player.mapY);
+            const transfer = this.game.data.transferAt(this.map, this.game.player.mapX, this.game.player.mapY, this.game.flags, this.game.mapId);
             if (!transfer || !transfer.mapId || transfer.mapId === this.game.mapId) return false;
             this.game.mapId = transfer.mapId;
             this.game.player.mapX = transfer.x;
@@ -419,7 +419,9 @@
                 this.triggerGuard();
                 return;
             }
-            const commands = this.game.data.commandsAt(this.map, front.x, front.y, this.game.flags);
+            const commands = this.game.data.commandsAt(this.map, front.x, front.y, this.game.flags, this.game.mapId);
+            const transfer = this.game.data.transferAt(this.map, front.x, front.y, this.game.flags, this.game.mapId);
+            const message = this.game.data.messageAt(this.map, front.x, front.y, this.game.flags, this.game.mapId);
             const eventAtFront = (this.map.events || []).find((event) => event && event.x === front.x && event.y === front.y);
             for (const command of commands) {
                 const p = command.parameters || [];
@@ -436,10 +438,10 @@
                     const to = Number(p[1] || from);
                     let operand = Number(p[4] || 0);
                     if (p[3] === 1) operand = Number(this.game.flags['variable:' + operand] || 0);
-                    if (p[3] === 2) operand = Math.floor(Math.random() * (operand + 1));
                     for (let id = from; id <= to; id += 1) {
                         const key = 'variable:' + id;
                         const old = Number(this.game.flags[key] || 0);
+                        if (p[3] === 2) operand = Number(p[4] || 0) + Math.floor(Math.random() * (Number(p[5] || 0) - Number(p[4] || 0) + 1));
                         if (p[2] === 0) this.game.flags[key] = operand;
                         else if (p[2] === 1) this.game.flags[key] = old + operand;
                         else if (p[2] === 2) this.game.flags[key] = old - operand;
@@ -448,8 +450,8 @@
                         else if (p[2] === 5 && operand !== 0) this.game.flags[key] = old % operand;
                     }
                 } else if (command.code === 123 && eventAtFront) {
-                    const key = 'self:' + eventAtFront.id + ':' + String(p[0] || 'A');
-                    this.game.flags[key] = true;
+                    const key = 'self:' + (this.game.mapId || 1) + ':' + eventAtFront.id + ':' + String(p[0] || 'A');
+                    this.game.flags[key] = p[1] === 0;
                 } else if (command.code === 125) {
                     const operation = Number(p[0] || 0);
                     let amount = Number(p[2] || 0);
@@ -473,7 +475,6 @@
                     this.game.audio.playSe(p[0].name, { volume: (Number(p[0].volume) || 90) / 100 });
                 }
             }
-            const transfer = this.game.data.transferAt(this.map, front.x, front.y);
             if (transfer && transfer.mapId && transfer.mapId !== this.game.mapId) {
                 this.game.mapId = transfer.mapId;
                 this.game.player.mapX = transfer.x;
@@ -483,7 +484,6 @@
                 this.game.changeScene(FNH.Scene_Map, { fromTransfer: true });
                 return;
             }
-            const message = this.game.data.messageAt(this.map, front.x, front.y);
             if (message) {
                 this.game.showToast(message, Math.max(2.5, Math.min(8, message.length / 14)));
                 return;

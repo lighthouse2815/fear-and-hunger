@@ -86,26 +86,22 @@
             return this.mapInfos[Number(id)] || null;
         }
 
-        transferAt(map, x, y) {
-            const events = (map && map.events) || [];
-            for (const event of events) {
-                if (!event || event.x !== x || event.y !== y) continue;
-                for (const page of event.pages || []) {
-                    for (const command of (page.list || [])) {
-                        if (command && command.code === 201 && Array.isArray(command.parameters)) {
-                            const p = command.parameters;
-                            return { mapId: Number(p[1]), x: Number(p[2]), y: Number(p[3]), direction: Number(p[4]) || 2 };
-                        }
-                    }
-                }
+        transferAt(map, x, y, flags, mapId) {
+            for (const command of this.commandsAt(map, x, y, flags, mapId)) {
+                if (command.code !== 201 || !Array.isArray(command.parameters)) continue;
+                const p = command.parameters;
+                const value = (index) => p[0] === 1
+                    ? Number((flags || {})['variable:' + p[index]] || 0)
+                    : Number(p[index]);
+                return { mapId: value(1), x: value(2), y: value(3), direction: Number(p[4]) || 2 };
             }
             return null;
         }
 
-        messageAt(map, x, y) {
+        messageAt(map, x, y, flags, mapId) {
             for (const event of ((map && map.events) || [])) {
                 if (!event || event.x !== x || event.y !== y) continue;
-                const active = this.eventPage(event, {});
+                const active = this.eventPage(event, flags || {}, mapId);
                 for (const page of active ? [active] : []) {
                     const list = page.list || [];
                     for (let i = 0; i < list.length; i += 1) {
@@ -121,7 +117,8 @@
             return null;
         }
 
-        eventPage(event, flags) {
+        eventPage(event, flags, mapId) {
+            flags = flags || {};
             const pages = event && event.pages || [];
             for (let i = pages.length - 1; i >= 0; i -= 1) {
                 const page = pages[i];
@@ -129,16 +126,20 @@
                 if (c.switch1Valid && !flags['switch:' + c.switch1Id]) continue;
                 if (c.switch2Valid && !flags['switch:' + c.switch2Id]) continue;
                 if (c.variableValid && Number(flags['variable:' + c.variableId] || 0) < Number(c.variableValue || 0)) continue;
-                if (c.selfSwitchValid && !flags['self:' + event.id + ':' + c.selfSwitchCh]) continue;
+                const selfKey = 'self:' + (mapId || 1) + ':' + event.id + ':' + c.selfSwitchCh;
+                const selfValue = Object.prototype.hasOwnProperty.call(flags, selfKey)
+                    ? flags[selfKey]
+                    : (mapId || 1) === 1 && flags['self:' + event.id + ':' + c.selfSwitchCh];
+                if (c.selfSwitchValid && !selfValue) continue;
                 return page;
             }
             return null;
         }
 
-        commandsAt(map, x, y, flags) {
+        commandsAt(map, x, y, flags, mapId) {
             for (const event of ((map && map.events) || [])) {
                 if (!event || event.x !== x || event.y !== y) continue;
-                const page = this.eventPage(event, flags || {});
+                const page = this.eventPage(event, flags || {}, mapId);
                 return page ? (page.list || []) : [];
             }
             return [];
