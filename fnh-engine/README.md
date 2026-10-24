@@ -136,7 +136,14 @@ Trong trận đấu: `↑`/`↓` chọn **TẤN CÔNG**, **PHÒNG THỦ** hoặc
 - Thành viên sống lần lượt hành động trước lượt Guard; mục tiêu dựa trên TGR,
   phòng thủ theo từng người, restriction bất động làm mất lượt, trạng thái cập nhật
   cuối hành động/cuối vòng. Chỉ thua khi toàn đội chết; EXP được chia cho từng actor.
-  Đây vẫn chưa phải công thức/AI/bộ phận chiến đấu đầy đủ của bản gốc.
+  Đây vẫn chưa phải AI/bộ phận chiến đấu đầy đủ của bản gốc.
+- Menu kỹ năng/vật phẩm có lọc occasion, chọn mục tiêu sống/chết, chi phí MP/TP,
+  tiêu thụ đồ và hồi sinh. Attack dùng công thức database; engine hỗ trợ các công
+  thức số hằng và `a.atk * 4 - b.def * 2` đang có trong bản cài được kiểm tra, gồm
+  accuracy/evasion, critical, variance, element, physical/magical rate, guard,
+  HP/MP damage/recover/drain, thêm/xóa state, học skill và common event. Common event
+  của hành động chạy trong trận, có thể chờ hội thoại và áp dụng vào tổ đội. Hiệu ứng
+  chưa hỗ trợ báo lỗi trước khi trả chi phí. Chưa có action sequence/plugin battle.
 - Thắng, thua (màn hình chết) và bỏ chạy đều có đường quay lại game.
 - **Một ô lưu** trong `localStorage`:
   - khoá: `FNH_ENGINE:<namespace>:save1`;
@@ -278,7 +285,7 @@ mặc định tổ đội một người. Có thể tạo tổ đội trống tr
 trên bản đồ hoặc menu formation. Trạng thái actor đọc từ States.json: thêm/xóa (313), điều kiện state, chết/hồi sinh,
 hồi phục toàn bộ, miễn nhiễm, restriction, tham số trait (21), xparam (22), sparam (23),
 đếm lượt và số bước trước khi hết trạng thái. Bonus chỉ số (317) được lưu và cộng trước
-trait multiplier. Chưa có đầy đủ hiệu ứng do plugin, buff/debuff hoặc chiến đấu bằng kỹ năng.
+trait multiplier. Chưa có đầy đủ hiệu ứng do plugin, buff/debuff hoặc kỹ năng do plugin tùy biến.
 Script event 355/655 hỗ trợ một tập API literal: đổi ảnh character/face/battler của
 actor, refresh người chơi, setValue switch/biến bằng hằng số. Đoạn nhiều dòng được
 kiểm tra toàn bộ trước khi thay đổi trạng thái; câu lệnh hoặc biểu thức ngoài tập này

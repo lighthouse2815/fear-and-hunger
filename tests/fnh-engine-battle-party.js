@@ -6,8 +6,8 @@ const vm = require('node:vm');
 const FNH = { Scene: class {} };
 const math = Object.create(Math);
 math.random = () => 0;
-vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/scene_battle.js'), 'utf8'), { window: { FNH }, Math: math });
-function actor(id) { return { id, name: 'Actor ' + id, hp: 100, maxHp: 100, def: 10, atk: 10, tgr: 1, exp: 0, faceName: 'Face' }; }
+for (const file of ['action', 'scene_battle']) vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/' + file + '.js'), 'utf8'), { window: { FNH }, Math: math });
+function actor(id) { return { id, name: 'Actor ' + id, hp: 100, maxHp: 100, def: 10, atk: 10, mp: 0, tgr: 1, exp: 0, faceName: 'Face' }; }
 const battle = new FNH.Scene_Battle();
 const first = actor(1), second = actor(2);
 let destination;
@@ -15,7 +15,10 @@ const ended = [];
 battle.game = { player: first, partyIds: [1, 2], actorStates: { 2: second }, gold: 0,
     assets: { loadImage: () => Promise.resolve() }, showToast() {},
     audio: { playSe() {}, playBgm() {}, stopBgm() {}, stopBgs() {} },
-    data: { createGuardEncounter: () => ({ hp: 320, maxHp: 320, atk: 10, def: 10, rewardGold: 35, rewardExp: 20 }),
+    data: { skill: () => ({ id: 1, name: 'Attack', occasion: 1, scope: 1, successRate: 100, hitType: 0,
+            damage: { formula: 'a.atk * 4 - b.def * 2', type: 1, variance: 0 }, effects: [] }),
+        battlerTraits: () => [],
+        createGuardEncounter: () => ({ hp: 320, maxHp: 320, atk: 10, def: 10, rewardGold: 35, rewardExp: 20 }),
         actorTurnEnd: (actor, timing) => ended.push([actor.id, timing]),
         setActorHp: (actor, value) => { actor.hp = Math.max(0, Math.min(actor.maxHp, value)); } },
     changeScene: (...args) => { destination = args; }, gameOver() { throw new Error('Chưa được game over'); } };

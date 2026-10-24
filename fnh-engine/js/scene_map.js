@@ -403,6 +403,17 @@
         }
 
         startAutorun() {
+            if (this.game.reservedCommonEvent) {
+                const event = this.game.data.commonEvents[this.game.reservedCommonEvent];
+                if (!event) {
+                    this.game.lastError = new Error('Không tìm thấy common event đặt trước');
+                    this.game.showToast(this.game.lastError.message, 6);
+                    this.game.reservedCommonEvent = null;
+                } else if (this.startEventList(event, 0)) {
+                    this.game.reservedCommonEvent = null;
+                    return true;
+                } else if (!this.eventRunner) this.game.reservedCommonEvent = null;
+            }
             for (const event of this.map.events || []) {
                 if (!event) continue;
                 const page = this.eventPage(event);
@@ -1203,6 +1214,7 @@
             } else if (command.code === 211) {
                 this.game.player.transparent = p[0] === 0;
             } else if (command.code === 351) {
+                if (this.game.sceneName === 'battle') return;
                 this.openPause();
                 return { type: 'pause', scene: this };
             } else if (command.code === 353 || command.code === 354) {
@@ -1281,22 +1293,23 @@
                 }
             } else if (command.code >= 231 && command.code <= 235) {
                 const pictures = this.game.pictures || (this.game.pictures = new FNH.PictureManager(this.game.assets));
+                const scope = this.game.sceneName === 'battle' ? 'battle' : 'map';
                 const values = (start) => ({
                     x: p[start] === 0 ? p[start + 1] : Number(this.game.flags['variable:' + p[start + 1]] || 0),
                     y: p[start] === 0 ? p[start + 2] : Number(this.game.flags['variable:' + p[start + 2]] || 0),
                     scaleX: p[start + 3], scaleY: p[start + 4], opacity: p[start + 5]
                 });
-                if (command.code === 231) pictures.show(p[0], p[1], p[2], values(3), p[9]);
+                if (command.code === 231) pictures.show(p[0], p[1], p[2], values(3), p[9], scope);
                 if (command.code === 232) {
-                    pictures.move(p[0], p[2], values(3), p[9], p[10]);
+                    pictures.move(p[0], p[2], values(3), p[9], p[10], scope);
                     if (p[11] && p[10] > 0) return { type: 'time', seconds: p[10] / 60 };
                 }
-                if (command.code === 233) pictures.rotate(p[0], p[1]);
+                if (command.code === 233) pictures.rotate(p[0], p[1], scope);
                 if (command.code === 234) {
-                    pictures.tint(p[0], p[1], p[2]);
+                    pictures.tint(p[0], p[1], p[2], scope);
                     if (p[3] && p[2] > 0) return { type: 'time', seconds: p[2] / 60 };
                 }
-                if (command.code === 235) pictures.erase(p[0]);
+                if (command.code === 235) pictures.erase(p[0], scope);
             } else if (command.code >= 221 && command.code <= 225) {
                 const screen = this.game.screenEffects || (this.game.screenEffects = new FNH.ScreenEffects());
                 if (command.code === 221 || command.code === 222) {

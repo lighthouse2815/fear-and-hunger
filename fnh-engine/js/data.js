@@ -179,8 +179,8 @@
         }
 
         battlerTraits(actor) {
-            const raw = this.actor(actor.id);
-            const sources = [raw, this.classData(actor.classId)];
+            const raw = actor.enemyId ? this.enemy(actor.enemyId) : this.actor(actor.id);
+            const sources = [raw, actor.enemyId ? null : this.classData(actor.classId)];
             for (const item of actor.equipment || []) sources.push((item.type === 'weapon' ? this.weapons : this.armors)[item.id]);
             for (const id of actor.states || []) sources.push(this.states[id]);
             return sources.filter(Boolean).flatMap((source) => source.traits || []);
@@ -188,11 +188,13 @@
 
         refreshActor(actor) {
             const cls = this.classData(actor.classId);
-            if (!cls) return;
+            const enemy = actor.enemyId ? this.enemy(actor.enemyId) : null;
+            const baseParams = actor.baseParams || (enemy && enemy.params);
+            if (!cls && !baseParams) return;
             const traits = this.battlerTraits(actor);
             const fields = ['maxHp', 'maxMp', 'atk', 'def', 'mat', 'mdf', 'agi', 'luk'];
             fields.forEach((field, index) => {
-                let value = this._param(cls.params, index, actor.level) + Number((actor.paramPlus || [])[index] || 0);
+                let value = (baseParams ? Number(baseParams[index] || 0) : this._param(cls.params, index, actor.level)) + Number((actor.paramPlus || [])[index] || 0);
                 for (const entry of actor.equipment || []) {
                     const item = (entry.type === 'weapon' ? this.weapons : this.armors)[entry.id];
                     value += Number(item && item.params && item.params[index] || 0);

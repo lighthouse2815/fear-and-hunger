@@ -694,6 +694,8 @@ async function main() {
         check('event thêm đồng đội vào tổ đội thật', await evalPage(cdp,
             'FNH.game.partyIds.length === 2 && FNH.game.partyIds[1] === 3 && FNH.game.actorStates[3].hp > 0', false, false));
 
+        await evalPage(cdp, 'FNH.game.scene.startEventList({list: [{code: 126, parameters: [30, 0, 0, 1]}, {code: 312, parameters: [0, 1, 1, 0, 100]}, {code: 318, parameters: [0, 3, 0, 12]}]}, 0)', false, false);
+
         await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
         await sleep(500);
         check('nhân vật bước lên ô 27,66', await evalPage(
@@ -733,6 +735,27 @@ async function main() {
         ));
         await waitFor(cdp, 'FNH.game.scene.phase === "command"', 15000, 'lượt chọn lệnh');
         await screenshot('battle');
+        await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.scene.phase === "actionMenu"', 5000, 'menu vật phẩm trong trận');
+        await evalPage(cdp, 'FNH.game.scene.actionMenuIndex = FNH.game.scene.actionMenu.findIndex(entry => entry.item.id === 30)', false, false);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.scene.phase === "actionTarget"', 5000, 'mục tiêu vật phẩm');
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        check('vật phẩm trong trận hồi MP và được tiêu thụ', await evalPage(cdp,
+            'FNH.game.player.mp > 0 && !FNH.game.player.inventory.some(item => item.id === 30 && (item.kind || "item") === "item")', false, false));
+        await waitFor(cdp, 'FNH.game.scene.phase === "command" && FNH.game.scene.player.id === 3', 5000, 'đồng đội tiếp lượt');
+        await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.scene.phase === "actionMenu"', 5000, 'menu kỹ năng trong trận');
+        await evalPage(cdp, 'FNH.game.scene.actionMenuIndex = FNH.game.scene.actionMenu.findIndex(entry => entry.item.id === 12); FNH.game.actorStates[3].mp', false, false);
+        const skillMpBefore = await evalPage(cdp, 'FNH.game.actorStates[3].mp', false, false);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        check('kỹ năng dùng đúng chi phí MP database', await evalPage(cdp,
+            'FNH.game.actorStates[3].mp === ' + skillMpBefore + ' - FNH.game.data.skills[12].mpCost', false, false));
+        await waitFor(cdp, '["command", "victory", "defeat"].includes(FNH.game.scene.phase)', 5000, 'kỹ năng hoàn tất');
 
         let battlePhase = 'command';
         for (let turn = 0; turn < 8 && battlePhase !== 'victory'; turn += 1) {

@@ -68,6 +68,7 @@
             this.actorStates = {};
             this.partyIds = null;
             this.savedBgm = null;
+            this.reservedCommonEvent = null;
             this.eventTimer = { seconds: 0, working: false };
             this.gold = 0;
             this.mapId = 1;
@@ -212,6 +213,7 @@
             this.partyIds = [actorId];
             this.actorStates = {};
             this.savedBgm = null;
+            this.reservedCommonEvent = null;
             this.eventTimer = { seconds: 0, working: false };
             this.player.mapX = 27;
             this.player.mapY = 67;
@@ -238,6 +240,7 @@
                 actorStates: this.actorStates,
                 partyIds: this.partyIds,
                 savedBgm: this.savedBgm,
+                reservedCommonEvent: this.reservedCommonEvent,
                 eventTimer: this.eventTimer,
                 gold: this.gold,
                 guardDefeated: this.guardDefeated,
@@ -273,6 +276,7 @@
             this.partyIds = Array.isArray(save.partyIds) ? [...new Set(save.partyIds)] : [this.player.id];
             delete this.actorStates[this.player.id];
             this.savedBgm = save.savedBgm || null;
+            this.reservedCommonEvent = save.reservedCommonEvent || null;
             this.eventTimer = { seconds: Math.max(0, Number(save.eventTimer && save.eventTimer.seconds) || 0),
                 working: !!(save.eventTimer && save.eventTimer.working) };
             this.player.mapX = Number.isFinite(this.player.mapX) ? this.player.mapX : 27;

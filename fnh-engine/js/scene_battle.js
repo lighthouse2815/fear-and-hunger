@@ -14,7 +14,9 @@
             this.timer = 1.7;
             this.index = 0;
             this.hoverIndex = -1;
-            this.commands = ['TẤN CÔNG', 'PHÒNG THỦ', 'BỎ CHẠY'];
+            this.commands = ['TẤN CÔNG', 'PHÒNG THỦ', 'BỎ CHẠY', 'KỸ NĂNG', 'VẬT PHẨM'];
+            this.actionMenu = null;
+            this.actionMenuIndex = 0;
             this.log = '';
             this.turn = 1;
             this.damageNumbers = [];
@@ -44,6 +46,11 @@
             this.guardedActors.clear();
             this.enemy = this.game.data.createGuardEncounter();
             this.enemy.hp = this.enemy.maxHp;
+            this.enemy.maxMp = 0;
+            this.enemy.mp = 0;
+            this.enemy.baseParams = [this.enemy.maxHp, 0, this.enemy.atk, this.enemy.def, 10, 10, this.enemy.agi || 10, 10];
+            if (this.game.data.refreshActor) this.game.data.refreshActor(this.enemy);
+            this.commonEventContext = null;
             this.phase = 'intro';
             this.timer = 1.7;
             this.index = 0;
@@ -91,10 +98,10 @@
         commandRects() {
             return this.commands.map(function (label, index) {
                 return {
-                    x: 558,
-                    y: 486 + index * 38,
-                    width: 206,
-                    height: 32
+                    x: 476 + (index % 2) * 150,
+                    y: 490 + Math.floor(index / 2) * 34,
+                    width: 144,
+                    height: 30
                 };
             });
         }
@@ -124,22 +131,122 @@
                 this.playerAttack();
             } else if (index === 1) {
                 this.playerGuard();
-            } else {
+            } else if (index === 2) {
                 this.playerFlee();
+            } else {
+                this.openActionMenu(index === 3);
             }
         }
 
+        openActionMenu(isSkill) {
+            const data = this.game.data;
+            const skillIds = [...new Set([...(this.player.skills || []), ...data.battlerTraits(this.player)
+                .filter((trait) => trait.code === 43).map((trait) => trait.dataId)])];
+            const entries = isSkill ? skillIds.map((id) => ({ item: data.skill(id), isSkill: true }))
+                : (this.game.player.inventory || []).filter((entry) => (entry.kind || 'item') === 'item' && entry.amount > 0)
+                    .map((entry) => ({ item: data.items[entry.id], isSkill: false, amount: entry.amount }));
+            this.actionMenu = entries.filter((entry) => entry.item && [0, 1].includes(entry.item.occasion));
+            this.actionMenuIndex = 0;
+            this.phase = 'actionMenu';
+        }
+
+        useAction(entry, targets) {
+            try {
+                const action = new FNH.Action(this.game.data, entry.item);
+                if (!action.canUse(this.player, entry.isSkill)) {
+                    this.log = 'Không thể dùng hành động này.';
+                    return false;
+                }
+                if (entry.isSkill) action.pay(this.player);
+                else if (entry.item.consumable) {
+                    const inventory = this.game.player.inventory;
+                    const item = inventory.find((item) => (item.kind || 'item') === 'item' && item.id === entry.item.id && item.amount > 0);
+                    if (!item) return false;
+                    item.amount -= 1;
+                    if (!item.amount) inventory.splice(inventory.indexOf(item), 1);
+                }
+                const results = [];
+                for (const target of targets.length ? targets : [null]) {
+                    for (let repeat = 0; repeat < Math.max(1, entry.item.repeats || 1); repeat += 1) {
+                        const result = action.apply(this.player, target, this.guardedActors.has(target && target.id));
+                        if (result.commonEvent) this.game.reservedCommonEvent = result.commonEvent;
+                        results.push(result);
+                    }
+                }
+                const total = results.reduce((sum, result) => sum + result.hp, 0);
+                const missed = results.every((result) => result.missed);
+                if (total) this.addDamage(Math.abs(total), targets[0] === this.enemy ? 408 : 226,
+                    targets[0] === this.enemy ? 264 : 398, total < 0 ? '#a9d99c' : '#ffd39b', targets[0] !== this.enemy);
+                this.enemyFlash = targets.includes(this.enemy) && total ? 0.24 : 0;
+                this.log = this.player.name + ' dùng ' + entry.item.name + (missed ? ' — trượt' : total ? ' — HP ' + (-total) : '') + '.';
+                this.phase = 'player';
+                this.timer = 0.9;
+                this.actionMenu = null;
+                this.game.audio.playSe('Decision1', { volume: 0.5 });
+                return true;
+            } catch (error) {
+                this.game.lastError = error;
+                this.game.showToast(error.message, 6);
+                return false;
+            }
+        }
+
+        chooseAction(entry) {
+            const scope = entry.item.scope;
+            if (scope === 7 || scope === 9) {
+                const targets = this.members.filter((actor) => scope === 9 ? actor.hp <= 0 : actor.hp > 0);
+                if (!targets.length) { this.log = 'Không có mục tiêu phù hợp.'; return; }
+                this.pendingAction = entry;
+                this.actionMenu = targets.map((actor) => ({ actor }));
+                this.actionMenuIndex = 0;
+                this.phase = 'actionTarget';
+                return;
+            }
+            if (scope === 8 || scope === 10) {
+                const targets = this.members.filter((actor) => scope === 10 ? actor.hp <= 0 : actor.hp > 0);
+                if (!targets.length) { this.log = 'Không có mục tiêu phù hợp.'; return; }
+                this.useAction(entry, targets);
+            } else if (scope === 11) this.useAction(entry, [this.player]);
+            else if (scope >= 1 && scope <= 6) this.useAction(entry, Array.from({ length: scope >= 3 ? scope - 2 : 1 }, () => this.enemy));
+            else if (scope === 0) this.useAction(entry, []);
+            else this.game.showToast('Chưa hỗ trợ phạm vi hành động ' + scope, 4);
+        }
+
+        updateActionMenu() {
+            const input = this.input;
+            if (input.isPressed('Escape', 'x', 'X')) {
+                this.phase = 'command';
+                this.actionMenu = null;
+                return;
+            }
+            const count = this.actionMenu.length;
+            if (count && input.isPressed('ArrowUp', 'w', 'W')) this.actionMenuIndex = (this.actionMenuIndex + count - 1) % count;
+            if (count && input.isPressed('ArrowDown', 's', 'S')) this.actionMenuIndex = (this.actionMenuIndex + 1) % count;
+            if (count && input.isPressed('Enter', ' ', 'z', 'Z')) {
+                const entry = this.actionMenu[this.actionMenuIndex];
+                if (this.phase === 'actionTarget') this.useAction(this.pendingAction, [entry.actor]);
+                else this.chooseAction(entry);
+            }
+        }
+
+        drawActionMenu(ctx) {
+            if (!this.actionMenu || !['actionMenu', 'actionTarget'].includes(this.phase)) return;
+            FNH.panel(ctx, 96, 100, FNH.WIDTH - 192, 340);
+            const start = Math.max(0, this.actionMenuIndex - 6);
+            const entries = this.actionMenu.slice(start, start + 7);
+            if (!entries.length) FNH.text(ctx, 'Không có hành động phù hợp.', 120, 140, { size: 18 });
+            entries.forEach((entry, index) => {
+                let label;
+                if (entry.actor) label = entry.actor.name + ' · HP ' + entry.actor.hp + '/' + entry.actor.maxHp;
+                else label = entry.item.name + (entry.isSkill ? ' · MP ' + Math.floor((entry.item.mpCost || 0) * (this.player.mcr === undefined ? 1 : this.player.mcr)) : ' ×' + entry.amount);
+                FNH.text(ctx, (start + index === this.actionMenuIndex ? '› ' : '  ') + label, 120, 138 + index * 38,
+                    { size: 18, color: start + index === this.actionMenuIndex ? '#f4deb0' : '#b9b09e' });
+            });
+            FNH.text(ctx, '↑ ↓ CHỌN · ENTER XÁC NHẬN · ESC QUAY LẠI', 120, 423, { size: 11 });
+        }
+
         playerAttack() {
-            const damage = this.rollDamage(this.player.atk, this.enemy.def);
-            this.enemy.hp = Math.max(0, this.enemy.hp - damage);
-            this.addDamage(damage, 408, 264, '#ffd39b', false);
-            this.enemyFlash = 0.24;
-            this.shake = 0.34;
-            this.log = this.player.name + ' chém vào Guard — ' + damage + ' sát thương.';
-            this.game.audio.playSe('Slash1', { volume: 0.7 });
-            this.game.audio.playSe('guard_grunt1', { volume: 0.45 });
-            this.phase = 'player';
-            this.timer = 0.95;
+            this.useAction({ item: this.game.data.skill(1), isSkill: true }, [this.enemy]);
         }
 
         playerGuard() {
@@ -167,6 +274,12 @@
         }
 
         enemyTurn() {
+            if (this.enemy.restriction === 4) {
+                this.log = this.enemy.name + ' không thể hành động.';
+                this.phase = 'enemy';
+                this.timer = 0.7;
+                return;
+            }
             const alive = this.members.filter((actor) => actor.hp > 0);
             if (!alive.length) {
                 this.defeat();
@@ -182,7 +295,7 @@
             const wasGuarding = this.guardedActors.has(target.id);
             let damage = this.rollDamage(this.enemy.atk, target.def);
             damage = Math.max(0, Math.round(damage * (target.pdr === undefined ? 1 : target.pdr)));
-            if (wasGuarding) damage = Math.max(1, Math.ceil(damage / (2 * Math.max(0.01, target.grd || 1))));
+            if (wasGuarding) damage = Math.max(0, Math.ceil(damage / (2 * Math.max(0.01, target.grd || 1))));
             this.game.data.setActorHp(target, target.hp - damage);
             this.player = target;
             this.guarding = wasGuarding;
@@ -226,6 +339,35 @@
             this.game.changeScene(FNH.Scene_Map, { fromBattle: true });
         }
 
+        updateCommonEvent(dt) {
+            if (this.game.reservedCommonEvent && !(this.commonEventContext && this.commonEventContext.eventRunner)) {
+                const id = this.game.reservedCommonEvent;
+                const event = this.game.data.commonEvents[id];
+                this.game.reservedCommonEvent = null;
+                if (!event) {
+                    this.game.lastError = new Error('Không tìm thấy common event ' + id);
+                    this.game.showToast(this.game.lastError.message, 6);
+                    return false;
+                }
+                if (!this.commonEventContext) {
+                    this.commonEventContext = new FNH.Scene_Map();
+                    this.commonEventContext.game = this.game;
+                    this.commonEventContext.input = this.input;
+                    this.commonEventContext.map = this.game.data.maps.get(this.game.mapId) || { events: [] };
+                }
+                this.commonEventContext.startEventList(event, 0);
+                if (this.commonEventContext.leaving) this.leaving = true;
+                return true;
+            }
+            const context = this.commonEventContext;
+            if (!context || !context.eventRunner) return false;
+            if (context.paused) context.updatePause(dt);
+            else context.updateEvent(dt);
+            this.paused = context.paused;
+            if (context.leaving) this.leaving = true;
+            return true;
+        }
+
         update(dt) {
             this.time += dt;
             if (this.enemyFlash > 0) this.enemyFlash = Math.max(0, this.enemyFlash - dt);
@@ -236,8 +378,13 @@
             }
             this.damageNumbers = this.damageNumbers.filter(function (item) { return item.life > 0; });
             if (this.leaving) return;
+            if (this.updateCommonEvent(dt)) return;
 
             const input = this.input;
+            if (this.phase === 'actionMenu' || this.phase === 'actionTarget') {
+                this.updateActionMenu();
+                return;
+            }
             if (this.phase === 'intro') {
                 this.timer -= dt;
                 if (input.isPressed('Enter', ' ', 'z', 'Z') || this.timer <= 0) {
@@ -299,6 +446,11 @@
                 this.timer -= dt;
                 if (this.timer <= 0) {
                     for (const actor of this.members) this.game.data.actorTurnEnd(actor, 2);
+                    this.game.data.actorTurnEnd(this.enemy, 2);
+                    if (this.enemy.hp <= 0) {
+                        this.victory();
+                        return;
+                    }
                     this.guardedActors.clear();
                     const index = this.members.findIndex((actor) => actor.hp > 0);
                     if (index < 0) this.defeat();
@@ -608,6 +760,11 @@
             this.drawEnemyHud(ctx);
             this.drawActorPanel(ctx);
             this.drawOverlay(ctx);
+            this.drawActionMenu(ctx);
+            if (this.commonEventContext) {
+                this.commonEventContext.drawEventDialog(ctx);
+                if (this.commonEventContext.paused) this.commonEventContext.drawPause(ctx);
+            }
             if (this.game.gabs) this.game.gabs.draw(ctx);
             FNH.drawVignette(ctx, FNH.WIDTH, FNH.HEIGHT, 0.38);
             FNH.drawGrain(ctx, FNH.WIDTH, FNH.HEIGHT, this.time);
