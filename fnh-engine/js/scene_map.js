@@ -174,7 +174,7 @@
 
         eventPage(event) {
             if (this.erasedEvents.has(event.id)) return null;
-            return this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
+            return this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player, this.game.partyIds);
         }
 
         eventState(event) {
@@ -672,7 +672,7 @@
                 this.updateEventImages();
                 return;
             }
-            if (this.game.player.hp <= 0) {
+            if (this.partyIds().length && this.partyIds().every((id) => this.eventActor(id).hp <= 0)) {
                 this.leaving = true;
                 this.game.gameOver();
                 return;
@@ -845,6 +845,52 @@
             return true;
         }
 
+        partyIds() {
+            return this.game.partyIds || [this.game.player.id];
+        }
+
+        changePartyMember(id, remove, initialize) {
+            if (!this.game.data.actor(id)) return;
+            const ids = this.partyIds().slice();
+            const previous = this.game.player;
+            const actors = this.game.actorStates || (this.game.actorStates = {});
+            if (!remove && initialize) {
+                const fresh = this.game.data.createPlayer(id);
+                if (id === previous.id) {
+                    this.finishMove();
+                    Object.assign(fresh, { mapX: previous.mapX, mapY: previous.mapY, direction: previous.direction,
+                        inventory: previous.inventory });
+                    this.game.player = fresh;
+                } else actors[id] = fresh;
+            }
+            if (remove) {
+                const index = ids.indexOf(id);
+                if (index >= 0) ids.splice(index, 1);
+            } else if (!ids.includes(id)) {
+                this.eventActor(id);
+                ids.push(id);
+            }
+            this.game.partyIds = ids;
+            if (ids.length && ids[0] !== this.game.player.id) {
+                this.finishMove();
+                const leader = this.eventActor(ids[0]);
+                actors[this.game.player.id] = this.game.player;
+                const current = this.game.player;
+                Object.assign(leader, { mapX: current.mapX, mapY: current.mapY,
+                    direction: current.direction, inventory: current.inventory || [] });
+                this.game.player = leader;
+                delete actors[leader.id];
+            }
+            if (this.game.player !== previous) {
+                const route = this.moveRoutes.get(-1);
+                if (route) route.done = true;
+                this.moveRoutes.delete(-1);
+                this.playerRouteState = null;
+                this.loadActorImages(this.game.player);
+            }
+            this.refreshEvents();
+        }
+
         eventActor(id) {
             if (this.game.player.id === id) return this.game.player;
             if (!this.game.data.actor(id)) return null;
@@ -855,7 +901,7 @@
 
         eventActorTargets(mode, id) {
             const actorId = mode === 1 ? Number(this.game.flags['variable:' + id] || 0) : id;
-            if (actorId === 0) return [this.game.player];
+            if (actorId === 0) return this.partyIds().map((id) => this.eventActor(id)).filter(Boolean);
             const actor = this.eventActor(actorId);
             return actor ? [actor] : [];
         }
@@ -896,7 +942,7 @@
                 if (p[2] === 1) return seconds <= p[1];
             }
             if (p[0] === 4) {
-                if (p[2] === 0) return this.game.player.id === p[1];
+                if (p[2] === 0) return this.partyIds().includes(p[1]);
                 const actor = this.eventActor(p[1]);
                 if (!actor) return false;
                 if (p[2] === 1) return actor.name === p[3];
@@ -955,10 +1001,10 @@
                     return Math.round(character.realY * FNH.TILE + FNH.TILE - this.camera.y - shift);
                 }
             }
-            if (type === 6) return id === 0 ? player.id : 0;
+            if (type === 6) return this.partyIds()[id] || 0;
             if (type === 7) {
                 if (id === 0) return this.game.mapId;
-                if (id === 1) return 1;
+                if (id === 1) return this.partyIds().length;
                 if (id === 2) return this.game.gold;
                 if (id === 3) return Math.floor(this.game.eventTimer && this.game.eventTimer.seconds || 0);
                 if (id === 4) return Math.floor(this.game.playtime || 0);
@@ -1141,6 +1187,8 @@
                     else if (p[2] === 4 && operand !== 0) this.game.flags[key] = Math.floor(old / operand);
                     else if (p[2] === 5 && operand !== 0) this.game.flags[key] = old % operand;
                 }
+            } else if (command.code === 129) {
+                this.changePartyMember(p[0], p[1] === 1, !!p[2]);
             } else if (command.code === 124) {
                 if (!this.game.eventTimer) this.game.eventTimer = { seconds: 0, working: false };
                 if (p[0] === 0) {
@@ -1342,7 +1390,7 @@
 
 
         triggerGuard() {
-            if (this.leaving) return;
+            if (this.leaving || !this.partyIds().length) return;
             this.leaving = true;
             const player = this.game.player;
             const returnDirection = oppositeDirection(player.direction);
@@ -1497,7 +1545,7 @@
             const player = this.game.player;
             const playerFootX = this.playerVisual.x * FNH.TILE + FNH.TILE / 2 - this.camera.x;
             const playerFootY = this.playerVisual.y * FNH.TILE + FNH.TILE - this.camera.y;
-            sprites.push({
+            if (this.partyIds().length) sprites.push({
                 y: playerFootY,
                 priority: 1,
                 draw: () => {
@@ -1560,6 +1608,10 @@
         }
 
         drawHud(ctx) {
+            if (!this.partyIds().length) {
+                FNH.text(ctx, 'TỔ ĐỘI TRỐNG', 24, 40, { size: 18, color: '#eee0c4' });
+                return;
+            }
             const player = this.game.player;
             const face = this.game.assets.imageCache.get('faces/' + player.faceName);
             FNH.panel(ctx, 16, 16, 314, 82, {
@@ -1707,7 +1759,7 @@
                 fillBottom: 'rgba(5,5,5,0.99)',
                 border: 'rgba(192,168,116,0.62)'
             });
-            FNH.text(ctx, 'TẠM DỪNG', panel.x + 24, panel.y + 34, {
+            FNH.text(ctx, 'TẠM DỪNG · ' + this.partyIds().length + ' THÀNH VIÊN', panel.x + 24, panel.y + 34, {
                 size: 22,
                 weight: 600,
                 color: '#eee0c4'

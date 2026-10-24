@@ -66,6 +66,7 @@
             this.lastFrame = 0;
             this.player = null;
             this.actorStates = {};
+            this.partyIds = null;
             this.savedBgm = null;
             this.eventTimer = { seconds: 0, working: false };
             this.gold = 0;
@@ -208,6 +209,7 @@
 
         newGame(actorId) {
             this.player = this.data.createPlayer(actorId);
+            this.partyIds = [actorId];
             this.actorStates = {};
             this.savedBgm = null;
             this.eventTimer = { seconds: 0, working: false };
@@ -234,6 +236,7 @@
                 mapId: this.mapId,
                 player: this.player,
                 actorStates: this.actorStates,
+                partyIds: this.partyIds,
                 savedBgm: this.savedBgm,
                 eventTimer: this.eventTimer,
                 gold: this.gold,
@@ -267,13 +270,15 @@
             }
             this.player = save.player;
             this.actorStates = save.actorStates || {};
+            this.partyIds = Array.isArray(save.partyIds) ? [...new Set(save.partyIds)] : [this.player.id];
+            delete this.actorStates[this.player.id];
             this.savedBgm = save.savedBgm || null;
             this.eventTimer = { seconds: Math.max(0, Number(save.eventTimer && save.eventTimer.seconds) || 0),
                 working: !!(save.eventTimer && save.eventTimer.working) };
             this.player.mapX = Number.isFinite(this.player.mapX) ? this.player.mapX : 27;
             this.player.mapY = Number.isFinite(this.player.mapY) ? this.player.mapY : 67;
             this.player.direction = this.player.direction || 2;
-            this.player.hp = FNH.clamp(this.player.hp, 1, this.player.maxHp);
+            this.player.hp = FNH.clamp(this.player.hp, 0, this.player.maxHp);
             this.gold = save.gold || 0;
             this.playtime = save.playtime || 0;
             this.mapId = save.mapId || 1;

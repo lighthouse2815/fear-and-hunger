@@ -119,7 +119,7 @@
             return null;
         }
 
-        eventPage(event, flags, mapId, player) {
+        eventPage(event, flags, mapId, player, partyIds) {
             flags = flags || {};
             const pages = event && event.pages || [];
             for (let i = pages.length - 1; i >= 0; i -= 1) {
@@ -135,7 +135,7 @@
                 if (c.selfSwitchValid && !selfValue) continue;
                 if (c.itemValid && !(player && (player.inventory || []).some((item) =>
                     (item.kind || 'item') === 'item' && item.id === c.itemId && item.amount > 0))) continue;
-                if (c.actorValid && !(player && player.id === c.actorId)) continue;
+                if (c.actorValid && !(partyIds ? partyIds.includes(c.actorId) : player && player.id === c.actorId)) continue;
                 return page;
             }
             return null;

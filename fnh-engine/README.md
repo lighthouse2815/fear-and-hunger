@@ -267,7 +267,11 @@ năng (318), đổi tên/hình/biệt danh/tiểu sử (320/322/324/325). Chọn
 biến; ID 0 áp dụng tổ đội một người hiện tại. Actor ngoài tổ đội có trạng thái riêng và
 được lưu/đọc cùng save. Kỹ năng ban đầu lấy từ learning của class ở cấp khởi đầu.
 Điều kiện actor hỗ trợ tên, class, kỹ năng và trang bị; biến đọc được chỉ số actor đã
-khởi tạo. Chưa mô phỏng trạng thái, party nhiều người, công thức trait hoặc chiến đấu
+khởi tạo. Tổ đội hỗ trợ thêm/bớt và khởi tạo actor qua lệnh 129, giữ thứ tự thành viên, chuyển
+trưởng nhóm, vị trí/túi đồ chung, điều kiện trang event và biến thành viên. ID actor 0
+áp dụng cho toàn đội. Danh sách tổ đội và trạng thái nhân vật được lưu/đọc; save cũ
+mặc định tổ đội một người. Có thể tạo tổ đội trống trong kịch bản. Chưa có follower
+trên bản đồ hoặc menu formation. Chưa mô phỏng trạng thái, công thức trait hoặc chiến đấu
 bằng kỹ năng; Recover All gặp trạng thái chưa hỗ trợ vẫn báo lỗi.
 Script event 355/655 hỗ trợ một tập API literal: đổi ảnh character/face/battler của
 actor, refresh người chơi, setValue switch/biến bằng hằng số. Đoạn nhiều dòng được
