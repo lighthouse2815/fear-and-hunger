@@ -282,6 +282,9 @@ Lệnh hệ thống hỗ trợ khóa/mở lưu và menu (134/135), ẩn/hiện n
 và đợi đóng (351), Game Over/về tiêu đề (353/354). Khóa lưu được kiểm tra ở cả menu
 và API lưu; các cờ này đi cùng save. Nhân vật hết HP chuyển màn hình chết khi event
 đã hoàn tất; event vẫn có thể tiếp tục hội thoại hoặc hồi phục trước thời điểm đó.
+Timer (124) hỗ trợ bắt đầu/dừng, hiển thị đếm ngược, điều kiện timer và toán hạng
+biến dữ liệu timer. Timer đóng băng trong menu, lưu/đọc cùng save và thoát trận hiện
+tại khi hết giờ. Hết giờ chỉ xử lý một lần, không tự đặt lại hoặc xóa giá trị khi dừng.
 Chưa có JavaScript tùy ý,
 script move route và các plugin command khác,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.

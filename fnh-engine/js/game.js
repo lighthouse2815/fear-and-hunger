@@ -67,6 +67,7 @@
             this.player = null;
             this.actorStates = {};
             this.savedBgm = null;
+            this.eventTimer = { seconds: 0, working: false };
             this.gold = 0;
             this.mapId = 1;
             this.guardDefeated = false;
@@ -127,6 +128,10 @@
             if (this.screenEffects && (this.sceneName === 'map' || this.sceneName === 'battle') &&
                 !(this.scene && this.scene.paused)) {
                 this.screenEffects.update(dt);
+                if (this.eventTimer && this.eventTimer.working && this.eventTimer.seconds > 0) {
+                    this.eventTimer.seconds = Math.max(0, this.eventTimer.seconds - dt);
+                    if (!this.eventTimer.seconds && this.sceneName === 'battle' && this.scene.returnToMap) this.scene.returnToMap();
+                }
                 if (this.pictures) this.pictures.update(dt);
                 if (this.gabs) this.gabs.update(dt);
             }
@@ -151,6 +156,12 @@
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, FNH.WIDTH, FNH.HEIGHT);
             if (this.scene) this.scene.draw(ctx);
+            if (this.eventTimer && this.eventTimer.working && (this.sceneName === 'map' || this.sceneName === 'battle')) {
+                const seconds = Math.floor(this.eventTimer.seconds);
+                const label = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
+                FNH.panel(ctx, FNH.WIDTH - 122, 90, 102, 38);
+                FNH.text(ctx, label, FNH.WIDTH - 71, 116, { size: 22, align: 'center', color: '#eee0c4' });
+            }
             this.drawToast(ctx);
             this.transition.draw(ctx);
         }
@@ -199,6 +210,7 @@
             this.player = this.data.createPlayer(actorId);
             this.actorStates = {};
             this.savedBgm = null;
+            this.eventTimer = { seconds: 0, working: false };
             this.player.mapX = 27;
             this.player.mapY = 67;
             this.player.direction = 8;
@@ -223,6 +235,7 @@
                 player: this.player,
                 actorStates: this.actorStates,
                 savedBgm: this.savedBgm,
+                eventTimer: this.eventTimer,
                 gold: this.gold,
                 guardDefeated: this.guardDefeated,
                 flags: this.flags,
@@ -255,6 +268,8 @@
             this.player = save.player;
             this.actorStates = save.actorStates || {};
             this.savedBgm = save.savedBgm || null;
+            this.eventTimer = { seconds: Math.max(0, Number(save.eventTimer && save.eventTimer.seconds) || 0),
+                working: !!(save.eventTimer && save.eventTimer.working) };
             this.player.mapX = Number.isFinite(this.player.mapX) ? this.player.mapX : 27;
             this.player.mapY = Number.isFinite(this.player.mapY) ? this.player.mapY : 67;
             this.player.direction = this.player.direction || 2;

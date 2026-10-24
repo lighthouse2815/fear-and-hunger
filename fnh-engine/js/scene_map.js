@@ -882,6 +882,13 @@
                     : (this.game.mapId || 1) === 1 && flags['self:' + this.eventId + ':' + p[1]];
                 return !!value === (p[2] === 0);
             }
+            if (p[0] === 3) {
+                const timer = this.game.eventTimer;
+                if (!timer || !timer.working) return false;
+                const seconds = Math.floor(timer.seconds);
+                if (p[2] === 0) return seconds >= p[1];
+                if (p[2] === 1) return seconds <= p[1];
+            }
             if (p[0] === 4) {
                 if (p[2] === 0) return this.game.player.id === p[1];
                 const actor = this.eventActor(p[1]);
@@ -947,6 +954,7 @@
                 if (id === 0) return this.game.mapId;
                 if (id === 1) return 1;
                 if (id === 2) return this.game.gold;
+                if (id === 3) return Math.floor(this.game.eventTimer && this.game.eventTimer.seconds || 0);
                 if (id === 4) return Math.floor(this.game.playtime || 0);
             }
             throw new Error('Chưa hỗ trợ dữ liệu event ' + type + ':' + id + ':' + parameter);
@@ -1070,6 +1078,12 @@
                     else if (p[2] === 4 && operand !== 0) this.game.flags[key] = Math.floor(old / operand);
                     else if (p[2] === 5 && operand !== 0) this.game.flags[key] = old % operand;
                 }
+            } else if (command.code === 124) {
+                if (!this.game.eventTimer) this.game.eventTimer = { seconds: 0, working: false };
+                if (p[0] === 0) {
+                    this.game.eventTimer.seconds = Math.max(0, Number(p[1]) || 0);
+                    this.game.eventTimer.working = true;
+                } else this.game.eventTimer.working = false;
             } else if (command.code === 134 || command.code === 135) {
                 const key = command.code === 134 ? 'system:saveDisabled' : 'system:menuDisabled';
                 this.game.flags[key] = p[0] === 0;
