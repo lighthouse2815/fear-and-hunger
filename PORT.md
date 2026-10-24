@@ -82,6 +82,30 @@ Máy chủ chỉ dùng module có sẵn của Node nên không cần cài thêm 
 `npm run fnh` hoặc `node tools\fnh-browser\server.js`; `--open` gọi `start`. Trên macOS,
 `--open` gọi `open`.
 
+## Engine web độc lập (fnh-engine)
+
+Repo còn có một cách chạy khác: **engine web viết mới** tại `fnh-engine/`, không dùng
+runtime RPG Maker MV. Engine tự đọc JSON, giải mã ảnh/âm thanh gốc và dựng cảnh bằng
+Canvas 2D + Web Audio. Đây là phần tách biệt với công cụ compat ở trên.
+
+```sh
+npm run fnh:engine        # http://127.0.0.1:8139/
+npm run fnh:engine:open   # tự mở trình duyệt
+npm run test:fnh-engine   # smoke test Chrome/CDP
+```
+
+Bản dựng hiện tại là vertical slice: tiêu đề → tạo nhân vật (4 nghề) → bản đồ 1 → gặp
+Guard → trận đấu theo lượt → thắng/thua → lưu và đọc game. Asset vẫn được đọc read-only
+từ `www` gốc qua `/game/`; không có asset nào được sao chép vào repo.
+
+Máy chủ engine mặc định ở cổng **8139**, có các tuỳ chọn `--game`, `--port`, `--host`,
+`--open`, `--help`; biến môi trường `FNH_GAME_ROOT`, `FNH_ENGINE_PORT`, `FNH_ENGINE_HOST`.
+Save dùng localStorage với tiền tố `FNH_ENGINE:<namespace>:` (mặc định `default`), có thể
+đổi namespace bằng `?fnh_engine_ns=...` khi test.
+
+Xem hướng dẫn đầy đủ, kiến trúc, điều khiển và giới hạn tại
+[`fnh-engine/README.md`](fnh-engine/README.md).
+
 ## Lưu game
 
 Game dùng `localStorage` của trình duyệt thay cho thư mục `save/` của NW.js:
@@ -128,6 +152,17 @@ Chrome không nằm trong `PATH`.
 
 Bài test không cần `npm install` và không thêm dependency nào.
 
+Engine độc lập có bài test riêng:
+
+```sh
+npm run test:fnh-engine
+```
+
+Bài test này kiểm tra giải mã asset, tiêu đề, Web Audio, tạo nhân vật, bản đồ 1, di
+chuyển, trận Guard, thắng/thua, lưu/đọc và Continue sau khi tải lại. Cũng như bài test
+compat, nó bỏ qua và trả mã 0 nếu thiếu thư mục game hoặc Chrome. Node.js 22+ là cần
+thiết cho cả hai bài test trình duyệt.
+
 ## Cách hoạt động
 
 - `tools/fnh-browser/server.js` là máy chủ HTTP không dependency, phục vụ nguyên cây
@@ -171,3 +206,5 @@ Bài test không cần `npm install` và không thêm dependency nào.
 | Video không phát | Bấm vào vùng game một lần nữa để kích hoạt retry; kiểm tra codec WebM/VP9 của trình duyệt. |
 | Mất save | Không xoá site data; dùng đúng cổng và đúng trình duyệt. |
 | `npm run test:fnh` báo BỎ QUA | Chưa có game hoặc Chrome. Đặt game đúng chỗ và cài Chrome, hoặc đặt `CHROME_BIN`. |
+| `npm run test:fnh-engine` báo BỎ QUA | Như trên; engine độc lập cũng cần thư mục `www` gốc và Chrome/Chromium. |
+| Muốn thử engine độc lập | Chạy `npm run fnh:engine`, mở `http://127.0.0.1:8139/`; xem `fnh-engine/README.md`. |

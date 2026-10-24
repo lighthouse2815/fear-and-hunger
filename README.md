@@ -34,6 +34,25 @@ npm run fnh:open   # tự mở trình duyệt
 sao chép asset của Fear & Hunger; thư mục game đã được ignore trong Git. Xem hướng dẫn
 đầy đủ, cách lưu game, kiểm thử và các giới hạn tại [`PORT.md`](PORT.md).
 
+## Engine web độc lập cho Fear & Hunger (thử nghiệm)
+
+Ngoài công cụ tương thích ở trên, repo còn có **engine web viết mới** tại `fnh-engine/`.
+Engine này không chạy runtime RPG Maker MV: nó tự đọc JSON, giải mã ảnh/âm thanh và dựng
+lại màn hình bằng Canvas 2D + Web Audio.
+
+```sh
+npm run fnh:engine        # http://127.0.0.1:8139/
+npm run fnh:engine:open   # tự mở trình duyệt
+npm run test:fnh-engine   # smoke test Chrome/CDP
+```
+
+Bản dựng hiện tại là vertical slice: tiêu đề → tạo nhân vật (4 nghề) → bản đồ 1 → gặp
+Guard → trận đấu theo lượt → thắng/thua → lưu và đọc game. Asset vẫn được đọc read-only
+từ thư mục `www` gốc qua `/game/`, không được sao chép vào repo.
+
+Xem [`fnh-engine/README.md`](fnh-engine/README.md) để biết kiến trúc, điều khiển, phạm vi,
+cách giải mã asset và các giới hạn.
+
 ## Cách chơi
 
 | Phím | Việc |
@@ -58,7 +77,9 @@ sao chép asset của Fear & Hunger; thư mục game đã được ignore trong 
 ## Kiểm chứng nhanh
 
 ```sh
-npm test   # node --check toàn bộ JS + smoke test headless
+npm test                 # Cối Hầm: node --check + smoke test headless
+npm run test:fnh         # bản chạy Fear & Hunger qua compat RPG Maker MV
+npm run test:fnh-engine  # engine web độc lập
 ```
 
 ## Cấu trúc
@@ -75,6 +96,9 @@ js/main.js        mặt màn, điều khiển, phím
 tests/smoke.js    smoke test headless (chạy cùng npm test)
 tools/fnh-browser/  máy chủ HTTP + lớp tương thích cho bản Fear & Hunger gốc
 tests/fnh-browser-smoke.js  kiểm tra bản chạy trình duyệt (npm run test:fnh)
+fnh-engine/       engine web độc lập cho Fear & Hunger (Canvas + Web Audio)
+tools/fnh-engine/ máy chủ phục vụ app và asset gốc tại /game/
+tests/fnh-engine-smoke.js  kiểm tra engine độc lập (npm run test:fnh-engine)
 ```
 
 Giấy phép: xem tệp [`LICENSE`](LICENSE) — **mã nguồn MIT**; nội dung ngôn ngữ
