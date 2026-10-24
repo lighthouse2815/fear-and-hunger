@@ -163,7 +163,7 @@
                 (video.error ? ': ' + (video.error.message || video.error.code) : ''))));
             document.body.appendChild(video);
             video.play().catch((error) => {
-                if (!token.done && error.name !== 'NotAllowedError') finish(error);
+                if (!token.done && !['NotAllowedError', 'AbortError'].includes(error.name)) finish(error);
             });
             return { type: 'video', token };
         }

@@ -78,6 +78,16 @@ function scene() {
     assert.equal(map.input.enabled, true);
     assert.equal(map.movieElement, null);
     assert.equal(document.body.children.length, 0);
+    const paused = scene();
+    playFailure = Object.assign(new Error('Người chơi tạm dừng khi còn đang tải'), { name: 'AbortError' });
+    paused.startEventList({ list: [c(261, ['intro']), c(125, [0, 0, 1])] }, 0);
+    await flush();
+    assert.equal(paused.eventRunner.wait.token.done, false, 'Tạm dừng lúc tải không biến thành lỗi video');
+    assert.equal(paused.movieElement.controls, true);
+    playFailure = null;
+    paused.movieElement.emit('ended');
+    paused.updateEvent(0);
+    assert.equal(paused.game.gold, 1, 'Người chơi vẫn có thể phát tiếp tới hết phim');
     const battle = new FNH.Scene_Battle();
     battle.commonEventContext = map;
     const request = map.openMovie('intro');
