@@ -289,6 +289,64 @@
             }
         }
 
+        expForLevel(classId, level) {
+            const cls = this.classData(classId);
+            if (!cls) throw new Error('Không tìm thấy class ' + classId);
+            const [basis, extra, acceleration, divisor] = cls.expParams || [30, 20, 30, 30];
+            return Math.round(basis * Math.pow(level - 1, 0.9 + acceleration / 250) * level *
+                (level + 1) / (6 + level * level / 50 / divisor) + (level - 1) * extra);
+        }
+
+        restoreActorProgression(actor) {
+            if (actor.classExp || !this.classData(actor.classId)) return;
+            // Save engine cũ lưu cấp khởi tạo cao nhưng EXP vẫn bằng 0.
+            actor.exp = Math.max(actor.exp || 0, this.expForLevel(actor.classId, actor.level || 1));
+            actor.classExp = { [actor.classId]: actor.exp };
+        }
+
+        changeActorExp(actor, exp) {
+            const cls = this.classData(actor.classId);
+            const raw = this.actor(actor.id);
+            if (!cls || !raw) throw new Error('Không tìm thấy dữ liệu cấp của actor ' + actor.id);
+            const oldLevel = actor.level;
+            const learned = [];
+            actor.skills = actor.skills || [];
+            actor.exp = Math.max(0, Math.round(exp));
+            actor.classExp = actor.classExp || {};
+            actor.classExp[actor.classId] = actor.exp;
+            const maximum = raw.maxLevel || 99;
+            while (actor.level < maximum && actor.exp >= this.expForLevel(actor.classId, actor.level + 1)) {
+                actor.level += 1;
+                for (const entry of cls.learnings || []) {
+                    if (entry.level !== actor.level || actor.skills.includes(entry.skillId)) continue;
+                    actor.skills.push(entry.skillId);
+                    learned.push(entry.skillId);
+                }
+            }
+            while (actor.level > 1 && actor.exp < this.expForLevel(actor.classId, actor.level)) actor.level -= 1;
+            actor.skills.sort((a, b) => a - b);
+            this.refreshActor(actor);
+            return { oldLevel, level: actor.level, learned };
+        }
+
+        changeActorLevel(actor, level) {
+            const maximum = this.actor(actor.id).maxLevel || 99;
+            return this.changeActorExp(actor, this.expForLevel(actor.classId, FNH.clamp(Math.floor(level), 1, maximum)));
+        }
+
+        changeActorClass(actor, classId, keepExp, inventory) {
+            const cls = this.classData(classId);
+            if (!cls) return false;
+            const history = actor.classExp || (actor.classExp = {});
+            history[actor.classId] = actor.exp || 0;
+            if (keepExp) history[classId] = actor.exp || 0;
+            actor.classId = classId;
+            actor.className = cls.name;
+            this.releaseUnequippableItems(actor, inventory || actor.inventory || (actor.inventory = []));
+            this.changeActorExp(actor, history[classId] || 0);
+            return true;
+        }
+
         createPlayer(actorId) {
             const actor = this.actor(actorId);
             if (!actor) throw new Error('Không tìm thấy actor ' + actorId + '.');
@@ -331,7 +389,8 @@
                 className: cls.name,
                 classId: cls.id,
                 level: level,
-                exp: 0,
+                exp: this.expForLevel(cls.id, level),
+                classExp: { [cls.id]: this.expForLevel(cls.id, level) },
                 hp: stats.maxHp,
                 mp: stats.maxMp,
                 maxHp: stats.maxHp,
@@ -454,6 +513,13 @@
                 if (!owned.amount) inventory.splice(inventory.indexOf(owned), 1);
                 equipment.push({ id: itemId, name: item.name, type: kind, slot });
             }
+            this.releaseUnequippableItems(actor, inventory);
+            this.refreshActor(actor);
+            return true;
+        }
+
+        releaseUnequippableItems(actor, inventory) {
+            const equipment = actor.equipment || [];
             // Refresh MV tháo trang bị không còn hợp lệ sau thay đổi traits.
             let changed;
             do {
@@ -463,18 +529,20 @@
                 for (let index = equipment.length - 1; index >= 0; index -= 1) {
                     const entry = equipment[index];
                     const source = (entry.type === 'weapon' ? this.weapons : this.armors)[entry.id];
-                    const expected = dual && entry.slot === 1 ? 1 : entry.slot + 1;
+                    const slot = entry.slot === undefined ? (source ? source.etypeId - 1 : -1) : entry.slot;
+                    const expected = dual && slot === 1 ? 1 : slot + 1;
                     const permission = entry.type === 'weapon' ? 51 : 52;
                     const itemType = source && (entry.type === 'weapon' ? source.wtypeId : source.atypeId);
                     if (!source || source.etypeId !== expected || traits.some((trait) => trait.code === 54 && trait.dataId === expected) ||
                         !traits.some((trait) => trait.code === permission && trait.dataId === itemType)) {
-                        giveBack(equipment.splice(index, 1)[0]);
+                        const removed = equipment.splice(index, 1)[0];
+                        const owned = inventory.find((item) => item.kind === removed.type && item.id === removed.id);
+                        if (owned) owned.amount += 1;
+                        else inventory.push({ id: removed.id, kind: removed.type, amount: 1 });
                         changed = true;
                     }
                 }
             } while (changed);
-            this.refreshActor(actor);
-            return true;
         }
 
         transformEnemy(enemy, id) {

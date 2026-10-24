@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const FNH = { Scene: class {}, Scene_Map: class {}, clamp: (v, min, max) => Math.max(min, Math.min(max, v)) };
-for (const file of ['screen_effects', 'pictures', 'gab', 'interpreter', 'scene_map', 'game']) {
+for (const file of ['data', 'screen_effects', 'pictures', 'gab', 'interpreter', 'scene_map', 'game']) {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/' + file + '.js'), 'utf8'), { window: { FNH } });
 }
 const c = (code, parameters = []) => ({ code, parameters });
@@ -59,6 +59,7 @@ assert.equal(scene.game.screenEffects.fadeTarget, 255);
 
 let saved;
 const game = Object.create(FNH.Game.prototype);
+game.data = new FNH.DataStore();
 game.player = { hp: 50, maxHp: 100, mapX: 1, mapY: 2 };
 game.flags = {};
 game.eventTimer = { seconds: 12.5, working: true };
@@ -116,3 +117,12 @@ game.update(0.5);
 assert.equal(game.screenEffects.brightness, 127.5);
 assert.equal(sceneUpdates, 2);
 console.log('ĐẠT: tint, fade, flash, shake, chờ event, tạm dừng và lưu/đọc tương thích save cũ.');
+
+game.data = new FNH.DataStore();
+saved.player = { id: 1, classId: 1, level: 3, exp: 0, hp: 50, maxHp: 100 };
+saved.actorStates = { 2: { id: 2, classId: 1, level: 2, exp: 0 } };
+game.data.classes[1] = { id: 1, expParams: [30, 20, 30, 30] };
+game.loadGame();
+assert.equal(game.player.exp, 162);
+assert.equal(game.actorStates[2].exp, 50, 'Tải save chuẩn hóa cả actor ngoài vị trí đội trưởng');
+console.log('ĐẠT: tải save cũ giữ cấp và chuẩn hóa EXP cho toàn bộ actor.');

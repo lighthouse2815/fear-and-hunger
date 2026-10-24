@@ -386,3 +386,14 @@ tạm và in đường dẫn.
 
 Mã nguồn engine nằm trong repo này. **Asset của Fear & Hunger không được cấp phép lại**
 và không được đưa vào repo. Xem [`LICENSE`](../LICENSE) của repo.
+
+### EXP, cấp và nghề
+
+Lệnh 315/316 thay đổi EXP/cấp theo actor trực tiếp, biến hoặc toàn tổ đội. Đường cong
+EXP đọc từ `Classes.expParams`, cấp giới hạn bởi `Actors.maxLevel`; lên cấp học các
+kỹ năng trong `learnings`, giảm cấp giữ kỹ năng đã học. Chỉ số được tính lại mà không
+tự hồi đầy HP/MP. Cờ hiển thị của event thông báo cấp/kỹ năng mới qua toast.
+Lệnh 321 đổi nghề, lưu EXP riêng từng class hoặc mang EXP hiện tại sang nghề mới;
+trang bị không còn hợp lệ được trả vào túi chung. Lịch sử EXP nằm trong dữ liệu actor
+và được lưu cùng save. Save cũ cấp cao nhưng EXP bằng 0 được chuẩn hóa khi tải để
+tránh tụt cấp khi nhận thưởng. Thưởng EXP chiến thắng dùng cùng logic cập nhật cấp/kỹ năng.

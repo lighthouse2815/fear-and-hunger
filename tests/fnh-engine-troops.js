@@ -302,3 +302,19 @@ resetBackdropMap.game.mapId = 2;
 resetBackdropMap.loadMap = async () => {};
 resetBackdropMap.enter({ fromTransfer: true });
 assert.equal(resetBackdropMap.game.flags['map:battleback'], undefined, 'Chuyển bản đồ bỏ override của bản đồ trước');
+const levelRewardMap = setup();
+levelRewardMap.game.data.classes[1].expParams = [30, 20, 30, 30];
+levelRewardMap.game.data.classes[1].learnings = [{ level: 2, skillId: 1 }];
+levelRewardMap.startEventList({ list: [c(301, [0, 1, true, true])] }, 1);
+const levelRewardBattle = levelRewardMap.game.scene;
+for (const enemy of levelRewardBattle.enemies) {
+    enemy.rewardExp = 30;
+    levelRewardMap.game.data.setActorHp(enemy, 0);
+}
+levelRewardBattle.victory();
+assert.equal(levelRewardMap.game.player.exp, 60);
+assert.equal(levelRewardMap.game.player.level, 2, 'Phần thưởng trận thật kích hoạt lên cấp');
+assert.ok(levelRewardMap.game.player.skills.includes(1));
+levelRewardBattle.victory();
+assert.equal(levelRewardMap.game.player.exp, 60, 'Không cộng thưởng hoặc lên cấp hai lần');
+console.log('ĐẠT: thưởng EXP chiến thắng kích hoạt cấp/kỹ năng và chỉ trao một lần.');

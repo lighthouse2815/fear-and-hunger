@@ -1327,7 +1327,7 @@
                         });
                     }
                 }
-            } else if ([311, 312, 313, 314, 317, 318, 326].includes(command.code)) {
+            } else if ([311, 312, 313, 314, 315, 316, 317, 318, 326].includes(command.code)) {
                 const actors = this.eventActorTargets(p[0], p[1]);
                 let value = p[3] === 1 ? Number(this.game.flags['variable:' + p[4]] || 0) : Number(p[4] || 0);
                 if (p[2] === 1) value = -value;
@@ -1342,6 +1342,14 @@
                         else this.game.data.removeActorState(actor, p[3]);
                     }
                     if (command.code === 314) this.game.data.recoverActor(actor);
+                    if (command.code === 315 || command.code === 316) {
+                        const result = command.code === 315 ? this.game.data.changeActorExp(actor, (actor.exp || 0) + value)
+                            : this.game.data.changeActorLevel(actor, actor.level + value);
+                        if (p[5] && result.level > result.oldLevel) {
+                            const skills = result.learned.map((id) => this.game.data.skill(id)).filter(Boolean).map((skill) => skill.name);
+                            this.game.showToast(actor.name + ' đạt cấp ' + actor.level + (skills.length ? ' · ' + skills.join(', ') : ''), 5);
+                        }
+                    }
                     if (command.code === 317) {
                         const amount = p[4] === 1 ? Number(this.game.flags['variable:' + p[5]] || 0) : Number(p[5] || 0);
                         if (!Number.isInteger(p[2]) || p[2] < 0 || p[2] > 7) throw new Error('Chỉ số actor không hợp lệ');
@@ -1357,6 +1365,10 @@
                         skills.sort((a, b) => a - b);
                     }
                 }
+            } else if (command.code === 321) {
+                const actor = this.eventActor(p[0]);
+                if (actor) this.game.data.changeActorClass(actor, p[1], !!p[2],
+                    this.game.player.inventory || (this.game.player.inventory = []));
             } else if (command.code === 319) {
                 const actor = this.eventActor(p[0]);
                 if (actor) this.game.data.changeEquipment(actor, p[1] - 1, p[2],

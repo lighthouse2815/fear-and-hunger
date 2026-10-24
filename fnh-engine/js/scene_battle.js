@@ -538,7 +538,7 @@
                 }
             }
             for (const actor of this.members) {
-                actor.exp = (actor.exp || 0) + Math.round(this.rewardExp * (actor.exr === undefined ? 1 : actor.exr));
+                this.game.data.changeActorExp(actor, (actor.exp || 0) + Math.round(this.rewardExp * (actor.exr === undefined ? 1 : actor.exr)));
             }
             this.log = 'Đối thủ đã gục ngã.';
             this.game.audio.stopBgm(0.5);

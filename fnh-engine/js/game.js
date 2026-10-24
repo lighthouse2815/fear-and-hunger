@@ -273,6 +273,7 @@
             }
             this.player = save.player;
             this.actorStates = save.actorStates || {};
+            for (const actor of [this.player, ...Object.values(this.actorStates)]) this.data.restoreActorProgression(actor);
             this.partyIds = Array.isArray(save.partyIds) ? [...new Set(save.partyIds)] : [this.player.id];
             delete this.actorStates[this.player.id];
             this.savedBgm = save.savedBgm || null;
