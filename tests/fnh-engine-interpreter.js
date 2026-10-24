@@ -124,4 +124,37 @@ assert.equal(scene.startEvent(event), false, 'Trang tự khóa được chọn s
 assert.equal(scene.eventCondition([7, 3, 0]), true);
 assert.equal(scene.eventCondition([2, 'A', 0]), true);
 assert.throws(() => scene.eventCondition([12, 'script']), /Chưa hỗ trợ/);
+
+const movement = new FNH.Scene_Map();
+movement.guard.alive = false;
+movement.game = {
+    data: new FNH.DataStore(), mapId: 2, flags: {}, gold: 0,
+    player: { id: 1, mapX: 0, mapY: 0, direction: 2, inventory: [] }, showToast() {}
+};
+movement.input = { isPressed: () => false };
+movement.game.data.isTilePassable = () => true;
+const npcPage = { priorityType: 1, trigger: 0, through: false, list: [command(125, [0, 0, 1])] };
+const npc = { id: 1, x: 0, y: 1, pages: [npcPage] };
+movement.map = { events: [null, npc] };
+assert.equal(movement.tryMove(2), false, 'NPC chặn di chuyển');
+assert.equal(movement.game.gold, 0, 'Va chạm không tự chạy event hành động');
+movement.interact();
+assert.equal(movement.game.gold, 1, 'Hành động kích hoạt NPC phía trước');
+npcPage.trigger = 1;
+movement.interact();
+assert.equal(movement.game.gold, 1, 'Phím hành động không kích hoạt event chạm');
+assert.equal(movement.tryMove(2), false);
+assert.equal(movement.game.gold, 2, 'Va chạm kích hoạt event chạm');
+npcPage.through = true;
+assert.equal(movement.tryMove(2), true, 'Event xuyên qua không chặn di chuyển');
+movement.finishMove();
+npcPage.priorityType = 0;
+npcPage.trigger = 0;
+movement.interact();
+assert.equal(movement.game.gold, 3, 'Hành động kích hoạt event dưới chân');
+npcPage.trigger = 1;
+assert.equal(movement.checkTransfer(), true, 'Chạm event dưới chân chạy interpreter');
+assert.equal(movement.game.gold, 4);
+npcPage.conditions = { switch1Valid: true, switch1Id: 1 };
+assert.equal(movement.checkTransfer(), false, 'Không chạy event chưa đủ điều kiện');
 console.log('ĐẠT: nhánh, hội thoại, lựa chọn, chờ, common event, vòng lặp và tích hợp bản đồ.');

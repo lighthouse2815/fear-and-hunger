@@ -88,8 +88,8 @@
             return this.mapInfos[Number(id)] || null;
         }
 
-        transferAt(map, x, y, flags, mapId) {
-            for (const command of this.commandsAt(map, x, y, flags, mapId)) {
+        transferAt(map, x, y, flags, mapId, player) {
+            for (const command of this.commandsAt(map, x, y, flags, mapId, player)) {
                 if (command.code !== 201 || !Array.isArray(command.parameters)) continue;
                 const p = command.parameters;
                 const value = (index) => p[0] === 1
@@ -100,10 +100,10 @@
             return null;
         }
 
-        messageAt(map, x, y, flags, mapId) {
+        messageAt(map, x, y, flags, mapId, player) {
             for (const event of ((map && map.events) || [])) {
                 if (!event || event.x !== x || event.y !== y) continue;
-                const active = this.eventPage(event, flags || {}, mapId);
+                const active = this.eventPage(event, flags || {}, mapId, player);
                 for (const page of active ? [active] : []) {
                     const list = page.list || [];
                     for (let i = 0; i < list.length; i += 1) {
@@ -119,7 +119,7 @@
             return null;
         }
 
-        eventPage(event, flags, mapId) {
+        eventPage(event, flags, mapId, player) {
             flags = flags || {};
             const pages = event && event.pages || [];
             for (let i = pages.length - 1; i >= 0; i -= 1) {
@@ -133,15 +133,18 @@
                     ? flags[selfKey]
                     : (mapId || 1) === 1 && flags['self:' + event.id + ':' + c.selfSwitchCh];
                 if (c.selfSwitchValid && !selfValue) continue;
+                if (c.itemValid && !(player && (player.inventory || []).some((item) =>
+                    (item.kind || 'item') === 'item' && item.id === c.itemId && item.amount > 0))) continue;
+                if (c.actorValid && !(player && player.id === c.actorId)) continue;
                 return page;
             }
             return null;
         }
 
-        commandsAt(map, x, y, flags, mapId) {
+        commandsAt(map, x, y, flags, mapId, player) {
             for (const event of ((map && map.events) || [])) {
                 if (!event || event.x !== x || event.y !== y) continue;
-                const page = this.eventPage(event, flags || {}, mapId);
+                const page = this.eventPage(event, flags || {}, mapId, player);
                 return page ? (page.list || []) : [];
             }
             return [];

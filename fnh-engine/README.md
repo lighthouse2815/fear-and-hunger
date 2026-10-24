@@ -193,6 +193,9 @@ Các lệnh thay đổi switch, biến (hằng số/biến/ngẫu nhiên), self-
 chuyển bản đồ và SE được thực thi tại vị trí của chúng trong luồng event. Self-switch
 được tách theo bản đồ; khóa save cũ chỉ được đọc lại ở bản đồ 1. Hình ảnh event được
 chọn lại theo điều kiện sau khi thực thi xong. Cửa chạm chỉ chạy từ trang đang hoạt động.
+Điều kiện trang event xét cả vật phẩm và nhân vật chính đang có. NPC ở cùng lớp với
+nhân vật chặn di chuyển trừ khi được đánh dấu xuyên qua. Nhấn hành động chỉ chạy event
+hành động ở phía trước hoặc dưới chân; event chạm chạy khi đi vào hoặc va chạm.
 
 Đây chưa phải interpreter đầy đủ của MV. Điều kiện hiện hỗ trợ switch, biến,
 self-switch, vàng và vật phẩm. Lệnh hoặc điều kiện chưa hỗ trợ sẽ dừng event, hiển thị

@@ -140,7 +140,7 @@
 
         refreshEvents() {
             this.events = this.map.events.filter(Boolean).map((event) => {
-                const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId);
+                const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
                 if (!page || !page.image || !(page.image.characterName || page.image.tileId > 0)) return null;
                 return {
                     id: event.id,
@@ -184,7 +184,7 @@
             const player = this.game.player;
             for (const event of this.map.events || []) {
                 if (!event || event.x !== player.mapX || event.y !== player.mapY) continue;
-                const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId);
+                const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
                 if (page && (page.trigger === 1 || page.trigger === 2)) return this.startEvent(event);
             }
             return false;
@@ -413,6 +413,14 @@
                 this.bump = 1;
                 return false;
             }
+            for (const event of this.map.events || []) {
+                if (!event || event.x !== nx || event.y !== ny) continue;
+                const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId, player);
+                if (!page || page.priorityType !== 1 || page.through) continue;
+                if (page.trigger === 1 || page.trigger === 2) this.startEvent(event);
+                this.bump = 1;
+                return false;
+            }
 
             this.fromX = player.mapX;
             this.fromY = player.mapY;
@@ -430,12 +438,18 @@
                 this.triggerGuard();
                 return;
             }
-            const event = (this.map.events || []).find((entry) => entry && entry.x === front.x && entry.y === front.y);
+            const player = this.game.player;
+            const event = (this.map.events || []).filter(Boolean).find((entry) => {
+                const page = this.game.data.eventPage(entry, this.game.flags, this.game.mapId, player);
+                if (!page || page.trigger !== 0) return false;
+                if (page.priorityType === 1) return entry.x === front.x && entry.y === front.y;
+                return entry.x === player.mapX && entry.y === player.mapY;
+            });
             if (!event || !this.startEvent(event)) this.game.showToast('Không có gì trong bóng tối.', 1.4);
         }
 
         startEvent(event) {
-            const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId);
+            const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
             if (!page || !page.list || !page.list.some((command) => command.code !== 0)) return false;
             this.finishMove();
             this.eventId = event.id;
