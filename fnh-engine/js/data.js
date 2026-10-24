@@ -135,6 +135,15 @@
             return null;
         }
 
+        commandsAt(map, x, y, flags) {
+            for (const event of ((map && map.events) || [])) {
+                if (!event || event.x !== x || event.y !== y) continue;
+                const page = this.eventPage(event, flags || {});
+                return page ? (page.list || []) : [];
+            }
+            return [];
+        }
+
         playable() {
             const self = this;
             return PLAYABLE.map(function (entry) {

@@ -408,6 +408,21 @@
                 this.triggerGuard();
                 return;
             }
+            const commands = this.game.data.commandsAt(this.map, front.x, front.y, this.game.flags);
+            for (const command of commands) {
+                const p = command.parameters || [];
+                if (command.code === 121) {
+                    const from = Number(p[0] || 0);
+                    const to = Number(p[1] || from);
+                    const value = p[2] === 0;
+                    for (let id = from; id <= to; id += 1) this.game.flags['switch:' + id] = value;
+                } else if (command.code === 122) {
+                    const from = Number(p[0] || 0);
+                    const to = Number(p[1] || from);
+                    const value = Number(p[4] || 0);
+                    for (let id = from; id <= to; id += 1) this.game.flags['variable:' + id] = value;
+                }
+            }
             const transfer = this.game.data.transferAt(this.map, front.x, front.y);
             if (transfer && transfer.mapId && transfer.mapId !== this.game.mapId) {
                 this.game.mapId = transfer.mapId;
