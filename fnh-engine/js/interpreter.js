@@ -22,6 +22,7 @@
         resume(value) {
             if (!this.wait || this.wait.type === 'time') return;
             if (this.wait.type === 'choice') {
+                if (value === -2 && this.wait.cancel !== -2) throw new Error('Event không cho phép hủy lựa chọn');
                 if (value !== -2 && (!Number.isInteger(value) || value < 0 || value >= this.wait.choices.length)) {
                     throw new Error('Lựa chọn event không hợp lệ');
                 }
@@ -109,8 +110,16 @@
                     case 119: {
                         const target = frame.list.findIndex((entry) => entry.code === 118 && entry.parameters[0] === p[0]);
                         if (target >= 0) {
+                            const current = frame.index - 1;
+                            let level = indent;
+                            for (let i = Math.min(current, target); i <= Math.max(current, target); i += 1) {
+                                const nextLevel = frame.list[i].indent || 0;
+                                if (level !== nextLevel) {
+                                    delete frame.branches[level];
+                                    level = nextLevel;
+                                }
+                            }
                             frame.index = target + 1;
-                            frame.branches = {};
                         }
                         break;
                     }

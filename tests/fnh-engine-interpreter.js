@@ -66,6 +66,8 @@ for (const [selection, expected] of [[0, 'A,end'], [1, 'B,end'], [-2, 'cancel,en
 runner = choiceRunner();
 runner.update(0);
 assert.throws(() => runner.resume(3), /không hợp lệ/);
+runner.wait.cancel = -1;
+assert.throws(() => runner.resume(-2), /không cho phép hủy/);
 
 executed = [];
 runner = new FNH.EventInterpreter([
@@ -85,6 +87,14 @@ runner = new FNH.EventInterpreter([
 ], handlers);
 runner.update(0);
 assert.equal(executed.join(','), 'label');
+executed = [];
+runner = new FNH.EventInterpreter([
+    command(111, [true]), command(119, ['inside'], 1), command(999, ['wrong'], 1),
+    command(118, ['inside'], 1), command(999, ['inside'], 1),
+    command(411), command(999, ['wrong else'], 1), command(412)
+], handlers);
+runner.update(0);
+assert.equal(executed.join(','), 'inside', 'Nhảy nhãn trong cùng nhánh giữ kết quả điều kiện');
 runner = new FNH.EventInterpreter([command(117, [1])], {
     ...handlers, commonEvent: () => ({ list: [command(117, [1])] })
 });
