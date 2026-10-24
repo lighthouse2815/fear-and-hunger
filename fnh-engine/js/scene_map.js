@@ -537,7 +537,7 @@
         pauseEntries() {
             return [
                 { id: 'resume', label: 'TIẾP TỤC', enabled: true },
-                { id: 'save', label: 'LƯU GAME', enabled: true },
+                { id: 'save', label: 'LƯU GAME', enabled: !this.game.flags['system:saveDisabled'] },
                 { id: 'load', label: 'TẢI GAME', enabled: !!this.pauseSaveInfo },
                 { id: 'items', label: 'VẬT PHẨM', enabled: true },
                 { id: 'sound', label: this.game.audio.muted ? 'ÂM THANH: TẮT' : 'ÂM THANH: BẬT', enabled: true },
@@ -672,9 +672,14 @@
                 this.updateEventImages();
                 return;
             }
+            if (this.game.player.hp <= 0) {
+                this.leaving = true;
+                this.game.gameOver();
+                return;
+            }
             if (!this.moving && this.startAutorun()) return;
             const input = this.input;
-            if (input.isPressed('Escape', 'x', 'X')) {
+            if (input.isPressed('Escape', 'x', 'X') && !this.game.flags['system:menuDisabled']) {
                 this.openPause();
                 return;
             }
@@ -1065,6 +1070,19 @@
                     else if (p[2] === 4 && operand !== 0) this.game.flags[key] = Math.floor(old / operand);
                     else if (p[2] === 5 && operand !== 0) this.game.flags[key] = old % operand;
                 }
+            } else if (command.code === 134 || command.code === 135) {
+                const key = command.code === 134 ? 'system:saveDisabled' : 'system:menuDisabled';
+                this.game.flags[key] = p[0] === 0;
+            } else if (command.code === 211) {
+                this.game.player.transparent = p[0] === 0;
+            } else if (command.code === 351) {
+                this.openPause();
+                return { type: 'pause', scene: this };
+            } else if (command.code === 353 || command.code === 354) {
+                this.leaving = true;
+                if (command.code === 353) this.game.gameOver();
+                else this.game.returnToTitle();
+                return false;
             } else if (command.code === 123) {
                 if (!this.eventId) return;
                 const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + String(p[0] || 'A');
@@ -1406,7 +1424,7 @@
                 y: playerFootY,
                 priority: 1,
                 draw: () => {
-                    if (!this.playerRouteState || !this.playerRouteState.transparent) {
+                    if (!player.transparent && (!this.playerRouteState || !this.playerRouteState.transparent)) {
                         this.drawShadow(ctx, playerFootX, playerFootY, 40, 0.35 * (this.playerRouteState ? this.playerRouteState.opacity / 255 : 1));
                     }
                     this.drawCharacter(
@@ -1420,7 +1438,8 @@
                         playerFootX,
                         playerFootY - (this.playerRouteState && this.playerRouteState.jumpHeight || 0),
                         this.playerRouteState ? { alpha: this.playerRouteState.opacity / 255,
-                            transparent: this.playerRouteState.transparent, blendMode: this.playerRouteState.blendMode } : undefined
+                            transparent: player.transparent || this.playerRouteState.transparent, blendMode: this.playerRouteState.blendMode }
+                            : { transparent: player.transparent }
                     );
                 }
             });

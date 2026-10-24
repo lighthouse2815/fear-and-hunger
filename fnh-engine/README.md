@@ -278,6 +278,10 @@ khôi phục vị trí; đổi tham số cùng bản nhạc không khởi độn
 hủy cả yêu cầu decode đang chờ để âm thanh không tự phát lại sau đó. BGM đã ghi nhớ
 được lưu cùng save. Bản đồ đọc cấu hình autoplay BGM/BGS từ JSON gốc. Chưa có ME
 và âm thanh theo vị trí từ plugin.
+Lệnh hệ thống hỗ trợ khóa/mở lưu và menu (134/135), ẩn/hiện người chơi (211), mở menu
+và đợi đóng (351), Game Over/về tiêu đề (353/354). Khóa lưu được kiểm tra ở cả menu
+và API lưu; các cờ này đi cùng save. Nhân vật hết HP chuyển màn hình chết khi event
+đã hoàn tất; event vẫn có thể tiếp tục hội thoại hoặc hồi phục trước thời điểm đó.
 Chưa có JavaScript tùy ý,
 script move route và các plugin command khác,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.

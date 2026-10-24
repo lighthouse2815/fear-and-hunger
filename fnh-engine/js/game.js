@@ -214,7 +214,7 @@
         }
 
         saveGame() {
-            if (!this.player) return false;
+            if (!this.player || this.flags['system:saveDisabled']) return false;
             const payload = {
                 version: 1,
                 savedAt: Date.now(),

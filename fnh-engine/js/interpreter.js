@@ -35,7 +35,9 @@
         update(dt) {
             if (this.done) return;
             if (this.wait) {
-                if (this.wait.type === 'gab') {
+                if (this.wait.type === 'pause') {
+                    if (this.wait.scene.paused) return;
+                } else if (this.wait.type === 'gab') {
                     if (this.wait.queue.busy) return;
                 } else if (this.wait.type === 'route') {
                     if (this.wait.route.error) throw this.wait.route.error;
@@ -151,7 +153,7 @@
                         break;
                     default: {
                         const result = this.handlers.execute(command);
-                        if (result && ['route', 'time', 'gab'].includes(result.type)) this.wait = result;
+                        if (result && ['route', 'time', 'gab', 'pause'].includes(result.type)) this.wait = result;
                         if (result === false) {
                             this.frames = [];
                             this.done = true;
