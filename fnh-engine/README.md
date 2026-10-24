@@ -211,11 +211,13 @@ trong túi, kể cả khi trùng ID; việc trừ cả trang bị đang mặc v�
 tránh làm sai chỉ số nhân vật.
 Lệnh hoặc điều kiện chưa hỗ trợ sẽ dừng event, hiển thị
 thông báo và lưu lỗi vào `FNH.game.lastError`, thay vì chạy tiếp các hệ quả sai.
-Có autorun bản đồ (trigger 3), chạy trước điều khiển người chơi và chờ hội thoại như event
+Có autorun bản đồ (trigger 3) và common autorun (trigger 1, điều kiện switch),
+chạy trước điều khiển người chơi và chờ hội thoại như event
 thường. Lệnh Erase Event (214) ẩn event và bỏ va chạm cho tới khi tải lại bản đồ; không
 ghi trạng thái xóa vào save. Trang autorun gặp lệnh chưa hỗ trợ được dừng và không tự
 thử lại cho tới khi tải lại bản đồ, tránh lặp thông báo lỗi mỗi frame.
-Chưa có parallel event, autorun common event, script/plugin command, move route, hiệu ứng màn hình,
+Common autorun dùng ngữ cảnh event ID 0, không ghi self-switch hoặc xóa event bản đồ.
+Chưa có parallel event, script/plugin command, move route, hiệu ứng màn hình,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 
 ## Kiểm chứng

@@ -252,3 +252,40 @@ autoEvent.pages.push(replacement);
 assert.equal(automatic.startAutorun(), true, 'Trang mới vẫn chạy sau lỗi trang cũ');
 assert.equal(automatic.game.gold, 10);
 console.log('ĐẠT: autorun, hội thoại, tự khóa, xóa event và tránh lặp lỗi.');
+
+const common = new FNH.Scene_Map();
+common.game = {
+    mapId: 2, flags: {}, player: {}, gold: 0,
+    data: new FNH.DataStore(), showToast() {}
+};
+common.map = { events: [] };
+common.input = { isPressed: () => false };
+common.game.data.commonEvents = [null, { trigger: 1, switchId: 15, list: [
+    command(125, [0, 0, 4]), command(230, [60]), command(121, [15, 15, 1])
+] }];
+assert.equal(common.startAutorun(), false, 'Common autorun chỉ chạy khi switch bật');
+common.game.flags['switch:15'] = true;
+assert.equal(common.startAutorun(), true);
+assert.equal(common.eventId, 0, 'Common autorun không mượn ID event bản đồ');
+assert.equal(common.game.gold, 4);
+assert.equal(common.startAutorun(), false, 'Không khởi động lại common event đang chờ');
+common.updateEvent(0.5);
+assert.equal(common.game.flags['switch:15'], true);
+common.updateEvent(0.5);
+assert.equal(common.game.flags['switch:15'], false);
+assert.equal(common.startAutorun(), false);
+common.game.flags['switch:15'] = true;
+assert.equal(common.startAutorun(), true, 'Bật lại switch chạy common autorun từ đầu');
+assert.equal(common.game.gold, 8);
+common.updateEvent(1);
+common.game.data.commonEvents[1].list = [command(999)];
+common.game.flags['switch:15'] = true;
+assert.equal(common.startAutorun(), true);
+assert.equal(common.startAutorun(), false, 'Common autorun lỗi không lặp mỗi frame');
+common.eventId = 0;
+common.executeEventCommand(command(123, ['A', 0]));
+assert.equal(common.game.flags['self:2:0:A'], undefined);
+assert.equal(common.eventCondition([2, 'A', 1]), false);
+common.executeEventCommand(command(214));
+assert.equal(common.erasedEvents.size, 0);
+console.log('ĐẠT: common autorun theo switch, chờ, kích hoạt lại và ngữ cảnh riêng.');

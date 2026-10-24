@@ -155,6 +155,10 @@
                 const page = this.eventPage(event);
                 if (page && page.trigger === 3 && !this.failedAutorunPages.has(page) && this.startEvent(event)) return true;
             }
+            for (const event of this.game.data.commonEvents || []) {
+                if (event && event.trigger === 1 && this.game.flags['switch:' + event.switchId] &&
+                    !this.failedAutorunPages.has(event) && this.startEventList(event, 0)) return true;
+            }
             return false;
         }
 
@@ -474,9 +478,14 @@
         startEvent(event) {
             if (this.eventRunner || this.leaving) return false;
             const page = this.eventPage(event);
-            if (!page || !page.list || !page.list.some((command) => command.code !== 0)) return false;
+            return this.startEventList(page, event.id);
+        }
+
+        startEventList(page, eventId) {
+            if (this.eventRunner || this.leaving || !page || !page.list ||
+                !page.list.some((command) => command.code !== 0)) return false;
             this.finishMove();
-            this.eventId = event.id;
+            this.eventId = eventId;
             this.runningEventPage = page;
             this.eventRunner = new FNH.EventInterpreter(page.list, {
                 condition: (parameters) => this.eventCondition(parameters),
@@ -497,6 +506,7 @@
                 if (p[4] >= 0 && p[4] < results.length) return results[p[4]];
             }
             if (p[0] === 2) {
+                if (!this.eventId) return false;
                 const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + p[1];
                 const value = Object.prototype.hasOwnProperty.call(flags, key) ? flags[key]
                     : (this.game.mapId || 1) === 1 && flags['self:' + this.eventId + ':' + p[1]];
@@ -602,7 +612,7 @@
                     this.refreshEvents();
                 }
             } catch (error) {
-                if (this.runningEventPage && this.runningEventPage.trigger === 3) {
+                if (this.runningEventPage) {
                     this.failedAutorunPages.add(this.runningEventPage);
                 }
                 this.game.lastError = error;
@@ -660,7 +670,8 @@
                     else if (p[2] === 4 && operand !== 0) this.game.flags[key] = Math.floor(old / operand);
                     else if (p[2] === 5 && operand !== 0) this.game.flags[key] = old % operand;
                 }
-            } else if (command.code === 123 && this.eventId) {
+            } else if (command.code === 123) {
+                if (!this.eventId) return;
                 const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + String(p[0] || 'A');
                 this.game.flags[key] = p[1] === 0;
             } else if (command.code === 125) {
@@ -687,8 +698,10 @@
                     inventory.push(kind === 'item' ? { id: itemId, amount: total } : { id: itemId, amount: total, kind });
                 }
             } else if (command.code === 214) {
-                this.erasedEvents.add(this.eventId);
-                this.refreshEvents();
+                if (this.eventId) {
+                    this.erasedEvents.add(this.eventId);
+                    this.refreshEvents();
+                }
             } else if (command.code === 250 && p[0] && p[0].name) {
                 this.game.audio.playSe(p[0].name, { volume: (Number(p[0].volume) || 90) / 100 });
             } else if (command.code === 201) {
