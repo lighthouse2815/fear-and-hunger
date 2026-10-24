@@ -1267,7 +1267,12 @@
                 if (!this.eventId) return;
                 const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + String(p[0] || 'A');
                 this.game.flags[key] = p[1] === 0;
-            } else if ([331, 332, 333, 334, 335, 342].includes(command.code)) {
+            } else if (command.code === 340) {
+                if (!this.battle) return;
+                this.battle.result = 'fled';
+                this.battle.returnToMap();
+                return false;
+            } else if ([331, 332, 333, 334, 335, 336, 342].includes(command.code)) {
                 if (!this.battle) return;
                 const enemies = p[0] < 0 ? this.battle.enemies : this.battle.enemies.filter((enemy, index) => index === p[0]);
                 let value = p[2] === 1 ? Number(this.game.flags['variable:' + p[3]] || 0) : Number(p[3] || 0);
@@ -1284,6 +1289,13 @@
                     }
                     if (command.code === 334) this.game.data.recoverActor(enemy);
                     if (command.code === 335) enemy.hidden = false;
+                    if (command.code === 336) {
+                        this.game.data.transformEnemy(enemy, p[1]);
+                        for (const part of enemy.parts) this.game.assets.loadImage(part.image).catch((error) => {
+                            this.game.lastError = error;
+                            this.game.showToast(error.message, 6);
+                        });
+                    }
                 }
             } else if ([311, 312, 313, 314, 317, 318, 326].includes(command.code)) {
                 const actors = this.eventActorTargets(p[0], p[1]);

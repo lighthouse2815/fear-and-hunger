@@ -158,3 +158,38 @@ eventBattle.turn = 3;
 assert.equal(eventBattle.battleEventMatches({ conditions: { turnValid: true, turnA: 1, turnB: 2 } }), true);
 assert.equal(eventBattle.battleEventMatches({ conditions: { enemyValid: true, enemyIndex: 0, enemyHp: 50 } }), false);
 console.log('ĐẠT: sự kiện troop theo lượt, switch, HP và lệnh thay đổi cả nhóm quái.');
+
+eventMap.game.data.enemies[2] = { ...eventMap.game.data.enemies[1], id: 2, name: 'Transformed',
+    battlerName: 'Other', params: [25, 5, 30, 10, 10, 10, 10, 10], gold: 99, exp: 88, actions: [] };
+const transformed = eventBattle.enemies[0];
+transformed.hidden = true;
+context.executeEventCommand(c(336, [0, 2]));
+assert.equal(transformed.enemyId, 2);
+assert.equal(transformed.hp, 25, 'Biến hình giới hạn HP theo chỉ số mới');
+assert.equal(transformed.mp, 5);
+assert.equal(transformed.atk, 30);
+assert.equal(transformed.hidden, true, 'Biến hình giữ trạng thái ẩn');
+assert.equal(transformed.parts[0].x, 10);
+assert.equal(transformed.parts[0].image, 'enemies/Other');
+assert.equal(transformed.rewardGold, 99);
+assert.equal(transformed.rewardExp, 88);
+assert.equal(transformed.actions.length, 0);
+assert.equal(eventBattle.enemies[1].enemyId, 1, 'Không biến hình nhầm enemy khác');
+assert.throws(() => context.executeEventCommand(c(336, [0, 999])), /Không tìm thấy enemy/);
+const abortMap = setup();
+abortMap.startEventList({ list: [c(301, [0, 1, false, false]), c(602), c(125, [0, 0, 9], 1), c(604)] }, 1);
+const abortBattle = abortMap.game.scene;
+abortBattle.battleEventContext().executeEventCommand(c(340));
+assert.equal(abortMap.game.scene, abortMap, 'Abort về cùng bản đồ dù cấm chạy');
+abortMap.updateEvent(0);
+assert.equal(abortMap.game.gold, 9, 'Abort trả nhánh thoát và không trao thưởng chiến thắng');
+console.log('ĐẠT: biến hình cập nhật dữ liệu chiến đấu và abort tiếp tục event bản đồ.');
+
+context.executeEventCommand(c(333, [1, 0, 1]));
+assert.equal(eventBattle.enemies[1].hp, 0);
+context.executeEventCommand(c(333, [1, 1, 1]));
+assert.equal(eventBattle.enemies[1].hp, 1);
+assert.equal(eventBattle.battleEventMatches({ conditions: { actorValid: true, actorId: 1, actorHp: 50 } }), false);
+eventMap.game.data.setActorHp(eventMap.game.player, 50);
+assert.equal(eventBattle.battleEventMatches({ conditions: { actorValid: true, actorId: 1, actorHp: 50 } }), true);
+console.log('ĐẠT: trạng thái enemy và ngưỡng HP actor trong điều kiện troop.');

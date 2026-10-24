@@ -419,6 +419,21 @@
             return { id: troop.id, name: troop.name, enemies, pages: troop.pages || [] };
         }
 
+        transformEnemy(enemy, id) {
+            const source = this.enemy(id);
+            if (!source) throw new Error('Không tìm thấy enemy ' + id);
+            enemy.enemyId = source.id;
+            enemy.name = source.name;
+            enemy.baseParams = source.params.slice();
+            enemy.actions = source.actions || [];
+            enemy.rewardGold = source.gold || 0;
+            enemy.rewardExp = source.exp || 0;
+            enemy.dropItems = source.dropItems || [];
+            enemy.parts = enemy.parts.map((part) => ({ ...part, enemyId: source.id,
+                name: source.name, image: 'enemies/' + source.battlerName }));
+            this.refreshActor(enemy);
+        }
+
         createGuardEncounter() {
             const guard = this.enemy(1);
             const troop = this.troop(1);
