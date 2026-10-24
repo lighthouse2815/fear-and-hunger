@@ -1267,6 +1267,11 @@
                 if (!this.eventId) return;
                 const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + String(p[0] || 'A');
                 this.game.flags[key] = p[1] === 0;
+            } else if (command.code === 337) {
+                if (!this.battle) return;
+                const targets = this.battle.enemies.filter((enemy, index) =>
+                    !enemy.hidden && enemy.hp > 0 && (p[2] || p[0] < 0 || index === p[0]));
+                this.battle.showAnimation(p[1], targets);
             } else if (command.code === 339) {
                 if (!this.battle) return;
                 const users = p[0] === 0 ? this.battle.enemies.filter((enemy, index) => p[1] < 0 || index === p[1])

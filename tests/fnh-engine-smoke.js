@@ -707,6 +707,11 @@ async function main() {
         await waitFor(cdp, 'FNH.game.sceneName === "battle" && FNH.game.scene.phase === "command"', 15000, 'trận troop từ event');
         check('battle event đọc HP và thành viên troop gốc', await evalPage(cdp,
             'FNH.game.scene.encounter.id === 1 && FNH.game.scene.enemies.length === 7 && FNH.game.scene.enemies[0].maxHp === FNH.game.data.enemies[1].params[0]', false, false));
+        await evalPage(cdp, 'FNH.game.scene.battleEventContext().executeEventCommand({code:337, parameters:[0,7,false]})', false, false);
+        await waitFor(cdp, 'FNH.game.scene.animations.some(a => a.ready && a.frame >= 0)', 15000, 'animation gốc trong trận');
+        check('animation trận đấu giải mã sprite sheet gốc', await evalPage(cdp,
+            'FNH.game.assets.imageCache.has("animations/coin_flip") && FNH.game.scene.animations[0].images[0].width > 0', false, false));
+        await waitFor(cdp, 'FNH.game.scene.animations.length === 0', 15000, 'animation kết thúc');
         await evalPage(cdp, 'FNH.game.scene.escapeRatio = 1', false, false);
         await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
         await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);

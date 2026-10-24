@@ -72,6 +72,7 @@
             this.escapeRatio = this.encounter ? 0.5 * mean(this.members) / Math.max(1, mean(this.enemies)) : 0.55;
             this.commonEventContext = null;
             this.battleEventFlags = new Map();
+            this.animations = [];
             this.phase = 'intro';
             this.timer = 1.7;
             this.index = 0;
@@ -131,6 +132,17 @@
                 if (value < 0) return members[i];
             }
             return members[members.length - 1];
+        }
+
+        showAnimation(id, targets) {
+            const data = this.game.data.animations[id];
+            if (!data) throw new Error('Không tìm thấy animation ' + id);
+            for (const target of data.position === 3 ? targets.slice(0, 1) : targets) {
+                this.animations.push(new FNH.BattleAnimation(data, this.game.assets, this.game.audio, target, (error) => {
+                    this.game.lastError = error;
+                    this.game.showToast(error.message, 6);
+                }));
+            }
         }
 
         actionTargets(user, skill, targetIndex) {
@@ -595,6 +607,8 @@
 
         update(dt) {
             this.time += dt;
+            for (const animation of this.animations) animation.update(dt);
+            this.animations = this.animations.filter((animation) => !animation.done);
             if (this.enemyFlash > 0) this.enemyFlash = Math.max(0, this.enemyFlash - dt);
             if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 1.6);
             for (const item of this.damageNumbers) {
@@ -745,7 +759,8 @@
 
         drawEnemy(ctx) {
             if (!this.enemy) return;
-            const parts = this.enemies.filter((enemy) => !enemy.hidden && enemy.hp > 0).flatMap((enemy) => enemy.parts).sort(function (a, b) { return a.y - b.y; });
+            const parts = this.enemies.filter((enemy) => !enemy.hidden && enemy.hp > 0 &&
+                !this.animations.some((animation) => animation.target === enemy && animation.hidden)).flatMap((enemy) => enemy.parts).sort(function (a, b) { return a.y - b.y; });
             const shakeX = this.shake > 0 ? (Math.random() * 2 - 1) * this.shake * 10 : 0;
             const shakeY = this.shake > 0 ? (Math.random() * 2 - 1) * this.shake * 6 : 0;
 
@@ -763,7 +778,11 @@
                 if (!image) continue;
                 const breathing = Math.sin(this.time * 2.1 + i * 0.8) * 1.4;
                 if (this.enemyFlash > 0) ctx.filter = 'brightness(1.85)';
-                ctx.drawImage(image, part.x - image.width / 2, part.y - image.height + breathing);
+                let tinted = image;
+                for (const animation of this.animations) {
+                    if ((animation.target.parts || []).includes(part)) tinted = animation.tint(tinted);
+                }
+                ctx.drawImage(tinted, part.x - image.width / 2, part.y - image.height + breathing);
                 ctx.filter = 'none';
             }
             ctx.restore();
@@ -994,6 +1013,11 @@
             if (this.game.screenEffects) ctx.translate(this.game.screenEffects.shakeX, 0);
             this.drawBattleback(ctx);
             this.drawEnemy(ctx);
+            for (const animation of this.animations) {
+                const part = animation.target.parts && animation.target.parts[0];
+                const image = part && this.game.assets.imageCache.get(part.image);
+                animation.draw(ctx, { x: part ? part.x : 226, y: part ? part.y : 430, height: image ? image.height : 96 });
+            }
             this.drawDamageNumbers(ctx);
             ctx.restore();
             if (this.game.screenEffects) this.game.screenEffects.apply(ctx);

@@ -21,6 +21,7 @@
             this.skills = [];
             this.items = [];
             this.states = [];
+            this.animations = [];
             this.commonEvents = [];
             this.weapons = [];
             this.armors = [];
@@ -35,7 +36,7 @@
             this.system = this.assets.system || await this.assets.fetchJson('data/System.json');
             const names = [
                 'Actors', 'Classes', 'Skills', 'Items', 'Weapons', 'Armors',
-                'Enemies', 'Troops', 'Tilesets', 'MapInfos', 'CommonEvents', 'States'
+                'Enemies', 'Troops', 'Tilesets', 'MapInfos', 'CommonEvents', 'States', 'Animations'
             ];
             const files = await Promise.all(names.map((name) => this.assets.fetchJson('data/' + name + '.json')));
             this.actors = files[0];
@@ -50,6 +51,7 @@
             this.mapInfos = files[9];
             this.commonEvents = files[10];
             this.states = files[11];
+            this.animations = files[12];
             return this;
         }
 
