@@ -150,6 +150,7 @@ fnh-engine/
   js/assets.js            nạp/giải mã ảnh và âm thanh RPG Maker MV
   js/audio.js             Web Audio: BGM, BGS, SE
   js/data.js              đọc JSON gốc, tạo nhân vật, tile, encounter
+  js/interpreter.js       con trỏ event, nhánh, lựa chọn, chờ, common event
   js/game.js              vòng lặp, chuyển cảnh, preload, lưu/đọc
   js/scene_title.js       tiêu đề
   js/scene_creation.js    chọn nghề
@@ -177,7 +178,8 @@ MV. Ảnh được giải mã vào `Blob` URL rồi nạp vào `Image`; âm than
 ### Dữ liệu gốc được dùng
 
 `System.json`, `Actors.json`, `Classes.json`, `Weapons.json`, `Armors.json`,
-`Enemies.json`, `Troops.json`, `Tilesets.json`, `MapInfos.json`, `Map001.json`.
+`Enemies.json`, `Troops.json`, `Tilesets.json`, `MapInfos.json`, `CommonEvents.json`
+và JSON bản đồ đang mở.
 Chỉ số nhân vật lấy từ class + trang bị gốc ở level khởi đầu. Tile passability lấy từ
 `Tilesets.json`; thứ tự vẽ tôn trọng cờ upper-layer `0x10`.
 
@@ -197,8 +199,14 @@ chọn lại theo điều kiện sau khi thực thi xong. Cửa chạm chỉ ch�
 nhân vật chặn di chuyển trừ khi được đánh dấu xuyên qua. Nhấn hành động chỉ chạy event
 hành động ở phía trước hoặc dưới chân; event chạm chạy khi đi vào hoặc va chạm.
 
+Biến cũng đọc được dữ liệu game: số lượng vật phẩm, chỉ số nhân vật chính, tọa độ/hướng
+và vị trí màn hình của nhân vật/event, ID thành viên trong tổ đội một người hiện tại,
+ID bản đồ, số thành viên, vàng và thời gian chơi. Những dữ liệu chưa có mô hình tương
+ứng (nhân vật ngoài tổ đội, timer, số trận, v.v.) được báo chưa hỗ trợ.
+
 Đây chưa phải interpreter đầy đủ của MV. Điều kiện hiện hỗ trợ switch, biến,
-self-switch, vàng và vật phẩm. Lệnh hoặc điều kiện chưa hỗ trợ sẽ dừng event, hiển thị
+self-switch, vàng, vật phẩm, nhân vật chính có trong tổ đội và hướng nhân vật/event.
+Lệnh hoặc điều kiện chưa hỗ trợ sẽ dừng event, hiển thị
 thông báo và lưu lỗi vào `FNH.game.lastError`, thay vì chạy tiếp các hệ quả sai.
 Chưa có autorun/parallel event, script/plugin command, move route, hiệu ứng màn hình,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.

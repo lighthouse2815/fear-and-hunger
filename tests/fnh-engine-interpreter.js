@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const FNH = { Scene: class {} };
+const FNH = { Scene: class {}, TILE: 48 };
 for (const name of ['interpreter', 'data', 'scene_map']) {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/' + name + '.js'), 'utf8'), {
         window: { FNH }
@@ -167,4 +167,40 @@ assert.equal(movement.checkTransfer(), true, 'Chạm event dưới chân chạy 
 assert.equal(movement.game.gold, 4);
 npcPage.conditions = { switch1Valid: true, switch1Id: 1 };
 assert.equal(movement.checkTransfer(), false, 'Không chạy event chưa đủ điều kiện');
+Object.assign(movement.game.player, {
+    level: 3, exp: 41, hp: 72, mp: 12, maxHp: 100, maxMp: 40,
+    atk: 8, def: 9, mat: 10, mdf: 11, agi: 12, luk: 13,
+    inventory: [{ id: 8, amount: 2 }, { id: 8, kind: 'weapon', amount: 1 }]
+});
+assert.equal(movement.eventDataOperand(0, 8, 0), 2);
+assert.equal(movement.eventDataOperand(1, 8, 0), 1);
+assert.equal(movement.eventDataOperand(2, 8, 0), 0);
+for (const [index, value] of [3, 41, 72, 12, 100, 40, 8, 9, 10, 11, 12, 13].entries()) {
+    assert.equal(movement.eventDataOperand(3, 1, index), value);
+}
+assert.equal(movement.eventDataOperand(5, -1, 0), 0);
+assert.equal(movement.eventDataOperand(5, -1, 1), 1);
+assert.equal(movement.eventDataOperand(5, -1, 2), 2);
+assert.equal(movement.eventDataOperand(5, -1, 3), 24);
+assert.equal(movement.eventDataOperand(5, -1, 4), 90);
+movement.eventId = 1;
+assert.equal(movement.eventDataOperand(5, 0, 1), 1, 'ID 0 dùng event đang thực thi');
+assert.equal(movement.eventDataOperand(5, 1, 1), 1);
+assert.equal(movement.eventDataOperand(5, 999, 0), 0);
+assert.equal(movement.eventDataOperand(6, 0, 0), 1);
+assert.equal(movement.eventDataOperand(6, 1, 0), 0);
+assert.equal(movement.eventDataOperand(7, 0, 0), 2);
+assert.equal(movement.eventDataOperand(7, 1, 0), 1);
+assert.equal(movement.eventDataOperand(7, 2, 0), 4);
+movement.game.playtime = 12.8;
+assert.equal(movement.eventDataOperand(7, 4, 0), 12);
+assert.throws(() => movement.eventDataOperand(7, 5, 0), /Chưa hỗ trợ/);
+assert.throws(() => movement.eventDataOperand(3, 2, 0), /Chưa hỗ trợ/);
+assert.equal(movement.eventCondition([4, 1, 0]), true);
+assert.equal(movement.eventCondition([4, 2, 0]), false);
+assert.equal(movement.eventCondition([6, -1, 2]), true);
+assert.equal(movement.eventCondition([6, 999, 2]), false);
+movement.executeEventCommand(command(122, [22, 23, 0, 3, 5, -1, 1]));
+assert.equal(movement.game.flags['variable:22'], 1);
+assert.equal(movement.game.flags['variable:23'], 1);
 console.log('ĐẠT: nhánh, hội thoại, lựa chọn, chờ, common event, vòng lặp và tích hợp bản đồ.');

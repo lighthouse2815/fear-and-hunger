@@ -477,6 +477,11 @@
                     : (this.game.mapId || 1) === 1 && flags['self:' + this.eventId + ':' + p[1]];
                 return !!value === (p[2] === 0);
             }
+            if (p[0] === 4 && p[2] === 0) return this.game.player.id === p[1];
+            if (p[0] === 6) {
+                const character = this.eventCharacter(p[1]);
+                return !!character && character.direction === p[2];
+            }
             if (p[0] === 7) {
                 const gold = this.game.gold;
                 if (p[2] === 0) return gold >= p[1];
@@ -485,6 +490,54 @@
             }
             if (p[0] === 8) return (this.game.player.inventory || []).some((item) => item.id === p[1] && item.amount > 0);
             throw new Error('Chưa hỗ trợ điều kiện event ' + p[0]);
+        }
+
+        eventCharacter(id) {
+            if (id === -1) {
+                const player = this.game.player;
+                return { x: player.mapX, y: player.mapY, direction: player.direction,
+                    name: player.characterName, realX: this.playerVisual.x, realY: this.playerVisual.y };
+            }
+            const eventId = id === 0 ? this.eventId : id;
+            const event = (this.map.events || []).find((entry) => entry && entry.id === eventId);
+            if (!event) return null;
+            const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
+            return { x: event.x, y: event.y, realX: event.x, realY: event.y,
+                direction: page && page.image ? page.image.direction || 2 : 2,
+                name: page && page.image ? page.image.characterName : '' };
+        }
+
+        eventDataOperand(type, id, parameter) {
+            const player = this.game.player;
+            if (type >= 0 && type <= 2) {
+                const kind = ['item', 'weapon', 'armor'][type];
+                const entry = (player.inventory || []).find((item) => item.id === id && (item.kind || 'item') === kind);
+                return entry ? entry.amount : 0;
+            }
+            if (type === 3 && player.id === id) {
+                const fields = ['level', 'exp', 'hp', 'mp', 'maxHp', 'maxMp', 'atk', 'def', 'mat', 'mdf', 'agi', 'luk'];
+                if (fields[parameter]) return Number(player[fields[parameter]] || 0);
+            }
+            if (type === 5) {
+                const character = this.eventCharacter(id);
+                if (!character) return 0;
+                if (parameter === 0) return character.x;
+                if (parameter === 1) return character.y;
+                if (parameter === 2) return character.direction;
+                if (parameter === 3) return Math.round(character.realX * FNH.TILE + FNH.TILE / 2 - this.camera.x);
+                if (parameter === 4) {
+                    const shift = /^[!$]*!/.test(character.name || '') ? 0 : 6;
+                    return Math.round(character.realY * FNH.TILE + FNH.TILE - this.camera.y - shift);
+                }
+            }
+            if (type === 6) return id === 0 ? player.id : 0;
+            if (type === 7) {
+                if (id === 0) return this.game.mapId;
+                if (id === 1) return 1;
+                if (id === 2) return this.game.gold;
+                if (id === 4) return Math.floor(this.game.playtime || 0);
+            }
+            throw new Error('Chưa hỗ trợ dữ liệu event ' + type + ':' + id + ':' + parameter);
         }
 
         updateEvent(dt) {
@@ -556,11 +609,12 @@
                     else this.game.flags[key] = p[2] === 0;
                 }
             } else if (command.code === 122) {
-                if (p[3] !== 0 && p[3] !== 1 && p[3] !== 2) throw new Error('Chưa hỗ trợ toán hạng biến ' + p[3]);
+                if (p[3] !== 0 && p[3] !== 1 && p[3] !== 2 && p[3] !== 3) throw new Error('Chưa hỗ trợ toán hạng biến ' + p[3]);
                 const from = Number(p[0] || 0);
                 const to = Number(p[1] || from);
                 let operand = Number(p[4] || 0);
                 if (p[3] === 1) operand = Number(this.game.flags['variable:' + operand] || 0);
+                if (p[3] === 3) operand = this.eventDataOperand(p[4], p[5], p[6]);
                 for (let id = from; id <= to; id += 1) {
                     const key = 'variable:' + id;
                     const old = Number(this.game.flags[key] || 0);
