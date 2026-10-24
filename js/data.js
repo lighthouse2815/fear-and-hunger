@@ -166,7 +166,7 @@ const DATA = (() => {
       'Dưới chân, Cối Hầm vẫn nhấp nháy. Như một miệng, vanh vách, khép lại.',
     ],
     legend: [
-      '@ = bạn       Ω = trùm      ◆ = tiền частей',
+      '@ = bạn       Ω = trùm      ◆ = vật phẩm',
       '▼ = thang xuống    ≡ = giường lay (về & lưu)    ⇒ = lối ra',
     ],
   };
