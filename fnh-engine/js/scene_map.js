@@ -410,6 +410,16 @@
                 this.triggerGuard();
                 return;
             }
+            const transfer = this.game.data.transferAt(this.map, front.x, front.y);
+            if (transfer && transfer.mapId && transfer.mapId !== this.game.mapId) {
+                this.game.mapId = transfer.mapId;
+                this.game.player.mapX = transfer.x;
+                this.game.player.mapY = transfer.y;
+                this.game.player.direction = transfer.direction;
+                this.leaving = true;
+                this.game.changeScene(FNH.Scene_Map, { fromTransfer: true });
+                return;
+            }
             const message = this.game.data.messageAt(this.map, front.x, front.y);
             if (message) {
                 this.game.showToast(message, Math.max(2.5, Math.min(8, message.length / 14)));
