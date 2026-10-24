@@ -415,13 +415,27 @@
                 if (command.code === 121) {
                     const from = Number(p[0] || 0);
                     const to = Number(p[1] || from);
-                    const value = p[2] === 0;
-                    for (let id = from; id <= to; id += 1) this.game.flags['switch:' + id] = value;
+                    for (let id = from; id <= to; id += 1) {
+                        const key = 'switch:' + id;
+                        if (p[2] === 2) this.game.flags[key] = !this.game.flags[key];
+                        else this.game.flags[key] = p[2] === 0;
+                    }
                 } else if (command.code === 122) {
                     const from = Number(p[0] || 0);
                     const to = Number(p[1] || from);
-                    const value = Number(p[4] || 0);
-                    for (let id = from; id <= to; id += 1) this.game.flags['variable:' + id] = value;
+                    let operand = Number(p[4] || 0);
+                    if (p[3] === 1) operand = Number(this.game.flags['variable:' + operand] || 0);
+                    if (p[3] === 2) operand = Math.floor(Math.random() * (operand + 1));
+                    for (let id = from; id <= to; id += 1) {
+                        const key = 'variable:' + id;
+                        const old = Number(this.game.flags[key] || 0);
+                        if (p[2] === 0) this.game.flags[key] = operand;
+                        else if (p[2] === 1) this.game.flags[key] = old + operand;
+                        else if (p[2] === 2) this.game.flags[key] = old - operand;
+                        else if (p[2] === 3) this.game.flags[key] = old * operand;
+                        else if (p[2] === 4 && operand !== 0) this.game.flags[key] = Math.floor(old / operand);
+                        else if (p[2] === 5 && operand !== 0) this.game.flags[key] = old % operand;
+                    }
                 } else if (command.code === 123 && eventAtFront) {
                     const key = 'self:' + eventAtFront.id + ':' + String(p[0] || 'A');
                     this.game.flags[key] = true;
