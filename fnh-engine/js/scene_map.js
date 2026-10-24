@@ -990,13 +990,19 @@
                     }
                     if (wait.type === 'choice') {
                         const count = wait.choices.length;
-                        if (input.isPressed('ArrowUp', 'w', 'W')) this.eventChoice = (this.eventChoice + count - 1) % count;
-                        if (input.isPressed('ArrowDown', 's', 'S')) this.eventChoice = (this.eventChoice + 1) % count;
-                        if (input.isPressed('Escape', 'x', 'X') && wait.cancel !== -1) {
-                            runner.resume(wait.cancel);
-                        }
+                        const moveChoice = (step) => {
+                            for (let i = 0; i < count; i += 1) {
+                                this.eventChoice = (this.eventChoice + count + step) % count;
+                                if (!wait.disabled || !wait.disabled[this.eventChoice]) break;
+                            }
+                        };
+                        if (input.isPressed('ArrowUp', 'w', 'W')) moveChoice(-1);
+                        if (input.isPressed('ArrowDown', 's', 'S')) moveChoice(1);
+                        if (input.isPressed('Escape', 'x', 'X') && wait.cancel !== -1 &&
+                            (wait.cancel < 0 || !wait.disabled || !wait.disabled[wait.cancel])) runner.resume(wait.cancel);
                     }
-                    if (runner.wait && input.isPressed('Enter', ' ', 'z', 'Z')) {
+                    if (runner.wait && input.isPressed('Enter', ' ', 'z', 'Z') &&
+                        (wait.type !== 'choice' || (this.eventChoice >= 0 && (!wait.disabled || !wait.disabled[this.eventChoice])))) {
                         runner.resume(wait.type === 'choice' ? this.eventChoice : wait.type === 'number' ? wait.value
                             : wait.type === 'item' ? (wait.items[this.eventChoice] ? wait.items[this.eventChoice].id : 0) : undefined);
                     }
@@ -1006,6 +1012,9 @@
                     this.eventWait = runner.wait;
                     this.eventChoice = runner.wait && runner.wait.type === 'choice'
                         ? Math.max(0, Math.min(runner.wait.choices.length - 1, runner.wait.defaultIndex || 0)) : 0;
+                    if (runner.wait && runner.wait.type === 'choice' && runner.wait.disabled && runner.wait.disabled[this.eventChoice]) {
+                        this.eventChoice = runner.wait.disabled.findIndex((disabled) => !disabled);
+                    }
                 }
                 if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice', 'number', 'item'].includes(runner.wait.type))) {
                     this.dialogRunner = null;
@@ -1067,7 +1076,8 @@
                 FNH.panel(ctx, 180, y, FNH.WIDTH - 200, height);
                 wait.choices.forEach((choice, index) => {
                     FNH.text(ctx, (index === dialog.eventChoice ? '› ' : '  ') + choice, 200, y + 30 + index * 38, {
-                        size: 18, color: index === dialog.eventChoice ? '#f4deb0' : '#b9b09e'
+                        size: 18, color: wait.disabled && wait.disabled[index] ? '#66615a'
+                            : index === dialog.eventChoice ? '#f4deb0' : '#b9b09e'
                     });
                 });
             }
@@ -1081,6 +1091,15 @@
                 const match = /^(\S+)(?:\s+([\s\S]*))?$/.exec(String(p[0] || '').trim());
                 if (!match) return;
                 const name = match[1], argument = match[2] || '';
+                if (name.toLowerCase() === 'choice_text' || name.toLowerCase() === 'disable_choice') {
+                    const setting = /^(\d+)(?:\s+([\s\S]*))?$/.exec(argument);
+                    const runner = this.eventRunner;
+                    if (!setting || Number(setting[1]) < 1 || !runner) throw new Error('Tham số plugin lựa chọn không hợp lệ');
+                    const index = Number(setting[1]) - 1;
+                    if (name.toLowerCase() === 'choice_text') runner.choiceText[index] = setting[2] || '';
+                    else runner.disabledChoices.add(index);
+                    return;
+                }
                 const supported = ['GabText', 'ShowGab', 'ForceGab', 'ClearGab', 'WaitForGab'];
                 if (!supported.includes(name)) throw new Error('Chưa hỗ trợ plugin command ' + name);
                 const gabs = this.game.gabs || (this.game.gabs = new FNH.GabQueue());

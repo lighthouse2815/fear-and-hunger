@@ -10,6 +10,8 @@
             this.wait = null;
             this.done = false;
             this.gabText = '';
+            this.choiceText = {};
+            this.disabledChoices = new Set();
         }
 
         seek(frame, indent, codes) {
@@ -37,6 +39,7 @@
                 if (value !== -2 && (!Number.isInteger(value) || value < 0 || value >= this.wait.choices.length)) {
                     throw new Error('Lựa chọn event không hợp lệ');
                 }
+                if (value >= 0 && this.wait.disabled && this.wait.disabled[value]) throw new Error('Đáp án event bị khóa');
                 this.wait.frame.branches[this.wait.indent] = value;
             }
             this.wait = null;
@@ -89,7 +92,15 @@
                             frame.index -= 1;
                             return;
                         }
-                        this.wait = { type: 'choice', choices: p[0] || [], cancel: p[1], defaultIndex: p[2], frame, indent };
+                        this.wait = { type: 'choice', choices: (p[0] || []).map((text, index) =>
+                            Object.prototype.hasOwnProperty.call(this.choiceText, index) ? this.choiceText[index] : text),
+                            disabled: (p[0] || []).map((text, index) => this.disabledChoices.has(index)),
+                            cancel: p[1], defaultIndex: p[2], frame, indent };
+                        this.choiceText = {};
+                        this.disabledChoices.clear();
+                        if (!this.wait.choices.some((text, index) => !this.wait.disabled[index]) && this.wait.cancel === -1) {
+                            throw new Error('Lựa chọn event không có đáp án mở hoặc đường hủy');
+                        }
                         break;
                     case 103: case 104: {
                         if (this.handlers.canShowMessage && !this.handlers.canShowMessage()) {

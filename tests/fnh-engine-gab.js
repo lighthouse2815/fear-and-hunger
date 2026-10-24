@@ -55,3 +55,36 @@ scene.startEventList({ list: [c('UnsupportedPlugin data'), { code: 125, paramete
 assert.match(scene.game.lastError.message, /UnsupportedPlugin/);
 assert.equal(scene.game.gold, 5, 'Plugin chưa hỗ trợ không được âm thầm bỏ qua');
 console.log('ĐẠT: hàng đợi gab, chống lặp, force/clear/wait và ngữ cảnh parallel độc lập.');
+
+scene.game.lastError = null;
+scene.input.isPressed = () => false;
+scene.startEventList({ list: [
+    c('choice_text 1 ????'), c('disable_choice 1'),
+    { code: 102, parameters: [['Ẩn', 'Mở', 'Khác'], -1, 0] },
+    { code: 402, parameters: [0] }, { code: 125, parameters: [0, 0, 100], indent: 1 },
+    { code: 402, parameters: [1] }, { code: 125, parameters: [0, 0, 2], indent: 1 },
+    { code: 402, parameters: [2] }, { code: 125, parameters: [0, 0, 3], indent: 1 }, { code: 404 }
+] }, 0);
+assert.equal(scene.eventRunner.wait.choices[0], '????');
+assert.equal(scene.eventChoice, 1, 'Mặc định chuyển sang đáp án mở');
+assert.throws(() => scene.eventRunner.resume(0), /bị khóa/);
+scene.input.isPressed = (key) => key === 'ArrowUp';
+scene.updateEvent(0);
+assert.equal(scene.eventChoice, 2, 'Di chuyển bỏ qua đáp án khóa');
+scene.input.isPressed = (key) => key === 'Enter';
+scene.updateEvent(0);
+assert.equal(scene.game.gold, 8, 'Giữ nguyên ID nhánh khi khóa đáp án');
+scene.input.isPressed = () => false;
+scene.startEventList({ list: [{ code: 102, parameters: [['A', 'B'], -2, 0] }] }, 0);
+assert.equal(scene.eventRunner.wait.disabled[0], false, 'Thiết lập chỉ dùng một lần');
+assert.equal(scene.eventRunner.wait.choices[0], 'A');
+scene.eventRunner.resume(-2);
+scene.updateEvent(0);
+scene.startEventList({ list: [c('disable_choice 1'), { code: 102, parameters: [['A'], -1, 0] }] }, 0);
+assert.match(scene.game.lastError.message, /không có đáp án mở/);
+scene.startEventList({ list: [c('disable_choice 1'), { code: 102, parameters: [['A'], -2, 0] }] }, 0);
+assert.equal(scene.eventChoice, -1);
+scene.input.isPressed = (key) => key === 'Escape';
+scene.updateEvent(0);
+assert.equal(scene.eventRunner, null, 'Vẫn có thể hủy khi mọi đáp án bị khóa');
+console.log('ĐẠT: plugin đổi lời lựa chọn, khóa đáp án, bỏ qua khóa và giữ chỉ số nhánh.');

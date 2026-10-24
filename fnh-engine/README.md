@@ -289,6 +289,11 @@ Nhập số (103) có chọn/sửa từng chữ số và xác nhận ghi vào bi
 Chọn vật phẩm (104) lọc itypeId từ database và túi đồ, hiển thị tên/số lượng, xác nhận
 trả ID hoặc hủy trả 0; không tự tiêu thụ vật phẩm. Cả hai dùng chung khóa hội thoại với
 các event khác và khóa điều khiển di chuyển cho tới khi đóng.
+Plugin choice_text/disable_choice hỗ trợ đổi nội dung và khóa đáp án theo số thứ tự
+1-based của lựa chọn kế tiếp. Chỉ số nhánh gốc được giữ nguyên; con trỏ bỏ qua đáp án
+khóa, xác nhận không nhận đáp án khóa, đường hủy vẫn hoạt động nếu được phép. Thiết
+lập được tiêu thụ sau một bảng lựa chọn; bảng không có đáp án mở lẫn đường hủy báo
+lỗi thay vì làm kẹt input. Chưa hỗ trợ công thức JavaScript của các plugin lựa chọn.
 Chưa có JavaScript tùy ý,
 script move route và các plugin command khác,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
