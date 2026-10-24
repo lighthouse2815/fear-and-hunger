@@ -557,6 +557,7 @@
             this.drawEnemyHud(ctx);
             this.drawActorPanel(ctx);
             this.drawOverlay(ctx);
+            if (this.game.gabs) this.game.gabs.draw(ctx);
             FNH.drawVignette(ctx, FNH.WIDTH, FNH.HEIGHT, 0.38);
             FNH.drawGrain(ctx, FNH.WIDTH, FNH.HEIGHT, this.time);
         }

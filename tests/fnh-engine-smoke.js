@@ -558,6 +558,15 @@ async function main() {
             return Math.abs(pixel[0] - 80) <= 1 && Math.abs(pixel[1] - 160) <= 1 && pixel[3] === 255 && pixel[7] === 0;
         })()`, false, false));
 
+        await evalPage(cdp, `(() => {
+            const c = (text) => ({code: 356, parameters: [text]});
+            FNH.game.scene.startEventList({list: [c('GabText Hội thoại nền thử nghiệm'), c('ShowGab')]}, 0);
+        })()`, false, false);
+        await waitFor(cdp, 'FNH.game.gabs.current === "Hội thoại nền thử nghiệm"', 5000, 'gab hiện trong vòng lặp thật');
+        check('gab hiển thị mà không giữ interpreter chính', await evalPage(cdp,
+            '!FNH.game.scene.eventRunner && FNH.game.gabs.busy', false, false));
+        await evalPage(cdp, 'FNH.game.gabs.clear()', false, false);
+
         check('common event gốc được nạp', await evalPage(cdp,
             'FNH.game.data.commonEvents.length > 1', false, false));
         await evalPage(cdp, `(() => {

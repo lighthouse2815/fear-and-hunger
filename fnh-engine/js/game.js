@@ -55,6 +55,7 @@
             this.transition = new FNH.Transition();
             this.screenEffects = new FNH.ScreenEffects();
             this.pictures = new FNH.PictureManager(this.assets);
+            this.gabs = new FNH.GabQueue();
 
             this.scene = null;
             this.sceneName = 'boot';
@@ -125,6 +126,7 @@
                 !(this.scene && this.scene.paused)) {
                 this.screenEffects.update(dt);
                 if (this.pictures) this.pictures.update(dt);
+                if (this.gabs) this.gabs.update(dt);
             }
             if (this.pictures && this.pictures.lastError) {
                 this.lastError = this.pictures.lastError;
@@ -203,6 +205,7 @@
             this.flags = {};
             this.screenEffects = new FNH.ScreenEffects();
             this.pictures = new FNH.PictureManager(this.assets);
+            this.gabs = new FNH.GabQueue();
             this.changeScene(FNH.Scene_Map, { fresh: true });
         }
 
@@ -255,6 +258,7 @@
             this.flags = save.flags || {};
             this.screenEffects = new FNH.ScreenEffects(save.screenEffects);
             this.pictures = new FNH.PictureManager(this.assets, save.pictures);
+            this.gabs = new FNH.GabQueue();
             this.changeScene(FNH.Scene_Map, { fromSave: true });
             return true;
         }

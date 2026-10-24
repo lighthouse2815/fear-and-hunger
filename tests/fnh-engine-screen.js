@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const FNH = { Scene: class {}, Scene_Map: class {}, clamp: (v, min, max) => Math.max(min, Math.min(max, v)) };
-for (const file of ['screen_effects', 'pictures', 'interpreter', 'scene_map', 'game']) {
+for (const file of ['screen_effects', 'pictures', 'gab', 'interpreter', 'scene_map', 'game']) {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/' + file + '.js'), 'utf8'), { window: { FNH } });
 }
 const c = (code, parameters = []) => ({ code, parameters });

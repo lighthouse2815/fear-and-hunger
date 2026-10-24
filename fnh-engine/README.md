@@ -256,7 +256,13 @@ tâm ảnh, tỉ lệ, opacity, blend, thứ tự ID và chờ chuyển động/
 gốc, được lưu/đọc cùng trạng thái chuyển động; ảnh map và battle dùng phạm vi riêng.
 Ảnh được vẽ trên cảnh và dưới HUD/hội thoại; màu ảnh giữ vùng trong suốt. Menu tạm
 dừng đóng băng chuyển động ảnh. Chưa hỗ trợ picture plugin hoặc battle event interpreter.
-Chưa có script/plugin command,
+Plugin hội thoại nền hỗ trợ GabText, ShowGab, ForceGab, ClearGab và WaitForGab:
+hàng đợi không khóa di chuyển, chống lặp nội dung, force thay hàng đợi, clear xóa ngay,
+wait chờ toàn bộ hàng đợi. Nội dung soạn nằm riêng trên từng interpreter để các event
+parallel không ghi đè nhau. Hàng đợi tạm thời không ghi vào save; thời lượng dùng mặc
+định plugin (90 frame + 4 frame/ký tự), chưa đọc tham số tùy chỉnh, hình đại diện và
+định dạng escape code. Plugin khác vẫn báo lỗi rõ ràng, không bỏ qua lệnh.
+Chưa có script hoặc các plugin command khác,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 
 ## Kiểm chứng

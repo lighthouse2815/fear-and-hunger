@@ -967,7 +967,26 @@
 
         executeEventCommand(command) {
             const p = command.parameters || [];
-            if (command.code === 121) {
+            if (command.code === 356) {
+                const match = /^(\S+)(?:\s+([\s\S]*))?$/.exec(String(p[0] || '').trim());
+                if (!match) return;
+                const name = match[1], argument = match[2] || '';
+                const supported = ['GabText', 'ShowGab', 'ForceGab', 'ClearGab', 'WaitForGab'];
+                if (!supported.includes(name)) throw new Error('Chưa hỗ trợ plugin command ' + name);
+                const gabs = this.game.gabs || (this.game.gabs = new FNH.GabQueue());
+                const runner = this.eventRunner;
+                if (!runner) throw new Error('Plugin hội thoại cần interpreter đang chạy');
+                if (name === 'GabText') runner.gabText = argument;
+                if (name === 'ShowGab' || name === 'ForceGab') {
+                    gabs.show(runner.gabText, name === 'ForceGab');
+                    runner.gabText = '';
+                }
+                if (name === 'ClearGab') {
+                    gabs.clear();
+                    runner.gabText = '';
+                }
+                if (name === 'WaitForGab') return { type: 'gab', queue: gabs };
+            } else if (command.code === 121) {
                 const from = Number(p[0] || 0);
                 const to = Number(p[1] || from);
                 for (let id = from; id <= to; id += 1) {
@@ -1596,6 +1615,7 @@
             if (this.game.pictures) this.game.pictures.draw(ctx, 'map');
             this.drawHud(ctx);
             this.drawBanner(ctx);
+            if (this.game.gabs) this.game.gabs.draw(ctx);
             this.drawEventDialog(ctx);
             if (this.paused) this.drawPause(ctx);
         }
