@@ -19,6 +19,36 @@ Màn hình tiêu đề
 Đây chưa phải bản chuyển toàn bộ game. Xem [Phạm vi](#phạm-vi) và
 [Giới hạn](#giới-hạn) bên dưới.
 
+Mục tiêu phát triển là chuyển toàn bộ game gốc sang engine web độc lập. Có thể kiểm kê
+dữ liệu cài đặt để xác định phạm vi cần hỗ trợ:
+
+```sh
+npm run audit:fnh-engine
+npm run audit:fnh-engine -- --game "/đường/dẫn/tới/www"
+```
+
+Công cụ chỉ đọc và xuất thống kê JSON: bản đồ, trang event, common event, battle event,
+loại lệnh/điều kiện/toán hạng và tên plugin đang bật. Không chạy mã plugin, không xuất
+lời thoại, tham số plugin hoặc sao chép asset. Thống kê dữ liệu đầu vào **không phải**
+phần trăm hoàn thành hay bằng chứng các tính năng đã tương thích.
+
+Bản cài 1.4.1 hiện được kiểm tra có 169 bản đồ, 27.715 event, 61.536 trang event bản đồ,
+315 common event, 220 troop, 2.404 trang battle event, 89 loại lệnh trên cả ba nguồn và
+48 plugin đang bật. Để xác nhận hoàn thành cần kiểm chứng cả luồng chơi và kết quả
+của các hệ thống dưới đây với bản gốc:
+
+| Hệ thống | Trạng thái hiện tại |
+| --- | --- |
+| Asset, nhạc, tạo nhân vật, lưu/đọc | Có trong bản chơi thử, cần kiểm chứng toàn bộ nội dung |
+| Bản đồ | Nạp JSON và một phần tileset; còn autotile, event di chuyển, va chạm và môi trường |
+| Event | Có interpreter cơ bản; còn nhiều lệnh, autorun, parallel, script và plugin |
+| Hội thoại | Có nội dung nhiều dòng và lựa chọn; còn định dạng, chân dung, điều kiện lựa chọn plugin |
+| Chiến đấu | Chỉ trận Guard đơn giản; chưa có mô hình và công thức đầy đủ của game gốc |
+| Nhân vật, tổ đội, kỹ năng, trang bị | Chưa tương thích đầy đủ |
+| Đói, tinh thần, trạng thái, bộ phận cơ thể | Chưa tương thích đầy đủ |
+| Cốt truyện, kết thúc, các chế độ chơi | Chưa kiểm chứng xuyên suốt |
+| Plugin, hiệu ứng, video, giao diện và âm thanh theo vị trí | Chưa tương thích đầy đủ |
+
 > **Quan trọng:** repo không chứa asset của Fear & Hunger. Thư mục
 > `Fear.and.Hunger.v1.4.1/` đã nằm trong `.gitignore`. Bạn cần tự mua/sở hữu bản game gốc.
 
