@@ -56,6 +56,9 @@
                     if (this.wait.scene.paused) return;
                 } else if (this.wait.type === 'gab') {
                     if (this.wait.queue.busy) return;
+                } else if (this.wait.type === 'asset') {
+                    if (this.wait.token.error) throw this.wait.token.error;
+                    if (!this.wait.token.done) return;
                 } else if (this.wait.type === 'animation') {
                     if (!this.wait.animation.done) return;
                 } else if (this.wait.type === 'route') {
@@ -195,7 +198,7 @@
                         break;
                     default: {
                         const result = this.handlers.execute(command);
-                        if (result && ['route', 'time', 'gab', 'pause', 'battle', 'animation'].includes(result.type)) {
+                        if (result && ['route', 'time', 'gab', 'pause', 'battle', 'animation', 'asset'].includes(result.type)) {
                             this.wait = result;
                             if (result.type === 'battle') { result.frame = frame; result.indent = indent; }
                         }

@@ -398,3 +398,11 @@ Lệnh 321 đổi nghề, lưu EXP riêng từng class hoặc mang EXP hiện t�
 trang bị không còn hợp lệ được trả vào túi chung. Lịch sử EXP nằm trong dữ liệu actor
 và được lưu cùng save. Save cũ cấp cao nhưng EXP bằng 0 được chuẩn hóa khi tải để
 tránh tụt cấp khi nhận thưởng. Thưởng EXP chiến thắng dùng cùng logic cập nhật cấp/kỹ năng.
+
+### Đổi tileset bằng event
+
+Lệnh 282 tải các sheet đang được bộ dựng bản đồ sử dụng, rồi đổi đồng thời ảnh và
+flags va chạm của tileset. Interpreter chờ tải asset trước lệnh tiếp theo; lỗi tải
+ảnh giữ tileset cũ và được báo qua cơ chế lỗi event. Yêu cầu tải mới hơn có quyền
+ưu tiên nếu nhiều event cùng đổi tileset. Override được lưu cùng flags, khôi phục
+khi đọc save và bỏ khi chuyển sang bản đồ khác; database bản đồ không bị sửa.

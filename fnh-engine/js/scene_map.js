@@ -74,6 +74,8 @@
                 this.leaving = false;
                 return;
             }
+            const tileset = this.game.flags['map:tileset'];
+            if (tileset && tileset.mapId !== this.game.mapId) delete this.game.flags['map:tileset'];
             const battleback = this.game.flags['map:battleback'];
             if (battleback && battleback.mapId !== this.game.mapId) delete this.game.flags['map:battleback'];
             this.time = 0;
@@ -110,25 +112,26 @@
             });
         }
 
+        async loadTileset(id) {
+            const tileset = this.game.data.tileset(id);
+            if (!tileset) throw new Error('Không tìm thấy tileset ' + id);
+            const request = {};
+            this.tilesetRequest = request;
+            const names = [...new Set(tileset.tilesetNames.slice(4, 9).filter(Boolean))];
+            const images = await Promise.all(names.map(async (name) =>
+                [name, await this.game.assets.loadImage('tilesets/' + name)]));
+            if (this.tilesetRequest !== request) return false;
+            this.tileset = tileset;
+            this.tileImages = new Map(images);
+            return true;
+        }
+
         async loadMap() {
             const game = this.game;
             this.map = await game.data.map(game.mapId);
-            this.tileset = game.data.tileset(this.map.tilesetId);
-            if (!this.map || !this.tileset) throw new Error('Thiếu dữ liệu bản đồ hoặc tileset.');
-
-            const names = [];
-            for (let i = 4; i <= 8; i += 1) {
-                const name = this.tileset.tilesetNames[i];
-                if (name) names.push(name);
-            }
-            await Promise.all(names.map(async (name) => {
-                try {
-                    const image = await game.assets.loadImage('tilesets/' + name);
-                    this.tileImages.set(name, image);
-                } catch (error) {
-                    console.warn('[FNH] Không nạp được tileset ' + name + ':', error.message);
-                }
-            }));
+            if (!this.map) throw new Error('Thiếu dữ liệu bản đồ.');
+            const override = game.flags['map:tileset'];
+            await this.loadTileset(override && override.mapId === game.mapId ? override.id : this.map.tilesetId);
 
             try {
                 await game.assets.loadImage('characters/' + game.player.characterName);
@@ -1499,6 +1502,15 @@
                     this.erasedEvents.add(this.eventId);
                     this.refreshEvents();
                 }
+            } else if (command.code === 282) {
+                const scene = this.battle && this.battle.returnScene || this;
+                const token = { done: false, error: null };
+                const mapId = this.game.mapId;
+                scene.loadTileset(p[0]).then((applied) => {
+                    if (applied && this.game.mapId === mapId) this.game.flags['map:tileset'] = { mapId, id: p[0] };
+                    token.done = true;
+                }).catch((error) => { token.error = error; token.done = true; });
+                return { type: 'asset', token };
             } else if (command.code === 283) {
                 if (!this.battle) this.game.flags['map:battleback'] = {
                     mapId: this.game.mapId, names: [String(p[0] || ''), String(p[1] || '')]
