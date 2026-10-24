@@ -1583,15 +1583,18 @@
                 if (!this.battle) this.game.flags['map:battleback'] = {
                     mapId: this.game.mapId, names: [String(p[0] || ''), String(p[1] || '')]
                 };
+            } else if (command.code === 133) {
+                this.game.flags['system:victoryMe'] = { ...p[0] };
             } else if (command.code === 132) {
                 this.game.flags['system:battleBgm'] = { ...p[0] };
-            } else if ([241, 242, 243, 244, 245, 246, 250, 251].includes(command.code)) {
+            } else if ([241, 242, 243, 244, 245, 246, 249, 250, 251].includes(command.code)) {
                 const audio = this.game.audio;
                 const play = (method) => {
                     const sound = p[0] || {};
                     if (!sound.name) {
                         if (method === 'playBgm') audio.stopBgm(0);
                         if (method === 'playBgs') audio.stopBgs(0);
+                        if (method === 'playMe') audio.stopMe();
                         return;
                     }
                     const result = audio[method](sound.name, {
@@ -1616,6 +1619,7 @@
                 }
                 if (command.code === 245) play('playBgs');
                 if (command.code === 246) audio.stopBgs(Math.max(0, Number(p[0]) || 0));
+                if (command.code === 249) play('playMe');
                 if (command.code === 250) play('playSe');
                 if (command.code === 251) audio.stopSe();
             } else if (command.code === 201) {

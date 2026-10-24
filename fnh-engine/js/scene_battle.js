@@ -99,6 +99,7 @@
             this.leaving = false;
             this.time = 0;
             this.result = null;
+            this.game.audio.stopMe(false);
             this.game.audio.stopBgs(0.35);
             const music = this.encounter ? (this.game.flags['system:battleBgm'] ||
                 (this.game.data.system && this.game.data.system.battleBgm)) : null;
@@ -542,7 +543,15 @@
             }
             this.log = 'Đối thủ đã gục ngã.';
             this.game.audio.stopBgm(0.5);
-            this.game.audio.playSe('fnh_choice', { volume: 0.6 });
+            const music = this.encounter && (this.game.flags['system:victoryMe'] ||
+                (this.game.data.system && this.game.data.system.victoryMe));
+            if (music && music.name) this.game.audio.playMe(music.name, {
+                volume: music.volume / 100, pitch: music.pitch, pan: music.pan
+            }).catch((error) => {
+                this.game.lastError = error;
+                this.game.showToast(error.message, 6);
+            });
+            else if (!this.encounter) this.game.audio.playSe('fnh_choice', { volume: 0.6 });
         }
 
         defeat() {
@@ -557,6 +566,7 @@
         returnToMap() {
             if (this.leaving) return;
             this.leaving = true;
+            this.game.audio.stopMe(false);
             this.game.player.mapX = this.returnX;
             this.game.player.mapY = this.returnY;
             this.game.player.direction = this.returnDir;

@@ -727,6 +727,18 @@ async function main() {
             'FNH.game.screenEffects.weatherType === "rain" && Math.abs(FNH.game.screenEffects.weatherPower-4) < 0.01', false, false));
         await evalPage(cdp, 'FNH.game.scene.executeEventCommand({code:236,parameters:["none",0,0,false]}); delete FNH.game.flags["switch:999988"]', false, false);
 
+        await evalPage(cdp, 'window.__beforeMe = FNH.game.audio.saveBgm();FNH.game.audio.playBgm("muted_aggression",{volume:0,position:2})', true, false);
+        await waitFor(cdp, 'FNH.game.audio.currentBgm && FNH.game.audio.currentBgm.name === "muted_aggression"', 15000, 'nhạc nền trước nhạc hiệu');
+        await evalPage(cdp, 'FNH.game.scene.executeEventCommand({code:249,parameters:[{name:"creeping_danger_234632__nornitus__creepy-industrial-loop_01",volume:0,pitch:120,pan:0}]})', false, false);
+        await waitFor(cdp, 'FNH.game.audio.currentMe && FNH.game.audio.currentMe.source.buffer.duration > 0', 20000, 'nhạc hiệu gốc');
+        check('event ME giải mã nhạc hiệu gốc và tạm dừng BGM', await evalPage(cdp,
+            '!FNH.game.audio.currentBgm && FNH.game.audio.saveBgm().name === "muted_aggression" && FNH.game.assets.audioBufferCache.has("me/creeping_danger_234632__nornitus__creepy-industrial-loop_01")', false, false));
+        await evalPage(cdp, 'FNH.game.scene.executeEventCommand({code:249,parameters:[{name:""}]})', false, false);
+        await waitFor(cdp, 'FNH.game.audio.currentBgm && FNH.game.audio.currentBgm.name === "muted_aggression"', 15000, 'phát tiếp BGM sau nhạc hiệu');
+        check('dừng nhạc hiệu phát tiếp BGM từ vị trí đã lưu', await evalPage(cdp,
+            '!FNH.game.audio.currentMe && FNH.game.audio.currentBgm.position >= 2', false, false));
+        await evalPage(cdp, '(() => {const sound=window.__beforeMe;delete window.__beforeMe;if(sound)return FNH.game.audio.playBgm(sound.name,sound);FNH.game.audio.stopBgm(0)})()', true, false);
+
         await evalPage(cdp, `(() => {
             const mapScene = FNH.game.scene;
             window.__eventBattleMap = mapScene;

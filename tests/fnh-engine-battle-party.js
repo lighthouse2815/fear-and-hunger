@@ -14,7 +14,7 @@ let destination;
 const ended = [];
 battle.game = { player: first, partyIds: [1, 2], actorStates: { 2: second }, gold: 0,
     assets: { loadImage: () => Promise.resolve() }, showToast() {},
-    audio: { playSe() {}, playBgm() {}, stopBgm() {}, stopBgs() {} },
+    audio: { stopMe() {}, playSe() {}, playBgm() {}, stopBgm() {}, stopBgs() {} },
     data: { skill: () => ({ id: 1, name: 'Attack', occasion: 1, scope: 1, successRate: 100, hitType: 0,
             damage: { formula: 'a.atk * 4 - b.def * 2', type: 1, variance: 0 }, effects: [] }),
         battlerTraits: () => [],

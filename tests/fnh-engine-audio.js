@@ -24,6 +24,7 @@ const context = {
 async function main() {
     const pending = new Map();
     const audio = new FNH.AudioManager({ decodeAudio: (name) => {
+        if (name.includes('broken')) return Promise.reject(new Error('Không đọc được ME'));
         if (name.includes('delayed')) return new Promise((resolve) => pending.set(name, resolve));
         return Promise.resolve({ duration: 100 });
     } });
@@ -65,12 +66,76 @@ async function main() {
     audio.stopAll();
     assert.equal(audio.currentBgm, null);
     assert.equal(audio.currentBgs, null);
+    const flush = () => new Promise(setImmediate);
+    await audio.playBgm('background', { position: 10, pitch: 100 });
+    context.currentTime += 3;
+    const me = await audio.playMe('fanfare', { volume: 0, pitch: 120, pan: -30 });
+    assert.equal(audio.currentBgm, null);
+    assert.equal(audio.saveBgm().position, 13);
+    assert.equal(me.gain.gain.value, 0);
+    assert.equal(me.source.playbackRate.value, 1.2);
+    context.currentTime += 9;
+    assert.equal(audio.saveBgm().position, 13, 'ME không làm vị trí BGM bị tạm dừng tiến lên');
+    me.source.onended();
+    await flush();
+    assert.equal(audio.currentBgm.name, 'background');
+    assert.equal(audio.currentBgm.position, 13);
+    const loadingMe = audio.playMe('delayed-me');
+    audio.stopAll();
+    pending.get('me/delayed-me')({ duration: 10 });
+    await loadingMe;
+    assert.equal(audio.currentMe, null);
+    assert.equal(audio.currentBgm, null, 'Dừng tất cả trong lúc tải ME không làm nhạc phát lại');
+    await audio.playBgm('background');
+    const olderMe = audio.playMe('delayed-older');
+    await audio.playMe('newer');
+    pending.get('me/delayed-older')({ duration: 10 });
+    await olderMe;
+    assert.equal(audio.currentMe.name, 'newer');
+    await audio.playBgm('replacement', { volume: 0.3, position: 7 });
+    assert.equal(audio.currentBgm, null, 'BGM yêu cầu trong ME được hoãn phát');
+    audio.stopMe();
+    await flush();
+    assert.equal(audio.currentBgm.name, 'replacement');
+    assert.equal(audio.currentBgm.position, 7);
+    const stoppedMe = await audio.playMe('fanfare');
+    audio.stopBgm(0);
+    stoppedMe.source.onended();
+    await flush();
+    assert.equal(audio.currentBgm, null, 'Dừng BGM trong ME không khôi phục bài đã dừng');
+    await audio.playBgm('background');
+    await assert.rejects(audio.playMe('broken'), /Không đọc được ME/);
+    await flush();
+    assert.equal(audio.currentBgm.name, 'background', 'Lỗi tải ME khôi phục BGM');
+    audio.stopAll();
+    let resolveBackground, firstBackground = true;
+    const loadingAudio = new FNH.AudioManager({ decodeAudio: (name) => {
+        if (name === 'bgm/loading' && firstBackground) {
+            firstBackground = false;
+            return new Promise((resolve) => { resolveBackground = resolve; });
+        }
+        return Promise.resolve({ duration: 100 });
+    } });
+    loadingAudio.context = context;
+    loadingAudio.master = {};
+    const startingBackground = loadingAudio.playBgm('loading', { position: 6 });
+    const interruptingMe = await loadingAudio.playMe('fanfare');
+    resolveBackground({ duration: 100 });
+    await startingBackground;
+    assert.equal(loadingAudio.currentBgm, null, 'BGM tải trước ME không tự phát đè ME');
+    interruptingMe.source.onended();
+    await flush();
+    assert.equal(loadingAudio.currentBgm.name, 'loading');
+    assert.equal(loadingAudio.currentBgm.position, 6, 'ME giữ cả BGM chưa tải xong');
+    loadingAudio.stopAll();
     const calls = [];
     const scene = new FNH.Scene_Map();
     scene.game = { audio: {
         playBgm: (...args) => { calls.push(['bgm', ...args]); return Promise.resolve(); },
         playBgs: (...args) => { calls.push(['bgs', ...args]); return Promise.resolve(); },
         playSe: (...args) => { calls.push(['se', ...args]); return Promise.resolve(); },
+        playMe: (...args) => { calls.push(['me', ...args]); return Promise.resolve(); },
+        stopMe: () => calls.push(['stopMe']),
         stopBgm: (...args) => calls.push(['stopBgm', ...args]), stopBgs: (...args) => calls.push(['stopBgs', ...args]),
         stopSe: () => calls.push(['stopSe']), saveBgm: () => ({ name: 'saved', volume: 0.5, position: 7 })
     }, showToast() {} };
@@ -85,6 +150,12 @@ async function main() {
     assert.equal(calls[2][1], 3);
     assert.equal(calls[3][0], 'stopBgs');
     assert.equal(calls[5][0], 'stopSe');
+    execute(249, [{ name: 'fanfare', volume: 0, pitch: 120, pan: -30 }]);
+    assert.equal(calls[6][0], 'me');
+    assert.equal(calls[6][2].volume, 0);
+    execute(249, [{ name: '' }]);
+    assert.equal(calls[7][0], 'stopMe');
+    console.log('ĐẠT: ME, tiếp tục đúng vị trí BGM, hoãn/đổi BGM và hủy tải âm thanh.');
     console.log('ĐẠT: audio event, volume 0, pitch/pan, vị trí lưu, fade và hủy decode đang chờ.');
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

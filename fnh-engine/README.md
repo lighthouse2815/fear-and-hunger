@@ -423,3 +423,14 @@ Enter hoặc nút xác nhận cập nhật actor rồi cho interpreter tiếp t�
 khóa hội thoại, tạm dừng bản đồ/hiệu ứng/timer và ngăn phím nhập tên điều khiển game.
 Đổi scene đóng giao diện, trả điều khiển và không ghi tên chưa xác nhận. Lệnh này
 không mở trong trận đấu. Tên được lưu cùng dữ liệu actor như các thay đổi actor khác.
+
+### Nhạc hiệu và nhạc thắng trận
+
+Lệnh 249 phát ME từ thư mục `audio/me`, giữ volume/pitch/pan từ event. Nhạc nền tạm
+dừng và được phát tiếp từ vị trí đã lưu khi ME kết thúc hoặc bị dừng bằng tên trống.
+BGM yêu cầu trong lúc ME đang phát được hoãn lại và thay bài chờ phát tiếp; dừng BGM
+hoặc dừng tất cả ngăn nhạc cũ tự phát lại. Yêu cầu ME tải chậm không ghi đè yêu cầu
+mới; lỗi tải trả quyền phát cho BGM. Lệnh 133 đổi nhạc hiệu chiến thắng, được lưu
+cùng flags. Trận troop phát cấu hình này hoặc `System.victoryMe` đúng một lần và
+dừng ME khi quay lại bản đồ trước khi khôi phục âm thanh bản đồ. Mở trận cũng dừng
+ME bản đồ để tránh nhạc hiệu phát chồng lên nhạc chiến đấu.

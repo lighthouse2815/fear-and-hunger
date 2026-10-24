@@ -25,7 +25,7 @@ function setup() {
     map.input = { isPressed: () => false, consumeClick: () => null };
     map.game = { player: data.createPlayer(1), partyIds: [1], actorStates: {}, data, flags: { 'variable:2': 1 }, mapId: 1, sceneName: 'map', gold: 0,
         assets: { loadImage: () => Promise.resolve() }, showToast() {},
-        audio: { saveBgm: () => null, stopBgm() {}, stopBgs() {}, playBgm: () => Promise.resolve(), playBgs: () => Promise.resolve(), playSe() {} },
+        audio: { stopMe() {}, saveBgm: () => null, stopBgm() {}, stopBgs() {}, playBgm: () => Promise.resolve(), playBgs: () => Promise.resolve(), playSe() {} },
         changeScene(Type, options) {
             if (typeof Type === 'function') {
                 const battle = new Type(); battle.game = this; battle.input = map.input; battle.enter(options);
@@ -318,3 +318,23 @@ assert.ok(levelRewardMap.game.player.skills.includes(1));
 levelRewardBattle.victory();
 assert.equal(levelRewardMap.game.player.exp, 60, 'Không cộng thưởng hoặc lên cấp hai lần');
 console.log('ĐẠT: thưởng EXP chiến thắng kích hoạt cấp/kỹ năng và chỉ trao một lần.');
+
+const victoryMusicMap = setup();
+const victoryMusicCalls = [];
+victoryMusicMap.game.audio.playMe = (name, options) => { victoryMusicCalls.push([name, options]); return Promise.resolve(); };
+victoryMusicMap.executeEventCommand(c(133, [{ name: 'Victory', volume: 0, pitch: 120, pan: -30 }]));
+victoryMusicMap.startEventList({ list: [c(301, [0, 1, true, true])] }, 1);
+for (const enemy of victoryMusicMap.game.scene.enemies) victoryMusicMap.game.data.setActorHp(enemy, 0);
+victoryMusicMap.game.scene.victory();
+assert.equal(victoryMusicCalls[0][0], 'Victory');
+assert.equal(victoryMusicCalls[0][1].volume, 0);
+assert.equal(victoryMusicCalls[0][1].pitch, 120);
+victoryMusicMap.game.scene.victory();
+assert.equal(victoryMusicCalls.length, 1, 'Nhạc hiệu chiến thắng chỉ phát một lần');
+console.log('ĐẠT: event đổi nhạc hiệu thắng trận và giữ thông số âm thanh.');
+
+const interruptedMusicMap = setup();
+let stoppedMapMe = 0;
+interruptedMusicMap.game.audio.stopMe = (resume) => { assert.equal(resume, false); stoppedMapMe += 1; };
+interruptedMusicMap.startEventList({ list: [c(301, [0, 1, true, true])] }, 1);
+assert.equal(stoppedMapMe, 1, 'Mở trận dừng ME bản đồ và không tự khôi phục BGM cũ');
