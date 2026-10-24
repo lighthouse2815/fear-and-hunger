@@ -74,6 +74,8 @@
                 this.leaving = false;
                 return;
             }
+            const battleback = this.game.flags['map:battleback'];
+            if (battleback && battleback.mapId !== this.game.mapId) delete this.game.flags['map:battleback'];
             this.time = 0;
             this.ready = false;
             this.leaving = false;
@@ -1474,6 +1476,10 @@
                     this.erasedEvents.add(this.eventId);
                     this.refreshEvents();
                 }
+            } else if (command.code === 283) {
+                if (!this.battle) this.game.flags['map:battleback'] = {
+                    mapId: this.game.mapId, names: [String(p[0] || ''), String(p[1] || '')]
+                };
             } else if (command.code === 132) {
                 this.game.flags['system:battleBgm'] = { ...p[0] };
             } else if ([241, 242, 243, 244, 245, 246, 250, 251].includes(command.code)) {

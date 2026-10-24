@@ -323,7 +323,9 @@ region và trọng số. Interpreter chờ kết quả rồi thực thi đúng n
 quay lại cùng cảnh bản đồ và con trỏ event, không khởi chạy lại event. Có cờ cho phép
 bỏ chạy/thua, hồi sinh người gục khi được phép thua, khôi phục nhạc bản đồ.
 Lệnh 132 đổi nhạc các trận sau và được lưu cùng flags; tên trống tắt nhạc trận,
-volume/pitch/pan giữ theo event thay vì ghi đè database.
+volume/pitch/pan giữ theo event thay vì ghi đè database. Lệnh 283 đổi hai lớp
+phông nền trận trên bản đồ hiện tại; trận lấy nền từ event hoặc metadata bản đồ,
+giải mã cả hai lớp và lưu override cùng save. Đổi sang bản đồ khác xóa override.
 Troop đọc thành viên, HP/MP/chỉ số/traits, tọa độ và sprite từ database gốc. Mỗi mục
 tiêu có HP riêng; chọn một hoặc nhiều mục tiêu và chỉ thắng khi hết enemy hiện diện.
 AI xét điều kiện lượt, HP, MP, state, cấp tổ đội và switch rồi chọn theo rating; từng

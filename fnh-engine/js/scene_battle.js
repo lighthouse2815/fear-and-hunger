@@ -48,6 +48,17 @@
             this.completedActors.clear();
             this.encounter = opts.encounter || null;
             this.returnScene = opts.returnScene || null;
+            const map = this.returnScene && this.returnScene.map;
+            const override = this.game.flags && this.game.flags['map:battleback'];
+            this.battlebackNames = this.encounter && override && override.mapId === this.game.mapId ? override.names.slice()
+                : this.encounter && map && map.specifyBattleback ? [map.battleback1Name || '', map.battleback2Name || '']
+                    : ['floor1', ''];
+            this.battlebackNames.forEach((name, index) => {
+                if (name) this.game.assets.loadImage('battlebacks' + (index + 1) + '/' + name).catch((error) => {
+                    this.game.lastError = error;
+                    this.game.showToast(error.message, 6);
+                });
+            });
             this.battleToken = opts.token || null;
             this.returnAudio = opts.returnAudio || null;
             this.canEscape = opts.canEscape !== false;
@@ -771,15 +782,16 @@
         }
 
         drawBattleback(ctx) {
-            const image = this.game.assets.imageCache.get('battlebacks1/floor1');
-            if (image) {
+            FNH.drawBackdrop(ctx, '#151413', '#050505');
+            this.battlebackNames.forEach((name, index) => {
+                if (!name) return;
+                const image = this.game.assets.imageCache.get('battlebacks' + (index + 1) + '/' + name);
+                if (!image) return;
                 const scale = Math.max(FNH.WIDTH / image.width, FNH.HEIGHT / image.height);
                 const width = image.width * scale;
                 const height = image.height * scale;
                 ctx.drawImage(image, (FNH.WIDTH - width) / 2, (FNH.HEIGHT - height) / 2, width, height);
-            } else {
-                FNH.drawBackdrop(ctx, '#151413', '#050505');
-            }
+            });
             const shade = ctx.createLinearGradient(0, 0, 0, FNH.HEIGHT);
             shade.addColorStop(0, 'rgba(4,5,7,0.2)');
             shade.addColorStop(0.55, 'rgba(4,5,7,0.28)');
