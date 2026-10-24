@@ -121,3 +121,46 @@ assert.equal(scene.game.player.id, 2);
 assert.equal(scene.game.player.inventory[0].amount, 3);
 assert.equal(scene.eventDataOperand(6, 5), 0);
 console.log('ĐẠT: thêm/bớt tổ đội, đổi trưởng nhóm, túi đồ chung, actor toàn đội và trang event.');
+
+// Trang bị event dùng đúng slot, đổi với túi chung và cập nhật traits/chỉ số.
+data.classes[1].traits = [{ code: 51, dataId: 1, value: 1 }, { code: 52, dataId: 1, value: 1 }];
+data.weapons = [null, { id: 1, name: 'Kiếm', etypeId: 1, wtypeId: 1, params: [0, 0, 8, 0, 0, 0, 0, 0], traits: [] },
+    { id: 2, name: 'Rìu', etypeId: 1, wtypeId: 2, params: [0, 0, 20, 0, 0, 0, 0, 0], traits: [] }];
+data.armors = [null, { id: 1, name: 'Giáp', etypeId: 4, atypeId: 1, params: [0, 0, 0, 6, 0, 0, 0, 0], traits: [] }];
+const equippedActor = scene.game.player;
+equippedActor.equipment = [];
+equippedActor.inventory = [{ id: 1, kind: 'weapon', amount: 1 }, { id: 1, kind: 'armor', amount: 1 }];
+data.refreshActor(equippedActor);
+const originalAtk = equippedActor.atk, originalDef = equippedActor.def;
+execute(319, [equippedActor.id, 1, 1]);
+assert.equal(equippedActor.atk, originalAtk + 8);
+assert.equal(equippedActor.equipment[0].slot, 0);
+assert.equal(equippedActor.inventory.some((entry) => entry.kind === 'weapon'), false);
+execute(319, [equippedActor.id, 4, 1]);
+assert.equal(equippedActor.def, originalDef + 6);
+assert.equal(equippedActor.equipment.length, 2);
+execute(319, [equippedActor.id, 1, 999]);
+assert.equal(equippedActor.atk, originalAtk + 8, 'ID không hợp lệ không mất đồ cũ');
+execute(319, [equippedActor.id, 1, 0]);
+assert.equal(equippedActor.atk, originalAtk);
+assert.equal(equippedActor.inventory.find((entry) => entry.kind === 'weapon').amount, 1);
+equippedActor.inventory.push({ id: 2, kind: 'weapon', amount: 1 });
+execute(319, [equippedActor.id, 1, 2]);
+assert.equal(equippedActor.equipment.some((entry) => entry.type === 'weapon'), false, 'Không có quyền loại vũ khí thì trả lại túi');
+assert.equal(equippedActor.inventory.find((entry) => entry.id === 2).amount, 1);
+execute(319, [equippedActor.id, 1, 1]);
+execute(319, [equippedActor.id, 1, 1]);
+assert.equal(equippedActor.equipment.filter((entry) => entry.type === 'weapon').length, 1, 'Không có đồ dư thì không nhân bản');
+assert.equal(equippedActor.atk, originalAtk + 8);
+const legacy = scene.eventActor(2);
+legacy.equipment = [{ id: 1, name: 'Giáp', type: 'armor' }];
+execute(319, [2, 4, 0]);
+assert.equal(legacy.equipment.length, 0, 'Save cũ không có slot vẫn tháo đúng trang bị');
+assert.equal(equippedActor.inventory.find((entry) => entry.kind === 'armor').amount, 1);
+console.log('ĐẠT: đổi/tháo trang bị, túi chung, slot save cũ và quyền sử dụng loại đồ.');
+
+execute(127, [1, 1, 0, 1, true]);
+assert.equal(equippedActor.equipment.some((entry) => entry.type === 'weapon'), false);
+assert.equal(equippedActor.atk, originalAtk, 'Trừ đồ kèm trang bị cập nhật lại chỉ số');
+assert.equal(equippedActor.inventory.some((entry) => entry.kind === 'weapon' && entry.id === 1), false);
+console.log('ĐẠT: lệnh trừ vật phẩm có thể lấy trang bị đang mặc mà không sinh đồ.');

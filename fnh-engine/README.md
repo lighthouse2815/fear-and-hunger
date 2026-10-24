@@ -220,8 +220,9 @@ ID bản đồ, số thành viên, vàng và thời gian chơi. Những dữ li�
 Đây chưa phải interpreter đầy đủ của MV. Điều kiện hiện hỗ trợ switch, biến,
 self-switch, vàng, vật phẩm/vũ khí/giáp (có tùy chọn tính trang bị đang mặc), nhân vật
 chính có trong tổ đội và hướng nhân vật/event. Lệnh 126–128 cộng/trừ riêng từng loại
-trong túi, kể cả khi trùng ID; việc trừ cả trang bị đang mặc vẫn báo chưa hỗ trợ để
-tránh làm sai chỉ số nhân vật.
+trong túi, kể cả khi trùng ID; tùy chọn trừ cả trang bị đang mặc lấy số còn thiếu
+từ thành viên tổ đội và tính lại chỉ số. Lệnh 319 đổi/tháo đồ theo slot, trao đổi với
+túi chung, xét quyền loại trang bị và tương thích save cũ chưa ghi slot.
 Lệnh hoặc điều kiện chưa hỗ trợ sẽ dừng event, hiển thị
 thông báo và lưu lỗi vào `FNH.game.lastError`, thay vì chạy tiếp các hệ quả sai.
 Có autorun bản đồ (trigger 3) và common autorun (trigger 1, điều kiện switch),

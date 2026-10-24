@@ -989,8 +989,8 @@
                 const kind = ['item', 'weapon', 'armor'][p[0] - 8];
                 if ((this.game.player.inventory || []).some((item) =>
                     item.id === p[1] && (item.kind || 'item') === kind && item.amount > 0)) return true;
-                return kind !== 'item' && !!p[2] && (this.game.player.equipment || []).some((item) =>
-                    item.id === p[1] && item.type === kind);
+                return kind !== 'item' && !!p[2] && this.partyIds().some((id) =>
+                    (this.eventActor(id).equipment || []).some((item) => item.id === p[1] && item.type === kind));
             }
             throw new Error('Chưa hỗ trợ điều kiện event ' + p[0]);
         }
@@ -1340,6 +1340,10 @@
                         skills.sort((a, b) => a - b);
                     }
                 }
+            } else if (command.code === 319) {
+                const actor = this.eventActor(p[0]);
+                if (actor) this.game.data.changeEquipment(actor, p[1] - 1, p[2],
+                    this.game.player.inventory || (this.game.player.inventory = []));
             } else if ([320, 322, 324, 325].includes(command.code)) {
                 const actor = this.eventActor(p[0]);
                 if (!actor) return;
@@ -1359,21 +1363,30 @@
                 this.game.gold = Math.max(0, this.game.gold + (operation === 0 ? amount : -amount));
             } else if (command.code >= 126 && command.code <= 128) {
                 const kind = ['item', 'weapon', 'armor'][command.code - 126];
-                if (kind !== 'item' && p[1] === 1 && p[4]) {
-                    throw new Error('Chưa hỗ trợ tháo trang bị khi trừ ' + kind);
-                }
                 const itemId = Number(p[0] || 0);
                 let amount = Number(p[3] || 0);
                 if (p[2] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
                 const inventory = this.game.player.inventory || (this.game.player.inventory = []);
                 const entry = inventory.find((item) => item.id === itemId && (item.kind || 'item') === kind);
                 const delta = p[1] === 0 ? amount : -amount;
+                let shortage = kind !== 'item' && p[4] ? Math.max(0, -delta - (entry ? entry.amount : 0)) : 0;
                 const total = Math.max(0, (entry ? entry.amount : 0) + delta);
                 if (entry) {
                     entry.amount = total;
                     if (!total) inventory.splice(inventory.indexOf(entry), 1);
                 } else if (total > 0) {
                     inventory.push(kind === 'item' ? { id: itemId, amount: total } : { id: itemId, amount: total, kind });
+                }
+                if (shortage > 0) {
+                    for (const id of this.partyIds()) {
+                        const actor = this.eventActor(id);
+                        actor.equipment = (actor.equipment || []).filter((item) => {
+                            if (shortage > 0 && item.type === kind && item.id === itemId) { shortage -= 1; return false; }
+                            return true;
+                        });
+                        this.game.data.refreshActor(actor);
+                        if (!shortage) break;
+                    }
                 }
             } else if (command.code >= 231 && command.code <= 235) {
                 const pictures = this.game.pictures || (this.game.pictures = new FNH.PictureManager(this.game.assets));

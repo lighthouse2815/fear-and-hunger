@@ -307,13 +307,15 @@
                 luk: this._param(params, 7, level)
             };
             const equipment = [];
+            const dualWield = [...(actor.traits || []), ...(cls.traits || [])].some((trait) => trait.code === 55 && trait.dataId === 1);
             (actor.equips || []).forEach((id, slot) => {
                 if (!id) return;
-                const weapon = slot === 0 ? this.weapons[id] : null;
-                const armor = slot === 0 ? null : this.armors[id];
+                const isWeapon = slot === 0 || slot === 1 && dualWield;
+                const weapon = isWeapon ? this.weapons[id] : null;
+                const armor = isWeapon ? null : this.armors[id];
                 const item = weapon || armor;
                 if (!item) return;
-                equipment.push({ id: id, name: item.name, type: weapon ? 'weapon' : 'armor' });
+                equipment.push({ id: id, name: item.name, type: weapon ? 'weapon' : 'armor', slot });
                 const itemParams = item.params || [];
                 for (let i = 0; i < 8; i += 1) {
                     const key = ['maxHp', 'maxMp', 'atk', 'def', 'mat', 'mdf', 'agi', 'luk'][i];
@@ -419,6 +421,60 @@
             });
             if (!enemies.length) throw new Error('Troop không có thành viên ' + id);
             return { id: troop.id, name: troop.name, enemies, pages: troop.pages || [] };
+        }
+
+        changeEquipment(actor, slot, itemId, inventory) {
+            const types = this.system && this.system.equipTypes;
+            const count = types ? types.length - 1 : 5;
+            if (!Number.isInteger(slot) || slot < 0 || slot >= count) return false;
+            const dualWield = this.battlerTraits(actor).some((trait) => trait.code === 55 && trait.dataId === 1);
+            const etype = dualWield && slot === 1 ? 1 : slot + 1;
+            const kind = etype === 1 ? 'weapon' : 'armor';
+            const table = kind === 'weapon' ? this.weapons : this.armors;
+            const item = itemId ? table[itemId] : null;
+            if (itemId && (!item || item.etypeId !== etype)) return false;
+            const owned = item && inventory.find((entry) => entry.id === itemId && entry.kind === kind && entry.amount > 0);
+            if (item && !owned) return false;
+            const equipment = actor.equipment || (actor.equipment = []);
+            // Save cũ chưa ghi slot: suy ra từ loại trang bị, giữ slot mới khi đã có.
+            for (const entry of equipment) {
+                if (entry.slot !== undefined) continue;
+                const source = (entry.type === 'weapon' ? this.weapons : this.armors)[entry.id];
+                entry.slot = source ? source.etypeId - 1 : entry.type === 'weapon' ? 0 : -1;
+            }
+            const oldIndex = equipment.findIndex((entry) => entry.slot === slot);
+            const giveBack = (entry) => {
+                const stored = inventory.find((value) => value.id === entry.id && value.kind === entry.type);
+                if (stored) stored.amount += 1;
+                else inventory.push({ id: entry.id, kind: entry.type, amount: 1 });
+            };
+            if (oldIndex >= 0) giveBack(equipment.splice(oldIndex, 1)[0]);
+            if (item) {
+                owned.amount -= 1;
+                if (!owned.amount) inventory.splice(inventory.indexOf(owned), 1);
+                equipment.push({ id: itemId, name: item.name, type: kind, slot });
+            }
+            // Refresh MV tháo trang bị không còn hợp lệ sau thay đổi traits.
+            let changed;
+            do {
+                changed = false;
+                const traits = this.battlerTraits(actor);
+                const dual = traits.some((trait) => trait.code === 55 && trait.dataId === 1);
+                for (let index = equipment.length - 1; index >= 0; index -= 1) {
+                    const entry = equipment[index];
+                    const source = (entry.type === 'weapon' ? this.weapons : this.armors)[entry.id];
+                    const expected = dual && entry.slot === 1 ? 1 : entry.slot + 1;
+                    const permission = entry.type === 'weapon' ? 51 : 52;
+                    const itemType = source && (entry.type === 'weapon' ? source.wtypeId : source.atypeId);
+                    if (!source || source.etypeId !== expected || traits.some((trait) => trait.code === 54 && trait.dataId === expected) ||
+                        !traits.some((trait) => trait.code === permission && trait.dataId === itemType)) {
+                        giveBack(equipment.splice(index, 1)[0]);
+                        changed = true;
+                    }
+                }
+            } while (changed);
+            this.refreshActor(actor);
+            return true;
         }
 
         transformEnemy(enemy, id) {
