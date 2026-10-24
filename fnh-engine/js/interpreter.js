@@ -48,7 +48,11 @@
         update(dt) {
             if (this.done) return;
             if (this.wait) {
-                if (this.wait.type === 'pause') {
+                if (this.wait.type === 'battle') {
+                    if (!this.wait.token.done) return;
+                    if (![0, 1, 2].includes(this.wait.token.result)) throw new Error('Kết quả trận đấu không hợp lệ');
+                    this.wait.frame.branches[this.wait.indent] = this.wait.token.result;
+                } else if (this.wait.type === 'pause') {
                     if (this.wait.scene.paused) return;
                 } else if (this.wait.type === 'gab') {
                     if (this.wait.queue.busy) return;
@@ -120,7 +124,7 @@
                     case 403:
                         if (frame.branches[indent] !== -2) this.seek(frame, indent, [404]);
                         break;
-                    case 404: case 412:
+                    case 404: case 412: case 604:
                         delete frame.branches[indent];
                         break;
                     case 111:
@@ -173,6 +177,9 @@
                         }
                         break;
                     }
+                    case 601: case 602: case 603:
+                        if (frame.branches[indent] !== command.code - 601) this.seek(frame, indent, [601, 602, 603, 604]);
+                        break;
                     case 355: {
                         const lines = [String(p[0] || '')];
                         while (frame.list[frame.index] && frame.list[frame.index].code === 655) {
@@ -186,7 +193,10 @@
                         break;
                     default: {
                         const result = this.handlers.execute(command);
-                        if (result && ['route', 'time', 'gab', 'pause'].includes(result.type)) this.wait = result;
+                        if (result && ['route', 'time', 'gab', 'pause', 'battle'].includes(result.type)) {
+                            this.wait = result;
+                            if (result.type === 'battle') { result.frame = frame; result.indent = indent; }
+                        }
                         if (result === false) {
                             this.frames = [];
                             this.done = true;

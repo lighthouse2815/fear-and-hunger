@@ -18,7 +18,7 @@ battle.game = { player: first, partyIds: [1, 2], actorStates: { 2: second }, gol
     data: { skill: () => ({ id: 1, name: 'Attack', occasion: 1, scope: 1, successRate: 100, hitType: 0,
             damage: { formula: 'a.atk * 4 - b.def * 2', type: 1, variance: 0 }, effects: [] }),
         battlerTraits: () => [],
-        createGuardEncounter: () => ({ hp: 320, maxHp: 320, atk: 10, def: 10, rewardGold: 35, rewardExp: 20 }),
+        createGuardEncounter: () => ({ parts: [], hp: 320, maxHp: 320, atk: 10, def: 10, rewardGold: 35, rewardExp: 20 }),
         actorTurnEnd: (actor, timing) => ended.push([actor.id, timing]),
         setActorHp: (actor, value) => { actor.hp = Math.max(0, Math.min(actor.maxHp, value)); } },
     changeScene: (...args) => { destination = args; }, gameOver() { throw new Error('Chưa được game over'); } };

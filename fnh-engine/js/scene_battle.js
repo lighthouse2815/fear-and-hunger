@@ -44,18 +44,38 @@
             this.memberIndex = Math.max(0, this.members.findIndex((actor) => actor.hp > 0));
             this.player = this.members[this.memberIndex] || this.game.player;
             this.guardedActors.clear();
-            this.enemy = this.game.data.createGuardEncounter();
-            this.enemy.hp = this.enemy.maxHp;
-            this.enemy.maxMp = 0;
-            this.enemy.mp = 0;
-            this.enemy.baseParams = [this.enemy.maxHp, 0, this.enemy.atk, this.enemy.def, 10, 10, this.enemy.agi || 10, 10];
-            if (this.game.data.refreshActor) this.game.data.refreshActor(this.enemy);
+            this.encounter = opts.encounter || null;
+            this.returnScene = opts.returnScene || null;
+            this.battleToken = opts.token || null;
+            this.returnAudio = opts.returnAudio || null;
+            this.canEscape = opts.canEscape !== false;
+            this.canLose = !!opts.canLose;
+            if (this.encounter) {
+                this.enemies = this.encounter.enemies;
+                this.enemy = this.enemies.find((enemy) => !enemy.hidden && enemy.hp > 0) || this.enemies[0];
+            } else {
+                this.enemy = this.game.data.createGuardEncounter();
+                this.enemy.hp = this.enemy.maxHp;
+                this.enemy.maxMp = 0;
+                this.enemy.mp = 0;
+                this.enemy.baseParams = [this.enemy.maxHp, 0, this.enemy.atk, this.enemy.def, 10, 10, this.enemy.agi || 10, 10];
+                if (this.game.data.refreshActor) this.game.data.refreshActor(this.enemy);
+                this.enemies = [this.enemy];
+            }
+            for (const enemy of this.enemies) {
+                for (const part of enemy.parts) this.game.assets.loadImage(part.image).catch((error) => {
+                    this.game.lastError = error;
+                    this.game.showToast(error.message, 6);
+                });
+            }
+            const mean = (members) => members.reduce((sum, actor) => sum + actor.agi, 0) / Math.max(1, members.length);
+            this.escapeRatio = this.encounter ? 0.5 * mean(this.members) / Math.max(1, mean(this.enemies)) : 0.55;
             this.commonEventContext = null;
             this.phase = 'intro';
             this.timer = 1.7;
             this.index = 0;
             this.hoverIndex = -1;
-            this.log = this.enemy.intro;
+            this.log = this.enemy.intro || (this.encounter ? this.encounter.name : this.enemy.name);
             this.turn = 1;
             this.damageNumbers = [];
             this.enemyFlash = 0;
@@ -63,9 +83,91 @@
             this.guarding = false;
             this.leaving = false;
             this.time = 0;
+            this.result = null;
             this.game.audio.stopBgs(0.35);
-            this.game.audio.playBgm('muted_aggression', { volume: 0.48, loop: true });
-            this.game.audio.playSe('guard_grunt1', { volume: 0.65 });
+            const music = this.encounter && this.game.data.system ? this.game.data.system.battleBgm : null;
+            if (music && music.name) this.game.audio.playBgm(music.name, {
+                volume: music.volume / 100, pitch: music.pitch, pan: music.pan, loop: true
+            });
+            else this.game.audio.playBgm('muted_aggression', { volume: 0.48, loop: true });
+            if (!this.encounter) this.game.audio.playSe('guard_grunt1', { volume: 0.65 });
+        }
+
+        livingEnemies() {
+            return this.enemies.filter((enemy) => !enemy.hidden && enemy.hp > 0);
+        }
+
+        chooseEnemyAction(enemy) {
+            const valid = (enemy.actions || []).filter((entry) => {
+                const a = entry.conditionParam1, b = entry.conditionParam2;
+                if (entry.conditionType === 1 && !(b === 0 ? this.turn === a : this.turn > 0 && this.turn >= a && this.turn % b === a % b)) return false;
+                if (entry.conditionType === 2 && !(enemy.hp / enemy.maxHp >= a && enemy.hp / enemy.maxHp <= b)) return false;
+                if (entry.conditionType === 3 && !(enemy.mp / Math.max(1, enemy.maxMp) >= a && enemy.mp / Math.max(1, enemy.maxMp) <= b)) return false;
+                if (entry.conditionType === 4 && !(enemy.states || []).includes(a)) return false;
+                if (entry.conditionType === 5 && !this.members.some((actor) => actor.level >= a)) return false;
+                if (entry.conditionType === 6 && !this.game.flags['switch:' + a]) return false;
+                if (entry.conditionType < 0 || entry.conditionType > 6) throw new Error('Chưa hỗ trợ điều kiện AI ' + entry.conditionType);
+                const skill = this.game.data.skill(entry.skillId);
+                return skill && new FNH.Action(this.game.data, skill).canUse(enemy, true);
+            });
+            if (!valid.length) return null;
+            const cutoff = Math.max(...valid.map((entry) => entry.rating)) - 3;
+            const candidates = valid.filter((entry) => entry.rating > cutoff);
+            let value = Math.random() * candidates.reduce((sum, entry) => sum + entry.rating - cutoff, 0);
+            for (const entry of candidates) {
+                value -= entry.rating - cutoff;
+                if (value < 0) return this.game.data.skill(entry.skillId);
+            }
+            return this.game.data.skill(candidates[candidates.length - 1].skillId);
+        }
+
+        randomTarget(members) {
+            if (!members.length) return null;
+            const weights = members.map((actor) => actor.tgr === undefined ? 1 : Math.max(0, actor.tgr));
+            let value = Math.random() * weights.reduce((sum, weight) => sum + weight, 0);
+            for (let i = 0; i < members.length; i += 1) {
+                value -= weights[i];
+                if (value < 0) return members[i];
+            }
+            return members[members.length - 1];
+        }
+
+        nextEnemyAction() {
+            const enemy = this.enemyQueue.shift();
+            if (!enemy) return false;
+            this.phase = 'enemy';
+            this.timer = 0.75;
+            if (enemy.hp <= 0 || enemy.hidden || enemy.restriction === 4) return true;
+            try {
+                const skill = this.chooseEnemyAction(enemy);
+                if (!skill) { this.log = enemy.name + ' không hành động.'; return true; }
+                const action = new FNH.Action(this.game.data, skill);
+                const alive = this.members.filter((actor) => actor.hp > 0);
+                let targets;
+                if (skill.scope === 0) targets = [null];
+                else if (skill.scope === 11) targets = [enemy];
+                else if (skill.scope === 7 || skill.scope === 9) targets = [this.randomTarget(this.enemies.filter((actor) => !actor.hidden && (skill.scope === 9 ? actor.hp <= 0 : actor.hp > 0)))];
+                else if (skill.scope === 8 || skill.scope === 10) targets = this.enemies.filter((actor) => !actor.hidden && (skill.scope === 10 ? actor.hp <= 0 : actor.hp > 0));
+                else if (skill.scope === 2) targets = alive;
+                else targets = Array.from({ length: skill.scope >= 3 ? skill.scope - 2 : 1 }, () => this.randomTarget(alive));
+                action.pay(enemy);
+                for (const target of targets) {
+                    if (!target && skill.scope !== 0) continue;
+                    for (let repeat = 0; repeat < Math.max(1, skill.repeats || 1); repeat += 1) {
+                        const result = action.apply(enemy, target, this.guardedActors.has(target && target.id));
+                        if (result.commonEvent) this.game.reservedCommonEvent = result.commonEvent;
+                        if (result.hp) this.addDamage(Math.abs(result.hp), 226, 398, result.hp < 0 ? '#a9d99c' : '#ff9a86', true);
+                    }
+                    if (target && this.members.includes(target)) this.player = target;
+                }
+                this.log = enemy.name + ' dùng ' + skill.name + '.';
+                this.game.data.actorTurnEnd(enemy, 1);
+            } catch (error) {
+                this.game.lastError = error;
+                this.game.showToast(error.message, 6);
+                this.enemyQueue.length = 0;
+            }
+            return true;
         }
 
         selectMember(index) {
@@ -173,6 +275,7 @@
                         results.push(result);
                     }
                 }
+                if (targets[0] && this.enemies && this.enemies.includes(targets[0])) this.enemy = targets[0];
                 const total = results.reduce((sum, result) => sum + result.hp, 0);
                 const missed = results.every((result) => result.missed);
                 if (total) this.addDamage(Math.abs(total), targets[0] === this.enemy ? 408 : 226,
@@ -207,7 +310,13 @@
                 if (!targets.length) { this.log = 'Không có mục tiêu phù hợp.'; return; }
                 this.useAction(entry, targets);
             } else if (scope === 11) this.useAction(entry, [this.player]);
-            else if (scope >= 1 && scope <= 6) this.useAction(entry, Array.from({ length: scope >= 3 ? scope - 2 : 1 }, () => this.enemy));
+            else if (scope === 1 && this.livingEnemies().length > 1) {
+                this.pendingAction = entry;
+                this.actionMenu = this.livingEnemies().map((actor) => ({ actor }));
+                this.actionMenuIndex = 0;
+                this.phase = 'actionTarget';
+            } else if (scope === 2) this.useAction(entry, this.livingEnemies());
+            else if (scope >= 1 && scope <= 6) this.useAction(entry, Array.from({ length: scope >= 3 ? scope - 2 : 1 }, () => this.randomTarget(this.livingEnemies())));
             else if (scope === 0) this.useAction(entry, []);
             else this.game.showToast('Chưa hỗ trợ phạm vi hành động ' + scope, 4);
         }
@@ -246,7 +355,7 @@
         }
 
         playerAttack() {
-            this.useAction({ item: this.game.data.skill(1), isSkill: true }, [this.enemy]);
+            this.chooseAction({ item: this.game.data.skill(1), isSkill: true });
         }
 
         playerGuard() {
@@ -259,14 +368,21 @@
         }
 
         playerFlee() {
-            if (Math.random() < 0.55) {
+            if (!this.canEscape) {
+                this.log = 'Không thể bỏ chạy khỏi trận này.';
+                this.game.audio.playSe('fnh_buzzer', { volume: 0.4 });
+                return;
+            }
+            if (Math.random() < this.escapeRatio) {
+                this.result = 'fled';
                 this.log = 'Bạn lùi lại, hoà mình vào bóng tối và rút lui.';
                 this.game.audio.playSe('fnh_cancel', { volume: 0.55 });
                 this.game.audio.stopBgm(0.5);
                 this.phase = 'fled';
                 this.timer = 1.2;
             } else {
-                this.log = 'Bạn cố chạy, nhưng Guard đã chặn kín lối ra.';
+                this.escapeRatio += 0.1;
+                this.log = 'Bạn cố chạy nhưng không thoát được.';
                 this.game.audio.playSe('fnh_buzzer', { volume: 0.4 });
                 this.phase = 'player';
                 this.timer = 0.8;
@@ -274,6 +390,11 @@
         }
 
         enemyTurn() {
+            if (this.encounter) {
+                this.enemyQueue = this.livingEnemies().slice();
+                this.nextEnemyAction();
+                return;
+            }
             if (this.enemy.restriction === 4) {
                 this.log = this.enemy.name + ' không thể hành động.';
                 this.phase = 'enemy';
@@ -309,14 +430,29 @@
         }
 
         victory() {
+            if (this.result === 'victory') return;
             this.phase = 'victory';
             this.result = 'victory';
-            this.game.guardDefeated = true;
-            this.game.gold += this.enemy.rewardGold;
-            for (const actor of this.members) {
-                actor.exp = (actor.exp || 0) + Math.round(this.enemy.rewardExp * (actor.exr === undefined ? 1 : actor.exr));
+            if (!this.encounter) this.game.guardDefeated = true;
+            this.rewardGold = this.enemies.filter((enemy) => enemy.hp <= 0).reduce((sum, enemy) => sum + enemy.rewardGold, 0);
+            this.rewardExp = this.enemies.filter((enemy) => enemy.hp <= 0).reduce((sum, enemy) => sum + enemy.rewardExp, 0);
+            this.game.gold += this.rewardGold;
+            const inventory = this.game.player.inventory || (this.game.player.inventory = []);
+            for (const enemy of this.enemies.filter((enemy) => enemy.hp <= 0)) {
+                for (const drop of enemy.dropItems || []) {
+                    if (!drop.kind || Math.random() * Math.max(1, drop.denominator) >= 1) continue;
+                    const kind = ['item', 'weapon', 'armor'][drop.kind - 1];
+                    const table = [this.game.data.items, this.game.data.weapons, this.game.data.armors][drop.kind - 1];
+                    if (!kind || !table || !table[drop.dataId]) continue;
+                    const entry = inventory.find((entry) => entry.id === drop.dataId && (entry.kind || 'item') === kind);
+                    if (entry) entry.amount += 1;
+                    else inventory.push({ id: drop.dataId, amount: 1, kind });
+                }
             }
-            this.log = 'Guard gục xuống. Bộ giáp rỉ sét vỡ vụn trong im lặng.';
+            for (const actor of this.members) {
+                actor.exp = (actor.exp || 0) + Math.round(this.rewardExp * (actor.exr === undefined ? 1 : actor.exr));
+            }
+            this.log = 'Đối thủ đã gục ngã.';
             this.game.audio.stopBgm(0.5);
             this.game.audio.playSe('fnh_choice', { volume: 0.6 });
         }
@@ -336,7 +472,19 @@
             this.game.player.mapX = this.returnX;
             this.game.player.mapY = this.returnY;
             this.game.player.direction = this.returnDir;
-            this.game.changeScene(FNH.Scene_Map, { fromBattle: true });
+            if (this.battleToken && this.returnScene) {
+                this.battleToken.result = this.result === 'victory' ? 0 : this.result === 'defeat' ? 2 : 1;
+                this.battleToken.done = true;
+                this.game.audio.stopBgm(0.2);
+                for (const [sound, method] of [[this.returnAudio && this.returnAudio.bgm, 'playBgm'],
+                    [this.returnAudio && this.returnAudio.bgs, 'playBgs']]) {
+                    if (sound && sound.name) this.game.audio[method](sound.name, sound).catch((error) => {
+                        this.game.lastError = error;
+                        this.game.showToast(error.message, 6);
+                    });
+                }
+                this.game.changeScene(this.returnScene, { resume: true });
+            } else this.game.changeScene(FNH.Scene_Map, { fromBattle: true });
         }
 
         updateCommonEvent(dt) {
@@ -436,7 +584,7 @@
             if (this.phase === 'player') {
                 this.timer -= dt;
                 if (this.timer <= 0) {
-                    if (this.enemy.hp <= 0) this.victory();
+                    if (!this.livingEnemies().length) this.victory();
                     else this.finishActorAction();
                 }
                 return;
@@ -445,9 +593,13 @@
             if (this.phase === 'enemy') {
                 this.timer -= dt;
                 if (this.timer <= 0) {
+                    if (this.encounter && this.enemyQueue.length && this.members.some((actor) => actor.hp > 0)) {
+                        this.nextEnemyAction();
+                        return;
+                    }
                     for (const actor of this.members) this.game.data.actorTurnEnd(actor, 2);
-                    this.game.data.actorTurnEnd(this.enemy, 2);
-                    if (this.enemy.hp <= 0) {
+                    for (const enemy of this.enemies) this.game.data.actorTurnEnd(enemy, 2);
+                    if (!this.livingEnemies().length) {
                         this.victory();
                         return;
                     }
@@ -478,8 +630,13 @@
             if (this.phase === 'defeat') {
                 this.timer -= dt;
                 if (this.timer <= 0 && !this.leaving) {
-                    this.leaving = true;
-                    this.game.gameOver();
+                    if (this.canLose && this.returnScene) {
+                        for (const actor of this.members) if (actor.hp <= 0) this.game.data.setActorHp(actor, 1);
+                        this.returnToMap();
+                    } else {
+                        this.leaving = true;
+                        this.game.gameOver();
+                    }
                 }
             }
         }
@@ -504,7 +661,7 @@
 
         drawEnemy(ctx) {
             if (!this.enemy) return;
-            const parts = this.enemy.parts.slice().sort(function (a, b) { return a.y - b.y; });
+            const parts = this.enemies.filter((enemy) => !enemy.hidden && enemy.hp > 0).flatMap((enemy) => enemy.parts).sort(function (a, b) { return a.y - b.y; });
             const shakeX = this.shake > 0 ? (Math.random() * 2 - 1) * this.shake * 10 : 0;
             const shakeY = this.shake > 0 ? (Math.random() * 2 - 1) * this.shake * 6 : 0;
 
@@ -536,7 +693,7 @@
                 fillBottom: 'rgba(5,5,5,0.94)',
                 border: 'rgba(172,139,93,0.48)'
             });
-            FNH.text(ctx, 'GUARD', 266, 42, {
+            FNH.text(ctx, this.enemy.name || 'ĐỐI THỦ', 266, 42, {
                 size: 15,
                 weight: 600,
                 color: '#ead9b8'
@@ -641,7 +798,7 @@
                 ? '↑ ↓ chọn · ENTER xác nhận'
                 : this.phase === 'victory'
                     ? 'ENTER để quay lại hành lang'
-                    : 'Guard đang hành động…',
+                    : 'Đang hành động…',
                 114, 598, {
                     size: 9,
                     color: 'rgba(210,194,160,0.46)'
@@ -671,7 +828,7 @@
                 const alpha = FNH.clamp(this.timer / 0.6, 0, 1);
                 ctx.save();
                 ctx.globalAlpha = Math.min(1, alpha);
-                FNH.text(ctx, 'GUARD CHẶN LỐI', FNH.WIDTH / 2, 180, {
+                FNH.text(ctx, this.encounter ? this.encounter.name : 'GUARD CHẶN LỐI', FNH.WIDTH / 2, 180, {
                     size: 25,
                     weight: 600,
                     color: '#eadbc0',
@@ -702,12 +859,12 @@
                     color: '#f0e2c1',
                     align: 'center'
                 });
-                FNH.text(ctx, 'Guard đã gục ngã.', FNH.WIDTH / 2, 266, {
+                FNH.text(ctx, 'Đối thủ đã gục ngã.', FNH.WIDTH / 2, 266, {
                     size: 13,
                     color: 'rgba(224,208,176,0.7)',
                     align: 'center'
                 });
-                FNH.text(ctx, '+ ' + this.enemy.rewardGold + ' vàng    ·    + ' + this.enemy.rewardExp + ' kinh nghiệm',
+                FNH.text(ctx, '+ ' + this.rewardGold + ' vàng    ·    + ' + this.rewardExp + ' kinh nghiệm',
                     FNH.WIDTH / 2, 306, {
                         size: 12,
                         weight: 600,

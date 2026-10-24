@@ -315,6 +315,19 @@ Chưa có JavaScript tùy ý,
 script move route và các plugin command khác,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 
+### Trận đấu từ event
+
+Battle Processing (301) chọn troop trực tiếp, qua biến hoặc từ encounterList theo
+region và trọng số. Interpreter chờ kết quả rồi thực thi đúng nhánh 601/602/603/604;
+quay lại cùng cảnh bản đồ và con trỏ event, không khởi chạy lại event. Có cờ cho phép
+bỏ chạy/thua, hồi sinh người gục khi được phép thua, khôi phục nhạc bản đồ.
+Troop đọc thành viên, HP/MP/chỉ số/traits, tọa độ và sprite từ database gốc. Mỗi mục
+tiêu có HP riêng; chọn một hoặc nhiều mục tiêu và chỉ thắng khi hết enemy hiện diện.
+AI xét điều kiện lượt, HP, MP, state, cấp tổ đội và switch rồi chọn theo rating; từng
+enemy còn sống hành động. Phần thưởng EXP/vàng và drop đọc từ enemy gốc. Trận Guard
+320 HP vẫn là encounter thử nghiệm riêng. Battle event của troop và plugin chiến đấu
+chưa được hỗ trợ đầy đủ; cơ chế này chưa xác nhận toàn bộ cốt truyện chơi xuyên suốt.
+
 ## Kiểm chứng
 
 ```sh

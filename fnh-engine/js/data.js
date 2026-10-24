@@ -399,6 +399,26 @@
             };
         }
 
+        createTroopEncounter(id) {
+            const troop = this.troop(id);
+            if (!troop) throw new Error('Không tìm thấy troop ' + id);
+            const enemies = (troop.members || []).map((member, index) => {
+                const source = this.enemy(member.enemyId);
+                if (!source) throw new Error('Không tìm thấy enemy ' + member.enemyId);
+                const actor = { id: 'enemy:' + index, enemyId: source.id, name: source.name, level: 1,
+                    baseParams: source.params.slice(), states: [], stateTurns: {}, stateSteps: {}, paramPlus: [],
+                    hp: source.params[0], mp: source.params[1], tp: 0, hidden: !!member.hidden,
+                    rewardGold: source.gold || 0, rewardExp: source.exp || 0,
+                    parts: [{ enemyId: source.id, name: source.name, image: 'enemies/' + source.battlerName,
+                        x: member.x, y: member.y }],
+                    actions: source.actions || [], dropItems: source.dropItems || [] };
+                this.refreshActor(actor);
+                return actor;
+            });
+            if (!enemies.length) throw new Error('Troop không có thành viên ' + id);
+            return { id: troop.id, name: troop.name, enemies, pages: troop.pages || [] };
+        }
+
         createGuardEncounter() {
             const guard = this.enemy(1);
             const troop = this.troop(1);

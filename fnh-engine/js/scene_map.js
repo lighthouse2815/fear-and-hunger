@@ -69,6 +69,10 @@
         }
 
         enter(options) {
+            if (options && options.resume) {
+                this.leaving = false;
+                return;
+            }
             this.time = 0;
             this.ready = false;
             this.leaving = false;
@@ -1200,6 +1204,32 @@
                     else if (p[2] === 4 && operand !== 0) this.game.flags[key] = Math.floor(old / operand);
                     else if (p[2] === 5 && operand !== 0) this.game.flags[key] = old % operand;
                 }
+            } else if (command.code === 301) {
+                if (this.game.sceneName === 'battle') throw new Error('Không thể mở trận đấu lồng nhau');
+                let troopId = p[0] === 1 ? Number(this.game.flags['variable:' + p[1]] || 0) : p[1];
+                if (p[0] === 2) {
+                    const player = this.game.player;
+                    const region = this.game.data.tileIdAt(this.map, player.mapX, player.mapY, 5);
+                    const encounters = (this.map.encounterList || []).filter((entry) => entry.weight > 0 &&
+                        (!entry.regionSet.length || entry.regionSet.includes(region)));
+                    let value = Math.random() * encounters.reduce((sum, entry) => sum + entry.weight, 0);
+                    troopId = 0;
+                    for (const entry of encounters) {
+                        value -= entry.weight;
+                        if (value < 0) { troopId = entry.troopId; break; }
+                    }
+                } else if (p[0] !== 0 && p[0] !== 1) throw new Error('Kiểu chọn troop không hợp lệ');
+                if (!this.partyIds().length) throw new Error('Không thể vào trận với tổ đội trống');
+                const encounter = this.game.data.createTroopEncounter(troopId);
+                const token = { done: false, result: null };
+                const bgs = this.game.audio.currentBgs;
+                const audio = { bgm: this.game.audio.saveBgm(), bgs: bgs ? { name: bgs.name, ...bgs.options } : null };
+                this.finishMove();
+                this.leaving = true;
+                this.game.changeScene(FNH.Scene_Battle, { encounter, returnScene: this, token,
+                    canEscape: !!p[2], canLose: !!p[3], returnAudio: audio,
+                    returnX: this.game.player.mapX, returnY: this.game.player.mapY, returnDir: this.game.player.direction });
+                return { type: 'battle', token };
             } else if (command.code === 129) {
                 this.changePartyMember(p[0], p[1] === 1, !!p[2]);
             } else if (command.code === 124) {

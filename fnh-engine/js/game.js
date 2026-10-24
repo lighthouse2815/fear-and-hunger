@@ -203,7 +203,7 @@
         changeScene(SceneClass, options) {
             if (this.transition.mode === 'out') return;
             this.transition.fadeOut(() => {
-                this.setScene(new SceneClass(), options);
+                this.setScene(typeof SceneClass === 'function' ? new SceneClass() : SceneClass, options);
                 this.transition.fadeIn();
             });
         }

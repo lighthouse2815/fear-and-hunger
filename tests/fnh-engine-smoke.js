@@ -690,6 +690,32 @@ async function main() {
             scene.refreshEvents();
         })()`, false, false);
 
+        await evalPage(cdp, `(() => {
+            const mapScene = FNH.game.scene;
+            window.__eventBattleMap = mapScene;
+            mapScene.startEventList({list: [
+                {code: 301, indent: 0, parameters: [0, 1, true, true]},
+                {code: 601, indent: 0, parameters: []},
+                {code: 121, indent: 1, parameters: [999990, 999990, 0]},
+                {code: 602, indent: 0, parameters: []},
+                {code: 121, indent: 1, parameters: [999991, 999991, 0]},
+                {code: 603, indent: 0, parameters: []},
+                {code: 121, indent: 1, parameters: [999992, 999992, 0]},
+                {code: 604, indent: 0, parameters: []}
+            ]}, 999990);
+        })()`, false, false);
+        await waitFor(cdp, 'FNH.game.sceneName === "battle" && FNH.game.scene.phase === "command"', 15000, 'trận troop từ event');
+        check('battle event đọc HP và thành viên troop gốc', await evalPage(cdp,
+            'FNH.game.scene.encounter.id === 1 && FNH.game.scene.enemies.length === 7 && FNH.game.scene.enemies[0].maxHp === FNH.game.data.enemies[1].params[0]', false, false));
+        await evalPage(cdp, 'FNH.game.scene.escapeRatio = 1', false, false);
+        await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.flags["switch:999991"]', 15000, 'tiếp tục nhánh bỏ chạy');
+        check('trở lại cùng cảnh và chỉ chạy nhánh bỏ chạy', await evalPage(cdp,
+            'FNH.game.scene === window.__eventBattleMap && !FNH.game.scene.eventRunner && !FNH.game.flags["switch:999990"] && !FNH.game.flags["switch:999992"] && FNH.game.player.mapY === 67 && !FNH.game.guardDefeated', false, false));
+        await evalPage(cdp, '[999990,999991,999992].forEach(id => delete FNH.game.flags["switch:"+id]); delete window.__eventBattleMap;', false, false);
+
         await evalPage(cdp, 'FNH.game.scene.startEventList({list: [{code: 129, parameters: [3, 0, true]}]}, 0)', false, false);
         check('event thêm đồng đội vào tổ đội thật', await evalPage(cdp,
             'FNH.game.partyIds.length === 2 && FNH.game.partyIds[1] === 3 && FNH.game.actorStates[3].hp > 0', false, false));
