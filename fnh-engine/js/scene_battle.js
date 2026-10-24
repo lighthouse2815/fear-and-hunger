@@ -133,6 +133,46 @@
             return members[members.length - 1];
         }
 
+        actionTargets(user, skill, targetIndex) {
+            const allies = this.enemies.includes(user) ? this.enemies : this.members;
+            const opponents = this.enemies.includes(user) ? this.members : this.enemies;
+            const present = (actor) => !actor.hidden;
+            const alive = opponents.filter((actor) => present(actor) && actor.hp > 0);
+            const friends = allies.filter((actor) => present(actor) && (skill.scope === 9 || skill.scope === 10 ? actor.hp <= 0 : actor.hp > 0));
+            if (skill.scope === 0) return [null];
+            if (skill.scope === 11) return [user];
+            if (skill.scope === 2) return alive;
+            if (skill.scope === 8 || skill.scope === 10) return friends;
+            if (skill.scope >= 3 && skill.scope <= 6) return Array.from({ length: skill.scope - 2 }, () => this.randomTarget(alive));
+            const pool = skill.scope >= 7 ? friends : alive;
+            const unit = skill.scope >= 7 ? allies : opponents;
+            const index = targetIndex === -2 ? (user.lastTargetIndex || 0) : targetIndex;
+            const target = index >= 0 ? (pool.includes(unit[index]) ? unit[index] : pool[0]) : this.randomTarget(pool);
+            return target ? [target] : [];
+        }
+
+        forceAction(user, skillId, targetIndex) {
+            if (!user || user.hp <= 0) return false;
+            const skill = this.game.data.skill(skillId);
+            const action = new FNH.Action(this.game.data, skill);
+            const targets = this.actionTargets(user, skill, targetIndex);
+            action.pay(user);
+            user.mp = Math.max(0, user.mp);
+            user.tp = Math.max(0, user.tp);
+            for (const target of targets) {
+                for (let repeat = 0; repeat < Math.max(1, skill.repeats || 1); repeat += 1) {
+                    const result = action.apply(user, target, this.guardedActors.has(target && target.id));
+                    if (result.commonEvent) this.game.reservedCommonEvent = result.commonEvent;
+                    if (result.hp) this.addDamage(Math.abs(result.hp), 408, 264, result.hp < 0 ? '#a9d99c' : '#ff9a86', false);
+                }
+                if (target) user.lastTargetIndex = (this.enemies.includes(target) ? this.enemies : this.members).indexOf(target);
+            }
+            if (this.enemyQueue) this.enemyQueue = this.enemyQueue.filter((enemy) => enemy !== user);
+            this.log = user.name + ' dùng ' + skill.name + '.';
+            this.game.data.actorTurnEnd(user, 1);
+            return true;
+        }
+
         nextEnemyAction() {
             const enemy = this.enemyQueue.shift();
             if (!enemy) return false;
@@ -143,14 +183,7 @@
                 const skill = this.chooseEnemyAction(enemy);
                 if (!skill) { this.log = enemy.name + ' không hành động.'; return true; }
                 const action = new FNH.Action(this.game.data, skill);
-                const alive = this.members.filter((actor) => actor.hp > 0);
-                let targets;
-                if (skill.scope === 0) targets = [null];
-                else if (skill.scope === 11) targets = [enemy];
-                else if (skill.scope === 7 || skill.scope === 9) targets = [this.randomTarget(this.enemies.filter((actor) => !actor.hidden && (skill.scope === 9 ? actor.hp <= 0 : actor.hp > 0)))];
-                else if (skill.scope === 8 || skill.scope === 10) targets = this.enemies.filter((actor) => !actor.hidden && (skill.scope === 10 ? actor.hp <= 0 : actor.hp > 0));
-                else if (skill.scope === 2) targets = alive;
-                else targets = Array.from({ length: skill.scope >= 3 ? skill.scope - 2 : 1 }, () => this.randomTarget(alive));
+                const targets = this.actionTargets(enemy, skill, -1);
                 action.pay(enemy);
                 for (const target of targets) {
                     if (!target && skill.scope !== 0) continue;
@@ -276,6 +309,7 @@
                         results.push(result);
                     }
                 }
+                if (targets[0]) this.player.lastTargetIndex = (this.enemies.includes(targets[0]) ? this.enemies : this.members).indexOf(targets[0]);
                 if (targets[0] && this.enemies && this.enemies.includes(targets[0])) this.enemy = targets[0];
                 const total = results.reduce((sum, result) => sum + result.hp, 0);
                 const missed = results.every((result) => result.missed);

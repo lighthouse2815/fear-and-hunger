@@ -1267,6 +1267,13 @@
                 if (!this.eventId) return;
                 const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + String(p[0] || 'A');
                 this.game.flags[key] = p[1] === 0;
+            } else if (command.code === 339) {
+                if (!this.battle) return;
+                const users = p[0] === 0 ? this.battle.enemies.filter((enemy, index) => p[1] < 0 || index === p[1])
+                    : p[1] === 0 ? this.battle.members : [this.eventActor(p[1])];
+                let performed = false;
+                for (const user of users) performed = this.battle.forceAction(user, p[2], p[3]) || performed;
+                if (performed) return { type: 'time', seconds: 0.75 };
             } else if (command.code === 340) {
                 if (!this.battle) return;
                 this.battle.result = 'fled';
