@@ -21,7 +21,17 @@
         }
 
         resume(value) {
-            if (!this.wait || !['message', 'choice'].includes(this.wait.type)) return;
+            if (!this.wait || !['message', 'choice', 'number', 'item'].includes(this.wait.type)) return;
+            if (this.wait.type === 'number') {
+                if (!Number.isInteger(value) || value < 0 || value >= Math.pow(10, this.wait.digits)) {
+                    throw new Error('Số nhập event không hợp lệ');
+                }
+                this.handlers.setVariable(this.wait.variableId, value);
+            }
+            if (this.wait.type === 'item') {
+                if (value !== 0 && !this.wait.items.some((item) => item.id === value)) throw new Error('Vật phẩm chọn không hợp lệ');
+                this.handlers.setVariable(this.wait.variableId, value);
+            }
             if (this.wait.type === 'choice') {
                 if (value === -2 && this.wait.cancel !== -2) throw new Error('Event không cho phép hủy lựa chọn');
                 if (value !== -2 && (!Number.isInteger(value) || value < 0 || value >= this.wait.choices.length)) {
@@ -81,6 +91,18 @@
                         }
                         this.wait = { type: 'choice', choices: p[0] || [], cancel: p[1], defaultIndex: p[2], frame, indent };
                         break;
+                    case 103: case 104: {
+                        if (this.handlers.canShowMessage && !this.handlers.canShowMessage()) {
+                            frame.index -= 1;
+                            return;
+                        }
+                        if (command.code === 103) {
+                            const digits = Math.max(1, Math.min(8, Number(p[1]) || 1));
+                            this.wait = { type: 'number', variableId: p[0], digits, digit: 0,
+                                value: Math.max(0, Math.min(Math.pow(10, digits) - 1, Math.floor(Number(this.handlers.variable(p[0])) || 0))) };
+                        } else this.wait = { type: 'item', variableId: p[0], items: this.handlers.selectItems(p[1]) };
+                        break;
+                    }
                     case 402:
                         if (frame.branches[indent] !== p[0]) this.seek(frame, indent, [402, 403, 404]);
                         break;

@@ -829,6 +829,12 @@
                     this.dialogRunner = runner;
                     return true;
                 },
+                variable: (id) => this.game.flags['variable:' + id] || 0,
+                setVariable: (id, value) => { this.game.flags['variable:' + id] = value; },
+                selectItems: (type) => (this.game.player.inventory || []).filter((entry) => {
+                    const item = this.game.data.items[entry.id];
+                    return (entry.kind || 'item') === 'item' && entry.amount > 0 && item && item.itypeId === type;
+                }).map((entry) => ({ id: entry.id, name: this.game.data.items[entry.id].name, amount: entry.amount })),
                 condition: (parameters) => this.eventCondition(parameters),
                 commonEvent: (id) => this.game.data.commonEvents[id],
                 execute: (command) => this.executeEventCommand(command)
@@ -965,9 +971,23 @@
             if (!runner) return;
             try {
                 const wait = runner.wait;
-                if (wait && ['message', 'choice'].includes(wait.type) && this.eventWait === wait &&
+                if (wait && ['message', 'choice', 'number', 'item'].includes(wait.type) && this.eventWait === wait &&
                     (!this.dialogRunner || this.dialogRunner === runner)) {
                     const input = this.input;
+                    if (wait.type === 'number') {
+                        if (input.isPressed('ArrowLeft', 'a', 'A')) wait.digit = (wait.digit + wait.digits - 1) % wait.digits;
+                        if (input.isPressed('ArrowRight', 'd', 'D')) wait.digit = (wait.digit + 1) % wait.digits;
+                        const place = Math.pow(10, wait.digits - 1 - wait.digit);
+                        const digit = Math.floor(wait.value / place) % 10;
+                        if (input.isPressed('ArrowUp', 'w', 'W')) wait.value += (((digit + 1) % 10) - digit) * place;
+                        if (input.isPressed('ArrowDown', 's', 'S')) wait.value += (((digit + 9) % 10) - digit) * place;
+                    }
+                    if (wait.type === 'item') {
+                        const count = wait.items.length;
+                        if (count && input.isPressed('ArrowUp', 'w', 'W')) this.eventChoice = (this.eventChoice + count - 1) % count;
+                        if (count && input.isPressed('ArrowDown', 's', 'S')) this.eventChoice = (this.eventChoice + 1) % count;
+                        if (input.isPressed('Escape', 'x', 'X')) runner.resume(0);
+                    }
                     if (wait.type === 'choice') {
                         const count = wait.choices.length;
                         if (input.isPressed('ArrowUp', 'w', 'W')) this.eventChoice = (this.eventChoice + count - 1) % count;
@@ -977,7 +997,8 @@
                         }
                     }
                     if (runner.wait && input.isPressed('Enter', ' ', 'z', 'Z')) {
-                        runner.resume(wait.type === 'choice' ? this.eventChoice : undefined);
+                        runner.resume(wait.type === 'choice' ? this.eventChoice : wait.type === 'number' ? wait.value
+                            : wait.type === 'item' ? (wait.items[this.eventChoice] ? wait.items[this.eventChoice].id : 0) : undefined);
                     }
                 }
                 runner.update(dt);
@@ -986,7 +1007,7 @@
                     this.eventChoice = runner.wait && runner.wait.type === 'choice'
                         ? Math.max(0, Math.min(runner.wait.choices.length - 1, runner.wait.defaultIndex || 0)) : 0;
                 }
-                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice'].includes(runner.wait.type))) {
+                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice', 'number', 'item'].includes(runner.wait.type))) {
                     this.dialogRunner = null;
                 }
                 if (runner.done) {
@@ -1012,11 +1033,34 @@
         drawEventDialog(ctx) {
             const dialog = this.dialogState();
             const wait = dialog.eventRunner && dialog.eventRunner.wait;
-            if (!wait || !['message', 'choice'].includes(wait.type)) return;
+            if (!wait || !['message', 'choice', 'number', 'item'].includes(wait.type)) return;
             if (wait.type === 'message') {
                 FNH.panel(ctx, 20, 420, FNH.WIDTH - 40, 170);
                 FNH.wrapText(ctx, wait.text, 40, 450, FNH.WIDTH - 80, 25, { size: 18 });
                 FNH.text(ctx, 'Z / ENTER · TIẾP TỤC', FNH.WIDTH - 40, 575, { size: 11, align: 'right' });
+            } else if (wait.type === 'number') {
+                FNH.panel(ctx, 180, 420, FNH.WIDTH - 360, 140);
+                const value = String(wait.value).padStart(wait.digits, '0');
+                const startX = FNH.WIDTH / 2 - value.length * 15;
+                for (let i = 0; i < value.length; i += 1) {
+                    FNH.text(ctx, value[i], startX + i * 30, 470, { size: 30,
+                        color: i === wait.digit ? '#f4deb0' : '#b9b09e' });
+                    if (i === wait.digit) FNH.text(ctx, '▔', startX + i * 30, 493, { size: 24, color: '#f4deb0' });
+                }
+                FNH.text(ctx, '← → CHỌN SỐ · ↑ ↓ ĐỔI · ENTER XÁC NHẬN', FNH.WIDTH / 2, 535, { size: 11, align: 'center' });
+            } else if (wait.type === 'item') {
+                const start = Math.max(0, dialog.eventChoice - 6);
+                const entries = wait.items.slice(start, start + 7);
+                const height = Math.max(1, entries.length) * 38 + 60;
+                const y = Math.max(20, 590 - height);
+                FNH.panel(ctx, 120, y, FNH.WIDTH - 240, height);
+                if (!entries.length) FNH.text(ctx, 'Không có vật phẩm phù hợp.', 140, y + 30, { size: 18 });
+                entries.forEach((item, index) => {
+                    const selected = start + index === dialog.eventChoice;
+                    FNH.text(ctx, (selected ? '› ' : '  ') + item.name + ' ×' + item.amount, 140, y + 30 + index * 38,
+                        { size: 18, color: selected ? '#f4deb0' : '#b9b09e' });
+                });
+                FNH.text(ctx, 'ENTER · CHỌN / ESC · HỦY', FNH.WIDTH - 140, 575, { size: 11, align: 'right' });
             } else {
                 const height = wait.choices.length * 38 + 32;
                 const y = Math.max(20, 590 - height);

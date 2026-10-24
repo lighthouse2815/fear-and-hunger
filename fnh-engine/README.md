@@ -285,6 +285,10 @@ và API lưu; các cờ này đi cùng save. Nhân vật hết HP chuyển màn 
 Timer (124) hỗ trợ bắt đầu/dừng, hiển thị đếm ngược, điều kiện timer và toán hạng
 biến dữ liệu timer. Timer đóng băng trong menu, lưu/đọc cùng save và thoát trận hiện
 tại khi hết giờ. Hết giờ chỉ xử lý một lần, không tự đặt lại hoặc xóa giá trị khi dừng.
+Nhập số (103) có chọn/sửa từng chữ số và xác nhận ghi vào biến, giới hạn 1–8 chữ số.
+Chọn vật phẩm (104) lọc itypeId từ database và túi đồ, hiển thị tên/số lượng, xác nhận
+trả ID hoặc hủy trả 0; không tự tiêu thụ vật phẩm. Cả hai dùng chung khóa hội thoại với
+các event khác và khóa điều khiển di chuyển cho tới khi đóng.
 Chưa có JavaScript tùy ý,
 script move route và các plugin command khác,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.

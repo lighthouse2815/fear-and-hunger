@@ -567,6 +567,23 @@ async function main() {
             '!FNH.game.scene.eventRunner && FNH.game.gabs.busy', false, false));
         await evalPage(cdp, 'FNH.game.gabs.clear()', false, false);
 
+        await evalPage(cdp, `(() => {
+            FNH.game.flags['variable:999993'] = 12;
+            FNH.game.scene.startEventList({list: [{code: 103, parameters: [999993, 3]}]}, 0);
+        })()`, false, false);
+        await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        check('nhập số trong event ghi biến sau xác nhận', await evalPage(cdp,
+            'FNH.game.flags["variable:999993"] === 112 && !FNH.game.scene.eventRunner', false, false));
+        await evalPage(cdp, `(() => {
+            delete FNH.game.flags['variable:999993'];
+            FNH.game.scene.startEventList({list: [{code: 104, parameters: [999993, 4]}]}, 0);
+        })()`, false, false);
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        check('hủy chọn vật phẩm trả biến về 0', await evalPage(cdp,
+            'FNH.game.flags["variable:999993"] === 0 && !FNH.game.scene.eventRunner', false, false));
+        await evalPage(cdp, 'delete FNH.game.flags["variable:999993"]', false, false);
+
         check('common event gốc được nạp', await evalPage(cdp,
             'FNH.game.data.commonEvents.length > 1', false, false));
         await evalPage(cdp, `(() => {
