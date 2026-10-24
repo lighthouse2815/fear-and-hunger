@@ -55,6 +55,8 @@
             this.eventRunner = null;
             this.erasedEvents = new Set();
             this.failedAutorunPages = new Set();
+            this.parallelEvents = new Map();
+            this.dialogRunner = null;
             this.eventChoice = 0;
             this.eventWait = null;
             this.eventId = 0;
@@ -68,6 +70,8 @@
             this.paused = false;
             this.erasedEvents.clear();
             this.failedAutorunPages.clear();
+            this.parallelEvents.clear();
+            this.dialogRunner = null;
             this.eventRunner = null;
             this.eventWait = null;
             this.bannerTimer = 3.8;
@@ -160,6 +164,65 @@
                     !this.failedAutorunPages.has(event) && this.startEventList(event, 0)) return true;
             }
             return false;
+        }
+
+        withEventContext(context, action) {
+            const fields = ['eventRunner', 'eventWait', 'eventChoice', 'eventId', 'runningEventPage'];
+            const previous = fields.map((field) => this[field]);
+            fields.forEach((field) => { this[field] = context[field]; });
+            try {
+                return action();
+            } finally {
+                fields.forEach((field, index) => {
+                    context[field] = this[field];
+                    this[field] = previous[index];
+                });
+            }
+        }
+
+        updateParallelEvents(dt) {
+            const active = new Map();
+            for (const event of this.map.events || []) {
+                if (!event) continue;
+                const page = this.eventPage(event);
+                if (page && page.trigger === 4) active.set('map:' + event.id, { page, eventId: event.id });
+            }
+            for (const event of this.game.data.commonEvents || []) {
+                if (event && event.trigger === 2 && this.game.flags['switch:' + event.switchId]) {
+                    active.set('common:' + event.id, { page: event, eventId: 0 });
+                }
+            }
+            for (const [key, context] of this.parallelEvents) {
+                if (!active.has(key) || active.get(key).page !== context.runningEventPage) {
+                    if (this.dialogRunner === context.eventRunner) this.dialogRunner = null;
+                    this.parallelEvents.delete(key);
+                }
+            }
+            for (const [key, entry] of active) {
+                if (this.leaving) break;
+                // Các event trước có thể vừa đổi switch, đổi trang hoặc xóa event này.
+                const valid = entry.eventId ? this.eventPage(this.map.events.find((event) => event && event.id === entry.eventId)) === entry.page
+                    : this.game.flags['switch:' + entry.page.switchId];
+                if (!valid || this.failedAutorunPages.has(entry.page)) continue;
+                let context = this.parallelEvents.get(key);
+                if (!context) {
+                    context = { eventRunner: null, eventWait: null, eventChoice: 0,
+                        eventId: entry.eventId, runningEventPage: entry.page };
+                    this.parallelEvents.set(key, context);
+                }
+                this.withEventContext(context, () => {
+                    if (this.eventRunner) this.updateEvent(dt);
+                    else this.startEventList(entry.page, entry.eventId, false);
+                });
+            }
+        }
+
+        dialogState() {
+            if (!this.dialogRunner || this.dialogRunner === this.eventRunner) return this;
+            for (const context of this.parallelEvents.values()) {
+                if (context.eventRunner === this.dialogRunner) return context;
+            }
+            return this;
         }
 
         refreshEvents() {
@@ -352,8 +415,15 @@
                 return;
             }
 
+            this.updateParallelEvents(dt);
+            if (this.leaving) return;
             if (this.eventRunner) {
                 this.updateEvent(dt);
+                this.updateEventImages();
+                return;
+            }
+            if (this.dialogRunner) {
+                this.updateCamera(dt);
                 this.updateEventImages();
                 return;
             }
@@ -481,17 +551,23 @@
             return this.startEventList(page, event.id);
         }
 
-        startEventList(page, eventId) {
+        startEventList(page, eventId, lockMovement = true) {
             if (this.eventRunner || this.leaving || !page || !page.list ||
                 !page.list.some((command) => command.code !== 0)) return false;
-            this.finishMove();
+            if (lockMovement) this.finishMove();
             this.eventId = eventId;
             this.runningEventPage = page;
-            this.eventRunner = new FNH.EventInterpreter(page.list, {
+            const runner = new FNH.EventInterpreter(page.list, {
+                canShowMessage: () => {
+                    if (this.dialogRunner && this.dialogRunner !== runner) return false;
+                    this.dialogRunner = runner;
+                    return true;
+                },
                 condition: (parameters) => this.eventCondition(parameters),
                 commonEvent: (id) => this.game.data.commonEvents[id],
                 execute: (command) => this.executeEventCommand(command)
             });
+            this.eventRunner = runner;
             this.updateEvent(0);
             return true;
         }
@@ -586,7 +662,8 @@
             if (!runner) return;
             try {
                 const wait = runner.wait;
-                if (wait && wait.type !== 'time' && this.eventWait === wait) {
+                if (wait && wait.type !== 'time' && this.eventWait === wait &&
+                    (!this.dialogRunner || this.dialogRunner === runner)) {
                     const input = this.input;
                     if (wait.type === 'choice') {
                         const count = wait.choices.length;
@@ -606,12 +683,16 @@
                     this.eventChoice = runner.wait && runner.wait.type === 'choice'
                         ? Math.max(0, Math.min(runner.wait.choices.length - 1, runner.wait.defaultIndex || 0)) : 0;
                 }
+                if (this.dialogRunner === runner && (!runner.wait || runner.wait.type === 'time')) {
+                    this.dialogRunner = null;
+                }
                 if (runner.done) {
                     this.eventRunner = null;
                     this.eventWait = null;
                     this.refreshEvents();
                 }
             } catch (error) {
+                if (this.dialogRunner === runner) this.dialogRunner = null;
                 if (this.runningEventPage) {
                     this.failedAutorunPages.add(this.runningEventPage);
                 }
@@ -624,7 +705,8 @@
         }
 
         drawEventDialog(ctx) {
-            const wait = this.eventRunner && this.eventRunner.wait;
+            const dialog = this.dialogState();
+            const wait = dialog.eventRunner && dialog.eventRunner.wait;
             if (!wait || wait.type === 'time') return;
             if (wait.type === 'message') {
                 FNH.panel(ctx, 20, 420, FNH.WIDTH - 40, 170);
@@ -635,8 +717,8 @@
                 const y = Math.max(20, 590 - height);
                 FNH.panel(ctx, 180, y, FNH.WIDTH - 200, height);
                 wait.choices.forEach((choice, index) => {
-                    FNH.text(ctx, (index === this.eventChoice ? '› ' : '  ') + choice, 200, y + 30 + index * 38, {
-                        size: 18, color: index === this.eventChoice ? '#f4deb0' : '#b9b09e'
+                    FNH.text(ctx, (index === dialog.eventChoice ? '› ' : '  ') + choice, 200, y + 30 + index * 38, {
+                        size: 18, color: index === dialog.eventChoice ? '#f4deb0' : '#b9b09e'
                     });
                 });
             }

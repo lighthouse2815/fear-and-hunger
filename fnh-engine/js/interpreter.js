@@ -54,6 +54,10 @@
                     case 0: case 108: case 408: case 118:
                         break;
                     case 101: {
+                        if (this.handlers.canShowMessage && !this.handlers.canShowMessage()) {
+                            frame.index -= 1;
+                            return;
+                        }
                         const lines = [];
                         while (frame.list[frame.index] && frame.list[frame.index].code === 401) {
                             lines.push(String(frame.list[frame.index++].parameters[0] || ''));
@@ -62,6 +66,10 @@
                         break;
                     }
                     case 102:
+                        if (this.handlers.canShowMessage && !this.handlers.canShowMessage()) {
+                            frame.index -= 1;
+                            return;
+                        }
                         this.wait = { type: 'choice', choices: p[0] || [], cancel: p[1], defaultIndex: p[2], frame, indent };
                         break;
                     case 402:

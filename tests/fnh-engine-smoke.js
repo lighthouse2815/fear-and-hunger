@@ -541,6 +541,31 @@ async function main() {
             false, false));
         await evalPage(cdp, '[999997, 999998, 999999].forEach(id => delete FNH.game.flags["switch:" + id])', false, false);
 
+        await evalPage(cdp, `(() => {
+            const c = (code, parameters = []) => ({code, parameters, indent: 0});
+            FNH.game.scene.map.events.push({id: 999996, x: -10, y: -10, pages: [{trigger: 4, list: [
+                c(122, [999996, 999996, 1, 0, 1]), c(230, [12]),
+                c(101, ['', 0]), c(401, ['Hội thoại từ event song song']), c(214)
+            ]}]});
+        })()`, false, false);
+        await waitFor(cdp, 'FNH.game.scene.dialogRunner && FNH.game.scene.dialogRunner.wait && FNH.game.scene.dialogRunner.wait.type === "message"',
+            5000, 'hội thoại parallel');
+        check('parallel thực thi trong vòng lặp game và có khung thoại riêng', await evalPage(cdp,
+            'FNH.game.flags["variable:999996"] === 1 && !FNH.game.scene.eventRunner && FNH.game.scene.dialogState().eventId === 999996', false, false));
+        await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
+        check('hội thoại parallel khóa di chuyển', await evalPage(cdp,
+            'FNH.game.player.mapY === 67', false, false));
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, '!FNH.game.scene.dialogRunner && FNH.game.scene.erasedEvents.has(999996)',
+            5000, 'parallel kết thúc và xóa event');
+        check('xác nhận parallel giải phóng hội thoại', await evalPage(cdp,
+            '!FNH.game.scene.dialogRunner && !FNH.game.scene.eventRunner', false, false));
+        await evalPage(cdp, `(() => {
+            FNH.game.scene.map.events = FNH.game.scene.map.events.filter(event => !event || event.id !== 999996);
+            FNH.game.scene.erasedEvents.delete(999996);
+            delete FNH.game.flags['variable:999996'];
+        })()`, false, false);
+
         await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
         await sleep(500);
         check('nhân vật bước lên ô 27,66', await evalPage(

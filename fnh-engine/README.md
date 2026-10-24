@@ -41,7 +41,7 @@ của các hệ thống dưới đây với bản gốc:
 | --- | --- |
 | Asset, nhạc, tạo nhân vật, lưu/đọc | Có trong bản chơi thử, cần kiểm chứng toàn bộ nội dung |
 | Bản đồ | Nạp JSON và một phần tileset; còn autotile, event di chuyển, va chạm và môi trường |
-| Event | Có interpreter cơ bản; còn nhiều lệnh, autorun, parallel, script và plugin |
+| Event | Có interpreter, autorun và parallel bản đồ/common event; còn nhiều lệnh, script và plugin |
 | Hội thoại | Có nội dung nhiều dòng và lựa chọn; còn định dạng, chân dung, điều kiện lựa chọn plugin |
 | Chiến đấu | Chỉ trận Guard đơn giản; chưa có mô hình và công thức đầy đủ của game gốc |
 | Nhân vật, tổ đội, kỹ năng, trang bị | Chưa tương thích đầy đủ |
@@ -217,7 +217,15 @@ thường. Lệnh Erase Event (214) ẩn event và bỏ va chạm cho tới khi 
 ghi trạng thái xóa vào save. Trang autorun gặp lệnh chưa hỗ trợ được dừng và không tự
 thử lại cho tới khi tải lại bản đồ, tránh lặp thông báo lỗi mỗi frame.
 Common autorun dùng ngữ cảnh event ID 0, không ghi self-switch hoặc xóa event bản đồ.
-Chưa có parallel event, script/plugin command, move route, hiệu ứng màn hình,
+Có parallel event bản đồ (trigger 4) và common parallel (trigger 2, điều kiện switch).
+Mỗi event có con trỏ, nhánh, thời gian chờ và ID ngữ cảnh riêng. Parallel tiếp tục chạy
+khi event chính đang chờ; đổi trang, xóa event hoặc tắt switch common parallel sẽ hủy
+interpreter tương ứng. Event hoàn tất lặp lại từ frame sau. Menu tạm dừng đóng băng cả
+các event nền. Interpreter đang chạy không được ghi vào save, được tạo lại khi tải bản đồ.
+Các event dùng chung một khung thoại; event khác chờ tới lượt, và người chơi chỉ bị khóa
+di chuyển khi có hội thoại hoặc event chính đang chạy. Lỗi một event nền không dừng
+các event còn lại; trang lỗi không thử lại trong lần tải bản đồ đó.
+Chưa có script/plugin command, move route, hiệu ứng màn hình,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 
 ## Kiểm chứng

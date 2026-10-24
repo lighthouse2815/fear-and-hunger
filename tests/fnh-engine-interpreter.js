@@ -289,3 +289,139 @@ assert.equal(common.eventCondition([2, 'A', 1]), false);
 common.executeEventCommand(command(214));
 assert.equal(common.erasedEvents.size, 0);
 console.log('ĐẠT: common autorun theo switch, chờ, kích hoạt lại và ngữ cảnh riêng.');
+
+const parallel = new FNH.Scene_Map();
+parallel.game = {
+    mapId: 2, flags: {}, player: { mapX: 0, mapY: 0 }, gold: 0,
+    data: new FNH.DataStore(), showToast() {}
+};
+parallel.input = { isPressed: () => false };
+const backgroundPage = { trigger: 4, list: [
+    command(122, [1, 1, 1, 0, 1]), command(230, [60]), command(123, ['A', 0])
+] };
+const background = { id: 5, x: 1, y: 1, pages: [backgroundPage, {
+    conditions: { selfSwitchValid: true, selfSwitchCh: 'A' }, trigger: 0, list: [command(0)]
+}] };
+parallel.map = { events: [null, background] };
+parallel.eventId = 99;
+parallel.moving = true;
+parallel.updateParallelEvents(0);
+assert.equal(parallel.moving, true, 'Khởi động parallel không kết thúc bước di chuyển');
+assert.equal(parallel.eventRunner, null, 'Parallel không chiếm interpreter chính');
+assert.equal(parallel.eventId, 99, 'Khôi phục ngữ cảnh chính sau cập nhật');
+assert.equal(parallel.game.flags['variable:1'], 1);
+parallel.updateParallelEvents(0.5);
+assert.equal(parallel.game.flags['self:2:5:A'], undefined);
+parallel.updateParallelEvents(0.5);
+assert.equal(parallel.game.flags['self:2:5:A'], true, 'Self-switch dùng ID riêng của parallel');
+parallel.updateParallelEvents(0);
+assert.equal(parallel.parallelEvents.size, 0, 'Đổi trang dừng interpreter cũ');
+assert.equal(parallel.game.flags['variable:1'], 1);
+
+parallel.game.flags['switch:20'] = true;
+const backgroundCommon = { id: 7, trigger: 2, switchId: 20, list: [
+    command(125, [0, 0, 2]), command(230, [60]), command(125, [0, 0, 8])
+] };
+parallel.game.data.commonEvents = [null, backgroundCommon];
+parallel.updateParallelEvents(0);
+assert.equal(parallel.game.gold, 2);
+parallel.game.flags['switch:20'] = false;
+parallel.updateParallelEvents(2);
+assert.equal(parallel.game.gold, 2, 'Tắt switch hủy common parallel đang chờ');
+assert.equal(parallel.parallelEvents.size, 0);
+parallel.game.flags['switch:20'] = true;
+parallel.updateParallelEvents(0);
+assert.equal(parallel.game.gold, 4, 'Bật lại switch chạy từ đầu');
+parallel.updateParallelEvents(1);
+assert.equal(parallel.game.gold, 12);
+parallel.updateParallelEvents(0);
+assert.equal(parallel.game.gold, 14, 'Parallel hoàn tất được lặp lại ở frame sau');
+parallel.game.flags['switch:20'] = false;
+parallel.updateParallelEvents(0);
+
+const dialogPage = { trigger: 4, list: [command(101), command(401, ['Song song']), command(214)] };
+const dialogEvent = { id: 6, pages: [dialogPage] };
+parallel.map.events.push(dialogEvent);
+parallel.updateParallelEvents(0);
+const dialogContext = parallel.parallelEvents.get('map:6');
+assert.equal(parallel.dialogRunner, dialogContext.eventRunner);
+assert.equal(parallel.dialogState(), dialogContext);
+parallel.moving = false;
+const foregroundPage = { trigger: 0, list: [command(101), command(401, ['Chính']), command(125, [0, 0, 1])] };
+parallel.map.events.push({ id: 8, pages: [foregroundPage] });
+assert.equal(parallel.startEvent(parallel.map.events[3]), true);
+assert.equal(parallel.eventRunner.wait, null, 'Hội thoại chính đợi parallel nhường khung thoại');
+assert.equal(parallel.eventRunner.frames[0].index, 0, 'Không bỏ mất lệnh hội thoại đang đợi');
+parallel.input.isPressed = (key) => key === 'Enter';
+parallel.updateParallelEvents(0);
+assert.equal(parallel.erasedEvents.has(6), true);
+assert.equal(parallel.dialogRunner, null, 'Xóa parallel giải phóng khung thoại');
+parallel.updateEvent(0);
+assert.equal(parallel.eventRunner.wait.text, 'Chính');
+assert.equal(parallel.game.gold, 14, 'Không dùng lại lần xác nhận cũ cho hội thoại vừa mở');
+parallel.updateEvent(0);
+assert.equal(parallel.game.gold, 15);
+assert.equal(parallel.dialogRunner, null);
+
+// Hai parallel độc lập: một lỗi không ngăn event khác chạy hoặc ghi sai self-switch.
+parallel.input.isPressed = () => false;
+parallel.map.events = [
+    { id: 10, pages: [{ trigger: 4, list: [command(999)] }] },
+    { id: 11, pages: [{ trigger: 4, list: [command(123, ['B', 0]), command(214)] }] }
+];
+parallel.updateParallelEvents(0);
+assert.match(parallel.game.lastError.message, /Chưa hỗ trợ/);
+assert.equal(parallel.game.flags['self:2:11:B'], true);
+assert.equal(parallel.game.flags['self:2:10:B'], undefined);
+const failedPage = parallel.map.events[0].pages[0];
+assert.equal(parallel.failedAutorunPages.has(failedPage), true);
+parallel.updateParallelEvents(0);
+assert.equal(parallel.eventId, 8, 'Ngữ cảnh chính vẫn nguyên sau lỗi parallel');
+console.log('ĐẠT: parallel bản đồ/common event, chờ độc lập, đổi trang, hội thoại và cô lập lỗi.');
+
+const concurrent = new FNH.Scene_Map();
+concurrent.game = {
+    mapId: 3, flags: {}, player: {}, gold: 0, data: new FNH.DataStore(), showToast() {}
+};
+concurrent.input = { isPressed: () => false };
+const choicesPage = (variable) => ({ trigger: 4, list: [
+    command(102, [['A', 'B'], -1, 0]),
+    command(402, [0]), command(122, [variable, variable, 0, 0, 1], 1),
+    command(402, [1]), command(122, [variable, variable, 0, 0, 2], 1), command(404), command(214)
+] });
+concurrent.map = { events: [{ id: 1, pages: [choicesPage(1)] }, { id: 2, pages: [choicesPage(2)] }] };
+concurrent.updateParallelEvents(0);
+assert.equal(concurrent.dialogState().eventId, 1);
+assert.equal(concurrent.parallelEvents.get('map:2').eventRunner.wait, null);
+concurrent.input.isPressed = (key) => key === 'ArrowDown';
+concurrent.updateParallelEvents(0);
+concurrent.input.isPressed = (key) => key === 'Enter';
+concurrent.updateParallelEvents(0);
+assert.equal(concurrent.game.flags['variable:1'], 2);
+assert.equal(concurrent.game.flags['variable:2'], undefined, 'Một phím không chọn hai hội thoại');
+assert.equal(concurrent.dialogState().eventId, 2);
+assert.equal(concurrent.dialogState().eventChoice, 0, 'Lựa chọn không bị rò sang event tiếp theo');
+concurrent.updateParallelEvents(0);
+assert.equal(concurrent.game.flags['variable:2'], 1);
+assert.equal(concurrent.dialogRunner, null);
+
+// Parallel vẫn cập nhật khi interpreter chính đang chờ; menu đóng băng tất cả.
+concurrent.map.events = [{ id: 3, pages: [{ trigger: 4, list: [
+    command(230, [30]), command(125, [0, 0, 3]), command(214)
+] }] }];
+concurrent.startEventList({ list: [command(230, [120])] }, 0);
+const foreground = concurrent.eventRunner;
+concurrent.ready = true;
+concurrent.paused = true;
+concurrent.updatePause = () => {};
+concurrent.update(1);
+assert.equal(concurrent.game.gold, 0);
+assert.equal(foreground.wait.seconds, 2, 'Tạm dừng không làm giảm thời gian chờ');
+concurrent.paused = false;
+concurrent.updateEventImages = () => {};
+concurrent.update(0);
+concurrent.update(0.5);
+assert.equal(concurrent.game.gold, 3, 'Parallel hoàn tất trong lúc event chính vẫn chờ');
+assert.equal(concurrent.eventRunner, foreground);
+assert.equal(foreground.wait.seconds, 1.5);
+console.log('ĐẠT: chia sẻ khung thoại, lựa chọn riêng, chạy nền trong lúc chờ và tạm dừng.');
