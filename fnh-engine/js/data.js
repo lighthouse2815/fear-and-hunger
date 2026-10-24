@@ -105,7 +105,8 @@
         messageAt(map, x, y) {
             for (const event of ((map && map.events) || [])) {
                 if (!event || event.x !== x || event.y !== y) continue;
-                for (const page of event.pages || []) {
+                const active = this.eventPage(event, {});
+                for (const page of active ? [active] : []) {
                     const list = page.list || [];
                     for (let i = 0; i < list.length; i += 1) {
                         if (list[i].code !== 101) continue;
@@ -116,6 +117,20 @@
                         if (lines.length) return lines.join(' ');
                     }
                 }
+            }
+            return null;
+        }
+
+        eventPage(event, flags) {
+            const pages = event && event.pages || [];
+            for (let i = pages.length - 1; i >= 0; i -= 1) {
+                const page = pages[i];
+                const c = page.conditions || {};
+                if (c.switch1Valid && !flags['switch:' + c.switch1Id]) continue;
+                if (c.switch2Valid && !flags['switch:' + c.switch2Id]) continue;
+                if (c.variableValid && Number(flags['variable:' + c.variableId] || 0) < Number(c.variableValue || 0)) continue;
+                if (c.selfSwitchValid && !flags['self:' + event.id + ':' + c.selfSwitchCh]) continue;
+                return page;
             }
             return null;
         }

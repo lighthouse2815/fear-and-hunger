@@ -111,10 +111,8 @@
             }
 
             this.events = this.map.events.filter(Boolean).map((event) => {
-                const page = event.pages.find(function (item) {
-                    return item.image && (item.image.characterName || item.image.tileId > 0);
-                });
-                if (!page) return null;
+                const page = game.data.eventPage(event, game.flags);
+                if (!page || !page.image || !(page.image.characterName || page.image.tileId > 0)) return null;
                 return {
                     id: event.id,
                     name: event.name,
