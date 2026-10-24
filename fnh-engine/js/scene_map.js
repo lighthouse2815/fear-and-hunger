@@ -469,6 +469,8 @@
                         entry.amount = Math.max(0, entry.amount - amount);
                         if (!entry.amount) inventory.splice(inventory.indexOf(entry), 1);
                     }
+                } else if (command.code === 250 && p[0] && p[0].name) {
+                    this.game.audio.playSe(p[0].name, { volume: (Number(p[0].volume) || 90) / 100 });
                 }
             }
             const transfer = this.game.data.transferAt(this.map, front.x, front.y);
