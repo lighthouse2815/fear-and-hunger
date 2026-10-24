@@ -131,8 +131,7 @@
             // Ưu tiên vị trí event gốc cho encounter Guard; bản đồ tùy biến
             // hoặc bản dump thiếu tên vẫn dùng tọa độ vertical slice hiện tại.
             const guardEvent = this.events.find((event) => {
-                const text = ((event.name || '') + ' ' + (event.imageName || '')).toLowerCase();
-                return text.includes('guard');
+                return String(event.name || '').trim().toLowerCase() === 'guard';
             });
             if (guardEvent) {
                 this.guard.x = guardEvent.x;
