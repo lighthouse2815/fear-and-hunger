@@ -409,6 +409,7 @@
                 return;
             }
             const commands = this.game.data.commandsAt(this.map, front.x, front.y, this.game.flags);
+            const eventAtFront = (this.map.events || []).find((event) => event && event.x === front.x && event.y === front.y);
             for (const command of commands) {
                 const p = command.parameters || [];
                 if (command.code === 121) {
@@ -421,6 +422,9 @@
                     const to = Number(p[1] || from);
                     const value = Number(p[4] || 0);
                     for (let id = from; id <= to; id += 1) this.game.flags['variable:' + id] = value;
+                } else if (command.code === 123 && eventAtFront) {
+                    const key = 'self:' + eventAtFront.id + ':' + String(p[0] || 'A');
+                    this.game.flags[key] = true;
                 }
             }
             const transfer = this.game.data.transferAt(this.map, front.x, front.y);
