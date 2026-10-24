@@ -59,3 +59,17 @@ scene.startEventList({ list: [c(103, [9, 2])] }, 0);
 assert.equal(scene.eventRunner.wait.value, 99);
 press('Enter');
 console.log('ĐẠT: nhập số, sửa từng chữ số, xác nhận biến và chọn/hủy vật phẩm theo loại.');
+
+const held = new Set();
+scene.input.isDown = (...keys) => keys.some((key) => held.has(key));
+for (const [button, key] of [['shift', 'Shift'], ['ok', 'Enter'], ['cancel', 'Escape'],
+    ['up', 'ArrowUp'], ['down', 's'], ['left', 'ArrowLeft'], ['right', 'd'], ['pageup', 'PageUp']]) {
+    assert.equal(scene.eventCondition([11, button]), false);
+    held.add(key);
+    assert.equal(scene.eventCondition([11, button]), true);
+    assert.equal(scene.eventCondition([11, button]), true, 'Nút giữ không bị tiêu thụ sau một frame');
+    held.clear();
+    assert.equal(scene.eventCondition([11, button]), false, 'Thả nút tắt điều kiện');
+}
+assert.throws(() => scene.eventCondition([11, 'unknown']), /Chưa hỗ trợ nút event/);
+console.log('ĐẠT: điều kiện nút giữ, ánh xạ phím xác nhận/hủy/hướng và thả nút.');

@@ -997,6 +997,17 @@
                 return kind !== 'item' && !!p[2] && this.partyIds().some((id) =>
                     (this.eventActor(id).equipment || []).some((item) => item.id === p[1] && item.type === kind));
             }
+            if (p[0] === 11) {
+                const keys = {
+                    ok: ['Enter', ' ', 'z', 'Z'], cancel: ['Escape', 'x', 'X'], escape: ['Escape', 'x', 'X'],
+                    menu: ['Escape', 'x', 'X'], shift: ['Shift'], control: ['Control', 'Alt'], tab: ['Tab'],
+                    pageup: ['PageUp', 'q', 'Q'], pagedown: ['PageDown'],
+                    up: ['ArrowUp', 'w', 'W'], down: ['ArrowDown', 's', 'S'],
+                    left: ['ArrowLeft', 'a', 'A'], right: ['ArrowRight', 'd', 'D'], debug: ['F9']
+                }[p[1]];
+                if (!keys) throw new Error('Chưa hỗ trợ nút event ' + p[1]);
+                return this.input.isDown(...keys);
+            }
             throw new Error('Chưa hỗ trợ điều kiện event ' + p[0]);
         }
 
