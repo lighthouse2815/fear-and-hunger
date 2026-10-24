@@ -690,6 +690,10 @@ async function main() {
             scene.refreshEvents();
         })()`, false, false);
 
+        await evalPage(cdp, 'FNH.game.scene.startEventList({list: [{code: 129, parameters: [3, 0, true]}]}, 0)', false, false);
+        check('event thêm đồng đội vào tổ đội thật', await evalPage(cdp,
+            'FNH.game.partyIds.length === 2 && FNH.game.partyIds[1] === 3 && FNH.game.actorStates[3].hp > 0', false, false));
+
         await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
         await sleep(500);
         check('nhân vật bước lên ô 27,66', await evalPage(
@@ -709,6 +713,8 @@ async function main() {
         // ---------------------------------------------------------
         // 6. Trận đấu theo lượt.
         // ---------------------------------------------------------
+        check('trận đấu nhận đủ thành viên tổ đội', await evalPage(cdp,
+            'FNH.game.scene.members.length === 2 && FNH.game.scene.members[1].id === 3', false, false));
         check('trận đấu có đủ bảy bộ phận Guard', await evalPage(
             cdp, 'FNH.game.scene.enemy.parts.length === 7', false, false
         ));
@@ -823,6 +829,8 @@ async function main() {
             '    game.scene.guard.alive === false && game.player.hp > 0;',
             '})()'
         ].join('\n'), false, false));
+        check('Continue khôi phục danh sách và trạng thái đồng đội', await evalPage(cdp,
+            'FNH.game.partyIds.length === 2 && FNH.game.partyIds[1] === 3 && FNH.game.actorStates[3].hp > 0', false, false));
         await screenshot('continue-map');
 
         // ---------------------------------------------------------

@@ -132,7 +132,11 @@ Trong trận đấu: `↑`/`↓` chọn **TẤN CÔNG**, **PHÒNG THỦ** hoặc
   - Ragnvaldr — Outlander
 - **Bản đồ 1** (`level1_A`, tileset `Inside`), xuất phát tại `(27, 67)`.
 - **Guard** đứng tại `(27, 64)`, dùng đủ 7 bộ phận battler gốc.
-- Trận đấu theo lượt với 3 lệnh; Guard có 320 HP, thưởng 35 vàng và 20 EXP.
+- Trận Guard thử nghiệm có 3 lệnh, 320 HP, thưởng 35 vàng và 20 EXP.
+- Thành viên sống lần lượt hành động trước lượt Guard; mục tiêu dựa trên TGR,
+  phòng thủ theo từng người, restriction bất động làm mất lượt, trạng thái cập nhật
+  cuối hành động/cuối vòng. Chỉ thua khi toàn đội chết; EXP được chia cho từng actor.
+  Đây vẫn chưa phải công thức/AI/bộ phận chiến đấu đầy đủ của bản gốc.
 - Thắng, thua (màn hình chết) và bỏ chạy đều có đường quay lại game.
 - **Một ô lưu** trong `localStorage`:
   - khoá: `FNH_ENGINE:<namespace>:save1`;

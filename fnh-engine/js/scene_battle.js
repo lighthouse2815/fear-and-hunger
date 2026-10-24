@@ -27,6 +27,9 @@
             this.returnDir = 2;
             this.enemy = null;
             this.player = null;
+            this.members = [];
+            this.memberIndex = 0;
+            this.guardedActors = new Set();
         }
 
         enter(options) {
@@ -34,7 +37,11 @@
             this.returnX = opts.returnX === undefined ? 27 : opts.returnX;
             this.returnY = opts.returnY === undefined ? 65 : opts.returnY;
             this.returnDir = opts.returnDir === undefined ? 2 : opts.returnDir;
-            this.player = this.game.player;
+            const ids = this.game.partyIds || [this.game.player.id];
+            this.members = ids.map((id) => id === this.game.player.id ? this.game.player : this.game.actorStates[id]).filter(Boolean);
+            this.memberIndex = Math.max(0, this.members.findIndex((actor) => actor.hp > 0));
+            this.player = this.members[this.memberIndex] || this.game.player;
+            this.guardedActors.clear();
             this.enemy = this.game.data.createGuardEncounter();
             this.enemy.hp = this.enemy.maxHp;
             this.phase = 'intro';
@@ -52,6 +59,33 @@
             this.game.audio.stopBgs(0.35);
             this.game.audio.playBgm('muted_aggression', { volume: 0.48, loop: true });
             this.game.audio.playSe('guard_grunt1', { volume: 0.65 });
+        }
+
+        selectMember(index) {
+            this.memberIndex = index;
+            this.player = this.members[index];
+            this.index = 0;
+            this.hoverIndex = -1;
+            this.guarding = this.guardedActors.has(this.player.id);
+            this.game.assets.loadImage('faces/' + this.player.faceName).catch((error) => {
+                this.game.lastError = error;
+                this.game.showToast(error.message, 6);
+            });
+            if (this.player.restriction === 4) {
+                this.log = this.player.name + ' không thể hành động.';
+                this.phase = 'player';
+                this.timer = 0.7;
+            } else {
+                this.phase = 'command';
+                this.log = 'Đến lượt ' + this.player.name + '.';
+            }
+        }
+
+        finishActorAction() {
+            this.game.data.actorTurnEnd(this.player, 1);
+            const next = this.members.findIndex((actor, index) => index > this.memberIndex && actor.hp > 0);
+            if (next >= 0) this.selectMember(next);
+            else this.enemyTurn();
         }
 
         commandRects() {
@@ -110,6 +144,7 @@
 
         playerGuard() {
             this.guarding = true;
+            this.guardedActors.add(this.player.id);
             this.log = this.player.name + ' nâng cao phòng thủ, chờ đòn đánh tới.';
             this.game.audio.playSe('Decision1', { volume: 0.5 });
             this.phase = 'player';
@@ -132,16 +167,28 @@
         }
 
         enemyTurn() {
-            const wasGuarding = this.guarding;
-            let damage = this.rollDamage(this.enemy.atk, this.player.def);
-            if (wasGuarding) damage = Math.max(1, Math.ceil(damage * 0.45));
-            this.player.hp = Math.max(0, this.player.hp - damage);
+            const alive = this.members.filter((actor) => actor.hp > 0);
+            if (!alive.length) {
+                this.defeat();
+                return;
+            }
+            const weights = alive.map((actor) => actor.tgr === undefined ? 1 : Math.max(0, actor.tgr));
+            let roll = Math.random() * weights.reduce((sum, value) => sum + value, 0);
+            let target = alive[alive.length - 1];
+            for (let i = 0; i < alive.length; i += 1) {
+                roll -= weights[i];
+                if (roll < 0) { target = alive[i]; break; }
+            }
+            const wasGuarding = this.guardedActors.has(target.id);
+            let damage = this.rollDamage(this.enemy.atk, target.def);
+            damage = Math.max(0, Math.round(damage * (target.pdr === undefined ? 1 : target.pdr)));
+            if (wasGuarding) damage = Math.max(1, Math.ceil(damage / (2 * Math.max(0.01, target.grd || 1))));
+            this.game.data.setActorHp(target, target.hp - damage);
+            this.player = target;
+            this.guarding = wasGuarding;
             this.addDamage(damage, 226, 398, '#ff9a86', true);
             this.shake = 0.5;
-            this.guarding = false;
-            this.log = wasGuarding
-                ? 'Guard giáng đòn, nhưng thế thủ đã làm giảm sát thương còn ' + damage + '.'
-                : 'Guard giáng một đòn nặng — ' + damage + ' sát thương.';
+            this.log = 'Guard đánh ' + target.name + (wasGuarding ? ' đang phòng thủ' : '') + ' — ' + damage + ' sát thương.';
             this.game.audio.playSe('Damage1', { volume: 0.65 });
             this.game.audio.playSe('guard_breath1', { volume: 0.35 });
             this.phase = 'enemy';
@@ -153,7 +200,9 @@
             this.result = 'victory';
             this.game.guardDefeated = true;
             this.game.gold += this.enemy.rewardGold;
-            this.player.exp = (this.player.exp || 0) + this.enemy.rewardExp;
+            for (const actor of this.members) {
+                actor.exp = (actor.exp || 0) + Math.round(this.enemy.rewardExp * (actor.exr === undefined ? 1 : actor.exr));
+            }
             this.log = 'Guard gục xuống. Bộ giáp rỉ sét vỡ vụn trong im lặng.';
             this.game.audio.stopBgm(0.5);
             this.game.audio.playSe('fnh_choice', { volume: 0.6 });
@@ -171,9 +220,9 @@
         returnToMap() {
             if (this.leaving) return;
             this.leaving = true;
-            this.player.mapX = this.returnX;
-            this.player.mapY = this.returnY;
-            this.player.direction = this.returnDir;
+            this.game.player.mapX = this.returnX;
+            this.game.player.mapY = this.returnY;
+            this.game.player.direction = this.returnDir;
             this.game.changeScene(FNH.Scene_Map, { fromBattle: true });
         }
 
@@ -192,8 +241,9 @@
             if (this.phase === 'intro') {
                 this.timer -= dt;
                 if (input.isPressed('Enter', ' ', 'z', 'Z') || this.timer <= 0) {
-                    this.phase = 'command';
-                    this.log = 'Đến lượt bạn. Chọn hành động.';
+                    const index = this.members.findIndex((actor) => actor.hp > 0);
+                    if (index < 0) this.defeat();
+                    else this.selectMember(index);
                 }
                 return;
             }
@@ -240,7 +290,7 @@
                 this.timer -= dt;
                 if (this.timer <= 0) {
                     if (this.enemy.hp <= 0) this.victory();
-                    else this.enemyTurn();
+                    else this.finishActorAction();
                 }
                 return;
             }
@@ -248,12 +298,13 @@
             if (this.phase === 'enemy') {
                 this.timer -= dt;
                 if (this.timer <= 0) {
-                    if (this.player.hp <= 0) {
-                        this.defeat();
-                    } else {
+                    for (const actor of this.members) this.game.data.actorTurnEnd(actor, 2);
+                    this.guardedActors.clear();
+                    const index = this.members.findIndex((actor) => actor.hp > 0);
+                    if (index < 0) this.defeat();
+                    else {
                         this.turn += 1;
-                        this.phase = 'command';
-                        this.log = 'Lượt ' + this.turn + '. Guard vẫn đứng đó, chờ bạn.';
+                        this.selectMember(index);
                     }
                 }
                 return;
@@ -391,7 +442,7 @@
                 weight: 600,
                 color: '#efe2c7'
             });
-            FNH.text(ctx, player.className + ' · Cấp ' + player.level, 114, 524, {
+            FNH.text(ctx, player.className + ' · Cấp ' + player.level + ' · Đội ' + this.members.filter((actor) => actor.hp > 0).length + '/' + this.members.length, 114, 524, {
                 size: 10,
                 color: 'rgba(209,194,160,0.62)'
             });
