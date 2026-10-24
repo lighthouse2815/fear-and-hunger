@@ -322,6 +322,8 @@ Battle Processing (301) chọn troop trực tiếp, qua biến hoặc từ encou
 region và trọng số. Interpreter chờ kết quả rồi thực thi đúng nhánh 601/602/603/604;
 quay lại cùng cảnh bản đồ và con trỏ event, không khởi chạy lại event. Có cờ cho phép
 bỏ chạy/thua, hồi sinh người gục khi được phép thua, khôi phục nhạc bản đồ.
+Lệnh 132 đổi nhạc các trận sau và được lưu cùng flags; tên trống tắt nhạc trận,
+volume/pitch/pan giữ theo event thay vì ghi đè database.
 Troop đọc thành viên, HP/MP/chỉ số/traits, tọa độ và sprite từ database gốc. Mỗi mục
 tiêu có HP riêng; chọn một hoặc nhiều mục tiêu và chỉ thắng khi hết enemy hiện diện.
 AI xét điều kiện lượt, HP, MP, state, cấp tổ đội và switch rồi chọn theo rating; từng

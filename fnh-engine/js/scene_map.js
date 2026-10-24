@@ -1474,6 +1474,8 @@
                     this.erasedEvents.add(this.eventId);
                     this.refreshEvents();
                 }
+            } else if (command.code === 132) {
+                this.game.flags['system:battleBgm'] = { ...p[0] };
             } else if ([241, 242, 243, 244, 245, 246, 250, 251].includes(command.code)) {
                 const audio = this.game.audio;
                 const play = (method) => {

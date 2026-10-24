@@ -89,10 +89,12 @@
             this.time = 0;
             this.result = null;
             this.game.audio.stopBgs(0.35);
-            const music = this.encounter && this.game.data.system ? this.game.data.system.battleBgm : null;
+            const music = this.encounter ? (this.game.flags['system:battleBgm'] ||
+                (this.game.data.system && this.game.data.system.battleBgm)) : null;
             if (music && music.name) this.game.audio.playBgm(music.name, {
                 volume: music.volume / 100, pitch: music.pitch, pan: music.pan, loop: true
             });
+            else if (this.encounter) this.game.audio.stopBgm(0);
             else this.game.audio.playBgm('muted_aggression', { volume: 0.48, loop: true });
             if (!this.encounter) this.game.audio.playSe('guard_grunt1', { volume: 0.65 });
         }
