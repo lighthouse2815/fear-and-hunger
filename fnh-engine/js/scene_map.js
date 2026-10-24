@@ -968,6 +968,12 @@
                 if (p[2] === 4 || p[2] === 5) return (actor.equipment || []).some((item) =>
                     item.type === (p[2] === 4 ? 'weapon' : 'armor') && item.id === p[3]);
             }
+            if (p[0] === 5) {
+                const enemy = this.battle && this.battle.enemies[p[1]];
+                if (!enemy) return false;
+                if (p[2] === 0) return !enemy.hidden;
+                if (p[2] === 1) return (enemy.states || []).includes(p[3]);
+            }
             if (p[0] === 6) {
                 const character = this.eventCharacter(p[1]);
                 return !!character && character.direction === p[2];
@@ -1005,6 +1011,11 @@
                 const actor = this.eventActor(id);
                 const fields = ['level', 'exp', 'hp', 'mp', 'maxHp', 'maxMp', 'atk', 'def', 'mat', 'mdf', 'agi', 'luk'];
                 if (actor && fields[parameter]) return Number(actor[fields[parameter]] || 0);
+            }
+            if (type === 4) {
+                const enemy = this.battle && this.battle.enemies[id];
+                const field = ['hp', 'mp', 'maxHp', 'maxMp', 'atk', 'def', 'mat', 'mdf', 'agi', 'luk'][parameter];
+                if (field) return enemy ? Number(enemy[field] || 0) : 0;
             }
             if (type === 5) {
                 const character = this.eventCharacter(id);
@@ -1256,6 +1267,24 @@
                 if (!this.eventId) return;
                 const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + String(p[0] || 'A');
                 this.game.flags[key] = p[1] === 0;
+            } else if ([331, 332, 333, 334, 335, 342].includes(command.code)) {
+                if (!this.battle) return;
+                const enemies = p[0] < 0 ? this.battle.enemies : this.battle.enemies.filter((enemy, index) => index === p[0]);
+                let value = p[2] === 1 ? Number(this.game.flags['variable:' + p[3]] || 0) : Number(p[3] || 0);
+                if (p[1] === 1) value = -value;
+                for (const enemy of enemies) {
+                    if (command.code === 331 && enemy.hp > 0) {
+                        this.game.data.setActorHp(enemy, Math.max(p[4] ? 0 : 1, Math.min(enemy.maxHp, enemy.hp + value)));
+                    }
+                    if (command.code === 332) enemy.mp = Math.max(0, Math.min(enemy.maxMp, enemy.mp + value));
+                    if (command.code === 342) enemy.tp = Math.max(0, Math.min(100, (enemy.tp || 0) + value));
+                    if (command.code === 333) {
+                        if (p[1] === 0) this.game.data.addActorState(enemy, p[2]);
+                        else this.game.data.removeActorState(enemy, p[2]);
+                    }
+                    if (command.code === 334) this.game.data.recoverActor(enemy);
+                    if (command.code === 335) enemy.hidden = false;
+                }
             } else if ([311, 312, 313, 314, 317, 318, 326].includes(command.code)) {
                 const actors = this.eventActorTargets(p[0], p[1]);
                 let value = p[3] === 1 ? Number(this.game.flags['variable:' + p[4]] || 0) : Number(p[4] || 0);

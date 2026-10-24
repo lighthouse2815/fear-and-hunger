@@ -71,6 +71,7 @@
             const mean = (members) => members.reduce((sum, actor) => sum + actor.agi, 0) / Math.max(1, members.length);
             this.escapeRatio = this.encounter ? 0.5 * mean(this.members) / Math.max(1, mean(this.enemies)) : 0.55;
             this.commonEventContext = null;
+            this.battleEventFlags = new Map();
             this.phase = 'intro';
             this.timer = 1.7;
             this.index = 0;
@@ -487,6 +488,53 @@
             } else this.game.changeScene(FNH.Scene_Map, { fromBattle: true });
         }
 
+        battleEventContext() {
+            if (!this.commonEventContext) {
+                const context = this.commonEventContext = new FNH.Scene_Map();
+                context.game = this.game;
+                context.input = this.input;
+                context.battle = this;
+                context.map = this.game.data.maps.get(this.game.mapId) || { events: [] };
+            }
+            return this.commonEventContext;
+        }
+
+        battleEventMatches(page) {
+            const c = page.conditions || {};
+            if (!(c.turnEnding || c.turnValid || c.enemyValid || c.actorValid || c.switchValid)) return false;
+            if (c.turnEnding && this.phase !== 'turnEnd') return false;
+            if (c.turnValid) {
+                const turn = this.phase === 'intro' ? 0 : this.turn;
+                if (c.turnB === 0 ? turn !== c.turnA : turn < 1 || turn < c.turnA || turn % c.turnB !== c.turnA % c.turnB) return false;
+            }
+            if (c.enemyValid) {
+                const enemy = this.enemies[c.enemyIndex];
+                if (!enemy || enemy.hp * 100 > enemy.maxHp * c.enemyHp) return false;
+            }
+            if (c.actorValid) {
+                const actor = this.battleEventContext().eventActor(c.actorId);
+                if (!actor || actor.hp * 100 > actor.maxHp * c.actorHp) return false;
+            }
+            if (c.switchValid && !this.game.flags['switch:' + c.switchId]) return false;
+            return true;
+        }
+
+        updateBattleEvent() {
+            if (!this.encounter || ['victory', 'fled', 'defeat'].includes(this.phase)) return false;
+            const pages = this.encounter.pages || [];
+            for (let index = 0; index < pages.length; index += 1) {
+                const page = pages[index];
+                if (this.commonEventContext && this.commonEventContext.failedAutorunPages.has(page)) continue;
+                const turn = this.phase === 'intro' ? 0 : this.turn;
+                const flag = this.battleEventFlags.get(index);
+                if (flag !== undefined && (page.span === 0 || page.span === 1 && flag === turn)) continue;
+                if (!this.battleEventMatches(page)) continue;
+                if (page.span <= 1) this.battleEventFlags.set(index, turn);
+                return this.battleEventContext().startEventList(page, 0);
+            }
+            return false;
+        }
+
         updateCommonEvent(dt) {
             if (this.game.reservedCommonEvent && !(this.commonEventContext && this.commonEventContext.eventRunner)) {
                 const id = this.game.reservedCommonEvent;
@@ -497,12 +545,7 @@
                     this.game.showToast(this.game.lastError.message, 6);
                     return false;
                 }
-                if (!this.commonEventContext) {
-                    this.commonEventContext = new FNH.Scene_Map();
-                    this.commonEventContext.game = this.game;
-                    this.commonEventContext.input = this.input;
-                    this.commonEventContext.map = this.game.data.maps.get(this.game.mapId) || { events: [] };
-                }
+                this.battleEventContext();
                 this.commonEventContext.startEventList(event, 0);
                 if (this.commonEventContext.leaving) this.leaving = true;
                 return true;
@@ -527,6 +570,7 @@
             this.damageNumbers = this.damageNumbers.filter(function (item) { return item.life > 0; });
             if (this.leaving) return;
             if (this.updateCommonEvent(dt)) return;
+            if (this.updateBattleEvent()) return;
 
             const input = this.input;
             if (this.phase === 'actionMenu' || this.phase === 'actionTarget') {
@@ -599,17 +643,23 @@
                     }
                     for (const actor of this.members) this.game.data.actorTurnEnd(actor, 2);
                     for (const enemy of this.enemies) this.game.data.actorTurnEnd(enemy, 2);
-                    if (!this.livingEnemies().length) {
-                        this.victory();
-                        return;
-                    }
-                    this.guardedActors.clear();
-                    const index = this.members.findIndex((actor) => actor.hp > 0);
-                    if (index < 0) this.defeat();
-                    else {
-                        this.turn += 1;
-                        this.selectMember(index);
-                    }
+                    this.phase = 'turnEnd';
+                }
+                if (this.phase !== 'turnEnd') return;
+                if (this.updateBattleEvent()) return;
+            }
+
+            if (this.phase === 'turnEnd') {
+                if (!this.livingEnemies().length) {
+                    this.victory();
+                    return;
+                }
+                this.guardedActors.clear();
+                const index = this.members.findIndex((actor) => actor.hp > 0);
+                if (index < 0) this.defeat();
+                else {
+                    this.turn += 1;
+                    this.selectMember(index);
                 }
                 return;
             }

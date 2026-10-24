@@ -266,7 +266,7 @@ Menu tạm dừng đóng băng thời gian hiệu ứng. Chưa có weather.
 tâm ảnh, tỉ lệ, opacity, blend, thứ tự ID và chờ chuyển động/đổi màu. Ảnh đọc từ asset
 gốc, được lưu/đọc cùng trạng thái chuyển động; ảnh map và battle dùng phạm vi riêng.
 Ảnh được vẽ trên cảnh và dưới HUD/hội thoại; màu ảnh giữ vùng trong suốt. Menu tạm
-dừng đóng băng chuyển động ảnh. Chưa hỗ trợ picture plugin hoặc battle event interpreter.
+dừng đóng băng chuyển động ảnh. Chưa hỗ trợ picture plugin. Picture trong battle event dùng cùng interpreter.
 Plugin hội thoại nền hỗ trợ GabText, ShowGab, ForceGab, ClearGab và WaitForGab:
 hàng đợi không khóa di chuyển, chống lặp nội dung, force thay hàng đợi, clear xóa ngay,
 wait chờ toàn bộ hàng đợi. Nội dung soạn nằm riêng trên từng interpreter để các event
@@ -325,8 +325,14 @@ Troop đọc thành viên, HP/MP/chỉ số/traits, tọa độ và sprite từ 
 tiêu có HP riêng; chọn một hoặc nhiều mục tiêu và chỉ thắng khi hết enemy hiện diện.
 AI xét điều kiện lượt, HP, MP, state, cấp tổ đội và switch rồi chọn theo rating; từng
 enemy còn sống hành động. Phần thưởng EXP/vàng và drop đọc từ enemy gốc. Trận Guard
-320 HP vẫn là encounter thử nghiệm riêng. Battle event của troop và plugin chiến đấu
-chưa được hỗ trợ đầy đủ; cơ chế này chưa xác nhận toàn bộ cốt truyện chơi xuyên suốt.
+320 HP vẫn là encounter thử nghiệm riêng.
+
+Trang sự kiện troop dùng chung interpreter hội thoại và common event, xét điều kiện
+lượt, cuối lượt, HP enemy/actor và switch; span chạy một lần trong trận, mỗi lượt
+hoặc lặp lại khi điều kiện còn đúng. Các lệnh 331/332/333/334/335/342 thay đổi
+HP/MP/state, hồi phục, xuất hiện và TP của một hoặc cả nhóm enemy. Điều kiện enemy
+và toán hạng dữ liệu enemy đọc trạng thái runtime. Chưa hỗ trợ đầy đủ biến hình,
+forced action, animation và plugin chiến đấu; cơ chế này chưa xác nhận toàn bộ cốt truyện chơi xuyên suốt.
 
 ## Kiểm chứng
 

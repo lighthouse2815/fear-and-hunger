@@ -107,3 +107,54 @@ Object.assign(randomMap.map, { width: 12, height: 12, data: Array(864).fill(0), 
 randomMap.startEventList({ list: [c(301, [2, 0, true, true])] }, 1);
 assert.equal(randomMap.game.scene.encounter.id, 1, 'Chọn encounter theo region và trọng số');
 console.log('ĐẠT: battle processing chọn troop ngẫu nhiên theo region.');
+
+const eventMap = setup();
+eventMap.game.data.commonEvents = [];
+eventMap.startEventList({ list: [c(301, [0, 1, true, true])] }, 1);
+const eventBattle = eventMap.game.scene;
+eventBattle.encounter.pages = [
+    { span: 0, conditions: { turnValid: true, turnA: 0, turnB: 0 }, list: [c(331, [0, 1, 0, 20, false]), c(121, [8, 8, 0])] },
+    { span: 1, conditions: { turnEnding: true }, list: [c(125, [0, 0, 2])] },
+    { span: 2, conditions: { switchValid: true, switchId: 9 }, list: [c(121, [9, 9, 1]), c(332, [-1, 1, 0, 3])] }
+];
+assert.equal(eventBattle.updateBattleEvent(), true);
+assert.equal(eventBattle.enemies[0].hp, 30);
+assert.equal(eventMap.game.flags['switch:8'], true);
+assert.equal(eventBattle.updateBattleEvent(), false, 'Trang một lần không chạy lại');
+eventBattle.phase = 'turnEnd';
+assert.equal(eventBattle.updateBattleEvent(), true);
+assert.equal(eventMap.game.gold, 2);
+assert.equal(eventBattle.updateBattleEvent(), false, 'Trang mỗi lượt chỉ chạy một lần trong lượt');
+eventBattle.turn += 1;
+assert.equal(eventBattle.updateBattleEvent(), true);
+assert.equal(eventMap.game.gold, 4);
+eventBattle.phase = 'command';
+eventMap.game.flags['switch:9'] = true;
+assert.equal(eventBattle.updateBattleEvent(), true);
+assert.equal(eventBattle.enemies[0].mp, 17);
+assert.equal(eventBattle.enemies[1].mp, 17);
+assert.equal(eventBattle.updateBattleEvent(), false);
+const context = eventBattle.battleEventContext();
+assert.equal(context.eventCondition([5, 0, 0]), true);
+eventBattle.enemies[0].hidden = true;
+assert.equal(context.eventCondition([5, 0, 0]), false);
+context.executeEventCommand(c(335, [0]));
+assert.equal(context.eventCondition([5, 0, 0]), true);
+context.executeEventCommand(c(331, [-1, 1, 0, 999, false]));
+assert.equal(eventBattle.enemies[0].hp, 1);
+assert.equal(eventBattle.enemies[1].hp, 1);
+context.executeEventCommand(c(331, [0, 1, 0, 999, true]));
+assert.equal(context.eventCondition([5, 0, 1, 1]), true);
+assert.equal(context.eventDataOperand(4, 0, 0), 0);
+context.executeEventCommand(c(334, [-1]));
+assert.equal(eventBattle.enemies[0].hp, 50);
+assert.equal(eventBattle.enemies[0].mp, 20);
+assert.equal(context.eventCondition([5, 0, 1, 1]), false);
+context.executeEventCommand(c(342, [-1, 0, 0, 200]));
+assert.equal(eventBattle.enemies[1].tp, 100);
+assert.equal(eventBattle.battleEventMatches({ conditions: {} }), false);
+assert.equal(eventBattle.battleEventMatches({ conditions: { turnValid: true, turnA: 1, turnB: 2 } }), false);
+eventBattle.turn = 3;
+assert.equal(eventBattle.battleEventMatches({ conditions: { turnValid: true, turnA: 1, turnB: 2 } }), true);
+assert.equal(eventBattle.battleEventMatches({ conditions: { enemyValid: true, enemyIndex: 0, enemyHp: 50 } }), false);
+console.log('ĐẠT: sự kiện troop theo lượt, switch, HP và lệnh thay đổi cả nhóm quái.');
