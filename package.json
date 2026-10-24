@@ -8,9 +8,13 @@
     "start:node": "npx -y http-server -p 8137 -c-1",
     "check": "node --check js/utils.js && node --check js/sound.js && node --check js/data.js && node --check js/combat.js && node --check js/game.js && node --check js/main.js",
     "check:fnh": "node --check tools/fnh-browser/server.js && node --check tools/fnh-browser/compat.js && node --check tests/fnh-browser-smoke.js",
+    "check:fnh-engine": "node --check fnh-engine/js/core.js && node --check fnh-engine/js/assets.js && node --check fnh-engine/js/audio.js && node --check fnh-engine/js/data.js && node --check fnh-engine/js/game.js && node --check fnh-engine/js/scene_title.js && node --check fnh-engine/js/scene_creation.js && node --check fnh-engine/js/scene_map.js && node --check fnh-engine/js/scene_battle.js && node --check fnh-engine/js/scene_gameover.js && node --check fnh-engine/js/main.js && node --check tools/fnh-engine/server.js && node --check tests/fnh-engine-smoke.js",
     "fnh": "node tools/fnh-browser/server.js",
     "fnh:open": "node tools/fnh-browser/server.js --open",
+    "fnh:engine": "node tools/fnh-engine/server.js",
+    "fnh:engine:open": "node tools/fnh-engine/server.js --open",
     "test": "npm run check && node tests/smoke.js",
-    "test:fnh": "npm run check:fnh && node tests/fnh-browser-smoke.js"
+    "test:fnh": "npm run check:fnh && node tests/fnh-browser-smoke.js",
+    "test:fnh-engine": "npm run check:fnh-engine && node tests/fnh-engine-smoke.js"
   }
 }
