@@ -271,8 +271,10 @@ khởi tạo. Tổ đội hỗ trợ thêm/bớt và khởi tạo actor qua lệ
 trưởng nhóm, vị trí/túi đồ chung, điều kiện trang event và biến thành viên. ID actor 0
 áp dụng cho toàn đội. Danh sách tổ đội và trạng thái nhân vật được lưu/đọc; save cũ
 mặc định tổ đội một người. Có thể tạo tổ đội trống trong kịch bản. Chưa có follower
-trên bản đồ hoặc menu formation. Chưa mô phỏng trạng thái, công thức trait hoặc chiến đấu
-bằng kỹ năng; Recover All gặp trạng thái chưa hỗ trợ vẫn báo lỗi.
+trên bản đồ hoặc menu formation. Trạng thái actor đọc từ States.json: thêm/xóa (313), điều kiện state, chết/hồi sinh,
+hồi phục toàn bộ, miễn nhiễm, restriction, tham số trait (21), xparam (22), sparam (23),
+đếm lượt và số bước trước khi hết trạng thái. Bonus chỉ số (317) được lưu và cộng trước
+trait multiplier. Chưa có đầy đủ hiệu ứng do plugin, buff/debuff hoặc chiến đấu bằng kỹ năng.
 Script event 355/655 hỗ trợ một tập API literal: đổi ảnh character/face/battler của
 actor, refresh người chơi, setValue switch/biến bằng hằng số. Đoạn nhiều dòng được
 kiểm tra toàn bộ trước khi thay đổi trạng thái; câu lệnh hoặc biểu thức ngoài tập này

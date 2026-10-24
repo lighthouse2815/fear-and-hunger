@@ -20,6 +20,7 @@
             this.classes = [];
             this.skills = [];
             this.items = [];
+            this.states = [];
             this.commonEvents = [];
             this.weapons = [];
             this.armors = [];
@@ -34,7 +35,7 @@
             this.system = this.assets.system || await this.assets.fetchJson('data/System.json');
             const names = [
                 'Actors', 'Classes', 'Skills', 'Items', 'Weapons', 'Armors',
-                'Enemies', 'Troops', 'Tilesets', 'MapInfos', 'CommonEvents'
+                'Enemies', 'Troops', 'Tilesets', 'MapInfos', 'CommonEvents', 'States'
             ];
             const files = await Promise.all(names.map((name) => this.assets.fetchJson('data/' + name + '.json')));
             this.actors = files[0];
@@ -48,6 +49,7 @@
             this.tilesets = files[8];
             this.mapInfos = files[9];
             this.commonEvents = files[10];
+            this.states = files[11];
             return this;
         }
 
@@ -176,6 +178,113 @@
             return Number(value) || 0;
         }
 
+        battlerTraits(actor) {
+            const raw = this.actor(actor.id);
+            const sources = [raw, this.classData(actor.classId)];
+            for (const item of actor.equipment || []) sources.push((item.type === 'weapon' ? this.weapons : this.armors)[item.id]);
+            for (const id of actor.states || []) sources.push(this.states[id]);
+            return sources.filter(Boolean).flatMap((source) => source.traits || []);
+        }
+
+        refreshActor(actor) {
+            const cls = this.classData(actor.classId);
+            if (!cls) return;
+            const traits = this.battlerTraits(actor);
+            const fields = ['maxHp', 'maxMp', 'atk', 'def', 'mat', 'mdf', 'agi', 'luk'];
+            fields.forEach((field, index) => {
+                let value = this._param(cls.params, index, actor.level) + Number((actor.paramPlus || [])[index] || 0);
+                for (const entry of actor.equipment || []) {
+                    const item = (entry.type === 'weapon' ? this.weapons : this.armors)[entry.id];
+                    value += Number(item && item.params && item.params[index] || 0);
+                }
+                for (const trait of traits) if (trait.code === 21 && trait.dataId === index) value *= trait.value;
+                actor[field] = Math.round(Math.max(index === 1 ? 0 : 1, Math.min(index === 0 ? 999999 : index === 1 ? 9999 : 999, value)));
+            });
+            ['hit', 'eva', 'cri', 'cev', 'mev', 'mrf', 'cnt', 'hrg', 'mrg', 'trg'].forEach((field, index) => {
+                actor[field] = traits.filter((trait) => trait.code === 22 && trait.dataId === index)
+                    .reduce((sum, trait) => sum + trait.value, 0);
+            });
+            ['tgr', 'grd', 'rec', 'pha', 'mcr', 'tcr', 'pdr', 'mdr', 'fdr', 'exr'].forEach((field, index) => {
+                actor[field] = traits.filter((trait) => trait.code === 23 && trait.dataId === index)
+                    .reduce((product, trait) => product * trait.value, 1);
+            });
+            actor.hp = Math.max(0, Math.min(actor.maxHp, Number(actor.hp) || 0));
+            actor.mp = Math.max(0, Math.min(actor.maxMp, Number(actor.mp) || 0));
+            actor.restriction = Math.max(0, ...(actor.states || []).map((id) => this.states[id] && this.states[id].restriction || 0));
+        }
+
+        setActorHp(actor, value) {
+            actor.hp = Math.max(0, Math.min(actor.maxHp, value));
+            const states = actor.states || (actor.states = []);
+            if (actor.hp === 0 && !states.includes(1)) {
+                actor.states = [1];
+                actor.stateTurns = {};
+                actor.stateSteps = {};
+            } else if (actor.hp > 0 && states.includes(1)) this.removeActorState(actor, 1);
+            this.refreshActor(actor);
+        }
+
+        addActorState(actor, id) {
+            const state = this.states[id];
+            if (!state || actor.hp <= 0 || this.battlerTraits(actor).some((trait) => trait.code === 14 && trait.dataId === id)) return false;
+            if (id === 1) this.setActorHp(actor, 0);
+            const states = actor.states || (actor.states = []);
+            if (!states.includes(id)) states.push(id);
+            const turns = actor.stateTurns || (actor.stateTurns = {});
+            const steps = actor.stateSteps || (actor.stateSteps = {});
+            const min = Math.max(0, state.minTurns || 0), max = Math.max(min, state.maxTurns || 0);
+            turns[id] = min + Math.floor(Math.random() * (max - min + 1));
+            steps[id] = Math.max(0, state.stepsToRemove || 0);
+            this.refreshActor(actor);
+            return true;
+        }
+
+        removeActorState(actor, id) {
+            if (!(actor.states || []).includes(id)) return;
+            actor.states = actor.states.filter((entry) => entry !== id);
+            if (actor.stateTurns) delete actor.stateTurns[id];
+            if (actor.stateSteps) delete actor.stateSteps[id];
+            if (id === 1 && actor.hp === 0) actor.hp = 1;
+            this.refreshActor(actor);
+        }
+
+        recoverActor(actor) {
+            actor.states = [];
+            actor.stateTurns = {};
+            actor.stateSteps = {};
+            this.refreshActor(actor);
+            actor.hp = actor.maxHp;
+            actor.mp = actor.maxMp;
+        }
+
+        actorTurnEnd(actor, timing = 2) {
+            if (timing === 2) {
+                if (actor.hp > 0) {
+                    const hp = Math.max(-actor.hp, Math.floor(actor.maxHp * (actor.hrg || 0)));
+                    this.setActorHp(actor, actor.hp + hp);
+                    actor.mp = Math.max(0, Math.min(actor.maxMp, actor.mp + Math.floor(actor.maxMp * (actor.mrg || 0))));
+                    actor.tp = Math.max(0, Math.min(100, (actor.tp || 0) + Math.floor(100 * (actor.trg || 0))));
+                }
+                for (const id of actor.states || []) {
+                    if (actor.stateTurns && actor.stateTurns[id] > 0) actor.stateTurns[id] -= 1;
+                }
+            }
+            for (const id of (actor.states || []).slice()) {
+                const state = this.states[id];
+                if (state && state.autoRemovalTiming === timing && !(actor.stateTurns && actor.stateTurns[id] > 0)) this.removeActorState(actor, id);
+            }
+        }
+
+        actorWalkStep(actor) {
+            for (const id of (actor.states || []).slice()) {
+                const state = this.states[id];
+                if (!state || !state.removeByWalking) continue;
+                const steps = actor.stateSteps || (actor.stateSteps = {});
+                steps[id] = Math.max(0, (steps[id] || 0) - 1);
+                if (!steps[id]) this.removeActorState(actor, id);
+            }
+        }
+
         createPlayer(actorId) {
             const actor = this.actor(actorId);
             if (!actor) throw new Error('Không tìm thấy actor ' + actorId + '.');
@@ -209,7 +318,7 @@
             });
             const canonical = PLAYABLE.find(function (entry) { return entry.actorId === actor.id; });
             const name = canonical ? canonical.name : actor.name;
-            return {
+            const player = {
                 id: actor.id,
                 name: name,
                 title: actor.name,
@@ -238,8 +347,13 @@
                 profile: actor.profile || '',
                 tp: 0,
                 equipment: equipment,
-                inventory: []
+                inventory: [],
+                states: [], stateTurns: {}, stateSteps: {}, paramPlus: []
             };
+            this.refreshActor(player);
+            player.hp = player.maxHp;
+            player.mp = player.maxMp;
+            return player;
         }
 
         tileIdAt(map, x, y, z) {

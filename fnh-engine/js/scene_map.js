@@ -717,6 +717,7 @@
                     this.playerVisual.y = this.toY;
                     this.stepPattern = 1;
                     this.moveCooldown = 0.045;
+                    for (const id of this.partyIds()) this.game.data.actorWalkStep(this.eventActor(id));
                     this.checkTransfer();
                 } else {
                     this.playerVisual.x = FNH.lerp(this.fromX, this.toX, this.moveT);
@@ -948,6 +949,7 @@
                 if (p[2] === 1) return actor.name === p[3];
                 if (p[2] === 2) return actor.classId === p[3];
                 if (p[2] === 3) return (actor.skills || []).includes(p[3]);
+                if (p[2] === 6) return (actor.states || []).includes(p[3]);
                 if (p[2] === 4 || p[2] === 5) return (actor.equipment || []).some((item) =>
                     item.type === (p[2] === 4 ? 'weapon' : 'armor') && item.id === p[3]);
             }
@@ -1212,20 +1214,27 @@
                 if (!this.eventId) return;
                 const key = 'self:' + (this.game.mapId || 1) + ':' + this.eventId + ':' + String(p[0] || 'A');
                 this.game.flags[key] = p[1] === 0;
-            } else if ([311, 312, 314, 318, 326].includes(command.code)) {
+            } else if ([311, 312, 313, 314, 317, 318, 326].includes(command.code)) {
                 const actors = this.eventActorTargets(p[0], p[1]);
                 let value = p[3] === 1 ? Number(this.game.flags['variable:' + p[4]] || 0) : Number(p[4] || 0);
                 if (p[2] === 1) value = -value;
                 for (const actor of actors) {
                     if (command.code === 311 && actor.hp > 0) {
-                        actor.hp = Math.max(p[5] ? 0 : 1, Math.min(actor.maxHp, actor.hp + value));
+                        this.game.data.setActorHp(actor, Math.max(p[5] ? 0 : 1, Math.min(actor.maxHp, actor.hp + value)));
                     }
                     if (command.code === 312) actor.mp = Math.max(0, Math.min(actor.maxMp, actor.mp + value));
                     if (command.code === 326) actor.tp = Math.max(0, Math.min(100, (actor.tp || 0) + value));
-                    if (command.code === 314) {
-                        if (actor.states && actor.states.length) throw new Error('Chưa hỗ trợ hồi phục trạng thái actor');
-                        actor.hp = actor.maxHp;
-                        actor.mp = actor.maxMp;
+                    if (command.code === 313) {
+                        if (p[2] === 0) this.game.data.addActorState(actor, p[3]);
+                        else this.game.data.removeActorState(actor, p[3]);
+                    }
+                    if (command.code === 314) this.game.data.recoverActor(actor);
+                    if (command.code === 317) {
+                        const amount = p[4] === 1 ? Number(this.game.flags['variable:' + p[5]] || 0) : Number(p[5] || 0);
+                        if (!Number.isInteger(p[2]) || p[2] < 0 || p[2] > 7) throw new Error('Chỉ số actor không hợp lệ');
+                        const bonus = actor.paramPlus || (actor.paramPlus = []);
+                        bonus[p[2]] = Number(bonus[p[2]] || 0) + (p[3] === 0 ? amount : -amount);
+                        this.game.data.refreshActor(actor);
                     }
                     if (command.code === 318) {
                         const skills = actor.skills || (actor.skills = []);
