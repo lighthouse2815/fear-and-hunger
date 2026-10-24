@@ -736,6 +736,13 @@
                 color: 'rgba(223,199,141,0.7)',
                 align: 'right'
             });
+            const inventory = this.game.player.inventory || [];
+            const itemCount = inventory.reduce((total, item) => total + Math.max(0, Number(item.amount) || 0), 0);
+            FNH.text(ctx, 'VẬT PHẨM ' + itemCount, 310, 57, {
+                size: 9,
+                color: 'rgba(223,199,141,0.62)',
+                align: 'right'
+            });
 
             FNH.panel(ctx, 602, 16, 198, 58, {
                 alpha: 0.82,
