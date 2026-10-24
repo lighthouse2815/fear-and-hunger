@@ -204,3 +204,51 @@ movement.executeEventCommand(command(122, [22, 23, 0, 3, 5, -1, 1]));
 assert.equal(movement.game.flags['variable:22'], 1);
 assert.equal(movement.game.flags['variable:23'], 1);
 console.log('ĐẠT: nhánh, hội thoại, lựa chọn, chờ, common event, vòng lặp và tích hợp bản đồ.');
+
+const automatic = new FNH.Scene_Map();
+automatic.game = {
+    mapId: 2, flags: {}, player: { mapX: 0, mapY: 0, direction: 2 }, gold: 0,
+    data: new FNH.DataStore(), showToast() {}
+};
+automatic.input = { isPressed: () => false };
+const autoPage = { trigger: 3, priorityType: 1, image: { characterName: 'Actor' }, list: [
+    command(125, [0, 0, 5]), command(101), command(401, ['Tự chạy']),
+    command(123, ['A', 0])
+] };
+const autoEvent = { id: 9, x: 0, y: 1, pages: [autoPage, {
+    conditions: { selfSwitchValid: true, selfSwitchCh: 'A' }, trigger: 0, list: [command(0)]
+}] };
+automatic.map = { events: [null, autoEvent] };
+assert.equal(automatic.startAutorun(), true);
+assert.equal(automatic.game.gold, 5);
+assert.equal(automatic.eventRunner.wait.type, 'message');
+assert.equal(automatic.startEvent(autoEvent), false, 'Không thay thế interpreter đang chờ');
+automatic.eventRunner.resume();
+automatic.updateEvent(0);
+assert.equal(automatic.startAutorun(), false, 'Self-switch kết thúc trang autorun');
+assert.equal(automatic.game.gold, 5);
+
+automatic.game.flags = {};
+autoPage.list = [command(214), command(125, [0, 0, 2])];
+assert.equal(automatic.startAutorun(), true);
+assert.equal(automatic.game.gold, 7, 'Xóa event vẫn hoàn tất các lệnh còn lại');
+assert.equal(automatic.events.length, 0, 'Event đã xóa không được vẽ');
+assert.equal(automatic.startAutorun(), false);
+assert.equal(automatic.startEvent(autoEvent), false);
+automatic.game.data.isTilePassable = () => true;
+automatic.guard.alive = false;
+assert.equal(automatic.tryMove(2), true, 'Event đã xóa không còn chặn đường');
+automatic.finishMove();
+automatic.erasedEvents.clear();
+assert.equal(automatic.startAutorun(), true, 'Event có thể xuất hiện khi tải lại bản đồ');
+
+automatic.erasedEvents.clear();
+autoPage.list = [command(999)];
+assert.equal(automatic.startAutorun(), true);
+assert.match(automatic.game.lastError.message, /Chưa hỗ trợ/);
+assert.equal(automatic.startAutorun(), false, 'Không lặp lỗi autorun mỗi frame');
+const replacement = { trigger: 3, list: [command(125, [0, 0, 1]), command(214)] };
+autoEvent.pages.push(replacement);
+assert.equal(automatic.startAutorun(), true, 'Trang mới vẫn chạy sau lỗi trang cũ');
+assert.equal(automatic.game.gold, 10);
+console.log('ĐẠT: autorun, hội thoại, tự khóa, xóa event và tránh lặp lỗi.');

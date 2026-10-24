@@ -53,6 +53,8 @@
             this.pauseSaveInfo = null;
             this.pauseHover = -1;
             this.eventRunner = null;
+            this.erasedEvents = new Set();
+            this.failedAutorunPages = new Set();
             this.eventChoice = 0;
             this.eventWait = null;
             this.eventId = 0;
@@ -64,6 +66,10 @@
             this.ready = false;
             this.leaving = false;
             this.paused = false;
+            this.erasedEvents.clear();
+            this.failedAutorunPages.clear();
+            this.eventRunner = null;
+            this.eventWait = null;
             this.bannerTimer = 3.8;
             this.map = null;
             this.tileset = null;
@@ -138,9 +144,23 @@
             this.updateEventImages();
         }
 
+        eventPage(event) {
+            if (this.erasedEvents.has(event.id)) return null;
+            return this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
+        }
+
+        startAutorun() {
+            for (const event of this.map.events || []) {
+                if (!event) continue;
+                const page = this.eventPage(event);
+                if (page && page.trigger === 3 && !this.failedAutorunPages.has(page) && this.startEvent(event)) return true;
+            }
+            return false;
+        }
+
         refreshEvents() {
             this.events = this.map.events.filter(Boolean).map((event) => {
-                const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
+                const page = this.eventPage(event);
                 if (!page || !page.image || !(page.image.characterName || page.image.tileId > 0)) return null;
                 return {
                     id: event.id,
@@ -184,7 +204,7 @@
             const player = this.game.player;
             for (const event of this.map.events || []) {
                 if (!event || event.x !== player.mapX || event.y !== player.mapY) continue;
-                const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
+                const page = this.eventPage(event);
                 if (page && (page.trigger === 1 || page.trigger === 2)) return this.startEvent(event);
             }
             return false;
@@ -331,6 +351,7 @@
                 this.updateEventImages();
                 return;
             }
+            if (!this.moving && this.startAutorun()) return;
             const input = this.input;
             if (input.isPressed('Escape', 'x', 'X')) {
                 this.openPause();
@@ -415,7 +436,7 @@
             }
             for (const event of this.map.events || []) {
                 if (!event || event.x !== nx || event.y !== ny) continue;
-                const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId, player);
+                const page = this.eventPage(event);
                 if (!page || page.priorityType !== 1 || page.through) continue;
                 if (page.trigger === 1 || page.trigger === 2) this.startEvent(event);
                 this.bump = 1;
@@ -440,7 +461,7 @@
             }
             const player = this.game.player;
             const event = (this.map.events || []).filter(Boolean).find((entry) => {
-                const page = this.game.data.eventPage(entry, this.game.flags, this.game.mapId, player);
+                const page = this.eventPage(entry);
                 if (!page || page.trigger !== 0) return false;
                 if (page.priorityType === 1) return entry.x === front.x && entry.y === front.y;
                 return entry.x === player.mapX && entry.y === player.mapY;
@@ -449,10 +470,12 @@
         }
 
         startEvent(event) {
-            const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
+            if (this.eventRunner || this.leaving) return false;
+            const page = this.eventPage(event);
             if (!page || !page.list || !page.list.some((command) => command.code !== 0)) return false;
             this.finishMove();
             this.eventId = event.id;
+            this.runningEventPage = page;
             this.eventRunner = new FNH.EventInterpreter(page.list, {
                 condition: (parameters) => this.eventCondition(parameters),
                 commonEvent: (id) => this.game.data.commonEvents[id],
@@ -501,7 +524,7 @@
             const eventId = id === 0 ? this.eventId : id;
             const event = (this.map.events || []).find((entry) => entry && entry.id === eventId);
             if (!event) return null;
-            const page = this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
+            const page = this.eventPage(event);
             return { x: event.x, y: event.y, realX: event.x, realY: event.y,
                 direction: page && page.image ? page.image.direction || 2 : 2,
                 name: page && page.image ? page.image.characterName : '' };
@@ -571,6 +594,9 @@
                     this.refreshEvents();
                 }
             } catch (error) {
+                if (this.runningEventPage && this.runningEventPage.trigger === 3) {
+                    this.failedAutorunPages.add(this.runningEventPage);
+                }
                 this.game.lastError = error;
                 this.game.showToast(error.message, 6);
                 this.eventRunner = null;
@@ -648,6 +674,9 @@
                 } else if (total > 0) {
                     inventory.push({ id: itemId, amount: total });
                 }
+            } else if (command.code === 214) {
+                this.erasedEvents.add(this.eventId);
+                this.refreshEvents();
             } else if (command.code === 250 && p[0] && p[0].name) {
                 this.game.audio.playSe(p[0].name, { volume: (Number(p[0].volume) || 90) / 100 });
             } else if (command.code === 201) {

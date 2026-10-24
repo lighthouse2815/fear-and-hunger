@@ -208,7 +208,11 @@ ID bản đồ, số thành viên, vàng và thời gian chơi. Những dữ li�
 self-switch, vàng, vật phẩm, nhân vật chính có trong tổ đội và hướng nhân vật/event.
 Lệnh hoặc điều kiện chưa hỗ trợ sẽ dừng event, hiển thị
 thông báo và lưu lỗi vào `FNH.game.lastError`, thay vì chạy tiếp các hệ quả sai.
-Chưa có autorun/parallel event, script/plugin command, move route, hiệu ứng màn hình,
+Có autorun bản đồ (trigger 3), chạy trước điều khiển người chơi và chờ hội thoại như event
+thường. Lệnh Erase Event (214) ẩn event và bỏ va chạm cho tới khi tải lại bản đồ; không
+ghi trạng thái xóa vào save. Trang autorun gặp lệnh chưa hỗ trợ được dừng và không tự
+thử lại cho tới khi tải lại bản đồ, tránh lặp thông báo lỗi mỗi frame.
+Chưa có parallel event, autorun common event, script/plugin command, move route, hiệu ứng màn hình,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 
 ## Kiểm chứng
