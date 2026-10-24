@@ -130,6 +130,20 @@
                 };
             }).filter(Boolean);
 
+            // Ưu tiên vị trí event gốc cho encounter Guard; bản đồ tùy biến
+            // hoặc bản dump thiếu tên vẫn dùng tọa độ vertical slice hiện tại.
+            const guardEvent = this.events.find((event) => {
+                const text = ((event.name || '') + ' ' + (event.imageName || '')).toLowerCase();
+                return text.includes('guard');
+            });
+            if (guardEvent) {
+                this.guard.x = guardEvent.x;
+                this.guard.y = guardEvent.y;
+            } else {
+                this.guard.x = GUARD_X;
+                this.guard.y = GUARD_Y;
+            }
+
             this.camera.x = this.clampCameraX(this.playerVisual.x * FNH.TILE + FNH.TILE / 2 - FNH.WIDTH / 2);
             this.camera.y = this.clampCameraY(this.playerVisual.y * FNH.TILE + FNH.TILE - FNH.HEIGHT / 2);
             this.ready = true;
