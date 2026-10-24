@@ -444,6 +444,19 @@
                     let amount = Number(p[2] || 0);
                     if (p[1] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
                     this.game.gold = Math.max(0, this.game.gold + (operation === 0 ? amount : -amount));
+                } else if (command.code === 126) {
+                    const itemId = Number(p[0] || 0);
+                    let amount = Number(p[2] || 0);
+                    if (p[1] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
+                    const inventory = this.game.player.inventory || (this.game.player.inventory = []);
+                    const entry = inventory.find((item) => item.id === itemId);
+                    if (p[3] === 0) {
+                        if (entry) entry.amount += amount;
+                        else inventory.push({ id: itemId, amount: amount });
+                    } else if (entry) {
+                        entry.amount = Math.max(0, entry.amount - amount);
+                        if (!entry.amount) inventory.splice(inventory.indexOf(entry), 1);
+                    }
                 }
             }
             const transfer = this.game.data.transferAt(this.map, front.x, front.y);

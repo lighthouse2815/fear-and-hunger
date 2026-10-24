@@ -228,6 +228,7 @@
                 battlerName: actor.battlerName,
                 portrait: 'pictures/' + actor.faceName + '_' + (actor.faceIndex + 1),
                 equipment: equipment
+                ,inventory: []
             };
         }
 
