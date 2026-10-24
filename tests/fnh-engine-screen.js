@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const FNH = { Scene: class {}, Scene_Map: class {}, clamp: (v, min, max) => Math.max(min, Math.min(max, v)) };
-for (const file of ['screen_effects', 'interpreter', 'scene_map', 'game']) {
+for (const file of ['screen_effects', 'pictures', 'interpreter', 'scene_map', 'game']) {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/' + file + '.js'), 'utf8'), { window: { FNH } });
 }
 const c = (code, parameters = []) => ({ code, parameters });
@@ -65,6 +65,10 @@ game.gold = 9;
 game.mapId = 2;
 game.playtime = 12;
 game.storage = { save(slot, payload) { saved = JSON.parse(JSON.stringify(payload)); return true; }, load() { return saved; } };
+game.pictures = new FNH.PictureManager({ loadImage: () => Promise.resolve({}) });
+game.pictures.show(1, 'test', 0, { x: 0, y: 0, scaleX: 100, scaleY: 100, opacity: 255 }, 0);
+game.pictures.move(1, 0, { x: 100, y: 50, scaleX: 100, scaleY: 100, opacity: 255 }, 0, 60);
+game.pictures.update(0.25);
 game.screenEffects = new FNH.ScreenEffects();
 game.screenEffects.tint([-60, 40, 0, 20], 60);
 game.screenEffects.fade(0, 60);
@@ -73,6 +77,9 @@ game.changeScene = () => {};
 game.saveGame();
 game.screenEffects.tint([0, 0, 0, 0], 0);
 game.loadGame();
+assert.equal(game.pictures.get(1).x, 25);
+game.pictures.update(0.75);
+assert.equal(game.pictures.get(1).x, 100);
 assert.equal(game.screenEffects.tone[0], -15);
 assert.equal(game.screenEffects.toneSeconds, 0.75);
 assert.equal(game.screenEffects.brightness, 191.25);

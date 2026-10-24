@@ -1020,6 +1020,24 @@
                 } else if (total > 0) {
                     inventory.push(kind === 'item' ? { id: itemId, amount: total } : { id: itemId, amount: total, kind });
                 }
+            } else if (command.code >= 231 && command.code <= 235) {
+                const pictures = this.game.pictures || (this.game.pictures = new FNH.PictureManager(this.game.assets));
+                const values = (start) => ({
+                    x: p[start] === 0 ? p[start + 1] : Number(this.game.flags['variable:' + p[start + 1]] || 0),
+                    y: p[start] === 0 ? p[start + 2] : Number(this.game.flags['variable:' + p[start + 2]] || 0),
+                    scaleX: p[start + 3], scaleY: p[start + 4], opacity: p[start + 5]
+                });
+                if (command.code === 231) pictures.show(p[0], p[1], p[2], values(3), p[9]);
+                if (command.code === 232) {
+                    pictures.move(p[0], p[2], values(3), p[9], p[10]);
+                    if (p[11] && p[10] > 0) return { type: 'time', seconds: p[10] / 60 };
+                }
+                if (command.code === 233) pictures.rotate(p[0], p[1]);
+                if (command.code === 234) {
+                    pictures.tint(p[0], p[1], p[2]);
+                    if (p[3] && p[2] > 0) return { type: 'time', seconds: p[2] / 60 };
+                }
+                if (command.code === 235) pictures.erase(p[0]);
             } else if (command.code >= 221 && command.code <= 225) {
                 const screen = this.game.screenEffects || (this.game.screenEffects = new FNH.ScreenEffects());
                 if (command.code === 221 || command.code === 222) {
@@ -1575,6 +1593,7 @@
 
             ctx.restore();
             if (this.game.screenEffects) this.game.screenEffects.apply(ctx);
+            if (this.game.pictures) this.game.pictures.draw(ctx, 'map');
             this.drawHud(ctx);
             this.drawBanner(ctx);
             this.drawEventDialog(ctx);

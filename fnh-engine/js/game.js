@@ -54,6 +54,7 @@
             this.storage = new FNH.Storage();
             this.transition = new FNH.Transition();
             this.screenEffects = new FNH.ScreenEffects();
+            this.pictures = new FNH.PictureManager(this.assets);
 
             this.scene = null;
             this.sceneName = 'boot';
@@ -121,7 +122,15 @@
                 this.playtime += dt;
             }
             if (this.screenEffects && (this.sceneName === 'map' || this.sceneName === 'battle') &&
-                !(this.scene && this.scene.paused)) this.screenEffects.update(dt);
+                !(this.scene && this.scene.paused)) {
+                this.screenEffects.update(dt);
+                if (this.pictures) this.pictures.update(dt);
+            }
+            if (this.pictures && this.pictures.lastError) {
+                this.lastError = this.pictures.lastError;
+                this.pictures.lastError = null;
+                this.showToast(this.lastError.message, 6);
+            }
             if (this.scene) this.scene.update(dt);
             this.transition.update(dt);
             if (this.toastTimer > 0) {
@@ -193,6 +202,7 @@
             this.guardDefeated = false;
             this.flags = {};
             this.screenEffects = new FNH.ScreenEffects();
+            this.pictures = new FNH.PictureManager(this.assets);
             this.changeScene(FNH.Scene_Map, { fresh: true });
         }
 
@@ -207,7 +217,8 @@
                 gold: this.gold,
                 guardDefeated: this.guardDefeated,
                 flags: this.flags,
-                screenEffects: this.screenEffects
+                screenEffects: this.screenEffects,
+                pictures: this.pictures
             };
             return this.storage.save(this.saveSlot, payload);
         }
@@ -243,6 +254,7 @@
             this.guardDefeated = !!save.guardDefeated;
             this.flags = save.flags || {};
             this.screenEffects = new FNH.ScreenEffects(save.screenEffects);
+            this.pictures = new FNH.PictureManager(this.assets, save.pictures);
             this.changeScene(FNH.Scene_Map, { fromSave: true });
             return true;
         }

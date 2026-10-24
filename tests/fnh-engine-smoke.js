@@ -542,6 +542,22 @@ async function main() {
             return pixel[0] === 255 && pixel[1] === 0 && pixel[2] === 0 && ctx.globalCompositeOperation === 'source-over';
         })()`, false, false));
 
+        check('picture tint giữ vùng trong suốt và thứ tự ảnh', await evalPage(cdp, `(() => {
+            const source = document.createElement('canvas');
+            source.width = 2; source.height = 1;
+            const sourceCtx = source.getContext('2d');
+            sourceCtx.fillStyle = 'rgb(100,150,200)'; sourceCtx.fillRect(0, 0, 1, 1);
+            const target = document.createElement('canvas'); target.width = 2; target.height = 1;
+            const ctx = target.getContext('2d');
+            const manager = new FNH.PictureManager({loadImage: () => Promise.resolve(source)});
+            manager.images.set('test', {image: source});
+            manager.show(1, 'test', 0, {x: 0, y: 0, scaleX: 100, scaleY: 100, opacity: 255}, 0);
+            manager.tint(1, [-20, 10, 0, 0], 0);
+            manager.draw(ctx);
+            const pixel = ctx.getImageData(0, 0, 2, 1).data;
+            return Math.abs(pixel[0] - 80) <= 1 && Math.abs(pixel[1] - 160) <= 1 && pixel[3] === 255 && pixel[7] === 0;
+        })()`, false, false));
+
         check('common event gốc được nạp', await evalPage(cdp,
             'FNH.game.data.commonEvents.length > 1', false, false));
         await evalPage(cdp, `(() => {

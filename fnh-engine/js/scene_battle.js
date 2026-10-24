@@ -553,6 +553,7 @@
             this.drawDamageNumbers(ctx);
             ctx.restore();
             if (this.game.screenEffects) this.game.screenEffects.apply(ctx);
+            if (this.game.pictures) this.game.pictures.draw(ctx, 'battle');
             this.drawEnemyHud(ctx);
             this.drawActorPanel(ctx);
             this.drawOverlay(ctx);

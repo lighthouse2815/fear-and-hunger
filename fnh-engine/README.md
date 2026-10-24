@@ -250,7 +250,12 @@ Hiệu ứng màn hình hỗ trợ Fadeout/Fadein (221/222), Tint (223), Flash (
 (225), bao gồm nội suy và tùy chọn chờ của event. Tông màu, độ sáng và hiệu ứng đang
 chạy theo game khi chuyển bản đồ/trận đấu, được lưu/đọc cùng save; save cũ dùng ánh
 sáng mặc định. Hiệu ứng áp dụng lên cảnh, không làm rung hoặc đổi màu HUD/hội thoại.
-Menu tạm dừng đóng băng thời gian hiệu ứng. Chưa có weather và picture event.
+Menu tạm dừng đóng băng thời gian hiệu ứng. Chưa có weather.
+Ảnh sự kiện hỗ trợ Show/Move/Rotate/Tint/Erase Picture (231–235), tọa độ hằng số/biến,
+tâm ảnh, tỉ lệ, opacity, blend, thứ tự ID và chờ chuyển động/đổi màu. Ảnh đọc từ asset
+gốc, được lưu/đọc cùng trạng thái chuyển động; ảnh map và battle dùng phạm vi riêng.
+Ảnh được vẽ trên cảnh và dưới HUD/hội thoại; màu ảnh giữ vùng trong suốt. Menu tạm
+dừng đóng băng chuyển động ảnh. Chưa hỗ trợ picture plugin hoặc battle event interpreter.
 Chưa có script/plugin command,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 
