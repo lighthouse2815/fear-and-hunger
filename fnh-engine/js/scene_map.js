@@ -54,6 +54,7 @@
             this.pauseHover = -1;
             this.eventRunner = null;
             this.erasedEvents = new Set();
+            this.eventStates = new Map();
             this.failedAutorunPages = new Set();
             this.parallelEvents = new Map();
             this.dialogRunner = null;
@@ -69,6 +70,7 @@
             this.leaving = false;
             this.paused = false;
             this.erasedEvents.clear();
+            this.eventStates.clear();
             this.failedAutorunPages.clear();
             this.parallelEvents.clear();
             this.dialogRunner = null;
@@ -153,6 +155,44 @@
             return this.game.data.eventPage(event, this.game.flags, this.game.mapId, this.game.player);
         }
 
+        eventState(event) {
+            let state = this.eventStates.get(event.id);
+            if (!state) {
+                state = { id: event.id, x: event.x, y: event.y, realX: event.x, realY: event.y };
+                this.eventStates.set(event.id, state);
+            }
+            const page = this.eventPage(event);
+            if (state.page !== page) {
+                state.page = page;
+                const image = page && page.image || {};
+                state.imageName = image.characterName || '';
+                state.imageIndex = image.characterIndex || 0;
+                state.direction = image.direction || 2;
+                state.pattern = image.pattern || 0;
+                state.priority = page ? page.priorityType ?? 1 : 1;
+                state.through = !!(page && page.through);
+            }
+            return state;
+        }
+
+        mapCharacter(id) {
+            if (id === -1) {
+                const player = this.game.player;
+                const visual = this.playerVisual;
+                return {
+                    get x() { return player.mapX; }, set x(value) { player.mapX = value; },
+                    get y() { return player.mapY; }, set y(value) { player.mapY = value; },
+                    get realX() { return visual.x; }, set realX(value) { visual.x = value; },
+                    get realY() { return visual.y; }, set realY(value) { visual.y = value; },
+                    get direction() { return player.direction; }, set direction(value) { player.direction = value; },
+                    get imageName() { return player.characterName; }
+                };
+            }
+            const eventId = id === 0 ? this.eventId : id;
+            const event = (this.map.events || []).find((entry) => entry && entry.id === eventId);
+            return event ? this.eventState(event) : null;
+        }
+
         startAutorun() {
             for (const event of this.map.events || []) {
                 if (!event) continue;
@@ -229,19 +269,11 @@
             this.events = this.map.events.filter(Boolean).map((event) => {
                 const page = this.eventPage(event);
                 if (!page || !page.image || !(page.image.characterName || page.image.tileId > 0)) return null;
-                return {
-                    id: event.id,
+                const state = this.eventState(event);
+                return Object.assign({}, state, {
                     name: event.name,
-                    x: event.x,
-                    y: event.y,
-                    page: page,
-                    imageName: page.image.characterName,
-                    imageIndex: page.image.characterIndex,
-                    direction: page.image.direction || 2,
-                    pattern: page.image.pattern || 0,
-                    priority: page.priorityType || 1,
-                    animated: /flame|fire/i.test(page.image.characterName || '')
-                };
+                    animated: /flame|fire/i.test(state.imageName)
+                });
             }).filter(Boolean);
         }
 
@@ -270,7 +302,9 @@
         checkTransfer() {
             const player = this.game.player;
             for (const event of this.map.events || []) {
-                if (!event || event.x !== player.mapX || event.y !== player.mapY) continue;
+                if (!event) continue;
+                const position = this.eventState(event);
+                if (position.x !== player.mapX || position.y !== player.mapY) continue;
                 const page = this.eventPage(event);
                 if (page && (page.trigger === 1 || page.trigger === 2)) return this.startEvent(event);
             }
@@ -511,7 +545,9 @@
                 return false;
             }
             for (const event of this.map.events || []) {
-                if (!event || event.x !== nx || event.y !== ny) continue;
+                if (!event) continue;
+                const position = this.eventState(event);
+                if (position.x !== nx || position.y !== ny) continue;
                 const page = this.eventPage(event);
                 if (!page || page.priorityType !== 1 || page.through) continue;
                 if (page.trigger === 1 || page.trigger === 2) this.startEvent(event);
@@ -539,8 +575,9 @@
             const event = (this.map.events || []).filter(Boolean).find((entry) => {
                 const page = this.eventPage(entry);
                 if (!page || page.trigger !== 0) return false;
-                if (page.priorityType === 1) return entry.x === front.x && entry.y === front.y;
-                return entry.x === player.mapX && entry.y === player.mapY;
+                const position = this.eventState(entry);
+                if (page.priorityType === 1) return position.x === front.x && position.y === front.y;
+                return position.x === player.mapX && position.y === player.mapY;
             });
             if (!event || !this.startEvent(event)) this.game.showToast('Không có gì trong bóng tối.', 1.4);
         }
@@ -610,18 +647,9 @@
         }
 
         eventCharacter(id) {
-            if (id === -1) {
-                const player = this.game.player;
-                return { x: player.mapX, y: player.mapY, direction: player.direction,
-                    name: player.characterName, realX: this.playerVisual.x, realY: this.playerVisual.y };
-            }
-            const eventId = id === 0 ? this.eventId : id;
-            const event = (this.map.events || []).find((entry) => entry && entry.id === eventId);
-            if (!event) return null;
-            const page = this.eventPage(event);
-            return { x: event.x, y: event.y, realX: event.x, realY: event.y,
-                direction: page && page.image ? page.image.direction || 2 : 2,
-                name: page && page.image ? page.image.characterName : '' };
+            const character = this.mapCharacter(id);
+            return character ? { x: character.x, y: character.y, realX: character.realX, realY: character.realY,
+                direction: character.direction, name: character.imageName } : null;
         }
 
         eventDataOperand(type, id, parameter) {
@@ -779,6 +807,27 @@
                 } else if (total > 0) {
                     inventory.push(kind === 'item' ? { id: itemId, amount: total } : { id: itemId, amount: total, kind });
                 }
+            } else if (command.code === 203) {
+                const character = this.mapCharacter(p[0]);
+                if (!character) return;
+                if (p[0] === -1) this.finishMove();
+                if (p[1] === 2) {
+                    const other = this.mapCharacter(p[2]);
+                    if (!other) return;
+                    if (p[2] === -1) this.finishMove();
+                    const x = character.x, y = character.y;
+                    character.x = other.x;
+                    character.y = other.y;
+                    other.x = other.realX = x;
+                    other.y = other.realY = y;
+                } else if (p[1] === 0 || p[1] === 1) {
+                    character.x = p[1] === 0 ? p[2] : Number(this.game.flags['variable:' + p[2]] || 0);
+                    character.y = p[1] === 0 ? p[3] : Number(this.game.flags['variable:' + p[3]] || 0);
+                } else throw new Error('Chưa hỗ trợ kiểu định vị event ' + p[1]);
+                character.realX = character.x;
+                character.realY = character.y;
+                if (p[4]) character.direction = p[4];
+                this.refreshEvents();
             } else if (command.code === 214) {
                 if (this.eventId) {
                     this.erasedEvents.add(this.eventId);

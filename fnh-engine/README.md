@@ -225,6 +225,9 @@ các event nền. Interpreter đang chạy không được ghi vào save, đư�
 Các event dùng chung một khung thoại; event khác chờ tới lượt, và người chơi chỉ bị khóa
 di chuyển khi có hội thoại hoặc event chính đang chạy. Lỗi một event nền không dừng
 các event còn lại; trang lỗi không thử lại trong lần tải bản đồ đó.
+Lệnh Set Event Location (203) hỗ trợ tọa độ hằng số/biến, đổi chỗ hai nhân vật và đổi
+hướng. Vị trí runtime được dùng cho hình ảnh, va chạm, tương tác và biến tọa độ event;
+JSON gốc không bị sửa. Vị trí NPC được tạo lại khi tải bản đồ, chưa ghi vào save.
 Chưa có script/plugin command, move route, hiệu ứng màn hình,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 

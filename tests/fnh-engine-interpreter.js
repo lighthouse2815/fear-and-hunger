@@ -425,3 +425,45 @@ assert.equal(concurrent.game.gold, 3, 'Parallel hoàn tất trong lúc event ch�
 assert.equal(concurrent.eventRunner, foreground);
 assert.equal(foreground.wait.seconds, 1.5);
 console.log('ĐẠT: chia sẻ khung thoại, lựa chọn riêng, chạy nền trong lúc chờ và tạm dừng.');
+
+const positioning = new FNH.Scene_Map();
+positioning.game = {
+    mapId: 2, flags: { 'variable:1': 4, 'variable:2': 5 }, gold: 0,
+    player: { mapX: 0, mapY: 0, direction: 2 }, data: new FNH.DataStore(), showToast() {}
+};
+positioning.guard.alive = false;
+positioning.game.data.isTilePassable = () => true;
+positioning.input = { isPressed: () => false };
+const positionedPage = { trigger: 0, priorityType: 1, image: { characterName: 'Actor', direction: 2 },
+    list: [command(125, [0, 0, 1])] };
+const positionedEvent = { id: 1, x: 0, y: 1, pages: [positionedPage] };
+positioning.map = { events: [null, positionedEvent, { id: 2, x: 8, y: 9, pages: [positionedPage] }] };
+positioning.eventId = 1;
+positioning.executeEventCommand(command(203, [0, 0, 3, 4, 8]));
+assert.equal(positioning.eventDataOperand(5, 1, 0), 3);
+assert.equal(positioning.eventDataOperand(5, 1, 1), 4);
+assert.equal(positioning.eventCondition([6, 1, 8]), true);
+assert.equal(positioning.events[0].x, 3, 'Hình ảnh dùng vị trí runtime');
+assert.equal(positionedEvent.x, 0, 'Không sửa dữ liệu bản đồ đã cache');
+assert.equal(positioning.tryMove(2), true, 'Ô cũ không còn NPC chặn');
+positioning.finishMove();
+positioning.executeEventCommand(command(203, [1, 1, 1, 2, 0]));
+assert.equal(positioning.eventDataOperand(5, 1, 0), 4);
+assert.equal(positioning.eventDataOperand(5, 1, 1), 5);
+assert.equal(positioning.eventCondition([6, 1, 8]), true, 'Hướng 0 giữ hướng hiện tại');
+positioning.executeEventCommand(command(203, [1, 2, 2, 0, 6]));
+assert.equal(positioning.eventDataOperand(5, 1, 0), 8);
+assert.equal(positioning.eventDataOperand(5, 2, 0), 4);
+assert.equal(positioning.eventDataOperand(5, 2, 1), 5);
+positioning.executeEventCommand(command(203, [1, 0, 0, 2, 2]));
+assert.equal(positioning.tryMove(2), false, 'Va chạm dùng vị trí mới');
+positioning.interact();
+assert.equal(positioning.game.gold, 1, 'Tương tác dùng vị trí mới');
+positionedPage.trigger = 1;
+positioning.executeEventCommand(command(203, [-1, 0, 0, 2, 4]));
+assert.equal(positioning.checkTransfer(), true, 'Event chạm dùng tọa độ runtime');
+assert.equal(positioning.playerVisual.y, 2);
+positioning.executeEventCommand(command(203, [1, 2, -1, 0, 0]));
+positioning.executeEventCommand(command(203, [999, 0, 5, 5, 0]));
+assert.equal(positioning.eventDataOperand(5, 1, 1), 2);
+console.log('ĐẠT: định vị event bằng hằng số/biến, đổi chỗ, hướng, va chạm và tương tác.');
