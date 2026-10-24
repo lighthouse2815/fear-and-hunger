@@ -117,6 +117,55 @@
 
         exit() {
             if (this.closeNameInput) this.closeNameInput();
+            if (this.closeMovie) this.closeMovie();
+        }
+
+        openMovie(name) {
+            if (!name) return;
+            const token = { done: false, error: null };
+            const video = document.createElement('video');
+            video.className = 'fnh-movie';
+            video.controls = true;
+            video.playsInline = true;
+            video.preload = 'auto';
+            video.muted = this.game.audio.muted;
+            video.setAttribute('aria-label', 'Đoạn phim');
+            for (const [extension, type] of [['.webm', 'video/webm'], ['.mp4', 'video/mp4']]) {
+                const source = document.createElement('source');
+                source.src = this.game.assets.assetPath('movies/' + encodeURIComponent(name), extension);
+                source.type = type;
+                video.appendChild(source);
+            }
+            const enabled = this.input.enabled;
+            this.input.enabled = false;
+            this.input.down.clear();
+            this.input.clearFrame();
+            this.movieElement = video;
+            const finish = (error) => {
+                if (token.done) return;
+                token.done = true;
+                token.error = error || null;
+                video.pause();
+                video.removeAttribute('src');
+                video.replaceChildren();
+                video.load();
+                video.remove();
+                this.movieElement = null;
+                this.closeMovie = null;
+                this.input.enabled = enabled;
+                this.input.down.clear();
+                this.input.clearFrame();
+                if (this.game.canvas) this.game.canvas.focus();
+            };
+            this.closeMovie = () => finish(new Error('Video bị dừng khi rời scene: ' + name));
+            video.addEventListener('ended', () => finish());
+            video.addEventListener('error', () => finish(new Error('Không phát được video ' + name +
+                (video.error ? ': ' + (video.error.message || video.error.code) : ''))));
+            document.body.appendChild(video);
+            video.play().catch((error) => {
+                if (!token.done && error.name !== 'NotAllowedError') finish(error);
+            });
+            return { type: 'video', token };
         }
 
         openNameInput(actor, maxLength) {
@@ -1205,7 +1254,7 @@
                         this.eventChoice = runner.wait.disabled.findIndex((disabled) => !disabled);
                     }
                 }
-                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice', 'number', 'item', 'name', 'scroll', 'pause'].includes(runner.wait.type))) {
+                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice', 'number', 'item', 'name', 'scroll', 'pause', 'video'].includes(runner.wait.type))) {
                     this.dialogRunner = null;
                 }
                 if (runner.done) {
@@ -1482,6 +1531,8 @@
                         skills.sort((a, b) => a - b);
                     }
                 }
+            } else if (command.code === 261) {
+                return this.openMovie(String(p[0] || ''));
             } else if (command.code === 303) {
                 if (this.battle || this.game.sceneName === 'battle') return;
                 const actor = this.eventActor(p[0]);

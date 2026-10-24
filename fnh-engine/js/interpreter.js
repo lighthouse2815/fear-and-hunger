@@ -65,6 +65,9 @@
                     if (this.wait.scene.paused) return;
                 } else if (this.wait.type === 'gab') {
                     if (this.wait.queue.busy) return;
+                } else if (this.wait.type === 'video') {
+                    if (this.wait.token.error) throw this.wait.token.error;
+                    if (!this.wait.token.done) return;
                 } else if (this.wait.type === 'scroll') {
                     if (!this.wait.done) return;
                 } else if (this.wait.type === 'name') {
@@ -123,13 +126,13 @@
                             offset: 0, height: null, done: false };
                         break;
                     }
-                    case 303: case 352: {
+                    case 261: case 303: case 352: {
                         if (this.handlers.canShowMessage && !this.handlers.canShowMessage()) {
                             frame.index -= 1;
                             return;
                         }
                         const result = this.handlers.execute(command);
-                        if (result && ['name', 'pause'].includes(result.type)) this.wait = result;
+                        if (result && ['name', 'pause', 'video'].includes(result.type)) this.wait = result;
                         break;
                     }
                     case 102:

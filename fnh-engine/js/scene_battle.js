@@ -111,6 +111,10 @@
             if (!this.encounter) this.game.audio.playSe('guard_grunt1', { volume: 0.65 });
         }
 
+        exit() {
+            if (this.commonEventContext) this.commonEventContext.exit();
+        }
+
         livingEnemies() {
             return this.enemies.filter((enemy) => !enemy.hidden && enemy.hp > 0);
         }

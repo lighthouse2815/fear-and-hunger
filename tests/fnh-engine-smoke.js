@@ -726,6 +726,18 @@ async function main() {
             '!FNH.game.scene.dialogRunner && FNH.game.flags["switch:999986"]', false, false));
         await evalPage(cdp, 'delete FNH.game.flags["switch:999986"]', false, false);
 
+        await evalPage(cdp, 'FNH.game.scene.startEventList({list:[{code:261,parameters:["intro"]},{code:121,parameters:[999983,999983,0]}]},0)', false, false);
+        await waitFor(cdp, 'FNH.game.scene.movieElement && FNH.game.scene.movieElement.readyState >= 2 && FNH.game.scene.movieElement.duration > 0', 20000, 'video intro gốc');
+        await evalPage(cdp, 'FNH.game.scene.movieElement.muted=true;FNH.game.scene.movieElement.play()', true, true);
+        check('video event phát tệp gốc và giữ luồng kịch bản', await evalPage(cdp,
+            'FNH.game.scene.movieElement.videoWidth > 0 && FNH.game.scene.eventRunner.wait.type === "video" && !FNH.game.input.enabled && !FNH.game.flags["switch:999983"]', false, false));
+        await evalPage(cdp, 'window.__movieResult=FNH.game.scene.eventRunner.wait.token;FNH.game.scene.movieElement.playbackRate=4', false, false);
+        await waitFor(cdp, 'FNH.game.flags["switch:999983"] || window.__movieResult.error', 15000, 'video kết thúc chạy tiếp event');
+        check('video kết thúc không lỗi', await evalPage(cdp, '!window.__movieResult.error', false, false), await evalPage(cdp, 'window.__movieResult.error && window.__movieResult.error.message', false, false));
+        check('kết thúc phim trả điều khiển và dọn trình phát', await evalPage(cdp,
+            '!FNH.game.scene.movieElement && !document.querySelector(".fnh-movie") && FNH.game.input.enabled', false, false));
+        await evalPage(cdp, 'delete window.__movieResult;delete FNH.game.flags["switch:999983"]', false, false);
+
         await evalPage(cdp, 'FNH.game.scene.startEventList({list:[{code:212,parameters:[-1,7,true]},{code:121,parameters:[999989,999989,0]}]},0)', false, false);
         await waitFor(cdp, 'FNH.game.scene.animations.some(a => a.ready && a.frame >= 0)', 15000, 'animation bản đồ');
         check('event bản đồ chờ animation trước lệnh tiếp theo', await evalPage(cdp,

@@ -455,3 +455,16 @@ event đang gọi cùng ngữ cảnh event ID. Tải lại tiếp tục ngay sau
 các lệnh bật lại menu lưu hoặc đổi self-switch, và không mở lại màn hình lưu. Save cũ
 không có continuation vẫn tải như trước. Event nền mở điểm lưu không chạy trùng phần
 đã lưu khi continuation còn hoạt động; các event nền khác khởi tạo lại từ bản đồ.
+
+### Video từ event
+
+Lệnh 261 phát video gốc trong `movies` bằng trình phát chuẩn của trình duyệt, với
+nguồn WebM/MP4, điều khiển phát và trạng thái tắt âm hiện tại. Event giữ khóa hội
+thoại và chờ sự kiện kết thúc thật; tên trống không mở video. Nếu trình duyệt chặn
+autoplay, người chơi dùng nút phát của trình video. Lỗi tải/codec dừng event và báo
+lỗi thay vì chạy các lệnh phía sau. Phím điều khiển game được khóa trong lúc phát;
+đổi scene (kể cả thoát battle common event) dừng phim, hủy tải và dọn phần tử media.
+
+Bài kiểm tra Chromium phát intro tuần tự đến hết rồi xác nhận event chạy tiếp. Trong
+môi trường kiểm thử, tua thẳng tới sát cuối intro từng trả lỗi giải mã; trường hợp
+này được xử lý như lỗi video, không giả vờ phim đã kết thúc thành công.
