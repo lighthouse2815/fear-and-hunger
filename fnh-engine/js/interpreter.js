@@ -20,7 +20,7 @@
         }
 
         resume(value) {
-            if (!this.wait || this.wait.type === 'time') return;
+            if (!this.wait || !['message', 'choice'].includes(this.wait.type)) return;
             if (this.wait.type === 'choice') {
                 if (value === -2 && this.wait.cancel !== -2) throw new Error('Event không cho phép hủy lựa chọn');
                 if (value !== -2 && (!Number.isInteger(value) || value < 0 || value >= this.wait.choices.length)) {
@@ -34,9 +34,13 @@
         update(dt) {
             if (this.done) return;
             if (this.wait) {
-                if (this.wait.type !== 'time') return;
-                this.wait.seconds -= dt;
-                if (this.wait.seconds > 0) return;
+                if (this.wait.type === 'route') {
+                    if (this.wait.route.error) throw this.wait.route.error;
+                    if (!this.wait.route.done) return;
+                } else if (this.wait.type === 'time') {
+                    this.wait.seconds -= dt;
+                    if (this.wait.seconds > 0) return;
+                } else return;
                 this.wait = null;
             }
             // Chia vòng lặp dài thành nhiều frame để trình duyệt vẫn nhận input.
@@ -51,7 +55,7 @@
                 const p = command.parameters || [];
                 const indent = command.indent || 0;
                 switch (command.code) {
-                    case 0: case 108: case 408: case 118:
+                    case 0: case 108: case 408: case 118: case 505:
                         break;
                     case 101: {
                         if (this.handlers.canShowMessage && !this.handlers.canShowMessage()) {
@@ -134,11 +138,15 @@
                     case 230:
                         this.wait = { type: 'time', seconds: Math.max(0, Number(p[0]) || 0) / 60 };
                         break;
-                    default:
-                        if (this.handlers.execute(command) === false) {
+                    default: {
+                        const result = this.handlers.execute(command);
+                        if (result && result.type === 'route') this.wait = result;
+                        if (result === false) {
                             this.frames = [];
                             this.done = true;
                         }
+                        break;
+                    }
                 }
             }
         }

@@ -55,6 +55,8 @@
             this.eventRunner = null;
             this.erasedEvents = new Set();
             this.eventStates = new Map();
+            this.moveRoutes = new Map();
+            this.playerRouteState = null;
             this.failedAutorunPages = new Set();
             this.parallelEvents = new Map();
             this.dialogRunner = null;
@@ -71,6 +73,8 @@
             this.paused = false;
             this.erasedEvents.clear();
             this.eventStates.clear();
+            this.moveRoutes.clear();
+            this.playerRouteState = null;
             this.failedAutorunPages.clear();
             this.parallelEvents.clear();
             this.dialogRunner = null;
@@ -171,26 +175,124 @@
                 state.pattern = image.pattern || 0;
                 state.priority = page ? page.priorityType ?? 1 : 1;
                 state.through = !!(page && page.through);
+                state.throughOverride = undefined;
+                state.moveSpeed = page && page.moveSpeed || 4;
+                state.walkAnime = !page || page.walkAnime !== false;
+                state.stepAnime = !!(page && page.stepAnime);
+                state.directionFix = !!(page && page.directionFix);
+                state.opacity = 255;
+                state.transparent = false;
             }
             return state;
         }
 
         mapCharacter(id) {
             if (id === -1) {
-                const player = this.game.player;
-                const visual = this.playerVisual;
-                return {
-                    get x() { return player.mapX; }, set x(value) { player.mapX = value; },
-                    get y() { return player.mapY; }, set y(value) { player.mapY = value; },
-                    get realX() { return visual.x; }, set realX(value) { visual.x = value; },
-                    get realY() { return visual.y; }, set realY(value) { visual.y = value; },
-                    get direction() { return player.direction; }, set direction(value) { player.direction = value; },
-                    get imageName() { return player.characterName; }
-                };
+                if (!this.playerRouteState) {
+                    const player = this.game.player;
+                    const visual = this.playerVisual;
+                    this.playerRouteState = {
+                        id: -1, moveSpeed: 4, walkAnime: true, opacity: 255,
+                        get x() { return player.mapX; }, set x(value) { player.mapX = value; },
+                        get y() { return player.mapY; }, set y(value) { player.mapY = value; },
+                        get realX() { return visual.x; }, set realX(value) { visual.x = value; },
+                        get realY() { return visual.y; }, set realY(value) { visual.y = value; },
+                        get direction() { return player.direction; }, set direction(value) { player.direction = value; },
+                        get imageName() { return player.characterName; }, set imageName(value) { player.characterName = value; },
+                        get imageIndex() { return player.characterIndex; }, set imageIndex(value) { player.characterIndex = value; }
+                    };
+                }
+                return this.playerRouteState;
             }
+
             const eventId = id === 0 ? this.eventId : id;
             const event = (this.map.events || []).find((entry) => entry && entry.id === eventId);
             return event ? this.eventState(event) : null;
+        }
+
+        routeCanPass(character, x, y, direction) {
+            const offset = directionOffset(direction);
+            const nx = x + offset.x, ny = y + offset.y;
+            if (nx < 0 || ny < 0 || nx >= this.map.width || ny >= this.map.height) return false;
+            if (character.throughOverride ?? character.through) return true;
+            if (!this.game.data.isTilePassable(this.map, this.tileset, x, y, direction) ||
+                !this.game.data.isTilePassable(this.map, this.tileset, nx, ny, oppositeDirection(direction))) return false;
+            for (const event of this.map.events || []) {
+                if (!event || event.id === character.id) continue;
+                const page = this.eventPage(event);
+                const state = this.eventState(event);
+                if ((character.id === -1 || character.priority === 1) && page && page.priorityType === 1 &&
+                    !(state.throughOverride ?? page.through) && state.x === nx && state.y === ny) return false;
+            }
+            if (character.id !== -1 && character.priority === 1 && this.game.player.mapX === nx && this.game.player.mapY === ny) return false;
+            return character.id !== -1 || !this.isGuardAt(nx, ny);
+        }
+
+        moveRouteCharacter(character, dx, dy, jump = false) {
+            const horizontal = dx < 0 ? 4 : 6;
+            const vertical = dy < 0 ? 8 : 2;
+            if (!jump) {
+                const x = character.x, y = character.y;
+                const passable = dx && dy
+                    ? (this.routeCanPass(character, x, y, vertical) && this.routeCanPass(character, x, y + dy, horizontal)) ||
+                      (this.routeCanPass(character, x, y, horizontal) && this.routeCanPass(character, x + dx, y, vertical))
+                    : this.routeCanPass(character, x, y, dx ? horizontal : vertical);
+                if (!passable) return false;
+            }
+            const duration = jump ? Math.max(0.2, (20 + Math.round(Math.hypot(dx, dy))) / 60)
+                : 256 / (Math.pow(2, character.moveSpeed || 4) * 60);
+            character.motion = { fromX: character.realX, fromY: character.realY, elapsed: 0, duration, jump };
+            character.x += dx;
+            character.y += dy;
+            return true;
+        }
+
+        updateMoveRoutes(dt) {
+            for (const [id, route] of this.moveRoutes) {
+                if (id !== -1) {
+                    const event = (this.map.events || []).find((entry) => entry && entry.id === id);
+                    if (!event || !this.eventPage(event)) {
+                        route.done = true;
+                        route.character.motion = null;
+                        route.character.realX = route.character.x;
+                        route.character.realY = route.character.y;
+                        this.moveRoutes.delete(id);
+                        continue;
+                    }
+                    this.eventState(event);
+                }
+                const character = route.character;
+                if (character.motion) {
+                    const motion = character.motion;
+                    motion.elapsed += dt;
+                    const t = Math.min(1, motion.elapsed / motion.duration);
+                    character.realX = motion.fromX + (character.x - motion.fromX) * t;
+                    character.realY = motion.fromY + (character.y - motion.fromY) * t;
+                    character.jumpHeight = motion.jump ? Math.sin(t * Math.PI) * FNH.TILE / 2 : 0;
+                    if (t >= 1) character.motion = null;
+                }
+                try {
+                    const imageName = character.imageName;
+                    route.update(dt);
+                    if (imageName !== character.imageName) {
+                        this.refreshEvents();
+                        if (id === -1 && character.imageName) {
+                            this.game.assets.loadImage('characters/' + character.imageName).catch((error) => {
+                                this.game.lastError = error;
+                                this.game.showToast(error.message, 6);
+                            });
+                        }
+                    }
+                } catch (error) {
+                    route.error = error;
+                    route.done = true;
+                    if (!route.route.wait) {
+                        this.game.lastError = error;
+                        this.game.showToast(error.message, 6);
+                    }
+                }
+                if (route.done) this.moveRoutes.delete(id);
+            }
         }
 
         startAutorun() {
@@ -268,12 +370,12 @@
         refreshEvents() {
             this.events = this.map.events.filter(Boolean).map((event) => {
                 const page = this.eventPage(event);
-                if (!page || !page.image || !(page.image.characterName || page.image.tileId > 0)) return null;
+                if (!page) return null;
                 const state = this.eventState(event);
-                return Object.assign({}, state, {
-                    name: event.name,
-                    animated: /flame|fire/i.test(state.imageName)
-                });
+                if (!state.imageName && !(page.image && page.image.tileId > 0)) return null;
+                state.name = event.name;
+                state.animated = /flame|fire/i.test(state.imageName);
+                return state;
             }).filter(Boolean);
         }
 
@@ -449,10 +551,12 @@
                 return;
             }
 
+            this.updateMoveRoutes(dt);
             this.updateParallelEvents(dt);
             if (this.leaving) return;
             if (this.eventRunner) {
                 this.updateEvent(dt);
+                this.updateCamera(dt);
                 this.updateEventImages();
                 return;
             }
@@ -488,6 +592,7 @@
         }
 
         updateMovement(dt) {
+            if (this.moveRoutes.has(-1)) return;
             const player = this.game.player;
             if (this.moving) {
                 this.moveT += dt / MOVE_TIME;
@@ -514,7 +619,7 @@
             }
             const direction = this.readDirection();
             if (!direction) return;
-            player.direction = direction;
+            if (!this.playerRouteState || !this.playerRouteState.directionFix) player.direction = direction;
             this.tryMove(direction);
         }
 
@@ -540,7 +645,9 @@
                 this.triggerGuard();
                 return false;
             }
-            if (!this.game.data.isTilePassable(this.map, this.tileset, nx, ny, direction)) {
+            if (this.playerRouteState && this.playerRouteState.throughOverride) {
+                if (nx < 0 || ny < 0 || nx >= this.map.width || ny >= this.map.height) return false;
+            } else if (!this.game.data.isTilePassable(this.map, this.tileset, nx, ny, direction)) {
                 this.bump = 1;
                 return false;
             }
@@ -549,7 +656,8 @@
                 const position = this.eventState(event);
                 if (position.x !== nx || position.y !== ny) continue;
                 const page = this.eventPage(event);
-                if (!page || page.priorityType !== 1 || page.through) continue;
+                if (!page || page.priorityType !== 1 || (position.throughOverride ?? page.through) ||
+                    (this.playerRouteState && this.playerRouteState.throughOverride)) continue;
                 if (page.trigger === 1 || page.trigger === 2) this.startEvent(event);
                 this.bump = 1;
                 return false;
@@ -690,7 +798,7 @@
             if (!runner) return;
             try {
                 const wait = runner.wait;
-                if (wait && wait.type !== 'time' && this.eventWait === wait &&
+                if (wait && ['message', 'choice'].includes(wait.type) && this.eventWait === wait &&
                     (!this.dialogRunner || this.dialogRunner === runner)) {
                     const input = this.input;
                     if (wait.type === 'choice') {
@@ -711,7 +819,7 @@
                     this.eventChoice = runner.wait && runner.wait.type === 'choice'
                         ? Math.max(0, Math.min(runner.wait.choices.length - 1, runner.wait.defaultIndex || 0)) : 0;
                 }
-                if (this.dialogRunner === runner && (!runner.wait || runner.wait.type === 'time')) {
+                if (this.dialogRunner === runner && (!runner.wait || !['message', 'choice'].includes(runner.wait.type))) {
                     this.dialogRunner = null;
                 }
                 if (runner.done) {
@@ -735,7 +843,7 @@
         drawEventDialog(ctx) {
             const dialog = this.dialogState();
             const wait = dialog.eventRunner && dialog.eventRunner.wait;
-            if (!wait || wait.type === 'time') return;
+            if (!wait || !['message', 'choice'].includes(wait.type)) return;
             if (wait.type === 'message') {
                 FNH.panel(ctx, 20, 420, FNH.WIDTH - 40, 170);
                 FNH.wrapText(ctx, wait.text, 40, 450, FNH.WIDTH - 80, 25, { size: 18 });
@@ -807,6 +915,15 @@
                 } else if (total > 0) {
                     inventory.push(kind === 'item' ? { id: itemId, amount: total } : { id: itemId, amount: total, kind });
                 }
+            } else if (command.code === 205) {
+                const character = this.mapCharacter(p[0]);
+                if (!character) return;
+                if (character.id === -1) this.finishMove();
+                const route = new FNH.MoveRoute(this, character, p[1] || {});
+                const previous = this.moveRoutes.get(character.id);
+                if (previous) previous.done = true;
+                this.moveRoutes.set(character.id, route);
+                if (route.route.wait) return { type: 'route', route };
             } else if (command.code === 203) {
                 const character = this.mapCharacter(p[0]);
                 if (!character) return;
@@ -818,12 +935,14 @@
                     const x = character.x, y = character.y;
                     character.x = other.x;
                     character.y = other.y;
+                    other.motion = null;
                     other.x = other.realX = x;
                     other.y = other.realY = y;
                 } else if (p[1] === 0 || p[1] === 1) {
                     character.x = p[1] === 0 ? p[2] : Number(this.game.flags['variable:' + p[2]] || 0);
                     character.y = p[1] === 0 ? p[3] : Number(this.game.flags['variable:' + p[3]] || 0);
                 } else throw new Error('Chưa hỗ trợ kiểu định vị event ' + p[1]);
+                character.motion = null;
                 character.realX = character.x;
                 character.realY = character.y;
                 if (p[4]) character.direction = p[4];
@@ -920,12 +1039,13 @@
         }
 
         drawCharacter(ctx, image, name, imageIndex, direction, pattern, footX, footY, options) {
-            if (!image) return;
+            if (!image || (options && options.transparent)) return;
             const frame = this.characterFrame(image, name, imageIndex, direction, pattern);
             const opts = options || {};
             ctx.save();
             if (opts.alpha !== undefined) ctx.globalAlpha = opts.alpha;
             if (opts.filter) ctx.filter = opts.filter;
+            if (opts.blendMode) ctx.globalCompositeOperation = ['source-over', 'lighter', 'multiply', 'screen'][opts.blendMode] || 'source-over';
             ctx.drawImage(
                 image,
                 frame.sx, frame.sy, frame.sw, frame.sh,
@@ -971,15 +1091,17 @@
         }
 
         drawEvent(ctx, event, footX, footY) {
-            if (!event.imageName) return;
+            if (!event.imageName || event.transparent || event.opacity === 0) return;
             const image = this.eventImages.get(event.imageName);
             if (!image) return;
             let pattern = event.pattern;
-            if (event.animated) {
+            if (event.animated || event.stepAnime || (event.motion && event.walkAnime)) {
                 pattern = Math.floor(this.time * 5 + event.id) % 3;
             }
-            this.drawShadow(ctx, footX, footY, event.imageName.charAt(0) === '$' ? 52 : 38, 0.3);
-            this.drawCharacter(ctx, image, event.imageName, event.imageIndex, event.direction, pattern, footX, footY);
+            this.drawShadow(ctx, footX, footY, event.imageName.charAt(0) === '$' ? 52 : 38, 0.3 * (event.opacity ?? 255) / 255);
+            this.drawCharacter(ctx, image, event.imageName, event.imageIndex, event.direction, pattern, footX,
+                footY - (event.jumpHeight || 0), { alpha: (event.opacity ?? 255) / 255,
+                    transparent: event.transparent, blendMode: event.blendMode });
         }
 
         drawGuard(ctx) {
@@ -1008,24 +1130,29 @@
                 y: playerFootY,
                 priority: 1,
                 draw: () => {
-                    this.drawShadow(ctx, playerFootX, playerFootY, 40, 0.35);
+                    if (!this.playerRouteState || !this.playerRouteState.transparent) {
+                        this.drawShadow(ctx, playerFootX, playerFootY, 40, 0.35 * (this.playerRouteState ? this.playerRouteState.opacity / 255 : 1));
+                    }
                     this.drawCharacter(
                         ctx,
                         this.game.assets.imageCache.get('characters/' + player.characterName),
                         player.characterName,
                         player.characterIndex,
                         player.direction,
-                        this.stepPattern,
+                        this.playerRouteState && ((this.playerRouteState.motion && this.playerRouteState.walkAnime) || this.playerRouteState.stepAnime)
+                            ? Math.floor(this.time * 6) % 3 : this.playerRouteState && !this.playerRouteState.walkAnime ? 1 : this.stepPattern,
                         playerFootX,
-                        playerFootY
+                        playerFootY - (this.playerRouteState && this.playerRouteState.jumpHeight || 0),
+                        this.playerRouteState ? { alpha: this.playerRouteState.opacity / 255,
+                            transparent: this.playerRouteState.transparent, blendMode: this.playerRouteState.blendMode } : undefined
                     );
                 }
             });
 
             for (const event of this.events) {
                 if (event.priority === 2) continue;
-                const footX = event.x * FNH.TILE + FNH.TILE / 2 - this.camera.x;
-                const footY = event.y * FNH.TILE + FNH.TILE - this.camera.y;
+                const footX = (event.realX ?? event.x) * FNH.TILE + FNH.TILE / 2 - this.camera.x;
+                const footY = (event.realY ?? event.y) * FNH.TILE + FNH.TILE - this.camera.y;
                 if (footX < -160 || footX > FNH.WIDTH + 160 || footY < -220 || footY > FNH.HEIGHT + 220) continue;
                 sprites.push({
                     y: footY,
@@ -1053,8 +1180,8 @@
         drawAboveCharacters(ctx) {
             for (const event of this.events) {
                 if (event.priority !== 2) continue;
-                const footX = event.x * FNH.TILE + FNH.TILE / 2 - this.camera.x;
-                const footY = event.y * FNH.TILE + FNH.TILE - this.camera.y;
+                const footX = (event.realX ?? event.x) * FNH.TILE + FNH.TILE / 2 - this.camera.x;
+                const footY = (event.realY ?? event.y) * FNH.TILE + FNH.TILE - this.camera.y;
                 if (footX < -160 || footX > FNH.WIDTH + 160 || footY < -220 || footY > FNH.HEIGHT + 220) continue;
                 this.drawEvent(ctx, event, footX, footY);
             }

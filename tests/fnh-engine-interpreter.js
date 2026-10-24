@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const FNH = { Scene: class {}, TILE: 48 };
-for (const name of ['interpreter', 'data', 'scene_map']) {
+for (const name of ['interpreter', 'data', 'move_route', 'scene_map']) {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/' + name + '.js'), 'utf8'), {
         window: { FNH }
     });
@@ -419,6 +419,7 @@ assert.equal(concurrent.game.gold, 0);
 assert.equal(foreground.wait.seconds, 2, 'Tạm dừng không làm giảm thời gian chờ');
 concurrent.paused = false;
 concurrent.updateEventImages = () => {};
+concurrent.updateCamera = () => {};
 concurrent.update(0);
 concurrent.update(0.5);
 assert.equal(concurrent.game.gold, 3, 'Parallel hoàn tất trong lúc event chính vẫn chờ');

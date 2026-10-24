@@ -566,6 +566,32 @@ async function main() {
             delete FNH.game.flags['variable:999996'];
         })()`, false, false);
 
+        await evalPage(cdp, `(() => {
+            const scene = FNH.game.scene;
+            const c = (code, parameters = []) => ({code, parameters, indent: 0});
+            const event = {id: 999995, x: 25, y: 67, pages: [{trigger: 0, priorityType: 0,
+                image: {characterName: FNH.game.player.characterName, characterIndex: 0, direction: 2}, list: [
+                c(205, [0, {wait: true, list: [c(15, [30]), c(14, [1, 0]), c(19), c(0)]}]),
+                c(505, [c(14, [1, 0])]), c(122, [999995, 999995, 0, 3, 5, 0, 0]), c(214)
+            ]}]};
+            scene.map.events.push(event);
+            scene.refreshEvents();
+            scene.startEvent(event);
+        })()`, false, false);
+        check('event chờ move route và chưa chạy lệnh phía sau', await evalPage(cdp,
+            'FNH.game.scene.eventRunner.wait.type === "route" && !FNH.game.flags["variable:999995"]', false, false));
+        await waitFor(cdp, 'FNH.game.flags["variable:999995"] === 26 && !FNH.game.scene.eventRunner',
+            5000, 'move route nhảy và hoàn tất');
+        check('move route cập nhật tọa độ và hướng runtime', await evalPage(cdp,
+            'FNH.game.scene.eventStates.get(999995).x === 26 && FNH.game.scene.eventStates.get(999995).realX === 26 && FNH.game.scene.erasedEvents.has(999995)', false, false));
+        await evalPage(cdp, `(() => {
+            const scene = FNH.game.scene;
+            scene.map.events = scene.map.events.filter(event => !event || event.id !== 999995);
+            scene.erasedEvents.delete(999995);
+            scene.eventStates.delete(999995);
+            delete FNH.game.flags['variable:999995'];
+        })()`, false, false);
+
         await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
         await sleep(500);
         check('nhân vật bước lên ô 27,66', await evalPage(

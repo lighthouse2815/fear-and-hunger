@@ -154,6 +154,7 @@ fnh-engine/
   js/game.js              vòng lặp, chuyển cảnh, preload, lưu/đọc
   js/scene_title.js       tiêu đề
   js/scene_creation.js    chọn nghề
+  js/move_route.js        interpreter cho lệnh di chuyển event/người chơi
   js/scene_map.js         bản đồ, di chuyển, va chạm, menu tạm dừng
   js/scene_battle.js      trận đấu theo lượt
   js/scene_gameover.js    màn hình chết
@@ -228,7 +229,16 @@ các event còn lại; trang lỗi không thử lại trong lần tải bản đ
 Lệnh Set Event Location (203) hỗ trợ tọa độ hằng số/biến, đổi chỗ hai nhân vật và đổi
 hướng. Vị trí runtime được dùng cho hình ảnh, va chạm, tương tác và biến tọa độ event;
 JSON gốc không bị sửa. Vị trí NPC được tạo lại khi tải bản đồ, chưa ghi vào save.
-Chưa có script/plugin command, move route, hiệu ứng màn hình,
+Set Movement Route (205) có interpreter riêng cho từng mục tiêu (người chơi, event ID
+hoặc event hiện tại), kèm chờ hoàn tất và dòng tiếp nối 505. Hỗ trợ các lệnh route 0–44:
+bước thẳng/chéo, tiến/lùi, ngẫu nhiên, tới/gần hoặc tránh người chơi, nhảy, chờ, quay,
+switch, tốc độ, animation, khóa hướng, xuyên qua, ẩn/hiện, đổi hình, opacity, blend và SE.
+Di chuyển nội suy theo thời gian, kiểm tra va chạm hai đầu bước đi; có repeat/skippable.
+Route vẫn chạy khi event chính đang chờ và đóng băng trong menu tạm dừng. Xóa event
+hủy route; lệnh định vị hủy nội suy để tránh kéo hình về tọa độ cũ. Script route (45)
+bị từ chối trước khi khởi chạy, không thực thi mã tùy ý hoặc bỏ qua lỗi. Chưa có di chuyển
+tự động theo moveType của trang event và bản đồ cuộn vòng.
+Chưa có script/plugin command, hiệu ứng màn hình,
 định dạng escape code của hội thoại hoặc chân dung trong khung hội thoại.
 
 ## Kiểm chứng
