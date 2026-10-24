@@ -439,6 +439,11 @@
                 } else if (command.code === 123 && eventAtFront) {
                     const key = 'self:' + eventAtFront.id + ':' + String(p[0] || 'A');
                     this.game.flags[key] = true;
+                } else if (command.code === 125) {
+                    const operation = Number(p[0] || 0);
+                    let amount = Number(p[2] || 0);
+                    if (p[1] === 1) amount = Number(this.game.flags['variable:' + amount] || 0);
+                    this.game.gold = Math.max(0, this.game.gold + (operation === 0 ? amount : -amount));
                 }
             }
             const transfer = this.game.data.transferAt(this.map, front.x, front.y);
