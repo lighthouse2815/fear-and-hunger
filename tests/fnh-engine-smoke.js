@@ -620,6 +620,34 @@ async function main() {
             delete FNH.game.flags['variable:999995'];
         })()`, false, false);
 
+        await evalPage(cdp, `(() => {
+            const c = (code, parameters = []) => ({code, parameters, indent: 0});
+            FNH.game.scene.map.events.push({id: 999994, x: 25, y: 67, pages: [{trigger: 0,
+                moveType: 3, moveFrequency: 5, priorityType: 0, through: true,
+                image: {characterName: FNH.game.player.characterName, characterIndex: 0, direction: 2},
+                moveRoute: {list: [c(14, [1, 0]), c(15, [30]), c(14, [-1, 0]), c(0)]},
+                list: [c(101, ['', 0]), c(401, ['NPC tự di chuyển và chờ đối thoại'])]
+            }]});
+            FNH.game.scene.refreshEvents();
+        })()`, false, false);
+        await waitFor(cdp, 'FNH.game.scene.eventStates.get(999994).x === 26 && !FNH.game.scene.eventStates.get(999994).motion',
+            5000, 'NPC tự chạy bước đầu');
+        await evalPage(cdp, 'FNH.game.scene.startEvent(FNH.game.scene.map.events.find(event => event && event.id === 999994))', false, false);
+        await sleep(650);
+        check('NPC tự di chuyển dừng khi đối thoại', await evalPage(cdp,
+            'FNH.game.scene.eventStates.get(999994).x === 26 && FNH.game.scene.lockedEventId === 999994 && FNH.game.scene.eventRunner.wait.type === "message"', false, false));
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.scene.eventStates.get(999994).x === 25 && FNH.game.scene.eventStates.get(999994).autonomousRoute.done',
+            5000, 'NPC tiếp tục lộ trình cũ sau đối thoại');
+        check('NPC tiếp tục đúng con trỏ lộ trình sau đối thoại', await evalPage(cdp,
+            'FNH.game.scene.eventStates.get(999994).realX === 25 && !FNH.game.scene.lockedEventId', false, false));
+        await evalPage(cdp, `(() => {
+            const scene = FNH.game.scene;
+            scene.map.events = scene.map.events.filter(event => !event || event.id !== 999994);
+            scene.eventStates.delete(999994);
+            scene.refreshEvents();
+        })()`, false, false);
+
         await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
         await sleep(500);
         check('nhân vật bước lên ô 27,66', await evalPage(

@@ -237,8 +237,15 @@ switch, tốc độ, animation, khóa hướng, xuyên qua, ẩn/hiện, đổi 
 Di chuyển nội suy theo thời gian, kiểm tra va chạm hai đầu bước đi; có repeat/skippable.
 Route vẫn chạy khi event chính đang chờ và đóng băng trong menu tạm dừng. Xóa event
 hủy route; lệnh định vị hủy nội suy để tránh kéo hình về tọa độ cũ. Script route (45)
-bị từ chối trước khi khởi chạy, không thực thi mã tùy ý hoặc bỏ qua lỗi. Chưa có di chuyển
-tự động theo moveType của trang event và bản đồ cuộn vòng.
+bị từ chối trước khi khởi chạy, không thực thi mã tùy ý hoặc bỏ qua lỗi.
+NPC hỗ trợ moveType 0–3: đứng yên, ngẫu nhiên, tới gần người chơi và lộ trình custom.
+Tần suất quyết định thời gian đứng chờ; NPC xa màn hình không bắt đầu bước mới.
+Lệnh cưỡng chế tạm ngắt và giữ con trỏ lộ trình tự động, sau đó tiếp tục từ vị trí cũ.
+Tương tác khóa NPC, quay mặt về người chơi và khôi phục hướng khi hội thoại kết thúc;
+lệnh định vị/cưỡng chế giữ hướng mới do kịch bản đặt. Event chạm (trigger 2) có thể
+khởi động khi NPC đi tới người chơi. Đổi trang/xóa event hủy lộ trình tự động cũ.
+Lỗi route tự động báo một lần trên trang hiện tại, trang mới vẫn được chạy. Chưa có
+bản đồ cuộn vòng; vị trí và con trỏ lộ trình NPC vẫn được tạo lại khi tải bản đồ.
 Hiệu ứng màn hình hỗ trợ Fadeout/Fadein (221/222), Tint (223), Flash (224) và Shake
 (225), bao gồm nội suy và tùy chọn chờ của event. Tông màu, độ sáng và hiệu ứng đang
 chạy theo game khi chuyển bản đồ/trận đấu, được lưu/đọc cùng save; save cũ dùng ánh

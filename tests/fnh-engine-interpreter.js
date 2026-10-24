@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const FNH = { Scene: class {}, TILE: 48 };
+const FNH = { Scene: class {}, TILE: 48, WIDTH: 816, HEIGHT: 624 };
 for (const name of ['interpreter', 'data', 'move_route', 'scene_map']) {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../fnh-engine/js/' + name + '.js'), 'utf8'), {
         window: { FNH }

@@ -56,6 +56,8 @@
             this.erasedEvents = new Set();
             this.eventStates = new Map();
             this.moveRoutes = new Map();
+            this.lockedEventId = 0;
+            this.lockedEventRunner = null;
             this.playerRouteState = null;
             this.failedAutorunPages = new Set();
             this.parallelEvents = new Map();
@@ -74,6 +76,8 @@
             this.erasedEvents.clear();
             this.eventStates.clear();
             this.moveRoutes.clear();
+            this.lockedEventId = 0;
+            this.lockedEventRunner = null;
             this.playerRouteState = null;
             this.failedAutorunPages.clear();
             this.parallelEvents.clear();
@@ -177,6 +181,10 @@
                 state.through = !!(page && page.through);
                 state.throughOverride = undefined;
                 state.moveSpeed = page && page.moveSpeed || 4;
+                state.moveFrequency = page && page.moveFrequency || 3;
+                state.stopSeconds = 0;
+                state.autonomousRoute = null;
+                state.autonomousError = null;
                 state.walkAnime = !page || page.walkAnime !== false;
                 state.stepAnime = !!(page && page.stepAnime);
                 state.directionFix = !!(page && page.directionFix);
@@ -237,8 +245,18 @@
                     ? (this.routeCanPass(character, x, y, vertical) && this.routeCanPass(character, x, y + dy, horizontal)) ||
                       (this.routeCanPass(character, x, y, horizontal) && this.routeCanPass(character, x + dx, y, vertical))
                     : this.routeCanPass(character, x, y, dx ? horizontal : vertical);
-                if (!passable) return false;
+                if (!passable) {
+                    const player = this.game.player;
+                    if (character.id !== -1 && character.priority === 1 && character.x + dx === player.mapX &&
+                        character.y + dy === player.mapY && !this.eventRunner) {
+                        const event = (this.map.events || []).find((entry) => entry && entry.id === character.id);
+                        const page = event && this.eventPage(event);
+                        if (page && page.trigger === 2) this.startEvent(event);
+                    }
+                    return false;
+                }
             }
+            character.stopSeconds = 0;
             const duration = jump ? Math.max(0.2, (20 + Math.round(Math.hypot(dx, dy))) / 60)
                 : 256 / (Math.pow(2, character.moveSpeed || 4) * 60);
             character.motion = { fromX: character.realX, fromY: character.realY, elapsed: 0, duration, jump };
@@ -247,8 +265,78 @@
             return true;
         }
 
+        updateCharacterMotion(character, dt) {
+            const motion = character.motion;
+            if (!motion) return;
+            motion.elapsed += dt;
+            const t = Math.min(1, motion.elapsed / motion.duration);
+            character.realX = motion.fromX + (character.x - motion.fromX) * t;
+            character.realY = motion.fromY + (character.y - motion.fromY) * t;
+            character.jumpHeight = motion.jump ? Math.sin(t * Math.PI) * FNH.TILE / 2 : 0;
+            if (t >= 1) character.motion = null;
+        }
+
+        updateAutonomousMovement(dt, forcedIds) {
+            for (const event of this.map.events || []) {
+                if (this.leaving) break;
+                if (!event || forcedIds.has(event.id)) continue;
+                const state = this.eventState(event);
+                const page = state.page;
+                if (!page) {
+                    state.motion = null;
+                    state.realX = state.x;
+                    state.realY = state.y;
+                    continue;
+                }
+                if (state.motion) {
+                    this.updateCharacterMotion(state, dt);
+                    continue;
+                }
+                if (this.lockedEventId === event.id) {
+                    state.stopSeconds = 0;
+                    continue;
+                }
+                state.stopSeconds = (state.stopSeconds || 0) + dt;
+                const width = FNH.WIDTH, height = FNH.HEIGHT;
+                const nearScreen = Math.abs(state.x * FNH.TILE + FNH.TILE / 2 - this.camera.x - width / 2) < width &&
+                    Math.abs(state.y * FNH.TILE + FNH.TILE / 2 - this.camera.y - height / 2) < height;
+                if (!page.moveType || !nearScreen || state.autonomousError ||
+                    state.stopSeconds <= (5 - state.moveFrequency) / 2) continue;
+                try {
+                    if (!state.autonomousRoute) {
+                        const definition = page.moveType === 3 ? page.moveRoute || {} : { list: [{ code: 0 }] };
+                        state.autonomousRoute = new FNH.MoveRoute(this, state, definition);
+                    }
+                    const route = state.autonomousRoute;
+                    if (page.moveType === 1 || page.moveType === 2) {
+                        const roll = Math.floor(Math.random() * 6);
+                        const player = this.game.player;
+                        const nearPlayer = Math.abs(state.x - player.mapX) + Math.abs(state.y - player.mapY) < 20;
+                        let code;
+                        if (page.moveType === 2) code = !nearPlayer || roll === 4 ? 9 : roll === 5 ? 12 : 10;
+                        else if (roll === 5) {
+                            state.stopSeconds = 0;
+                            continue;
+                        } else code = roll < 2 ? 9 : 12;
+                        route.route = { list: [{ code }], skippable: true };
+                        route.index = 0;
+                        route.done = false;
+                    }
+                    const imageName = state.imageName;
+                    route.update(dt);
+                    if (imageName !== state.imageName) this.refreshEvents();
+                } catch (error) {
+                    state.autonomousError = error;
+                    this.game.lastError = error;
+                    this.game.showToast(error.message, 6);
+                }
+            }
+        }
+
         updateMoveRoutes(dt) {
+            const forcedIds = new Set(this.moveRoutes.keys());
             for (const [id, route] of this.moveRoutes) {
+                if (this.leaving) break;
                 if (id !== -1) {
                     const event = (this.map.events || []).find((entry) => entry && entry.id === id);
                     if (!event || !this.eventPage(event)) {
@@ -262,15 +350,7 @@
                     this.eventState(event);
                 }
                 const character = route.character;
-                if (character.motion) {
-                    const motion = character.motion;
-                    motion.elapsed += dt;
-                    const t = Math.min(1, motion.elapsed / motion.duration);
-                    character.realX = motion.fromX + (character.x - motion.fromX) * t;
-                    character.realY = motion.fromY + (character.y - motion.fromY) * t;
-                    character.jumpHeight = motion.jump ? Math.sin(t * Math.PI) * FNH.TILE / 2 : 0;
-                    if (t >= 1) character.motion = null;
-                }
+                this.updateCharacterMotion(character, dt);
                 try {
                     const imageName = character.imageName;
                     route.update(dt);
@@ -293,6 +373,19 @@
                 }
                 if (route.done) this.moveRoutes.delete(id);
             }
+            this.updateAutonomousMovement(dt, forcedIds);
+        }
+
+        unlockEvent(runner) {
+            if (!this.lockedEventId || this.lockedEventRunner !== runner) return;
+            const state = this.eventStates.get(this.lockedEventId);
+            if (state) {
+                if (state.prelockDirection && !state.directionFix) state.direction = state.prelockDirection;
+                state.prelockDirection = 0;
+                state.stopSeconds = 0;
+            }
+            this.lockedEventId = 0;
+            this.lockedEventRunner = null;
         }
 
         startAutorun() {
@@ -693,6 +786,15 @@
         startEvent(event) {
             if (this.eventRunner || this.leaving) return false;
             const page = this.eventPage(event);
+            if (page && page.trigger >= 0 && page.trigger <= 2 && page.list && page.list.some((command) => command.code !== 0)) {
+                const state = this.eventState(event);
+                this.lockedEventId = event.id;
+                state.prelockDirection = state.direction;
+                const dx = this.game.player.mapX - state.x, dy = this.game.player.mapY - state.y;
+                if (!state.directionFix && (dx || dy)) {
+                    state.direction = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 6 : 4) : (dy > 0 ? 2 : 8);
+                }
+            }
             return this.startEventList(page, event.id);
         }
 
@@ -713,6 +815,7 @@
                 execute: (command) => this.executeEventCommand(command)
             });
             this.eventRunner = runner;
+            if (lockMovement && this.lockedEventId === eventId && eventId) this.lockedEventRunner = runner;
             this.updateEvent(0);
             return true;
         }
@@ -823,11 +926,13 @@
                     this.dialogRunner = null;
                 }
                 if (runner.done) {
+                    this.unlockEvent(runner);
                     this.eventRunner = null;
                     this.eventWait = null;
                     this.refreshEvents();
                 }
             } catch (error) {
+                this.unlockEvent(runner);
                 if (this.dialogRunner === runner) this.dialogRunner = null;
                 if (this.runningEventPage) {
                     this.failedAutorunPages.add(this.runningEventPage);
@@ -932,6 +1037,7 @@
                 if (!character) return;
                 if (character.id === -1) this.finishMove();
                 const route = new FNH.MoveRoute(this, character, p[1] || {});
+                character.prelockDirection = 0;
                 const previous = this.moveRoutes.get(character.id);
                 if (previous) previous.done = true;
                 this.moveRoutes.set(character.id, route);
@@ -948,6 +1054,7 @@
                     character.x = other.x;
                     character.y = other.y;
                     other.motion = null;
+                    other.prelockDirection = 0;
                     other.x = other.realX = x;
                     other.y = other.realY = y;
                 } else if (p[1] === 0 || p[1] === 1) {
@@ -955,6 +1062,7 @@
                     character.y = p[1] === 0 ? p[3] : Number(this.game.flags['variable:' + p[3]] || 0);
                 } else throw new Error('Chưa hỗ trợ kiểu định vị event ' + p[1]);
                 character.motion = null;
+                character.prelockDirection = 0;
                 character.realX = character.x;
                 character.realY = character.y;
                 if (p[4]) character.direction = p[4];
