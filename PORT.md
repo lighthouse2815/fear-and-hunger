@@ -101,6 +101,11 @@ Trang tự khởi động game và vào thẳng menu, không có nút BẮT Đ�
 sau lần bấm phím hoặc chuột đầu tiên trong game vì trình duyệt yêu cầu tương tác
 để phát âm thanh. Dùng `?fnh_skip_pretitle=0` nếu muốn xem phần pre-title gốc.
 
+Nút **⚙ Cài đặt** ở góc trên bên phải mở các thanh âm lượng tổng (gồm video),
+nhạc nền, âm thanh môi trường, nhạc sự kiện và hiệu ứng. Thay đổi có hiệu lực ngay,
+đồng bộ với menu Options gốc và được lưu cho lần mở sau. Game tạm dừng khi bảng
+cài đặt mở; bấm **Đóng** hoặc **Esc** để tiếp tục.
+
 Có thể mở trình duyệt tự động:
 
 ```sh

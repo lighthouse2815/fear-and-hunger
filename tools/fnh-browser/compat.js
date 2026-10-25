@@ -137,6 +137,83 @@
         }
     });
 
+    // Cài đặt âm thanh dùng ConfigManager gốc để đồng bộ với menu Options và save.
+    window.addEventListener('load', function () {
+        var viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) viewport.content = 'width=device-width, initial-scale=1';
+        var style = document.createElement('style');
+        style.textContent =
+            '#fnh-audio-button,#fnh-audio-settings{color:#e7ddca;background:#17120f;border:1px solid #8c7759;font:14px/1.5 system-ui,sans-serif}' +
+            '#fnh-audio-button{position:fixed;top:12px;right:12px;z-index:20;padding:9px 14px;cursor:pointer;border-radius:4px}' +
+            '#fnh-audio-settings{width:360px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);box-sizing:border-box;padding:24px;border-radius:6px;overflow:auto;box-shadow:0 20px 70px #000}' +
+            '#fnh-audio-settings::backdrop{background:rgba(0,0,0,.65)}' +
+            '#fnh-audio-settings header,#fnh-audio-settings label{display:flex;align-items:center;justify-content:space-between;gap:16px}' +
+            '#fnh-audio-settings h2{font:24px Georgia,serif;margin:0}' +
+            '#fnh-audio-settings p{color:#b8aa95;margin:12px 0 22px}' +
+            '#fnh-audio-settings .fnh-volume-row{margin-top:18px}' +
+            '#fnh-audio-settings input{width:100%;margin:12px 0 0;accent-color:#c8ac7c;cursor:pointer}' +
+            '#fnh-audio-settings output{color:#c8ac7c;font-variant-numeric:tabular-nums}' +
+            '#fnh-audio-settings button{background:transparent;color:#e7ddca;border:1px solid #8c7759;border-radius:3px;padding:6px 10px;cursor:pointer}' +
+            '#fnh-audio-button:focus-visible,#fnh-audio-settings :focus-visible{outline:2px solid #e7ddca;outline-offset:3px}';
+        document.head.appendChild(style);
+        var button = document.createElement('button');
+        button.id = 'fnh-audio-button';
+        button.type = 'button';
+        button.textContent = '⚙ Cài đặt';
+        button.setAttribute('aria-haspopup', 'dialog');
+        button.setAttribute('aria-controls', 'fnh-audio-settings');
+        var panel = document.createElement('dialog');
+        panel.id = 'fnh-audio-settings';
+        panel.setAttribute('aria-labelledby', 'fnh-audio-title');
+        panel.innerHTML = '<header><h2 id="fnh-audio-title">Âm thanh</h2>' +
+            '<button type="button" aria-label="Đóng cài đặt">Đóng ×</button></header>' +
+            '<p>Thay đổi có hiệu lực ngay và được tự động lưu.</p>';
+        var volumes = [
+            ['bgmVolume', 'Nhạc nền'], ['bgsVolume', 'Âm thanh môi trường'],
+            ['meVolume', 'Nhạc sự kiện'], ['seVolume', 'Hiệu ứng']
+        ];
+        if (typeof ConfigManager.masterVolume === 'number') volumes.unshift(['masterVolume', 'Âm lượng tổng']);
+        volumes.forEach(function (entry) {
+            var key = entry[0], row = document.createElement('div');
+            row.className = 'fnh-volume-row';
+            row.innerHTML = '<label for="fnh-' + key + '">' + entry[1] +
+                '<output for="fnh-' + key + '"></output></label>' +
+                '<input id="fnh-' + key + '" type="range" min="0" max="100" step="1">';
+            var slider = row.querySelector('input'), output = row.querySelector('output');
+            slider.addEventListener('input', function () {
+                ConfigManager[key] = Number(slider.value);
+                output.value = slider.value + '%';
+            });
+            slider.addEventListener('change', function () { ConfigManager.save(); });
+            panel.appendChild(row);
+        });
+        document.body.appendChild(button);
+        document.body.appendChild(panel);
+        function clearGameInput() { Input.clear(); TouchInput.clear(); }
+        button.addEventListener('click', function () {
+            volumes.forEach(function (entry) {
+                var slider = panel.querySelector('#fnh-' + entry[0]);
+                slider.value = ConfigManager[entry[0]];
+                slider.parentNode.querySelector('output').value = slider.value + '%';
+            });
+            clearGameInput();
+            panel.showModal();
+        });
+        panel.querySelector('button').addEventListener('click', function () { panel.close(); });
+        panel.addEventListener('close', function () { ConfigManager.save(); clearGameInput(); });
+        // Phím và thao tác chỉnh thanh âm lượng chỉ tác động tới cài đặt.
+        [button, panel].forEach(function (element) {
+            ['keydown', 'keyup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'wheel', 'contextmenu'].forEach(function (type) {
+                element.addEventListener(type, function (event) { event.stopPropagation(); });
+            });
+        });
+        // Giữ nguyên scene và tạm dừng gameplay trong lúc chỉnh âm thanh.
+        var updateScene = SceneManager.updateScene;
+        SceneManager.updateScene = function () {
+            if (!panel.open) updateScene.call(this);
+        };
+    });
+
     // Cho phép test/người dùng kiểm tra nhanh trạng thái âm thanh.
     window.FNHBrowser.audioState = function () {
         if (typeof WebAudio === 'undefined' || !WebAudio._context) return 'uninitialized';

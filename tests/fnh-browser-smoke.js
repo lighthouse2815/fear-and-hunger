@@ -256,6 +256,15 @@ async function sendAudioGesture(cdp, type) {
     }
 }
 
+async function clickElement(cdp, selector) {
+    const point = await evalPage(cdp, `(() => {
+        const rect = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`, false, false);
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button: 'left', clickCount: 1 });
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...point, button: 'left', clickCount: 1 });
+}
+
 async function main() {
     let gameRoot;
     try {
@@ -428,6 +437,35 @@ async function main() {
         check('lệnh Continue phản ánh đúng trạng thái save', await evalPage(
             cdp, 'DataManager.isAnySavefileExists() === false', false, false
         ));
+
+        await clickElement(cdp, '#fnh-audio-button');
+        await waitFor(cdp, 'document.querySelector("#fnh-audio-settings").open', 5000, 'mở cài đặt âm thanh');
+        check('nút cài đặt mở đủ năm thanh âm lượng', await evalPage(cdp,
+            'document.querySelectorAll("#fnh-audio-settings input[type=range]").length === 5', false, false));
+        const audioSettings = { masterVolume: 80, bgmVolume: 37, bgsVolume: 29, meVolume: 43, seVolume: 61 };
+        await evalPage(cdp, `(() => {
+            const settings = ${JSON.stringify(audioSettings)};
+            for (const key of Object.keys(settings)) {
+                const slider = document.querySelector('#fnh-' + key);
+                slider.value = settings[key];
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
+                slider.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        })()`, false, false);
+        check('thanh âm lượng cập nhật nhạc đang phát và âm lượng video', await evalPage(cdp,
+            'Math.abs(AudioManager._bgmBuffer.volume - 37 * AudioManager._currentBgm.volume / 10000) < 0.00001 && AudioManager.bgsVolume === 29 && AudioManager.meVolume === 43 && AudioManager.seVolume === 61 && Graphics._video.volume === 0.8', false, false));
+        await evalPage(cdp, 'document.querySelector("#fnh-bgmVolume").focus()', false, false);
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Home', code: 'Home', windowsVirtualKeyCode: 36 });
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Home', code: 'Home', windowsVirtualKeyCode: 36 });
+        check('kéo về 0 tắt nhạc và phím chỉnh không đổi menu game', await evalPage(cdp,
+            'ConfigManager.bgmVolume === 0 && AudioManager._bgmBuffer.volume === 0 && SceneManager._scene instanceof Scene_Title', false, false));
+        audioSettings.bgmVolume = 0;
+        await screenshot('audio-settings');
+        await clickElement(cdp, '#fnh-audio-settings button');
+        await waitFor(cdp, '!document.querySelector("#fnh-audio-settings").open', 5000, 'đóng cài đặt');
+        // Tiếp tục nghe nhạc để kiểm tra video và gameplay bên dưới.
+        await evalPage(cdp, 'ConfigManager.bgmVolume = 37; ConfigManager.save()', false, false);
+        audioSettings.bgmVolume = 37;
 
         // ---------------------------------------------------------
         // 3. Video intro: phát thật qua Graphics.playVideo.
@@ -613,6 +651,18 @@ async function main() {
         check('event cửa thật cho phép quay lại map trước', await evalPage(cdp,
             '$gamePlayer.x === 15 && $gamePlayer.y === 5', false, false));
 
+        await evalPage(cdp, '$gameTimer.start(600)', false, false);
+        await clickElement(cdp, '#fnh-audio-button');
+        await sleep(100);
+        const pausedFrames = await evalPage(cdp, '$gameTimer._frames', false, false);
+        await sleep(250);
+        check('game tạm dừng khi chỉnh âm thanh trên bản đồ', await evalPage(cdp,
+            '$gameTimer._frames === ' + pausedFrames + ' && document.querySelector("#fnh-bgmVolume").value === "37"', false, false));
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+        await waitFor(cdp, '!document.querySelector("#fnh-audio-settings").open && $gameTimer._frames < ' + pausedFrames, 5000, 'Escape đóng cài đặt và tiếp tục game');
+        await evalPage(cdp, '$gameTimer.stop()', false, false);
+
         await evalPage(cdp, `(() => {
             $gameMap._interpreter.setup([
                 { code: 101, indent: 0, parameters: ['', 0, 0, 1] },
@@ -670,6 +720,8 @@ async function main() {
         await cdp.send('Page.navigate', { url: url });
         await sleep(800);
         await waitFor(cdp, 'window.SceneManager && SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()', 60000, 'menu tự xuất hiện sau tải lại');
+        check('âm lượng được giữ sau khi tải lại trang', await evalPage(cdp,
+            'Object.entries(' + JSON.stringify(audioSettings) + ').every(([key, value]) => ConfigManager[key] === value)', false, false));
         check('tải lại vào thẳng menu mà không hiện nút bắt đầu', await evalPage(
             cdp, '!document.querySelector("#fnh-start-overlay, #fnh-start-button") && SceneManager._scene._commandWindow.active', false, false
         ));
