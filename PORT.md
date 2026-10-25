@@ -29,9 +29,10 @@ npm start                        # http://127.0.0.1:8140/
 ```
 
 Có thể dùng máy chủ tĩnh khác hoặc hosting HTTP(S). Mở trực tiếp `index.html` bằng
-`file://` không hỗ trợ XHR của runtime. Bấm BẮT ĐẦU để mở âm thanh/video theo yêu cầu
-của trình duyệt. Save nằm trong localStorage của địa chỉ đang chơi; giữ cùng origin
-để dùng tiếp save. Save cũ của engine tự viết ở cổng 8139 không chuyển sang được.
+`file://` không hỗ trợ XHR của runtime. Menu tự hiện khi mở web; âm thanh được mở ở
+lần bấm phím hoặc chuột đầu tiên trong game theo yêu cầu của trình duyệt. Save nằm
+trong localStorage của địa chỉ đang chơi; giữ cùng origin để dùng tiếp save. Save cũ
+của engine tự viết ở cổng 8139 không chuyển sang được.
 
 Chỉ định nguồn và nơi xuất:
 
@@ -96,9 +97,9 @@ Mở địa chỉ in ra trong terminal, mặc định là:
 http://127.0.0.1:8138/
 ```
 
-Bấm **BẮT ĐẦU** trên màn hình mở đầu. Thao tác này rất quan trọng: trình duyệt chỉ cho
-phép Web Audio và video có âm thanh phát sau một tương tác thật của người dùng. Sau khi
-bấm, engine mới thực sự khởi động.
+Trang tự khởi động game và vào thẳng menu, không có nút BẮT ĐẦU. Nhạc bắt đầu
+sau lần bấm phím hoặc chuột đầu tiên trong game vì trình duyệt yêu cầu tương tác
+để phát âm thanh. Dùng `?fnh_skip_pretitle=0` nếu muốn xem phần pre-title gốc.
 
 Có thể mở trình duyệt tự động:
 
@@ -221,11 +222,11 @@ thiết cho cả hai bài test trình duyệt.
 - `tools/fnh-browser/compat.js` chạy trước `main.js` và:
   - tắt các plugin Steamworks/Greenworks trước khi `PluginManager.setup()`;
   - ép `Utils.isNwjs()` trả `false` để engine dùng đường lưu localStorage;
-  - hoãn `SceneManager.run()` cho tới khi người dùng bấm **BẮT ĐẦU**;
+  - để runtime tự khởi động và bỏ qua pre-title để hiện menu ngay;
   - mở khoá Web Audio bằng gesture và thử lại video nếu autoplay bị chặn;
   - thay `SceneManager.terminate()` bằng màn hình kết thúc, vì trình duyệt thường chặn
     `window.close()`;
-  - hỗ trợ namespace save và bỏ qua màn hình pre-title khi test.
+  - hỗ trợ namespace save và tuỳ chọn bật lại pre-title gốc.
 - Không có asset nào bị sửa, sao chép hoặc ghi vào repo.
 
 ## Giới hạn đã biết
@@ -252,7 +253,7 @@ thiết cho cả hai bài test trình duyệt.
 | --- | --- |
 | `Không tìm thấy thư mục game RPG Maker MV hợp lệ` | Kiểm tra lại đường dẫn tới thư mục `www`, hoặc truyền `--game`. |
 | Cổng đã bận | Đổi `--port`, nhưng nhớ rằng save gắn với origin/cổng. |
-| Không có âm thanh | Bấm **BẮT ĐẦU** lại sau khi tải trang; kiểm tra tab không bị tắt tiếng. |
+| Không có âm thanh | Bấm phím hoặc chuột trong game; kiểm tra tab không bị tắt tiếng. |
 | Video không phát | Bấm vào vùng game một lần nữa để kích hoạt retry; kiểm tra codec WebM/VP9 của trình duyệt. |
 | Mất save | Không xoá site data; dùng đúng cổng và đúng trình duyệt. |
 | `npm run test:fnh` báo BỎ QUA | Chưa có game hoặc Chrome. Đặt game đúng chỗ và cài Chrome, hoặc đặt `CHROME_BIN`. |

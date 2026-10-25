@@ -3,7 +3,7 @@
    Smoke test cho bản Fear & Hunger chạy trên trình duyệt.
    - Khởi động server tạm trên cổng ngẫu nhiên.
    - Dùng Chrome/Chromium hệ thống qua CDP (không cần npm install).
-   - Kiểm tra overlay, tiêu đề, âm thanh, video, bản đồ, di chuyển,
+   - Kiểm tra tự vào menu, âm thanh, video, bản đồ, di chuyển,
      lưu/đọc, trận đấu và lưu qua localStorage sau khi tải lại.
    Nếu thiếu thư mục game hoặc Chrome, bài test bỏ qua và trả mã 0.
    ============================================================ */
@@ -238,26 +238,22 @@ async function stopChrome(chrome) {
     await Promise.race([exited, sleep(1500)]);
 }
 
-async function clickStart(cdp) {
-    await waitFor(
-        cdp,
-        'document.querySelector("#fnh-start-button") && document.querySelector("#fnh-start-button").getBoundingClientRect().width > 0',
-        20000,
-        'nút BẮT ĐẦU'
-    );
-    const point = await evalPage(cdp, [
-        '(() => {',
-        '  const button = document.querySelector("#fnh-start-button");',
-        '  const rect = button.getBoundingClientRect();',
-        '  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };',
-        '})()'
-    ].join('\n'), false, false);
-    await cdp.send('Input.dispatchMouseEvent', {
-        type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1
-    });
-    await cdp.send('Input.dispatchMouseEvent', {
-        type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1
-    });
+async function sendAudioGesture(cdp, type) {
+    if (type === 'keyboard') {
+        await cdp.send('Input.dispatchKeyEvent', {
+            type: 'keyDown', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40
+        });
+        await cdp.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40
+        });
+    } else {
+        await cdp.send('Input.dispatchMouseEvent', {
+            type: 'mousePressed', x: 20, y: 20, button: 'left', clickCount: 1
+        });
+        await cdp.send('Input.dispatchMouseEvent', {
+            type: 'mouseReleased', x: 20, y: 20, button: 'left', clickCount: 1
+        });
+    }
 }
 
 async function main() {
@@ -378,23 +374,21 @@ async function main() {
         await cdp.send('Log.enable');
 
         const namespace = 'smoke-' + process.pid + '-' + Date.now().toString(36);
-        const url = running.url + '?fnh_skip_pretitle=1&fnh_save_ns=' + encodeURIComponent(namespace);
+        const url = running.url + '?fnh_save_ns=' + encodeURIComponent(namespace);
         log('Mở: ' + url);
         await cdp.send('Page.navigate', { url: url });
         await sleep(800);
 
-        await waitFor(cdp, 'document.querySelector("#fnh-start-button")', 30000, 'overlay bắt đầu');
-        check('overlay bắt đầu xuất hiện trước khi game chạy', await evalPage(
-            cdp,
-            '!!(document.querySelector("#fnh-start-button") && getComputedStyle(document.querySelector("#fnh-start-overlay")).display !== "none")',
-            false,
-            false
-        ));
-        await screenshot('overlay');
-
-        await clickStart(cdp);
-        await waitFor(cdp, 'window.SceneManager && SceneManager._scene instanceof Scene_Title', 60000, 'Scene_Title');
+        // Menu phải xuất hiện trước bất kỳ tương tác nào; không dựa vào query bỏ intro.
+        await waitFor(cdp, 'window.SceneManager && SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()', 60000, 'menu tự xuất hiện');
         await waitFor(cdp, 'DataManager.isDatabaseLoaded()', 10000, 'nạp database');
+        await waitFor(cdp, 'SceneManager._scene._commandWindow.isOpen() && SceneManager._scene._commandWindow.active',
+            10000, 'menu mở xong trước tương tác');
+        check('menu tự xuất hiện khi chưa bấm phím hoặc chuột', await evalPage(
+            cdp, 'SceneManager._scene._commandWindow.isOpen() && SceneManager._scene._commandWindow.active', false, false
+        ));
+        await screenshot('title-before-input');
+        await sendAudioGesture(cdp, 'keyboard');
         await waitFor(cdp, 'FNHBrowser.audioState() === "running"', 15000, 'Web Audio chạy');
         await waitFor(
             cdp,
@@ -407,11 +401,8 @@ async function main() {
         check('đã vào Scene_Title', await evalPage(
             cdp, 'SceneManager._scene instanceof Scene_Title', false, false
         ));
-        check('overlay đã ẩn sau khi bắt đầu', await evalPage(
-            cdp,
-            'getComputedStyle(document.querySelector("#fnh-start-overlay")).display === "none"',
-            false,
-            false
+        check('không còn màn hình và nút bắt đầu', await evalPage(
+            cdp, '!document.querySelector("#fnh-start-overlay, #fnh-start-button")', false, false
         ));
         check('Steamworks bị tắt', await evalPage(
             cdp,
@@ -425,7 +416,7 @@ async function main() {
             false,
             false
         ));
-        check('âm thanh đã được mở khoá', await evalPage(
+        check('âm thanh mở khoá bằng phím trên menu', await evalPage(
             cdp, 'FNHBrowser.audioState() === "running"', false, false
         ));
         check('nhạc tiêu đề đang phát', await evalPage(
@@ -658,9 +649,11 @@ async function main() {
         // ---------------------------------------------------------
         await cdp.send('Page.navigate', { url: url });
         await sleep(800);
-        await waitFor(cdp, 'document.querySelector("#fnh-start-button")', 30000, 'overlay sau tải lại');
-        await clickStart(cdp);
-        await waitFor(cdp, 'window.SceneManager && SceneManager._scene instanceof Scene_Title', 60000, 'Scene_Title sau tải lại');
+        await waitFor(cdp, 'window.SceneManager && SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()', 60000, 'menu tự xuất hiện sau tải lại');
+        check('tải lại vào thẳng menu mà không hiện nút bắt đầu', await evalPage(
+            cdp, '!document.querySelector("#fnh-start-overlay, #fnh-start-button") && SceneManager._scene._commandWindow.active', false, false
+        ));
+        await sendAudioGesture(cdp, 'pointer');
         await waitFor(cdp, 'FNHBrowser.audioState() === "running"', 15000, 'Web Audio sau tải lại');
         await waitFor(
             cdp,
