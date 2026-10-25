@@ -31,21 +31,19 @@
             progressBar.style.width = Math.round(ratio * 100) + '%';
         }
 
-        startButton.addEventListener('click', async function () {
+        const unlock = () => game.audio.unlock().catch((error) => {
+            console.warn('[FNH] Không mở khoá được Web Audio:', error.message);
+        });
+        document.addEventListener('pointerdown', unlock, true);
+        document.addEventListener('keydown', unlock, true);
+
+        async function start() {
             if (starting) return;
             starting = true;
-            startButton.disabled = true;
+            startButton.hidden = true;
             overlay.classList.add('is-loading');
             if (progress) progress.hidden = false;
-            setStatus('Đang mở khoá âm thanh…');
-
             try {
-                try {
-                    await game.audio.unlock();
-                } catch (error) {
-                    console.warn('[FNH] Không mở khoá được Web Audio:', error.message);
-                }
-
                 try {
                     await document.fonts.load('16px "FNH Serif"');
                 } catch (error) {}
@@ -53,10 +51,10 @@
                 setStatus('Đang đọc dữ liệu gốc…');
                 await game.boot(function (done, total, rel) {
                     setProgress(done, total);
-                    setStatus('Đang nạp tài nguyên ' + done + '/' + total + ' · ' + rel);
+                    setStatus('Loading…');
                 });
 
-                setStatus('Đang dựng ngục địa…');
+                setStatus('Loading…');
                 setProgress(1, 1);
                 overlay.classList.add('is-hidden');
                 game.start();
@@ -66,14 +64,16 @@
             } catch (error) {
                 console.error('[FNH] Không khởi động được engine:', error);
                 starting = false;
-                startButton.disabled = false;
+                startButton.hidden = false;
                 startButton.textContent = 'THỬ LẠI';
                 overlay.classList.remove('is-hidden');
                 overlay.classList.remove('is-loading');
                 if (progress) progress.hidden = true;
                 setStatus('Không khởi động được: ' + error.message, true);
             }
-        });
+        }
+        startButton.addEventListener('click', start);
+        start();
 
         overlay.addEventListener('pointerdown', function () {
             if (overlay.classList.contains('is-hidden')) return;

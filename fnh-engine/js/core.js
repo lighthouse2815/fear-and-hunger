@@ -67,7 +67,15 @@
             ctx.shadowBlur = opts.shadowBlur || 5;
             ctx.shadowOffsetY = opts.shadowOffsetY || 2;
         }
-        ctx.fillText(String(value), x, y);
+        const textArgs = [String(value), x, y];
+        if (opts.maxWidth !== undefined) textArgs.push(opts.maxWidth);
+        if (opts.outline) {
+            ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+            ctx.lineWidth = opts.outline;
+            ctx.lineJoin = 'round';
+            ctx.strokeText(...textArgs);
+        }
+        ctx.fillText(...textArgs);
         ctx.restore();
     };
 
@@ -198,8 +206,25 @@
     };
 
     // Dựng khung và con trỏ từ windowskin gốc, dùng chung cho menu/hội thoại.
+    const windowBacks = new WeakMap();
     FNH.drawWindow = function (ctx, skin, rect, cursor, time) {
         if (!skin) return;
+        const tone = FNH.windowTone || [0, 0, 0];
+        let back = windowBacks.get(skin);
+        if (!back || back.tone !== tone.join(',')) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 96;
+            canvas.height = 192;
+            const context = canvas.getContext('2d');
+            context.drawImage(skin, 0, 0, 96, 192, 0, 0, 96, 192);
+            const pixels = context.getImageData(0, 0, 96, 192);
+            for (let i = 0; i < pixels.data.length; i += 4) {
+                for (let channel = 0; channel < 3; channel += 1) pixels.data[i + channel] += tone[channel];
+            }
+            context.putImageData(pixels, 0, 0);
+            back = { canvas, tone: tone.join(',') };
+            windowBacks.set(skin, back);
+        }
         const slice = (sx, sy, size, margin, target, center) => {
             const source = [0, margin, size - margin];
             const sourceSize = [margin, size - margin * 2, margin];
@@ -215,7 +240,15 @@
         };
         ctx.save();
         ctx.globalAlpha = 192 / 255;
-        ctx.drawImage(skin, 0, 0, 96, 96, rect.x + 4, rect.y + 4, rect.width - 8, rect.height - 8);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(rect.x + 4, rect.y + 4, rect.width - 8, rect.height - 8);
+        ctx.clip();
+        ctx.drawImage(back.canvas, 0, 0, 96, 96, rect.x + 4, rect.y + 4, rect.width - 8, rect.height - 8);
+        for (let y = 4; y < rect.height - 4; y += 96) for (let x = 4; x < rect.width - 4; x += 96) {
+            ctx.drawImage(back.canvas, 0, 96, 96, 96, rect.x + x, rect.y + y, 96, 96);
+        }
+        ctx.restore();
         ctx.globalAlpha = 1;
         slice(96, 0, 96, 24, rect, false);
         if (cursor) {
@@ -331,8 +364,11 @@
             const rect = this.canvas.getBoundingClientRect();
             const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
-            this.mouse.x = (event.clientX - rect.left) * scaleX;
-            this.mouse.y = (event.clientY - rect.top) * scaleY;
+            const x = (event.clientX - rect.left) * scaleX;
+            const y = (event.clientY - rect.top) * scaleY;
+            this.mouse.moved = this.mouse.moved || x !== this.mouse.x || y !== this.mouse.y;
+            this.mouse.x = x;
+            this.mouse.y = y;
         }
 
         isDown() {
@@ -356,6 +392,7 @@
         clearFrame() {
             this.pressed.clear();
             this.clicks.length = 0;
+            this.mouse.moved = false;
         }
     };
 

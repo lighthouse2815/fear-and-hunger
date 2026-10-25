@@ -239,13 +239,13 @@ async function stopChrome(chrome) {
 async function clickStart(cdp) {
     await waitFor(
         cdp,
-        'document.querySelector("#fnh-engine-start") && document.querySelector("#fnh-engine-start").getBoundingClientRect().width > 0',
+        'window.FNH && FNH.game && FNH.game.booted',
         20000,
-        'nút BẮT ĐẦU'
+        'game tự khởi động'
     );
     const point = await evalPage(cdp, [
         '(() => {',
-        '  const button = document.querySelector("#fnh-engine-start");',
+        '  const button = document.querySelector("#fnh-canvas");',
         '  const rect = button.getBoundingClientRect();',
         '  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };',
         '})()'
@@ -483,11 +483,22 @@ async function main() {
         await sleep(250);
         await tapKey(cdp, 'Enter', 'Enter', 13);
 
-        await waitFor(cdp, 'FNH.game.mapId === FNH.game.data.system.startMapId && document.querySelector(".fnh-name-dialog[open]")',
+        await waitFor(cdp, 'FNH.game.mapId === FNH.game.data.system.startMapId && FNH.game.scene.nameInput',
             30000, 'đặt tên từ sự kiện mở đầu gốc');
         check('ván mới chạy bản đồ mở đầu gốc thay vì bỏ qua cốt truyện', await evalPage(cdp,
             'FNH.game.mapId === 10 && FNH.game.flags["switch:246"] && FNH.game.scene.usesOriginalPresentation()', false, false));
-        await evalPage(cdp, 'document.querySelector(".fnh-name-dialog form").requestSubmit()', false, false);
+        await screenshot('name-original');
+        check('đặt tên dùng bàn phím và cửa sổ trong game', await evalPage(cdp,
+            '!document.querySelector(".fnh-name-dialog") && FNH.game.scene.paused && FNH.game.scene.nameInput.value === "Cahara"', false, false));
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        check('chọn chữ chưa xác nhận không ghi tên vào actor', await evalPage(cdp,
+            'FNH.game.scene.nameInput.value === "CaharaA" && FNH.game.player.name === "Cahara"', false, false));
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        await tapKey(cdp, 'PageDown', 'PageDown', 34);
+        check('xóa chữ và đổi trang ký tự hoạt động', await evalPage(cdp,
+            'FNH.game.scene.nameInput.value === "Cahara" && FNH.game.scene.nameInput.page === 1', false, false));
+        await tapKey(cdp, 'Shift', 'ShiftLeft', 16);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
         await waitFor(cdp, 'FNH.game.scene.movieElement', 30000, 'phim giới thiệu sau cảnh báo nội dung');
         check('mở đầu phát phim từ bản cài gốc', await evalPage(cdp,
             'FNH.game.scene.movieElement.querySelector("source").src.endsWith("/game/movies/intro.webm") && FNH.game.player.name === "Cahara"', false, false));
@@ -527,8 +538,8 @@ async function main() {
 
         for (const [actorId, mode, name] of [[3, 1, "D'arce"], [4, 2, 'Enki'], [5, 0, 'Ragnvaldr']]) {
             await evalPage(cdp, 'FNH.game.newGame(' + actorId + ', {opening:true}); true', false, false);
-            await waitFor(cdp, 'document.querySelector(".fnh-name-dialog[open]")', 30000, 'đặt tên ' + name);
-            await evalPage(cdp, 'document.querySelector(".fnh-name-dialog form").requestSubmit()', false, false);
+            await waitFor(cdp, 'FNH.game.scene.nameInput', 30000, 'đặt tên ' + name);
+            await evalPage(cdp, 'FNH.game.scene.nameInput.index=89;FNH.game.scene.nameInput.activate()', false, false);
             await waitFor(cdp, '!FNH.game.flags["switch:296"] && FNH.game.flags["switch:411"]', 15000, 'cửa sổ bỏ qua cảnh báo');
             await tapKey(cdp, 'Enter', 'Enter', 13);
             await waitFor(cdp, 'FNH.game.scene.dialogState().eventWait?.type === "choice" && FNH.game.scene.dialogState().eventWait.choices.length === 4',

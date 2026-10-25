@@ -129,7 +129,9 @@
             const token = { done: false, error: null };
             const video = document.createElement('video');
             video.className = 'fnh-movie';
-            video.controls = true;
+            const original = this.usesOriginalPresentation();
+            video.controls = !original;
+            if (original) video.classList.add('is-original');
             video.playsInline = true;
             video.preload = 'auto';
             video.muted = this.game.audio.muted;
@@ -165,14 +167,20 @@
             video.addEventListener('ended', () => finish());
             video.addEventListener('error', () => finish(new Error('Không phát được video ' + name +
                 (video.error ? ': ' + (video.error.message || video.error.code) : ''))));
-            document.body.appendChild(video);
+            (original ? document.getElementById('fnh-shell') : document.body).appendChild(video);
             video.play().catch((error) => {
+                if (error.name === 'NotAllowedError') video.controls = true;
                 if (!token.done && !['NotAllowedError', 'AbortError'].includes(error.name)) finish(error);
             });
             return { type: 'video', token };
         }
 
         openNameInput(actor, maxLength) {
+            if (this.usesOriginalPresentation()) {
+                this.nameInput = new FNH.NameInput(this, actor, maxLength);
+                this.closeNameInput = () => this.nameInput && this.nameInput.close();
+                return { type: 'name', token: this.nameInput.token };
+            }
             const limit = Math.max(1, Math.floor(Number(maxLength) || 1));
             const token = { done: false };
             const dialog = document.createElement('dialog');
@@ -797,7 +805,7 @@
                     break;
                 }
             }
-            if (this.pauseHover >= 0 && this.pauseEntries()[this.pauseHover].enabled &&
+            if (input.mouse.moved && this.pauseHover >= 0 && this.pauseEntries()[this.pauseHover].enabled &&
                 this.pauseHover !== this.pauseIndex) {
                 this.pauseIndex = this.pauseHover;
                 this.game.audio.playSe('fnh_cursor', { volume: 0.35 });
@@ -821,6 +829,7 @@
             if (this.bump > 0) this.bump = Math.max(0, this.bump - dt * 4);
             if (!this.ready || this.leaving) return;
             if (this.paused) {
+                if (this.nameInput) { this.nameInput.update(dt); return; }
                 if (this.nameInputDialog) return;
                 this.updatePause(dt);
                 return;
@@ -1367,7 +1376,7 @@
             const message = wait.type === 'message' ? wait : wait.message;
             const drawMessage = (value, y, height = 180) => {
                 FNH.drawWindow(ctx, skin, { x: 0, y, width: FNH.WIDTH, height });
-                const options = { size: 28, color: '#fff', shadow: true };
+                const options = { size: 28, color: '#fff', outline: 4 };
                 if (this.game.flags['message:wordWrap'] || /<WordWrap>/i.test(value)) {
                     FNH.wrapText(ctx, this.openingText(value).replace(/\n/g, ' '), 24, y + 41,
                         FNH.WIDTH - 48, 36, options);
@@ -1398,7 +1407,7 @@
             const cursor = { x: x + 18, y: y + 18 + dialog.eventChoice * 36, width: width - 36, height: 36 };
             FNH.drawWindow(ctx, skin, { x, y, width, height }, cursor, this.time);
             wait.choices.forEach((choice, index) => FNH.text(ctx, this.openingText(choice), x + 24, y + 41 + index * 36,
-                { size: 28, color: wait.disabled && wait.disabled[index] ? '#888' : '#fff', shadow: true }));
+                { size: 28, color: wait.disabled && wait.disabled[index] ? '#888' : '#fff', outline: 4 }));
         }
 
         executeEventCommand(command) {
@@ -2296,6 +2305,7 @@
         }
 
         draw(ctx) {
+            if (this.nameInput) { this.nameInput.draw(ctx); return; }
             if (!this.ready) {
                 FNH.drawBackdrop(ctx, '#0a0a0b', '#020202');
                 FNH.text(ctx, 'ĐANG MỞ CÁNH CỬA…', FNH.WIDTH / 2, FNH.HEIGHT / 2, {

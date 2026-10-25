@@ -90,6 +90,7 @@
         async boot(onProgress) {
             this.assets.system = await this.assets.init();
             await this.data.loadCore();
+            FNH.windowTone = this.data.system.windowTone;
             let done = 0;
             const total = PRELOAD.length;
             await Promise.all(PRELOAD.map(async (rel) => {
@@ -212,6 +213,12 @@
         }
 
         newGame(actorId, options) {
+            if (options && options.opening) {
+                this.openingBackground = document.createElement('canvas');
+                this.openingBackground.width = FNH.WIDTH;
+                this.openingBackground.height = FNH.HEIGHT;
+                this.openingBackground.getContext('2d').drawImage(this.canvas, 0, 0);
+            }
             if (this.scene) this.scene.leaving = true;
             this.lastError = null;
             const opening = !!(options && options.opening);

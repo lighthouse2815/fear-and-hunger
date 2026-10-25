@@ -90,8 +90,9 @@ npm run fnh:engine        # http://127.0.0.1:8139/
 npm run fnh:engine:open   # tự mở trình duyệt
 ```
 
-Bấm **BẮT ĐẦU** trên overlay. Thao tác này vừa mở khoá Web Audio vừa bắt đầu nạp asset;
-trình duyệt chỉ cho phép âm thanh phát sau một tương tác thật của người dùng.
+Game tự tải rồi hiện splash và tiêu đề ở kích thước 816×624, tự thu nhỏ nếu màn hình
+không đủ chỗ. Âm thanh được mở khóa khi người chơi nhấn phím hoặc chuột lần đầu;
+không có trang chào riêng trước splash.
 
 Chạy trực tiếp máy chủ:
 
@@ -484,7 +485,8 @@ này được xử lý như lỗi video, không giả vờ phim đã kết thúc
 Ván mới từ menu giữ bố cục khung thoại/choice gốc, hiển thị câu hỏi cùng lựa chọn,
 đọc `ChoiceHelp`/`ChoiceMessage` và ẩn HUD thử nghiệm. `EnableWordWrap`/`DisableWordWrap`
 điều khiển cách xuống dòng. Script khóa TouchInput của phần chọn nhân vật khóa click
-trên canvas; ô nhập tên vẫn dùng bàn phím/IME của trình duyệt. Khi về tiêu đề, chuột
+trên canvas. Đặt tên dùng chân dung và bảng 9×10 ô theo bản gốc: mũi tên để chọn chữ,
+Z/Enter để nhập, X/Esc để xóa, PageUp/PageDown đổi bảng, Shift chọn OK rồi Enter xác nhận. Khi về tiêu đề, chuột
 được bật lại. Trạng thái trình bày được giữ trong save.
 
 Các lệnh `EnableDashing`/`DisableDashing` điều khiển chạy bằng Shift. `Fire radius`,

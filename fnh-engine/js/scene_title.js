@@ -86,7 +86,7 @@
                     break;
                 }
             }
-            if (this.hoverIndex >= 0 && this.entries[this.hoverIndex].enabled && this.hoverIndex !== this.index) {
+            if (input.mouse.moved && this.hoverIndex >= 0 && this.entries[this.hoverIndex].enabled && this.hoverIndex !== this.index) {
                 this.index = this.hoverIndex;
                 this.game.audio.playSe('fnh_cursor', { volume: 0.4 });
             }
@@ -111,9 +111,9 @@
                 this.menuRect(), rects[this.index], this.time);
             this.entries.forEach((entry, index) => {
                 const rect = rects[index];
-                FNH.text(ctx, entry.label, rect.x + rect.width / 2, rect.y + 18, {
+                FNH.text(ctx, entry.label, rect.x + 6, rect.y + 28, {
                     size: 28, color: entry.enabled ? '#fff' : 'rgba(255,255,255,0.5)',
-                    align: 'center', baseline: 'middle', shadow: true
+                    outline: 4
                 });
             });
         }

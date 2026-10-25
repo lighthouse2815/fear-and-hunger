@@ -19,7 +19,7 @@ body {
 }
 #fnh-shell {
     position: relative;
-    width: min(100vw, calc(100svh * 816 / 624));
+    width: min(816px, 100vw, calc(100svh * 816 / 624));
     aspect-ratio: 816 / 624;
     overflow: hidden;
     background: #000;
@@ -108,3 +108,5 @@ body {
     object-fit: contain;
     background: #000;
 }
+
+.fnh-movie.is-original { position: absolute; }
