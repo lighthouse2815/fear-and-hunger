@@ -12,6 +12,10 @@
     var skipPretitle = params.get('fnh_skip_pretitle') !== '0';
     var saveNamespace = params.get('fnh_save_ns') || '';
 
+    // Giữ hội thoại ở đáy vùng game, kể cả event gốc yêu cầu đặt giữa.
+    // Dùng vị trí của runtime để cửa sổ lựa chọn và tên nhân vật đi cùng hộp thoại.
+    Game_Message.prototype.positionType = function () { return 2; };
+
     // ---------------------------------------------------------
     // 1. Tắt plugin chỉ dành cho NW.js/Steam trước khi main.js nạp chúng.
     //    Các lệnh plugin "steamworks ..." trong dữ liệu sẽ tự động thành no-op.

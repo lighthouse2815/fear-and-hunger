@@ -613,6 +613,26 @@ async function main() {
         check('event cửa thật cho phép quay lại map trước', await evalPage(cdp,
             '$gamePlayer.x === 15 && $gamePlayer.y === 5', false, false));
 
+        await evalPage(cdp, `(() => {
+            $gameMap._interpreter.setup([
+                { code: 101, indent: 0, parameters: ['', 0, 0, 1] },
+                { code: 401, indent: 0, parameters: ['Kiểm tra hội thoại ở đáy màn hình.'] },
+                { code: 102, indent: 0, parameters: [['Tiếp tục'], -1, 0, 2, 0] },
+                { code: 402, indent: 0, parameters: [0, 'Tiếp tục'] },
+                { code: 0, indent: 1, parameters: [] },
+                { code: 404, indent: 0, parameters: [] },
+                { code: 0, indent: 0, parameters: [] }
+            ]);
+        })()`, false, false);
+        await waitFor(cdp, 'SceneManager._scene._messageWindow._choiceWindow.active', 15000, 'hội thoại và lựa chọn');
+        check('event yêu cầu thoại giữa vẫn hiện sát đáy vùng game', await evalPage(cdp,
+            'Math.abs(SceneManager._scene._messageWindow.y + SceneManager._scene._messageWindow.height - Graphics.boxHeight) < 1', false, false));
+        check('lựa chọn nằm phía trên hộp thoại và trong vùng game', await evalPage(cdp,
+            'SceneManager._scene._messageWindow._choiceWindow.y >= 0 && SceneManager._scene._messageWindow._choiceWindow.y + SceneManager._scene._messageWindow._choiceWindow.height <= SceneManager._scene._messageWindow.y', false, false));
+        await screenshot('dialogue-bottom');
+        await evalPage(cdp, 'SceneManager._scene._messageWindow._choiceWindow.processOk()', false, false);
+        await waitFor(cdp, '!$gameMessage.isBusy() && !$gameMap.isEventRunning()', 10000, 'đóng hội thoại');
+
         const battleState = await evalPage(cdp, [
             '(async () => {',
             '  const troop = $dataTroops.find(function (item) { return item && item.members && item.members.length > 0; });',
