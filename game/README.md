@@ -19,7 +19,7 @@ Có thể copy nguyên thư mục dự án sang vị trí khác rồi chạy cá
 Khi chỉnh source, tải lại trình duyệt để xem kết quả. Build không ghi đè source.
 Save nằm trong trình duyệt, nên giữ cùng địa chỉ/cổng để tiếp tục save.
 
-Ở màn hình đặt tên, nhập `lighthous` để bật cheat cho nhân vật đó: luôn đầy HP,
+Ở màn hình đặt tên, nhập `lighthouse` để bật cheat cho nhân vật đó: luôn đầy HP,
 miễn trạng thái chết và gây ít nhất 9.999 sát thương mỗi đòn gây mất/hút HP trúng
 quái. Tên không phân biệt hoa thường; đổi sang tên khác sẽ tắt cheat. Cheat đi
 theo tên trong save, không tăng sát thương hồi máu hay đòn đánh đồng đội và không

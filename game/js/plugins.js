@@ -59,5 +59,5 @@ var $plugins =
 {"name":"physical_attack_animation","status":true,"description":"Characters draw weapons when using physical skills.\n(or any skills you configure)","parameters":{"PhysicalAttacks":"false","SkillTypes":"4"}},
 {"name":"WeaponSkill","status":true,"description":"Change skill id of attack for each weapon.","parameters":{}},
 {"name":"Olivia_MetaControls","status":true,"description":"<MetaControls> for RPG Maker MV version 1.6.1.","parameters":{"":"","ATTENTION!!!":"READ THE HELP FILE","Common Event on New Game":"0","Common Event on Load":"0","Variables on Save":"","Map ID":"0","Map X":"0","Map Y":"0"}},
-{"name":"FNH_NameCheat","status":true,"description":"Bất tử và sát thương lớn khi đặt tên nhân vật là lighthous.","parameters":{}}
+{"name":"FNH_NameCheat","status":true,"description":"Bất tử và sát thương lớn khi đặt tên nhân vật là lighthouse.","parameters":{}}
 ];

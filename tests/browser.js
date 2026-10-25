@@ -527,7 +527,7 @@ async function main() {
             '  DataManager.setupNewGame();',
             '  $gameVariables.setValue(123, 4242);',
             '  $gameParty.gainGold(777);',
-            '  $gameParty.leader().setName("lighthous");',
+            '  $gameParty.leader().setName("lighthouse");',
             '  const goldBefore = $gameParty.gold();',
             '  const saved = DataManager.saveGame(' + SAVE_SLOT + ');',
             '  const exists = StorageManager.exists(' + SAVE_SLOT + ');',
@@ -544,7 +544,7 @@ async function main() {
             '    exists: exists,',
             '    info: !!info,',
             '    loaded: loaded,',
-            '    cheat: $gameParty.leader().name() === "lighthous" && $gameParty.leader().hp === $gameParty.leader().mhp,',
+            '    cheat: $gameParty.leader().name() === "lighthouse" && $gameParty.leader().hp === $gameParty.leader().mhp,',
             '    variable: $gameVariables.value(123),',
             '    gold: $gameParty.gold(),',
             '    goldBefore: goldBefore,',
@@ -687,8 +687,8 @@ async function main() {
         check('nhập được đầy đủ tên cheat qua cửa sổ đặt tên gốc', await evalPage(cdp, `(() => {
             const edit = SceneManager._scene._editWindow;
             while (edit.back()) {}
-            for (const character of 'lighthous') edit.add(character);
-            const complete = edit.name() === 'lighthous';
+            for (const character of 'lighthouse') edit.add(character);
+            const complete = edit.name() === 'lighthouse';
             SceneManager._scene.onInputOk();
             return complete;
         })()`, false, false));
@@ -705,12 +705,12 @@ async function main() {
             const directDeath = actor.hp === actor.mhp && actor.isAlive();
             normal.gainHp(-999999);
             const normalDies = normal.isDead();
-            normal.setName(' LIGHTHOUS ');
+            normal.setName(' LIGHTHOUSE ');
             const revived = normal.isAlive() && normal.hp === normal.mhp;
             const previousMaxHp = normal.mhp;
             normal.addParam(0, 50);
             const maxHp = normal.mhp > previousMaxHp && normal.hp === normal.mhp;
-            normal.setName('lighthouse');
+            normal.setName('lighthous');
             normal.setHp(0);
             const disabled = normal.isDead();
             const enemy = new Game_Enemy(1, 0, 0), comparisons = [];
@@ -726,13 +726,13 @@ async function main() {
                 actor.setName('D\u2019arce');
                 const base = action.makeDamageValue(enemy, false);
                 const allyBase = action.makeDamageValue(normal, false);
-                actor.setName('lighthous');
+                actor.setName('lighthouse');
                 const boosted = action.makeDamageValue(enemy, false);
                 comparisons.push({ type, base, boosted, ally: action.makeDamageValue(normal, false) === allyBase });
             }
             return { damage, directHp, deathState, directDeath, normalDies, revived, maxHp, disabled, comparisons };
         })()`, false, false);
-        check('lighthous bất tử trước sát thương, đặt HP bằng 0, trạng thái chết và die()',
+        check('lighthouse bất tử trước sát thương, đặt HP bằng 0, trạng thái chết và die()',
             cheatState.damage && cheatState.directHp && cheatState.deathState && cheatState.directDeath, JSON.stringify(cheatState));
         check('tên khác vẫn chết bình thường; đổi tên bật/tắt cheat ngay',
             cheatState.normalDies && cheatState.revived && cheatState.disabled, JSON.stringify(cheatState));
@@ -776,7 +776,7 @@ async function main() {
         // đi qua luồng ra đòn, event chết của Guard, thắng trận và trở về map thật.
         await evalPage(cdp, `(() => {
             const actor = BattleManager.actor(), action = BattleManager.inputtingAction();
-            if (actor.name() !== 'lighthous') throw new Error('Cheat chưa bật cho nhân vật chiến đấu');
+            if (actor.name() !== 'lighthouse') throw new Error('Cheat chưa bật cho nhân vật chiến đấu');
             actor.addParam(6, 1000);
             action.itemHit = () => 1;
             action.itemEva = () => 0;
@@ -834,7 +834,7 @@ async function main() {
             '  return {',
             '    exists: exists,',
             '    loaded: loaded,',
-            '    cheat: $gameParty.leader().name() === "lighthous" && $gameParty.leader().isAlive(),',
+            '    cheat: $gameParty.leader().name() === "lighthouse" && $gameParty.leader().isAlive(),',
             '    variable: $gameVariables.value(123),',
             '    gold: $gameParty.gold(),',
             '    audio: FNHBrowser.audioState(),',

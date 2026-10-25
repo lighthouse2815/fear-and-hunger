@@ -1,7 +1,7 @@
 /*:
- * @plugindesc Bất tử và sát thương lớn cho nhân vật mang tên lighthous.
+ * @plugindesc Bất tử và sát thương lớn cho nhân vật mang tên lighthouse.
  * @help
- * Đặt tên nhân vật là lighthous (không phân biệt hoa thường).
+ * Đặt tên nhân vật là lighthouse (không phân biệt hoa thường).
  * Nhân vật luôn đầy HP, miễn trạng thái chết và gây ít nhất 9999 sát thương
  * bằng đòn gây mất/hút HP trúng quái. Đổi tên khác để tắt.
  * Đặt plugin này cuối danh sách để áp dụng sau các plugin chiến đấu.
@@ -11,7 +11,7 @@
     'use strict';
 
     function hasCheat(actor) {
-        return actor.isActor() && actor.name().trim().toLowerCase() === 'lighthous';
+        return actor.isActor() && actor.name().trim().toLowerCase() === 'lighthouse';
     }
 
     var setName = Game_Actor.prototype.setName;
