@@ -200,7 +200,15 @@
             panel.showModal();
         });
         panel.querySelector('button').addEventListener('click', function () { panel.close(); });
-        panel.addEventListener('close', function () { ConfigManager.save(); clearGameInput(); });
+        panel.addEventListener('close', function () {
+            ConfigManager.save();
+            clearGameInput();
+            // Dialog mặc định trả focus về nút mở; bàn phím cần trở lại khung game.
+            if (Graphics._canvas) {
+                Graphics._canvas.tabIndex = -1;
+                Graphics._canvas.focus({ preventScroll: true });
+            }
+        });
         // Phím và thao tác chỉnh thanh âm lượng chỉ tác động tới cài đặt.
         [button, panel].forEach(function (element) {
             ['keydown', 'keyup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'wheel', 'contextmenu'].forEach(function (type) {
