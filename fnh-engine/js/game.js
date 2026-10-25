@@ -9,6 +9,8 @@
 
     const PRELOAD = [
         'titles2/title2',
+        'system/Window',
+        'pictures/splash_screen1',
         'pictures/character_select_bg',
         'pictures/background_character',
         'pictures/border_character',
@@ -92,7 +94,7 @@
             const total = PRELOAD.length;
             await Promise.all(PRELOAD.map(async (rel) => {
                 try {
-                    await this.assets.loadImage(rel);
+                    await this.assets.loadImage(rel, { plain: rel === 'system/Window' });
                 } catch (error) {
                     console.warn('[FNH] Không nạp được ảnh:', rel, error.message);
                 }
@@ -107,7 +109,7 @@
         start() {
             if (this.running) return;
             this.running = true;
-            this.setScene(new FNH.Scene_Title());
+            this.setScene(new FNH.Scene_Splash());
             this.transition.alpha = 1;
             this.transition.fadeIn();
             this.lastFrame = performance.now();

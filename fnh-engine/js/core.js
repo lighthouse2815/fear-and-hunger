@@ -197,6 +197,34 @@
         return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
     };
 
+    // Dựng khung và con trỏ từ windowskin gốc, dùng chung cho menu/hội thoại.
+    FNH.drawWindow = function (ctx, skin, rect, cursor, time) {
+        if (!skin) return;
+        const slice = (sx, sy, size, margin, target, center) => {
+            const source = [0, margin, size - margin];
+            const sourceSize = [margin, size - margin * 2, margin];
+            const destX = [target.x, target.x + margin, target.x + target.width - margin];
+            const destY = [target.y, target.y + margin, target.y + target.height - margin];
+            const widths = [margin, target.width - margin * 2, margin];
+            const heights = [margin, target.height - margin * 2, margin];
+            for (let y = 0; y < 3; y += 1) for (let x = 0; x < 3; x += 1) {
+                if (!center && x === 1 && y === 1) continue;
+                ctx.drawImage(skin, sx + source[x], sy + source[y], sourceSize[x], sourceSize[y],
+                    destX[x], destY[y], widths[x], heights[y]);
+            }
+        };
+        ctx.save();
+        ctx.globalAlpha = 192 / 255;
+        ctx.drawImage(skin, 0, 0, 96, 96, rect.x + 4, rect.y + 4, rect.width - 8, rect.height - 8);
+        ctx.globalAlpha = 1;
+        slice(96, 0, 96, 24, rect, false);
+        if (cursor) {
+            ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.cos((time || 0) * Math.PI * 1.5));
+            slice(96, 96, 48, 4, cursor, true);
+        }
+        ctx.restore();
+    };
+
     FNH.faceRect = function (faceIndex, size) {
         const cell = 144;
         const scale = (size || 72) / cell;

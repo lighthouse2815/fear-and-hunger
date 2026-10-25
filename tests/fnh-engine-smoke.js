@@ -435,7 +435,7 @@ async function main() {
         ));
         check('chưa có save nên Continue bị khoá', await evalPage(
             cdp,
-            'FNH.game.getSaveInfo() === null && FNH.game.scene.entries[0].enabled === false',
+            'FNH.game.getSaveInfo() === null && FNH.game.scene.entries[1].enabled === false',
             false, false
         ));
         const titlePixels = await evalPage(cdp, [
@@ -962,7 +962,7 @@ async function main() {
         await waitFor(cdp, 'FNH.game.getSaveInfo() !== null', 10000, 'save sau tải lại');
         check('Continue được bật sau tải lại', await evalPage(
             cdp,
-            'FNH.game.scene.entries[0].enabled === true && FNH.game.scene.index === 0',
+            'FNH.game.scene.entries[1].enabled === true && FNH.game.scene.index === 1',
             false, false
         ));
         await tapKey(cdp, 'Enter', 'Enter', 13);
