@@ -483,10 +483,77 @@ async function main() {
         await sleep(250);
         await tapKey(cdp, 'Enter', 'Enter', 13);
 
+        await waitFor(cdp, 'FNH.game.mapId === FNH.game.data.system.startMapId && document.querySelector(".fnh-name-dialog[open]")',
+            30000, 'đặt tên từ sự kiện mở đầu gốc');
+        check('ván mới chạy bản đồ mở đầu gốc thay vì bỏ qua cốt truyện', await evalPage(cdp,
+            'FNH.game.mapId === 10 && FNH.game.flags["switch:246"] && FNH.game.scene.usesOriginalPresentation()', false, false));
+        await evalPage(cdp, 'document.querySelector(".fnh-name-dialog form").requestSubmit()', false, false);
+        await waitFor(cdp, 'FNH.game.scene.movieElement', 30000, 'phim giới thiệu sau cảnh báo nội dung');
+        check('mở đầu phát phim từ bản cài gốc', await evalPage(cdp,
+            'FNH.game.scene.movieElement.querySelector("source").src.endsWith("/game/movies/intro.webm") && FNH.game.player.name === "Cahara"', false, false));
+        await evalPage(cdp, 'FNH.game.scene.movieElement.playbackRate = 4', false, false);
+        await waitFor(cdp, 'FNH.game.scene.dialogState().eventWait?.type === "choice" && FNH.game.scene.dialogState().eventWait.choices.length === 4',
+            180000, 'chọn chế độ sau phim giới thiệu');
+        check('menu chế độ gốc có mô tả và khóa Dungeon Nights', await evalPage(cdp,
+            '(() => { const w=FNH.game.scene.dialogState().eventWait; return w.choices[0] === "Fear & Hunger" && w.disabled[3] && w.descriptions[0].length > 0; })()', false, false));
+        await screenshot('difficulty');
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.scene.dialogState().eventWait?.type === "choice" && FNH.game.scene.dialogState().eventWait.message?.text === "Play intro?"',
+            15000, 'lựa chọn câu chuyện nhân vật');
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.mapId === 73 && FNH.game.scene.ready', 30000, 'câu chuyện xuất thân gốc');
+        await waitFor(cdp, 'FNH.game.scene.dialogState().eventWait?.type === "message"', 30000, 'lời mở đầu nhân vật');
+        await screenshot('backstory');
+        for (let step = 0; step < 160; step += 1) {
+            const state = await evalPage(cdp, `(() => {
+                const game = FNH.game;
+                if (game.lastError) throw new Error(game.lastError.message);
+                if (game.mapId === 74) return 'entrance';
+                const wait = game.scene.dialogState().eventWait;
+                if (wait?.type === 'choice' && /save/i.test(wait.message?.text || '')) {
+                    game.scene.dialogState().eventChoice = wait.choices.findIndex(choice => /^no/i.test(choice));
+                }
+                return wait && ['message','choice'].includes(wait.type) ? 'confirm' : 'wait';
+            })()`, false, false);
+            if (state === 'entrance') break;
+            if (state === 'confirm') await tapKey(cdp, 'Enter', 'Enter', 13);
+            await sleep(200);
+        }
+        await waitFor(cdp, 'FNH.game.mapId === 74 && FNH.game.scene.ready && FNH.game.scene.map === FNH.game.data.maps.get(74) && FNH.game.transition.mode === "idle"', 30000, 'cổng ngục sau câu chuyện xuất thân');
+        check('câu chuyện gốc đưa nhân vật tới cổng ngục cùng kỹ năng đã chọn', await evalPage(cdp,
+            'FNH.game.player.id === 1 && FNH.game.player.skills.length > 0 && !FNH.game.lastError', false, false),
+            await evalPage(cdp, 'JSON.stringify({actor:FNH.game.player.id,skills:FNH.game.player.skills,error:FNH.game.lastError?.message})', false, false));
+        await screenshot('entrance');
+
+        for (const [actorId, mode, name] of [[3, 1, "D'arce"], [4, 2, 'Enki'], [5, 0, 'Ragnvaldr']]) {
+            await evalPage(cdp, 'FNH.game.newGame(' + actorId + ', {opening:true}); true', false, false);
+            await waitFor(cdp, 'document.querySelector(".fnh-name-dialog[open]")', 30000, 'đặt tên ' + name);
+            await evalPage(cdp, 'document.querySelector(".fnh-name-dialog form").requestSubmit()', false, false);
+            await waitFor(cdp, '!FNH.game.flags["switch:296"] && FNH.game.flags["switch:411"]', 15000, 'cửa sổ bỏ qua cảnh báo');
+            await tapKey(cdp, 'Enter', 'Enter', 13);
+            await waitFor(cdp, 'FNH.game.scene.dialogState().eventWait?.type === "choice" && FNH.game.scene.dialogState().eventWait.choices.length === 4',
+                15000, 'menu chế độ của ' + name);
+            for (let step = 0; step < mode; step += 1) await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+            await tapKey(cdp, 'Enter', 'Enter', 13);
+            await waitFor(cdp, 'FNH.game.scene.dialogState().eventWait?.message?.text === "Play intro?"', 15000, 'bỏ qua xuất thân ' + name);
+            await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+            await tapKey(cdp, 'Enter', 'Enter', 13);
+            await waitFor(cdp, 'FNH.game.mapId === 74 && FNH.game.scene.ready && FNH.game.scene.map === FNH.game.data.maps.get(74) && FNH.game.transition.mode === "idle"',
+                30000, 'cổng ngục của ' + name);
+            check('bỏ qua xuất thân vẫn khởi tạo đúng ' + name + ' và chế độ đã chọn', await evalPage(cdp,
+                'FNH.game.player.id === ' + actorId + ' && FNH.game.player.name === ' + JSON.stringify(name) +
+                ' && FNH.game.partyIds.length === 1 && !FNH.game.lastError' +
+                (mode > 0 ? ' && !!FNH.game.flags["switch:3153"]' : ''), false, false),
+                await evalPage(cdp, 'FNH.game.lastError?.message', false, false));
+        }
+
+        // Phần chiến đấu bên dưới tiếp tục kiểm tra encounter thử nghiệm riêng.
+        await evalPage(cdp, 'FNH.game.newGame(1); true', false, false);
+
         // ---------------------------------------------------------
         // 5. Bản đồ đầu tiên, di chuyển và gặp Guard.
         // ---------------------------------------------------------
-        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true',
+        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true && !FNH.game.scene.leaving && FNH.game.transition.mode === "idle" && FNH.game.scene.map === FNH.game.data.maps.get(1)',
             30000, 'bản đồ sẵn sàng');
         check('bản đồ 1 và vị trí xuất phát đúng', await evalPage(cdp, [
             '(() => {',
@@ -558,6 +625,8 @@ async function main() {
             return Math.abs(pixel[0] - 80) <= 1 && Math.abs(pixel[1] - 160) <= 1 && pixel[3] === 255 && pixel[7] === 0;
         })()`, false, false));
 
+        // Chờ các gab mở đầu bản đồ phát hết trước khi kiểm tra hàng đợi mới.
+        await waitFor(cdp, '!FNH.game.gabs.busy', 30000, 'gab mở đầu bản đồ phát hết');
         await evalPage(cdp, `(() => {
             const c = (text) => ({code: 356, parameters: [text]});
             FNH.game.scene.startEventList({list: [c('GabText Hội thoại nền thử nghiệm'), c('ShowGab')]}, 0);
@@ -885,7 +954,7 @@ async function main() {
         await screenshot('victory');
 
         await tapKey(cdp, 'Enter', 'Enter', 13);
-        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true',
+        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true && !FNH.game.scene.leaving && FNH.game.transition.mode === "idle"',
             20000, 'trở lại bản đồ sau trận');
         check('trở lại hành lang và Guard biến mất', await evalPage(cdp, [
             '(() => {',
@@ -966,7 +1035,7 @@ async function main() {
             false, false
         ));
         await tapKey(cdp, 'Enter', 'Enter', 13);
-        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true',
+        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true && !FNH.game.scene.leaving && FNH.game.transition.mode === "idle"',
             30000, 'bản đồ sau Continue');
         check('Continue khôi phục vị trí, vàng và Guard', await evalPage(cdp, [
             '(() => {',
@@ -984,7 +1053,7 @@ async function main() {
         // 9. Thất bại, màn hình chết và tải lại từ save.
         // ---------------------------------------------------------
         await evalPage(cdp, 'FNH.game.newGame(1); true', false, false);
-        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true',
+        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true && !FNH.game.scene.leaving && FNH.game.transition.mode === "idle"',
             30000, 'bản đồ mới cho kiểm tra thất bại');
         check('ván mới đặt lại Guard, vàng và vị trí', await evalPage(cdp, [
             '(() => {',
@@ -1011,7 +1080,7 @@ async function main() {
         ));
         await screenshot('gameover');
         await tapKey(cdp, 'Enter', 'Enter', 13);
-        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true',
+        await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true && !FNH.game.scene.leaving && FNH.game.transition.mode === "idle"',
             30000, 'tải lại sau khi chết');
         check('tải lại từ màn hình chết khôi phục save', await evalPage(cdp, [
             '(() => {',

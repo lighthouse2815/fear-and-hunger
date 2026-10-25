@@ -18,6 +18,7 @@
 
         enter() {
             this.time = 0;
+            this.input.pointerEnabled = true;
             this.saveInfo = this.game.getSaveInfo();
             this.entries = [
                 { id: 'new', label: this.game.data.system.terms.commands[18], enabled: true },

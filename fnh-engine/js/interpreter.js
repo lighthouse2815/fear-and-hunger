@@ -109,7 +109,11 @@
                         while (frame.list[frame.index] && frame.list[frame.index].code === 401) {
                             lines.push(String(frame.list[frame.index++].parameters[0] || ''));
                         }
-                        this.wait = { type: 'message', text: lines.join('\n'), faceName: p[0], faceIndex: p[1] };
+                        const message = { type: 'message', text: lines.join('\n'), faceName: p[0], faceIndex: p[1],
+                            background: p[2], position: p[3] };
+                        if (this.handlers.combineChoices && this.handlers.combineChoices() &&
+                            frame.list[frame.index] && frame.list[frame.index].code === 102) this.choiceMessage = message;
+                        else if (lines.length || !this.handlers.combineChoices || !this.handlers.combineChoices()) this.wait = message;
                         break;
                     }
                     case 105: {
@@ -143,7 +147,17 @@
                         this.wait = { type: 'choice', choices: (p[0] || []).map((text, index) =>
                             Object.prototype.hasOwnProperty.call(this.choiceText, index) ? this.choiceText[index] : text),
                             disabled: (p[0] || []).map((text, index) => this.disabledChoices.has(index)),
-                            cancel: p[1], defaultIndex: p[2], frame, indent };
+                            cancel: p[1], defaultIndex: p[2], position: p[3], background: p[4], frame, indent,
+                            message: this.choiceMessage || null, help: [], descriptions: [] };
+                        this.choiceMessage = null;
+                        for (let i = frame.index, branch = -1; i < frame.list.length; i += 1) {
+                            const entry = frame.list[i];
+                            if (entry.code === 404 && (entry.indent || 0) === indent) break;
+                            if (entry.code === 402 && (entry.indent || 0) === indent) branch = entry.parameters[0];
+                            if (branch < 0 || ![108, 408].includes(entry.code) || (entry.indent || 0) !== indent + 1) continue;
+                            const match = /^(ChoiceHelp|ChoiceMessage)\s+([\s\S]*)$/.exec(entry.parameters[0]);
+                            if (match) this.wait[match[1] === 'ChoiceHelp' ? 'help' : 'descriptions'][branch] = match[2];
+                        }
                         this.choiceText = {};
                         this.disabledChoices.clear();
                         if (!this.wait.choices.some((text, index) => !this.wait.disabled[index]) && this.wait.cancel === -1) {

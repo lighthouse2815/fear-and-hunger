@@ -274,6 +274,7 @@
             this.clicks = [];
             this.mouse = { x: 0, y: 0, down: false };
             this.enabled = true;
+            this.pointerEnabled = true;
             this._bind();
         }
 
@@ -302,6 +303,7 @@
             });
 
             this.canvas.addEventListener('pointerdown', function (event) {
+                if (!self.enabled || !self.pointerEnabled) return;
                 self._updateMouse(event);
                 self.mouse.down = true;
             });
@@ -314,6 +316,7 @@
             });
 
             this.canvas.addEventListener('pointerup', function (event) {
+                if (!self.enabled || !self.pointerEnabled) return;
                 self._updateMouse(event);
                 self.mouse.down = false;
                 self.clicks.push({ x: self.mouse.x, y: self.mouse.y });

@@ -4,17 +4,26 @@
 `www` của bản **Fear & Hunger 1.4.1** mà bạn sở hữu. Engine không chạy runtime RPG Maker
 MV, không dùng `rpg_core.js`/`rpg_managers.js`, và không sao chép asset vào repo.
 
-Bản dựng hiện tại là một **vertical slice** chơi được:
+Menu và phần mở đầu đọc asset/event từ bản cài gốc:
 
 ```text
-Màn hình tiêu đề
-  → tạo nhân vật (4 nghề)
-  → bản đồ 1 (hành lang phía Đông)
-  → gặp Guard
-  → trận đấu theo lượt
-  → thắng / thua / bỏ chạy
-  → lưu và đọc game
+Splash → New Game / Continue
+  → chọn một trong bốn nhân vật → đặt tên
+  → cảnh báo nội dung → phim giới thiệu
+  → chọn chế độ → xem hoặc bỏ qua câu chuyện xuất thân
+  → cổng ngục (bản đồ 74)
 ```
+
+Bố cục tiêu đề, thẻ nhân vật, khung cửa sổ, tên menu, lời thoại và mô tả chế độ dùng
+asset/dữ liệu gốc. Các lựa chọn xuất thân chạy qua interpreter và áp dụng kỹ năng,
+vật phẩm, trang bị, switch/biến thật; không nhảy thẳng vào encounter Guard thử nghiệm.
+Continue vẫn đọc slot lưu của engine web. Bản mở đầu đã được kiểm tra với câu chuyện
+Cahara và đường bỏ qua xuất thân của D'arce, Enki, Ragnvaldr, gồm ba chế độ thường.
+Dungeon Nights giữ điều kiện mở khóa của dữ liệu gốc.
+
+Phần chiến đấu vẫn có **vertical slice thử nghiệm riêng**: bản đồ 1 → Guard →
+thắng/thua → lưu và đọc. Bộ smoke test khởi tạo riêng encounter này sau khi kiểm tra
+mở đầu; menu New Game không còn dẫn trực tiếp vào encounter thử nghiệm.
 
 Đây chưa phải bản chuyển toàn bộ game. Xem [Phạm vi](#phạm-vi) và
 [Giới hạn](#giới-hạn) bên dưới.
@@ -130,7 +139,8 @@ Trong trận đấu: `↑`/`↓` chọn **TẤN CÔNG**, **PHÒNG THỦ** hoặc
   - D'arce — Knight
   - Enki — Dark Priest
   - Ragnvaldr — Outlander
-- **Bản đồ 1** (`level1_A`, tileset `Inside`), xuất phát tại `(27, 67)`.
+- **Bản đồ 1 của encounter thử nghiệm** (`level1_A`, tileset `Inside`), xuất phát tại `(27, 67)`.
+- **Mở đầu gốc** dùng bản đồ 10, 73 và cổng ngục 74; điểm bắt đầu đọc từ `System.json`.
 - **Guard** đứng tại `(27, 64)`, dùng đủ 7 bộ phận battler gốc.
 - Trận Guard thử nghiệm có 3 lệnh, 320 HP, thưởng 35 vàng và 20 EXP.
 - Thành viên sống lần lượt hành động trước lượt Guard; mục tiêu dựa trên TGR,
@@ -372,14 +382,14 @@ tạm và in đường dẫn.
 
 ## Giới hạn
 
-- Chỉ có **bản đồ 1** và **một encounter Guard**. Chưa có toàn bộ bản đồ, cốt truyện,
+- Đã nối menu và các bản đồ mở đầu; combat vẫn có **một encounter Guard thử nghiệm**. Chưa có toàn bộ bản đồ, cốt truyện,
   hội thoại, inventory, kỹ năng, vật phẩm, cấp máu từng bộ phận hay hệ thống đói/kinh hoàng.
 - Các event hình ảnh trên bản đồ được vẽ để giữ không khí, nhưng **chưa chạy event command**
   gốc đầy đủ; chỉ tập lệnh mô tả ở mục Event interpreter được thực thi.
   Guard encounter vẫn là kịch bản riêng của vertical slice.
 - Trận đấu là bản đơn giản hoá: một nhân vật, một kẻ địch, ba lệnh; chưa mô phỏng đầy đủ
   công thức, trạng thái, vũ khí và animation của bản gốc.
-- Chưa có âm thanh môi trường theo vị trí, video intro, Steamworks, thành tựu hay save
+- Đã phát video intro gốc. Chưa có âm thanh môi trường theo vị trí, Steamworks, thành tựu hay save
   NW.js.
 - Chất lượng giải mã/âm thanh phụ thuộc codec của trình duyệt.
 - Đây là dự án phi thương mại, chỉ dành cho người đã sở hữu bản game gốc.
@@ -468,3 +478,17 @@ lỗi thay vì chạy các lệnh phía sau. Phím điều khiển game được
 Bài kiểm tra Chromium phát intro tuần tự đến hết rồi xác nhận event chạy tiếp. Trong
 môi trường kiểm thử, tua thẳng tới sát cuối intro từng trả lỗi giải mã; trường hợp
 này được xử lý như lỗi video, không giả vờ phim đã kết thúc thành công.
+
+### Trình bày phần mở đầu
+
+Ván mới từ menu giữ bố cục khung thoại/choice gốc, hiển thị câu hỏi cùng lựa chọn,
+đọc `ChoiceHelp`/`ChoiceMessage` và ẩn HUD thử nghiệm. `EnableWordWrap`/`DisableWordWrap`
+điều khiển cách xuống dòng. Script khóa TouchInput của phần chọn nhân vật khóa click
+trên canvas; ô nhập tên vẫn dùng bàn phím/IME của trình duyệt. Khi về tiêu đề, chuột
+được bật lại. Trạng thái trình bày được giữ trong save.
+
+Các lệnh `EnableDashing`/`DisableDashing` điều khiển chạy bằng Shift. `Fire radius`,
+`Light radiusgrow` giữ bán kính/màu ánh sáng trong trạng thái lưu; bản đồ có note ánh
+sáng áp dụng mặt nạ quanh người chơi. `Light on/off` giữ ID đèn toàn cục và self-switch D
+của event tương ứng. Đây chưa phải toàn bộ TerraxLighting hoặc các shader filter gốc;
+xóa filter chưa tồn tại là thao tác hợp lệ, còn tạo filter chưa hỗ trợ vẫn báo lỗi.

@@ -59,6 +59,7 @@ assert.equal(scene.game.screenEffects.fadeTarget, 255);
 
 let saved;
 const game = Object.create(FNH.Game.prototype);
+game.input = { pointerEnabled: true };
 game.data = new FNH.DataStore();
 game.player = { hp: 50, maxHp: 100, mapX: 1, mapY: 2 };
 game.flags = {};
@@ -101,7 +102,11 @@ assert.equal(game.screenEffects.brightness, 255, 'Save cũ không có hiệu ứ
 assert.deepEqual(values(game.screenEffects.tone), [0, 0, 0, 0]);
 game.data = { createPlayer: () => ({}) };
 game.screenEffects.tint([-255, 0, 0, 0], 0);
+game.scene = { leaving: false };
+game.gabs.show('Cảnh cũ');
 game.newGame(1);
+assert.equal(game.scene.leaving, true, 'Dừng scene cũ trước khi khởi tạo trạng thái ván mới');
+assert.equal(game.gabs.busy, false, 'Ván mới bắt đầu với hàng đợi hội thoại riêng');
 assert.deepEqual(values(game.screenEffects.tone), [0, 0, 0, 0], 'Ván mới không giữ ánh sáng của ván cũ');
 
 let sceneUpdates = 0;

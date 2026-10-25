@@ -120,6 +120,10 @@
             if (this.closeMovie) this.closeMovie();
         }
 
+        usesOriginalPresentation() {
+            return !!this.game.flags['system:originalOpening'];
+        }
+
         openMovie(name) {
             if (!name) return;
             const token = { done: false, error: null };
@@ -617,6 +621,12 @@
         }
 
         refreshEvents() {
+            for (const event of this.map.events.filter(Boolean)) {
+                const light = /^(?:light|fire)\s+\d+\s+#[\da-f]{6}(?:\s+[bd]\d+)*\s+(\d+)\s*$/i.exec(event.note || '');
+                if (light && Object.prototype.hasOwnProperty.call(this.game.flags, 'light:' + light[1])) {
+                    this.game.flags['self:' + this.game.mapId + ':' + event.id + ':D'] = this.game.flags['light:' + light[1]];
+                }
+            }
             this.events = this.map.events.filter(Boolean).map((event) => {
                 const page = this.eventPage(event);
                 if (!page) return null;
@@ -816,6 +826,12 @@
                 return;
             }
 
+            const light = this.game.flags['light:player'];
+            if (light && light.radius !== light.target) {
+                const step = Math.min(Math.abs(light.target - light.radius), light.speed * dt);
+                light.radius += Math.sign(light.target - light.radius) * step;
+            }
+
             for (const animation of this.animations) animation.update(dt);
             this.animations = this.animations.filter((animation) => !animation.done);
             this.updateMoveRoutes(dt);
@@ -867,7 +883,7 @@
             if (this.moveRoutes.has(-1)) return;
             const player = this.game.player;
             if (this.moving) {
-                this.moveT += dt / MOVE_TIME;
+                this.moveT += dt / (this.moveDuration || MOVE_TIME);
                 if (this.moveT >= 1) {
                     this.moving = false;
                     this.moveT = 0;
@@ -892,6 +908,8 @@
             }
             const direction = this.readDirection();
             if (!direction) return;
+            this.moveDuration = !this.game.flags['system:dashingDisabled'] && this.input.isDown('Shift')
+                ? MOVE_TIME / 2 : MOVE_TIME;
             if (!this.playerRouteState || !this.playerRouteState.directionFix) player.direction = direction;
             this.tryMove(direction);
         }
@@ -999,6 +1017,7 @@
                 }).map((entry) => ({ id: entry.id, name: this.game.data.items[entry.id].name, amount: entry.amount })),
                 condition: (parameters) => this.eventCondition(parameters),
                 commonEvent: (id) => this.game.data.commonEvents[id],
+                combineChoices: () => this.usesOriginalPresentation(),
                 execute: (command) => this.executeEventCommand(command)
             }, state);
             this.eventRunner = runner;
@@ -1281,6 +1300,10 @@
             const dialog = this.dialogState();
             const wait = dialog.eventRunner && dialog.eventRunner.wait;
             if (!wait || !['message', 'choice', 'number', 'item', 'scroll'].includes(wait.type)) return;
+            if (this.usesOriginalPresentation() && ['message', 'choice'].includes(wait.type)) {
+                this.drawOpeningDialog(ctx, dialog, wait);
+                return;
+            }
             if (wait.type === 'scroll') {
                 ctx.save();
                 ctx.beginPath();
@@ -1329,6 +1352,55 @@
             }
         }
 
+        openingText(value) {
+            return String(value || '').replace(/<WordWrap>/gi, '')
+                .replace(/\\N\[(\d+)\]/gi, (match, id) => {
+                    const actor = this.eventActor(Number(id));
+                    return actor ? actor.name : '';
+                }).replace(/\\V\[(\d+)\]/gi, (match, id) => this.game.flags['variable:' + Number(id)] || 0)
+                .replace(/\\G/g, this.game.data.system.currencyUnit || '')
+                .replace(/\\[CIS]\[\d+\]|\\[.!|><^{}$]/gi, '');
+        }
+
+        drawOpeningDialog(ctx, dialog, wait) {
+            const skin = this.game.assets.imageCache.get('system/Window|plain');
+            const message = wait.type === 'message' ? wait : wait.message;
+            const drawMessage = (value, y, height = 180) => {
+                FNH.drawWindow(ctx, skin, { x: 0, y, width: FNH.WIDTH, height });
+                const options = { size: 28, color: '#fff', shadow: true };
+                if (this.game.flags['message:wordWrap'] || /<WordWrap>/i.test(value)) {
+                    FNH.wrapText(ctx, this.openingText(value).replace(/\n/g, ' '), 24, y + 41,
+                        FNH.WIDTH - 48, 36, options);
+                } else this.openingText(value).split('\n').forEach((line, index) =>
+                    FNH.text(ctx, line, 24, y + 41 + index * 36, options));
+            };
+            const help = wait.help && wait.help[dialog.eventChoice];
+            const description = wait.descriptions && wait.descriptions[dialog.eventChoice];
+            if (help) drawMessage(help, 0, 72);
+            if (description) drawMessage(description, FNH.HEIGHT - 180);
+            if (message && message.text) {
+                const y = (message.position ?? 2) * (FNH.HEIGHT - 180) / 2;
+                drawMessage(message.text, y);
+                if (wait.type === 'message') {
+                    FNH.text(ctx, '▼', FNH.WIDTH / 2, y + 172,
+                        { size: 16, color: '#fff', align: 'center', alpha: 0.6 + Math.sin(this.time * 6) * 0.3 });
+                }
+            }
+            if (wait.type !== 'choice') return;
+            ctx.save();
+            ctx.font = '28px "FNH Serif", Georgia, serif';
+            const width = Math.min(FNH.WIDTH, Math.max(96,
+                ...wait.choices.map((choice) => ctx.measureText(this.openingText(choice)).width + 48)));
+            ctx.restore();
+            const height = wait.choices.length * 36 + 36;
+            const x = (wait.position ?? 2) * (FNH.WIDTH - width) / 2;
+            const y = message && message.text ? Math.max(0, FNH.HEIGHT - 180 - height) : (FNH.HEIGHT - height) / 2;
+            const cursor = { x: x + 18, y: y + 18 + dialog.eventChoice * 36, width: width - 36, height: 36 };
+            FNH.drawWindow(ctx, skin, { x, y, width, height }, cursor, this.time);
+            wait.choices.forEach((choice, index) => FNH.text(ctx, this.openingText(choice), x + 24, y + 41 + index * 36,
+                { size: 28, color: wait.disabled && wait.disabled[index] ? '#888' : '#fff', shadow: true }));
+        }
+
         executeEventCommand(command) {
             const p = command.parameters || [];
             if (command.code === 355) {
@@ -1337,6 +1409,35 @@
                 const match = /^(\S+)(?:\s+([\s\S]*))?$/.exec(String(p[0] || '').trim());
                 if (!match) return;
                 const name = match[1], argument = match[2] || '';
+                if (['EnableDashing', 'DisableDashing'].includes(name) && !argument) {
+                    this.game.flags['system:dashingDisabled'] = name === 'DisableDashing';
+                    return;
+                }
+                if (name === 'eraseFilter' && /^\S+$/.test(argument)) {
+                    // Xóa một filter chưa được tạo cũng hợp lệ trong plugin gốc.
+                    delete this.game.flags['filter:' + argument];
+                    return;
+                }
+                if (['EnableWordWrap', 'DisableWordWrap'].includes(name)) {
+                    this.game.flags['message:wordWrap'] = name === 'EnableWordWrap';
+                    return;
+                }
+                if (['light', 'fire'].includes(name.toLowerCase())) {
+                    const radius = /^(radius|radiusgrow)\s+(\d+)\s+(#[\da-f]{3}(?:[\da-f]{3})?)$/i.exec(argument);
+                    if (radius) {
+                        const previous = this.game.flags['light:player'];
+                        const target = Number(radius[2]);
+                        const current = radius[1].toLowerCase() === 'radiusgrow' && previous ? previous.radius : target;
+                        this.game.flags['light:player'] = { radius: current, target,
+                            speed: Math.abs(target - current) * 60 / 500, color: radius[3], fire: name.toLowerCase() === 'fire' };
+                        return;
+                    }
+                    const light = /^(on|off)\s+(\d+)$/i.exec(argument);
+                    if (!light) throw new Error('Tham số ánh sáng không hợp lệ');
+                    this.game.flags['light:' + Number(light[2])] = light[1].toLowerCase() === 'on';
+                    this.refreshEvents();
+                    return;
+                }
                 if (name.toLowerCase() === 'choice_text' || name.toLowerCase() === 'disable_choice') {
                     const setting = /^(\d+)(?:\s+([\s\S]*))?$/.exec(argument);
                     const runner = this.eventRunner;
@@ -2224,17 +2325,33 @@
                     y: y * FNH.TILE + FNH.TILE - this.camera.y, height: frame ? frame.sh : FNH.TILE });
             }
 
-            const light = ctx.createRadialGradient(
-                FNH.WIDTH / 2, FNH.HEIGHT / 2, 70,
-                FNH.WIDTH / 2, FNH.HEIGHT / 2, 470
-            );
-            light.addColorStop(0, 'rgba(0,0,0,0)');
-            light.addColorStop(0.65, 'rgba(0,0,0,0.2)');
-            light.addColorStop(1, 'rgba(0,0,0,0.68)');
-            ctx.fillStyle = light;
-            ctx.fillRect(0, 0, FNH.WIDTH, FNH.HEIGHT);
-            FNH.drawVignette(ctx, FNH.WIDTH, FNH.HEIGHT, 0.55);
-            FNH.drawGrain(ctx, FNH.WIDTH, FNH.HEIGHT, this.time);
+            const playerLight = this.game.flags['light:player'];
+            const hasMapLights = this.map.events.some((event) => event && /^(?:light|fire)\s+\d+/i.test(event.note || ''));
+            if (playerLight && hasMapLights) {
+                const x = this.playerVisual.x * FNH.TILE + FNH.TILE / 2 - this.camera.x;
+                const y = this.playerVisual.y * FNH.TILE + FNH.TILE / 2 - this.camera.y;
+                const radius = Math.max(1, playerLight.radius + (playerLight.fire ? Math.sin(this.time * 17) * Math.min(5, playerLight.radius * 0.02) : 0));
+                const light = ctx.createRadialGradient(x, y, 0, x, y, radius);
+                light.addColorStop(0, playerLight.color);
+                light.addColorStop(1, '#000');
+                ctx.save();
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.fillStyle = light;
+                ctx.fillRect(0, 0, FNH.WIDTH, FNH.HEIGHT);
+                ctx.restore();
+            } else {
+                const light = ctx.createRadialGradient(
+                    FNH.WIDTH / 2, FNH.HEIGHT / 2, 70,
+                    FNH.WIDTH / 2, FNH.HEIGHT / 2, 470
+                );
+                light.addColorStop(0, 'rgba(0,0,0,0)');
+                light.addColorStop(0.65, 'rgba(0,0,0,0.2)');
+                light.addColorStop(1, 'rgba(0,0,0,0.68)');
+                ctx.fillStyle = light;
+                ctx.fillRect(0, 0, FNH.WIDTH, FNH.HEIGHT);
+                FNH.drawVignette(ctx, FNH.WIDTH, FNH.HEIGHT, 0.55);
+                FNH.drawGrain(ctx, FNH.WIDTH, FNH.HEIGHT, this.time);
+            }
 
             ctx.restore();
             if (this.game.screenEffects) {
@@ -2242,8 +2359,10 @@
                 this.game.screenEffects.apply(ctx);
             }
             if (this.game.pictures) this.game.pictures.draw(ctx, 'map');
-            this.drawHud(ctx);
-            this.drawBanner(ctx);
+            if (!this.usesOriginalPresentation()) {
+                this.drawHud(ctx);
+                this.drawBanner(ctx);
+            }
             if (this.game.gabs) this.game.gabs.draw(ctx);
             this.drawEventDialog(ctx);
             if (this.paused && !this.nameInputDialog) this.drawPause(ctx);

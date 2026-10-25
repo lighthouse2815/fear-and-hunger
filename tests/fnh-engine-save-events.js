@@ -21,7 +21,7 @@ let payload;
 const storage = { save(slot, value) { payload = JSON.parse(JSON.stringify(value)); return true; },
     load() { return payload ? JSON.parse(JSON.stringify(payload)) : null; } };
 function game() {
-    return Object.assign(Object.create(FNH.Game.prototype), { data, storage, saveSlot: 1, mapId: 1, gold: 0, playtime: 0,
+    return Object.assign(Object.create(FNH.Game.prototype), { data, storage, input: { pointerEnabled: true }, saveSlot: 1, mapId: 1, gold: 0, playtime: 0,
         flags: { 'system:saveDisabled': true }, player: data.createPlayer(1), partyIds: [1], actorStates: {},
         audio: { playSe() {}, stopBgm() {} }, assets: { loadImage: async () => ({}) }, changeScene() {}, showToast() {} });
 }

@@ -46,8 +46,9 @@ npm run fnh:engine:open   # tự mở trình duyệt
 npm run test:fnh-engine   # smoke test Chrome/CDP
 ```
 
-Bản dựng hiện tại là vertical slice: tiêu đề → tạo nhân vật (4 nghề) → bản đồ 1 → gặp
-Guard → trận đấu theo lượt → thắng/thua → lưu và đọc game. Asset vẫn được đọc read-only
+Menu New Game hiện đi qua chọn nhân vật, đặt tên, phim giới thiệu, chọn chế độ và
+câu chuyện xuất thân gốc tới cổng ngục. Combat vẫn là vertical slice thử nghiệm với
+Guard, thắng/thua và lưu/đọc game. Asset vẫn được đọc read-only
 từ thư mục `www` gốc qua `/game/`, không được sao chép vào repo.
 
 Xem [`fnh-engine/README.md`](fnh-engine/README.md) để biết kiến trúc, điều khiển, phạm vi,

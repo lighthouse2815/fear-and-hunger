@@ -71,6 +71,26 @@ assert.throws(() => runner.resume(-2), /không cho phép hủy/);
 
 executed = [];
 runner = new FNH.EventInterpreter([
+    command(101, ['', 0, 0, 2]), command(401, ['Chọn đường đi?']),
+    command(102, [['A', 'B'], -1, 0, 1, 0]),
+    command(402, [0]), command(108, ['ChoiceHelp Đường thứ nhất'], 1),
+    command(108, ['ChoiceMessage Mô tả A'], 1), command(999, ['A'], 1),
+    command(402, [1]), command(108, ['ChoiceHelp Đường thứ hai'], 1),
+    command(108, ['ChoiceMessage Mô tả B'], 1), command(999, ['B'], 1), command(404)
+], { ...handlers, combineChoices: () => true });
+runner.update(0);
+assert.equal(runner.wait.type, 'choice', 'Lựa chọn gốc hiện cùng hội thoại, không cần xác nhận thêm');
+assert.equal(runner.wait.message.text, 'Chọn đường đi?');
+assert.equal(runner.wait.message.position, 2);
+assert.equal(runner.wait.help[1], 'Đường thứ hai');
+assert.equal(runner.wait.descriptions[0], 'Mô tả A');
+runner.resume(1);
+runner.update(0);
+assert.equal(executed.join(','), 'B', 'Thông tin xem trước không thực thi nhánh chưa chọn');
+console.log('ĐẠT: lựa chọn gốc gộp hội thoại, giữ vị trí và đọc mô tả từng nhánh.');
+
+executed = [];
+runner = new FNH.EventInterpreter([
     command(112), command(999, ['loop'], 1),
     command(112, [], 1), command(113, [], 2), command(413, [], 1),
     command(113, [], 1), command(413), command(999, ['after loop'])

@@ -4,6 +4,7 @@
     // Chỉ nhận các lời gọi API có đối số literal; không chạy JavaScript tùy ý.
     const string = String.raw`(?:'[^'\\\r\n]*'|"[^"\\\r\n]*")`;
     const patterns = [
+        { kind: 'disableTouch', regex: /TouchInput\.update\s*=\s*function\(\)\s*\{\s*\}/y },
         { kind: 'refresh', regex: /\$gamePlayer\.refresh\(\s*\)/y },
         { kind: 'character', regex: new RegExp(String.raw`\$gameActors\.actor\(\s*(\d+)\s*\)\.setCharacterImage\(\s*(${string})\s*,\s*(\d+)\s*\)`, 'y') },
         { kind: 'face', regex: new RegExp(String.raw`\$gameActors\.actor\(\s*(\d+)\s*\)\.setFaceImage\(\s*(${string})\s*,\s*(\d+)\s*\)`, 'y') },
@@ -35,7 +36,10 @@
         // Xác thực xong toàn bộ đoạn mới bắt đầu thay đổi trạng thái.
         for (const operation of operations) {
             const [id, value, imageIndex] = operation.args;
-            if (operation.kind === 'switch') scene.game.flags['switch:' + Number(id)] = value === 'true';
+            if (operation.kind === 'disableTouch') {
+                scene.input.pointerEnabled = false;
+                scene.input.clearFrame();
+            } else if (operation.kind === 'switch') scene.game.flags['switch:' + Number(id)] = value === 'true';
             else if (operation.kind === 'variable') scene.game.flags['variable:' + Number(id)] = Number(value);
             else if (operation.kind === 'refresh') scene.loadActorImages(scene.game.player);
             else {

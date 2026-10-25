@@ -211,9 +211,13 @@
             });
         }
 
-        newGame(actorId) {
-            this.player = this.data.createPlayer(actorId);
-            this.partyIds = [actorId];
+        newGame(actorId, options) {
+            if (this.scene) this.scene.leaving = true;
+            this.lastError = null;
+            const opening = !!(options && options.opening);
+            const leaderId = opening ? this.data.system.partyMembers[0] : actorId;
+            this.player = this.data.createPlayer(leaderId);
+            this.partyIds = [leaderId];
             this.actorStates = {};
             this.savedBgm = null;
             this.reservedCommonEvent = null;
@@ -227,6 +231,19 @@
             this.mapId = 1;
             this.guardDefeated = false;
             this.flags = {};
+            if (opening) {
+                const selection = [1, 3, 4, 5].indexOf(actorId);
+                if (selection < 0) throw new Error('Nhân vật mở đầu không hợp lệ');
+                const system = this.data.system;
+                this.mapId = system.startMapId;
+                this.player.mapX = system.startX;
+                this.player.mapY = system.startY;
+                this.player.transparent = true;
+                this.flags = { 'system:originalOpening': true, 'system:menuDisabled': true,
+                    'variable:9': selection + 1, 'switch:214': true, 'switch:296': true,
+                    ['switch:' + [246, 242, 243, 244][selection]]: true };
+            }
+            this.input.pointerEnabled = true;
             this.screenEffects = new FNH.ScreenEffects();
             this.pictures = new FNH.PictureManager(this.assets);
             this.gabs = new FNH.GabQueue();
@@ -295,6 +312,7 @@
             this.pendingEventContinuation = save.eventContinuation || null;
             this.guardDefeated = !!save.guardDefeated;
             this.flags = save.flags || {};
+            this.input.pointerEnabled = !this.flags['system:originalOpening'];
             this.screenEffects = new FNH.ScreenEffects(save.screenEffects);
             this.pictures = new FNH.PictureManager(this.assets, save.pictures);
             this.gabs = new FNH.GabQueue();

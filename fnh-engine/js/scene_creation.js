@@ -53,7 +53,7 @@
             if (!entry) return;
             this.leaving = true;
             this.game.audio.playSe('fnh_choice', { volume: 0.6 });
-            this.game.newGame(entry.actorId);
+            this.game.newGame(entry.actorId, { opening: true });
         }
 
         update(dt) {
