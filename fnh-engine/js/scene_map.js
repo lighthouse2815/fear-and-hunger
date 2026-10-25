@@ -847,6 +847,7 @@
             for (const animation of this.animations) animation.update(dt);
             this.animations = this.animations.filter((animation) => !animation.done);
             this.updateMoveRoutes(dt);
+            const hadDialogue = !!this.dialogRunner;
             this.updateParallelEvents(dt);
             if (this.leaving) return;
             if (this.eventRunner) {
@@ -855,7 +856,7 @@
                 this.updateEventImages();
                 return;
             }
-            if (this.dialogRunner) {
+            if (this.dialogRunner || hadDialogue) {
                 this.updateCamera(dt);
                 this.updateEventImages();
                 return;
@@ -990,7 +991,7 @@
                 if (page.priorityType === 1) return position.x === front.x && position.y === front.y;
                 return position.x === player.mapX && position.y === player.mapY;
             });
-            if (!event || !this.startEvent(event)) this.game.showToast('Không có gì trong bóng tối.', 1.4);
+            if (event) this.startEvent(event);
         }
 
         startEvent(event) {

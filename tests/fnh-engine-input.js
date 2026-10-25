@@ -73,3 +73,37 @@ for (const [button, key] of [['shift', 'Shift'], ['ok', 'Enter'], ['cancel', 'Es
 }
 assert.throws(() => scene.eventCondition([11, 'unknown']), /Chưa hỗ trợ nút event/);
 console.log('ĐẠT: điều kiện nút giữ, ánh xạ phím xác nhận/hủy/hướng và thả nút.');
+
+for (const confirm of ['Enter', 'z', ' ']) {
+    const map = new FNH.Scene_Map();
+    const notices = [];
+    let key = null;
+    map.ready = true;
+    map.game = { mapId: 2, flags: {}, gold: 0,
+        player: { id: 1, hp: 100, mapX: 0, mapY: 0, direction: 2 },
+        data: new FNH.DataStore(), showToast: (text) => notices.push(text) };
+    map.input = { isPressed: (...keys) => keys.includes(key) };
+    map.updateMoveRoutes = () => {};
+    map.updateMovement = () => {};
+    map.updateCamera = () => {};
+    map.updateEventImages = () => {};
+    map.map = { events: [
+        { id: 1, x: 1, y: 1, pages: [{ trigger: 4, list: [c(101), c(401, ['Hội thoại nền']), c(214)] }] },
+        { id: 2, x: 0, y: 1, pages: [{ trigger: 0, priorityType: 1, list: [c(125, [0, 0, 7])] }] }
+    ] };
+    map.update(0);
+    assert.equal(map.dialogRunner.wait.type, 'message');
+    key = confirm;
+    map.update(0);
+    assert.equal(map.dialogRunner, null, 'Phím xác nhận đóng hội thoại nền');
+    assert.equal(map.game.gold, 0, 'Phím vừa đóng hội thoại không kích hoạt NPC cùng khung hình');
+    key = null;
+    map.update(0);
+    key = confirm;
+    map.update(0);
+    assert.equal(map.game.gold, 7, 'Lần nhấn mới vẫn tương tác được với NPC');
+    map.map.events = [];
+    for (let press = 0; press < 5; press += 1) map.update(0);
+    assert.equal(notices.length, 0, 'Nhấn xác nhận ở chỗ trống không hiện thông báo tự thêm');
+}
+console.log('ĐẠT: Enter/Z/Space đóng hội thoại nền không kích hoạt tương tác, chỗ trống không hiện thông báo.');
