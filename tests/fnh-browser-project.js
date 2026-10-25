@@ -65,6 +65,15 @@ const { checkProject } = require('../tools/fnh-browser/check-project');
         assert.ok((await fs.readFile(path.join(release, '__fnh/compat.js'), 'utf8')).includes('edited-project-compat'));
         await buildWeb({ gameRoot: moved, output: release });
         assert.equal(await fs.readFile(path.join(moved, 'js/rpg_objects.js'), 'utf8'), 'window.damage = 77;');
+        await fs.writeFile(path.join(moved, 'data/Map001.json'), JSON.stringify({ events: [null, {
+            id: 1, pages: [{ list: [{ code: 201, parameters: [0, 999, 0, 0, 2, 0] }] }]
+        }] }));
+        await assert.rejects(checkProject(moved), /Map999\.json/);
+        await fs.writeFile(path.join(moved, 'data/Map001.json'), JSON.stringify({ events: [null, {
+            id: 1, pages: [{ list: [{ code: 231, parameters: [1, 'missing', 0] }] }]
+        }] }));
+        await assert.rejects(checkProject(moved), /missing\.png/);
+        await fs.writeFile(path.join(moved, 'data/Map001.json'), '{"note":"edited"}');
         await fs.writeFile(path.join(moved, 'data/broken.json'), '{');
         await assert.rejects(checkProject(moved), /broken\.json/);
         console.log('ĐẠT: nhập code/asset, giải mã thật, bảo vệ nguồn, sửa logic/map/ảnh, chuyển thư mục và build khi không còn game gốc.');
