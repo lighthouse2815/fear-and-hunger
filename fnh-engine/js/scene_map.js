@@ -1391,7 +1391,7 @@
             if (help) drawMessage(help, 0, 72);
             if (description) drawMessage(description, FNH.HEIGHT - 180);
             if (message && message.text) {
-                const y = (message.position ?? 2) * (FNH.HEIGHT - 180) / 2;
+                const y = FNH.HEIGHT - 180;
                 drawMessage(message.text, y);
                 if (wait.type === 'message') {
                     FNH.text(ctx, '▼', FNH.WIDTH / 2, y + 172,

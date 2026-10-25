@@ -525,3 +525,24 @@ nameRunner.update(0);
 assert.equal(afterName, true);
 assert.equal(nameRunner.done, true);
 console.log('ĐẠT: đặt tên khóa luồng event và tiếp tục đúng con trỏ sau xác nhận.');
+
+const dialogue = new FNH.Scene_Map();
+dialogue.game = { flags: { 'system:originalOpening': true }, assets: { imageCache: new Map() }, data: { system: {} } };
+const windows = [];
+FNH.drawWindow = (ctx, skin, rect) => windows.push(rect);
+FNH.text = () => {};
+const drawContext = { save() {}, restore() {}, measureText: (text) => ({ width: text.length * 14 }) };
+for (const position of [0, 1, 2, undefined]) {
+    windows.length = 0;
+    dialogue.eventRunner = { wait: { type: 'message', text: 'Lời thoại', position } };
+    dialogue.drawEventDialog(drawContext);
+    assert.equal(windows[0].y + windows[0].height, FNH.HEIGHT, 'Ô lời thoại luôn sát đáy, kể cả event đặt ở giữa');
+}
+windows.length = 0;
+dialogue.eventRunner = { wait: { type: 'choice', choices: ['Có', 'Không'], position: 2,
+    message: { text: 'Tiếp tục?', position: 1 } } };
+dialogue.eventChoice = 0;
+dialogue.drawEventDialog(drawContext);
+assert.equal(windows[0].y + windows[0].height, FNH.HEIGHT);
+assert.ok(windows[1].y + windows[1].height <= windows[0].y, 'Lựa chọn nằm phía trên, không che ô lời thoại');
+console.log('ĐẠT: lời thoại luôn nằm dưới màn hình và lựa chọn không chồng lên lời thoại.');
