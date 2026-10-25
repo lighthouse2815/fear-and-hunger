@@ -55,12 +55,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 
 (function() { 
-var parameters = PluginManager.parameters('CC_physicalattacks'); 
-var phys_weap = eval(String(parameters)); 
-var types_weap = String(parameters).split(' '); 
-for(var i=0;i<types_weap.length;i++) { 
-types_weap = parseInt(types_weap); 
-} 
+var parameters = PluginManager.parameters('physical_attack_animation');
+var phys_weap = String(parameters.PhysicalAttacks || 'true').toLowerCase() === 'true';
+var types_weap = String(parameters.SkillTypes || '').split(/\s+/).map(Number).filter(function(type) {
+return Number.isInteger(type) && type > 0;
+});
 
 Game_Actor.prototype.CC_performAction = Game_Actor.prototype.performAction; 
 Game_Actor.prototype.performAction = function(action) { 
@@ -70,7 +69,7 @@ return;
 } 
 if(action.item().meta.CCPS_weapon === 'true' 
 || (phys_weap && action.isPhysical() && action.isSkill()) 
-|| (action.isSkill() && types_weap.contains(action.item().stypeId))) { 
+|| (action.isSkill() && types_weap.indexOf(action.item().stypeId) >= 0)) {
 this.performAttack(); 
 } 
 } 

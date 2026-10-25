@@ -26,6 +26,6 @@
     "build": "npm --prefix game run build",
     "check:game": "npm --prefix game run check",
     "import:game": "node tools/fnh-browser/project.js",
-    "test:game": "npm run check:game && node tests/fnh-browser-project.js && node tests/fnh-browser-smoke.js"
+    "test:game": "npm run check:game && node tests/fnh-browser-project.js && node tests/weapon-animation.js && node tests/fnh-browser-smoke.js"
   }
 }

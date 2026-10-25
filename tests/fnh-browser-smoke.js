@@ -764,16 +764,26 @@ async function main() {
         ].join('\n'), false, false);
         check('dọn save test khỏi localStorage', removed >= 2, 'đã xoá ' + removed + ' khoá');
 
-        const relevantErrors = runtimeErrors.filter((details) => {
-            const urlText = details.url || '';
-            const description = details.exception && (details.exception.description || details.exception.value) || '';
-            return !/physical_attack_animation/.test(urlText) && !/physical_attack_animation/.test(description);
+        await cdp.send('Emulation.setUserAgentOverride', {
+            userAgent: 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36'
         });
-        const relevantLogs = logErrors.filter((entry) => {
-            const text = entry.text || '';
-            const urlText = entry.url || '';
-            return !/physical_attack_animation/.test(text) && !/physical_attack_animation/.test(urlText);
-        });
+        await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+        await cdp.send('Page.navigate', { url: url });
+        await waitFor(cdp, 'window.SceneManager && SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()', 60000, 'menu trên điện thoại');
+        await sendAudioGesture(cdp, 'pointer');
+        await waitFor(cdp, 'FNHBrowser.audioState() === "running" && AudioManager._bgmBuffer && AudioManager._bgmBuffer.isPlaying()', 20000, 'nhạc trên điện thoại');
+        check('điện thoại tải và phát OGG có trong dự án', await evalPage(cdp,
+            'Utils.isMobileDevice() && AudioManager.audioFileExt() === ".ogg" && AudioManager._bgmBuffer._url.endsWith(".ogg")', false, false));
+        await clickElement(cdp, '#fnh-audio-button');
+        check('cài đặt vừa màn hình điện thoại', await evalPage(cdp, `(() => {
+            const r = document.querySelector('#fnh-audio-settings').getBoundingClientRect();
+            return r.left >= 0 && r.top >= 0 && r.right <= visualViewport.width && r.bottom <= visualViewport.height;
+        })()`, false, false));
+        await screenshot('mobile-audio');
+        await clickElement(cdp, '#fnh-audio-settings button');
+
+        const relevantErrors = runtimeErrors;
+        const relevantLogs = logErrors;
         check('không có lỗi runtime mới', relevantErrors.length === 0, JSON.stringify(relevantErrors.map((item) => ({
             url: item.url,
             text: item.exception && (item.exception.description || item.exception.value)

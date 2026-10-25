@@ -261,10 +261,8 @@ thiết cho cả hai bài test trình duyệt.
 - **Không có save của NW.js.** Save mới nằm trong localStorage như mô tả ở trên.
 - **Đóng game:** nút thoát/`window.close()` của trình duyệt có thể bị chặn; game hiện
   màn hình "Trò chơi đã kết thúc" thay vì đóng tab.
-- **Plugin `physical_attack_animation.js` có lỗi cú pháp từ bản gốc.** Plugin gọi
-  `eval(String(parameters))` với một object, nên không nạp được và in lỗi
-  `SyntaxError: Unexpected identifier 'Object'` trong console. Lỗi này có từ trước, không
-  phải do bản chuyển trình duyệt; game vẫn chạy và bài test bỏ qua đúng lỗi đã biết này.
+- **Hoạt ảnh vũ khí:** plugin đã được sửa để đọc đúng `PhysicalAttacks` và `SkillTypes`,
+  giữ ghi chú bật/tắt của kỹ năng. Bài test trình duyệt không bỏ qua lỗi plugin.
 - **Video/âm thanh phụ thuộc trình duyệt.** Nếu video vẫn không phát, hãy bấm thêm một lần
   vào vùng game; compat có cơ chế thử lại ở tương tác kế tiếp. Chế độ ẩn danh hoặc chặn
   autoplay nghiêm ngặt có thể ảnh hưởng trải nghiệm.

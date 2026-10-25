@@ -1482,7 +1482,7 @@ AudioManager.updateBufferParameters = function(buffer, configVolume, audio) {
 };
 
 AudioManager.audioFileExt = function() {
-    if (WebAudio.canPlayOgg() && !Utils.isMobileDevice()) {
+    if (WebAudio.canPlayOgg()) {
         return '.ogg';
     } else {
         return '.m4a';
