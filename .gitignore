@@ -4,6 +4,7 @@ Fear.and.Hunger.v1.4.1/
 node_modules/
 *.log
 .DS_Store
+.wrangler/
 
 # Gói web chứa tài nguyên game được tạo tại máy, không đưa lên GitHub
 /dist/

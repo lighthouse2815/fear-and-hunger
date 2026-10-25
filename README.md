@@ -68,3 +68,21 @@ của runtime; PSD được giữ lại và xuất thêm PNG bằng ImageMagick 
 Chạy/build/chỉnh sửa nội dung đã nhập không cần ImageMagick hoặc bộ cài gốc.
 Cách quản lý nguồn và asset trong repo tham khảo
 [Jump King Web](https://github.com/lighthouse2815/jump-king).
+
+## Cloudflare Pages
+
+Project Cloudflare: `fear-and-hunger-web`, nhánh production `main`.
+Triển khai trực tiếp bản build; không phụ thuộc việc GitHub đã nhận commit hay chưa.
+
+```sh
+npm ci                     # cài công cụ deploy, dùng Node.js 22+
+npx wrangler login         # chỉ khi máy chưa đăng nhập Cloudflare
+npm run deploy:cloudflare
+```
+
+`wrangler.jsonc` trỏ tới `dist/fear-and-hunger-web/`. Lệnh deploy kiểm tra nguồn,
+build rồi upload toàn bộ code và asset lên Pages. Hosting chỉ phục vụ file tĩnh,
+không chạy `server.js` hay cần thư mục game trên máy bạn. Save của địa chỉ Pages
+được lưu riêng trong trình duyệt, tách với save ở localhost.
+
+Thông tin đăng nhập do Wrangler quản lý ngoài source. Không đưa token vào Git.
