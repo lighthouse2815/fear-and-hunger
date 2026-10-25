@@ -434,13 +434,14 @@
         isTilePassable(map, tileset, x, y, direction) {
             if (x < 0 || y < 0 || x >= map.width || y >= map.height) return false;
             const bit = direction === 2 ? 0x01 : direction === 4 ? 0x02 : direction === 6 ? 0x04 : 0x08;
-            for (let z = 0; z < 4; z += 1) {
+            for (let z = 3; z >= 0; z -= 1) {
                 const tileId = this.tileIdAt(map, x, y, z);
-                if (!tileId) continue;
                 const flags = tileset.flags[tileId] || 0;
+                if (flags & 0x10) continue;
+                if (!(flags & bit)) return true;
                 if (flags & bit) return false;
             }
-            return true;
+            return false;
         }
 
         tileSource(tileset, tileId) {

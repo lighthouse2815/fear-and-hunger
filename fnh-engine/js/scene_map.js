@@ -951,7 +951,8 @@
             }
             if (this.playerRouteState && this.playerRouteState.throughOverride) {
                 if (nx < 0 || ny < 0 || nx >= this.map.width || ny >= this.map.height) return false;
-            } else if (!this.game.data.isTilePassable(this.map, this.tileset, nx, ny, direction)) {
+            } else if (!this.game.data.isTilePassable(this.map, this.tileset, player.mapX, player.mapY, direction) ||
+                !this.game.data.isTilePassable(this.map, this.tileset, nx, ny, oppositeDirection(direction))) {
                 this.bump = 1;
                 return false;
             }

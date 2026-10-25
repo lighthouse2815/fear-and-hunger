@@ -10,9 +10,9 @@ function setup() {
     const scene = new FNH.Scene_Map();
     const data = new FNH.DataStore();
     data.tilesets = [null,
-        { id: 1, tilesetNames: ['', '', '', '', '', 'Old'], flags: [0, 0] },
-        { id: 2, tilesetNames: ['', '', '', '', '', 'New'], flags: [0, 1] },
-        { id: 3, tilesetNames: ['', '', '', '', '', 'Other'], flags: [0, 0] }];
+        { id: 1, tilesetNames: ['', '', '', '', '', 'Old'], flags: [0x10, 0] },
+        { id: 2, tilesetNames: ['', '', '', '', '', 'New'], flags: [0x10, 1] },
+        { id: 3, tilesetNames: ['', '', '', '', '', 'Other'], flags: [0x10, 0] }];
     scene.map = { width: 2, height: 2, tilesetId: 1, events: [], data: [1, 1, 1, 1] };
     data.maps.set(1, scene.map);
     scene.tileset = data.tilesets[1];
@@ -68,3 +68,27 @@ function setup() {
     await assert.rejects(racing.loadTileset(999), /Không tìm thấy tileset/);
     console.log('ĐẠT: đổi tileset, chờ asset, va chạm, save, lỗi tải và yêu cầu đồng thời.');
 })().catch((error) => { console.error(error); process.exitCode = 1; });
+
+const passageData = new FNH.DataStore();
+const passageMap = { width: 2, height: 1, data: [1, 1, 0, 0, 2, 3, 0, 0] };
+const passageTiles = { flags: [0x10, 0x0f, 0, 0x12] };
+assert.equal(passageData.isTilePassable(passageMap, passageTiles, 0, 0, 6), true,
+    'Lớp đi được phía trên cho phép đi qua nền bị chặn ở dưới');
+assert.equal(passageData.isTilePassable(passageMap, passageTiles, 1, 0, 6), false,
+    'Tile ngôi sao không ghi đè va chạm của lớp dưới');
+passageTiles.flags[2] = 0x04;
+passageTiles.flags[1] = 0;
+assert.equal(passageData.isTilePassable(passageMap, passageTiles, 0, 0, 6), false,
+    'Lớp trên chặn đúng hướng dù nền bên dưới đi được');
+const directed = setup();
+directed.map = { width: 2, height: 1, events: [], data: [1, 2, 0, 0, 0, 0, 0, 0] };
+directed.guard.alive = false;
+directed.tileset = { flags: [0x10, 0x04, 0] };
+assert.equal(directed.tryMove(6), false, 'Người chơi phải được phép rời ô hiện tại');
+directed.tileset.flags = [0x10, 0, 0x02];
+assert.equal(directed.tryMove(6), false, 'Đi sang phải kiểm tra cạnh trái của ô đích');
+directed.tileset.flags = [0x10, 0, 0x04];
+assert.equal(directed.tryMove(6), true, 'Cạnh phải ô đích không chặn bước đi vào từ trái');
+assert.equal(directed.toX, 1);
+assert.equal(directed.toY, 0);
+console.log('ĐẠT: va chạm theo lớp trên, tile ngôi sao và hai cạnh của bước đi.');
