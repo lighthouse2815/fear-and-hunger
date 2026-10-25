@@ -5,7 +5,7 @@
    - Dùng Chrome/Chromium hệ thống qua CDP (không cần npm install).
    - Kiểm tra tự vào menu, âm thanh, video, bản đồ, di chuyển,
      lưu/đọc, trận đấu và lưu qua localStorage sau khi tải lại.
-   Nếu thiếu thư mục game hoặc Chrome, bài test bỏ qua và trả mã 0.
+   Nếu thiếu source hoặc Chrome, bài test báo lỗi để tránh kết quả xanh giả.
    ============================================================ */
 const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
@@ -13,12 +13,10 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 
-const packageRoot = process.env.FNH_WEB_PACKAGE || (!process.env.FNH_GAME_ROOT && fs.existsSync(path.resolve(__dirname, '../game/source-info.json')) ? path.resolve(__dirname, '../game') : null);
-const { findGameRoot, startServer } = packageRoot
-    ? require(path.resolve(packageRoot, 'server.js'))
-    : require('../tools/fnh-browser/server');
+const packageRoot = process.env.FNH_WEB_PACKAGE || path.resolve(__dirname, '../game');
+const { findGameRoot, startServer } = require(path.resolve(packageRoot, 'server.js'));
 
-const GAME_HINT = 'Fear.and.Hunger.v1.4.1/Fear.and.Hunger.v1.4.1/www';
+const GAME_HINT = 'game/';
 const SAVE_SLOT = 20;
 const CHROME_ARGS = [
     '--headless=new',
@@ -48,13 +46,6 @@ function sleep(ms) {
 
 function log(message) {
     console.log('[FNH smoke] ' + message);
-}
-
-function skip(message) {
-    console.log('');
-    console.log('BỎ QUA: ' + message);
-    console.log('');
-    process.exitCode = 0;
 }
 
 function findChrome() {
@@ -269,11 +260,9 @@ async function clickElement(cdp, selector) {
 async function main() {
     let gameRoot;
     try {
-        gameRoot = findGameRoot(process.env.FNH_GAME_ROOT);
+        gameRoot = findGameRoot(packageRoot);
     } catch (error) {
-        skip('không tìm thấy thư mục game. Đặt game vào ' + GAME_HINT +
-            ' hoặc dùng FNH_GAME_ROOT / --game.');
-        return;
+        throw new Error('Không tìm thấy source trong ' + GAME_HINT + ' hoặc FNH_WEB_PACKAGE: ' + error.message);
     }
 
     let running = null;
@@ -350,8 +339,7 @@ async function main() {
         // ---------------------------------------------------------
         const chromeBin = findChrome();
         if (!chromeBin) {
-            skip('không tìm thấy Chrome/Chromium. Đặt CHROME_BIN hoặc cài Chrome để chạy phần kiểm tra trình duyệt.');
-            return;
+            throw new Error('Không tìm thấy Chrome/Chromium. Đặt CHROME_BIN hoặc cài Chrome để chạy kiểm tra trình duyệt.');
         }
         log('Chrome: ' + chromeBin);
 
@@ -463,7 +451,10 @@ async function main() {
         audioSettings.bgmVolume = 0;
         await screenshot('audio-settings');
         await clickElement(cdp, '#fnh-audio-settings button');
-        await waitFor(cdp, '!document.querySelector("#fnh-audio-settings").open', 5000, 'đóng cài đặt');
+        await waitFor(cdp, '!document.querySelector("#fnh-audio-settings").open && document.activeElement === Graphics._canvas',
+            5000, 'đóng cài đặt và trả focus về game');
+        check('đóng cài đặt trả bàn phím về khung game', await evalPage(cdp,
+            'document.activeElement === Graphics._canvas', false, false));
         // Tiếp tục nghe nhạc để kiểm tra video và gameplay bên dưới.
         await evalPage(cdp, 'ConfigManager.bgmVolume = 37; ConfigManager.save()', false, false);
         audioSettings.bgmVolume = 37;
@@ -569,8 +560,8 @@ async function main() {
         // ---------------------------------------------------------
         const mapState = await evalPage(cdp, [
             '(async () => {',
-            '  DataManager.setupNewGame();',
-            '  SceneManager.goto(Scene_Map);',
+            '  SceneManager._scene._commandWindow.selectSymbol("newGame");',
+            '  SceneManager._scene._commandWindow.processOk();',
             '  await new Promise(function (resolve) { setTimeout(resolve, 5000); });',
             '  const scene = SceneManager._scene;',
             '  return {',
@@ -583,7 +574,7 @@ async function main() {
             '  };',
             '})()'
         ].join('\n'), true, false);
-        check('vào được bản đồ bắt đầu', mapState.scene === 'Scene_Map' && mapState.mapId === 10, JSON.stringify(mapState));
+        check('New Game trên menu mở được phần tạo nhân vật', mapState.scene === 'Scene_Map' && mapState.mapId === 10, JSON.stringify(mapState));
         check('bản đồ có nhân vật và spriteset', mapState.party.length > 0 && mapState.spriteset === true, JSON.stringify(mapState));
         check('bản đồ nạp được sự kiện', mapState.events > 0, JSON.stringify(mapState));
         await screenshot('map');
@@ -707,13 +698,45 @@ async function main() {
         check('trận đấu có nhân vật và giao diện', battleState.actorSprites > 0 && !!battleState.phase, JSON.stringify(battleState));
         await screenshot('battle');
         await waitFor(cdp, 'BattleManager.isInputting() && BattleManager.actor()', 20000, 'lượt nhập lệnh chiến đấu');
-        await evalPage(cdp, 'SceneManager._scene.commandAttack()', false, false);
+        await evalPage(cdp, 'SceneManager._scene._actorCommandWindow.selectSymbol("attack"); SceneManager._scene._actorCommandWindow.processOk()', false, false);
         await waitFor(cdp, 'SceneManager._scene._enemyWindow.active', 10000, 'chọn bộ phận khi tấn công');
         check('Guard gốc gồm đủ bảy mục tiêu bộ phận', await evalPage(cdp,
             '$gameTroop.members().length === 7 && $gameTroop.members().every(enemy => enemy.mhp === $dataEnemies[enemy.enemyId()].params[0])', false, false));
         check('tấn công mở chọn bộ phận bằng cửa sổ gốc', await evalPage(cdp,
             'SceneManager._scene._enemyWindow.maxItems() > 1 && BattleManager.inputtingAction().isAttack()', false, false));
         await screenshot('battle-targets');
+
+        // Trận kiểm tra có chỉ số kiểm soát để tránh phụ thuộc RNG; dùng luồng ra đòn,
+        // event chết của Guard, thắng trận và trở về map thật, không gọi processVictory.
+        await evalPage(cdp, `(() => {
+            const actor = BattleManager.actor(), action = BattleManager.inputtingAction();
+            actor.addParam(2, 1000);
+            actor.addParam(6, 1000);
+            $gameTroop.members()[0].setHp(1);
+            action.itemHit = () => 1;
+            action.itemEva = () => 0;
+            SceneManager._scene._enemyWindow.select(0);
+            SceneManager._scene._enemyWindow.processOk();
+        })()`, false, false);
+        const battleDeadline = Date.now() + 40000;
+        let battleResult;
+        while (Date.now() < battleDeadline) {
+            battleResult = await evalPage(cdp, `({
+                scene: SceneManager._scene.constructor.name,
+                turn: $gameTroop.turnCount(), torsoHp: $gameTroop.members()[0].hp,
+                message: $gameMessage.isBusy(), inBattle: $gameParty.inBattle()
+            })`, false, false);
+            if (battleResult.scene === 'Scene_Map' && !battleResult.inBattle) break;
+            if (battleResult.message) {
+                await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+                await sleep(100);
+                await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+            }
+            await sleep(180);
+        }
+        check('ra đòn, hạ Guard, thắng trận và quay lại map',
+            battleResult.scene === 'Scene_Map' && !battleResult.inBattle && battleResult.torsoHp === 0 && battleResult.turn > 0,
+            JSON.stringify(battleResult));
 
         // ---------------------------------------------------------
         // 6. Tải lại trang để chứng minh save nằm trong localStorage.

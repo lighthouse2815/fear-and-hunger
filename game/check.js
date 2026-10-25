@@ -59,6 +59,11 @@ async function checkProject(root) {
             }
         }
     }
+    for (const name of ['server.js', 'build.js', 'check.js']) {
+        const filename = path.join(root, name);
+        new vm.Script(await fs.readFile(filename, 'utf8'), { filename });
+        scripts += 1;
+    }
     for (const directory of ['js', 'data', '__fnh']) await walk(path.join(root, directory));
     for (const directory of ['img', 'audio', 'fonts']) await fs.access(path.join(root, directory));
     return { scripts, data, maps, transfers, audioCommands, pictureCommands };

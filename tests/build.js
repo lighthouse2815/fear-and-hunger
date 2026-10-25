@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
-const { buildWeb } = require('../tools/fnh-browser/build');
+const { buildWeb } = require('../game/build');
 
 (async () => {
     const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'fnh-web-build-test-'));

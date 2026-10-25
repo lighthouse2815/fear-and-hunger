@@ -4,10 +4,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
-const { buildWeb } = require('./build');
-const { findGameRoot, isGameRoot } = require('./server');
+const { buildWeb } = require('../game/build');
+const { findGameRoot, isGameRoot } = require('../game/server');
 
-const REPO_ROOT = path.resolve(__dirname, '../..');
+const REPO_ROOT = path.resolve(__dirname, '..');
 
 async function createProject(options = {}) {
     const output = path.resolve(options.output || path.join(REPO_ROOT, 'game'));
@@ -80,9 +80,11 @@ async function createProject(options = {}) {
         system.hasEncryptedAudio = false;
         system.encryptionKey = '';
         await fs.writeFile(systemFile, JSON.stringify(system) + '\n');
-        await fs.copyFile(path.join(__dirname, 'build.js'), path.join(staging, 'build.js'));
-        await fs.copyFile(path.join(__dirname, 'check-project.js'), path.join(staging, 'check.js'));
-        await fs.copyFile(path.join(__dirname, 'templates/project-README.md'), path.join(staging, 'README.md'));
+        await fs.copyFile(path.join(REPO_ROOT, 'game/build.js'), path.join(staging, 'build.js'));
+        await fs.copyFile(path.join(REPO_ROOT, 'game/check.js'), path.join(staging, 'check.js'));
+        await fs.copyFile(path.join(REPO_ROOT, 'game/README.md'), path.join(staging, 'README.md'));
+        await fs.copyFile(path.join(REPO_ROOT, 'game/NOTICE.md'), path.join(staging, 'NOTICE.md'));
+        await fs.unlink(path.join(staging, 'web-build.json'));
         await fs.writeFile(path.join(staging, 'package.json'), JSON.stringify({
             name: 'fear-and-hunger-source', private: true, version: '1.0.0',
             scripts: {
@@ -110,7 +112,7 @@ async function main() {
             if (!args[i + 1] || args[i + 1].startsWith('--')) throw new Error('Thiếu giá trị cho ' + args[i]);
             options[args[i] === '--game' ? 'gameRoot' : 'output'] = args[++i];
         } else if (args[i] === '--help') {
-            console.log('Cách dùng: node tools/fnh-browser/project.js [--game thư_mục_www] [--out thư_mục_dự_án]');
+            console.log('Cách dùng: node tools/import-game.js [--game thư_mục_www] [--out thư_mục_dự_án]');
             return;
         } else throw new Error('Tuỳ chọn không hợp lệ: ' + args[i]);
     }

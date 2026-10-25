@@ -5,27 +5,15 @@
   "description": "Dự án Fear & Hunger Web với mã nguồn, dữ liệu và tài nguyên chỉnh sửa trực tiếp",
   "scripts": {
     "start": "npm --prefix game start",
-    "start:node": "npx -y http-server -p 8137 -c-1",
-    "check": "npm --prefix game run check",
-    "check:fnh": "node --check tools/fnh-browser/server.js && node --check tools/fnh-browser/compat.js && node --check tests/fnh-browser-smoke.js && node --check tools/fnh-browser/build.js && node --check tests/fnh-browser-build.js && node --check tools/fnh-browser/project.js && node --check tools/fnh-browser/check-project.js && node --check tests/fnh-browser-project.js",
-    "check:fnh-engine": "node --check fnh-engine/js/core.js && node --check fnh-engine/js/assets.js && node --check fnh-engine/js/audio.js && node --check fnh-engine/js/data.js && node --check fnh-engine/js/screen_effects.js && node --check fnh-engine/js/pictures.js && node --check fnh-engine/js/gab.js && node --check fnh-engine/js/game.js && node --check fnh-engine/js/scene_title.js && node --check fnh-engine/js/scene_creation.js && node --check fnh-engine/js/name_input.js && node --check fnh-engine/js/interpreter.js && node --check fnh-engine/js/move_route.js && node --check fnh-engine/js/event_script.js && node --check fnh-engine/js/scene_map.js && node --check fnh-engine/js/action.js && node --check fnh-engine/js/scene_battle.js && node --check fnh-engine/js/scene_gameover.js && node --check fnh-engine/js/main.js && node --check tools/fnh-engine/server.js && node --check tests/fnh-engine-troops.js && node --check tests/fnh-engine-actions.js && node --check tests/fnh-engine-battle-party.js && node --check tests/fnh-engine-states.js && node --check tests/fnh-engine-input.js && node --check tests/fnh-engine-system.js && node --check tests/fnh-engine-audio.js && node --check tests/fnh-engine-actors.js && node --check tests/fnh-engine-gab.js && node --check tests/fnh-engine-pictures.js && node --check tests/fnh-engine-screen.js && node --check tests/fnh-engine-routes.js && node --check tests/fnh-engine-smoke.js && node --check fnh-engine/js/battle_animation.js && node --check tests/fnh-engine-animation.js && node --check tests/fnh-engine-tilesets.js && node --check tests/fnh-engine-scroll.js && node --check tests/fnh-engine-save-events.js && node --check tests/fnh-engine-video.js && node --check tests/fnh-engine-name.js && node --check fnh-engine/js/native_menu.js && node --check tests/fnh-engine-menu.js",
-    "fnh": "node tools/fnh-browser/server.js",
-    "fnh:open": "node tools/fnh-browser/server.js --open",
-    "audit:fnh-engine": "node tools/fnh-engine/audit.js",
-    "fnh:engine": "node tools/fnh-engine/server.js",
-    "fnh:engine:open": "node tools/fnh-engine/server.js --open",
-    "test": "npm run test:game",
-    "test:fnh": "npm run check:fnh && node tests/fnh-browser-build.js && node tests/fnh-browser-project.js && node tests/fnh-browser-smoke.js",
-    "test:fnh-engine": "npm run check:fnh-engine && node tests/fnh-engine-audit.js && node tests/fnh-engine-events.js && node tests/fnh-engine-interpreter.js && node tests/fnh-engine-routes.js && node tests/fnh-engine-screen.js && node tests/fnh-engine-pictures.js && node tests/fnh-engine-gab.js && node tests/fnh-engine-actors.js && node tests/fnh-engine-audio.js && node tests/fnh-engine-system.js && node tests/fnh-engine-input.js && node tests/fnh-engine-states.js && node tests/fnh-engine-battle-party.js && node tests/fnh-engine-actions.js && node tests/fnh-engine-animation.js && node tests/fnh-engine-troops.js && node tests/fnh-engine-tilesets.js && node tests/fnh-engine-scroll.js && node tests/fnh-engine-save-events.js && node tests/fnh-engine-video.js && node tests/fnh-engine-menu.js && node tests/fnh-engine-name.js && node tests/fnh-engine-smoke.js",
-    "build:fnh-web": "node tools/fnh-browser/build.js",
-    "fnh:web": "node dist/fear-and-hunger-web/server.js --port 8140 --open",
-    "coi-ham": "python3 -m http.server 8137",
-    "check:coi-ham": "node --check js/utils.js && node --check js/sound.js && node --check js/data.js && node --check js/combat.js && node --check js/game.js && node --check js/main.js",
-    "test:coi-ham": "npm run check:coi-ham && node tests/smoke.js",
     "dev": "npm --prefix game run dev",
+    "check": "npm --prefix game run check && node --check tools/import-game.js",
     "build": "npm --prefix game run build",
-    "check:game": "npm --prefix game run check",
-    "import:game": "node tools/fnh-browser/project.js",
-    "test:game": "npm run check:game && node tests/fnh-browser-project.js && node tests/weapon-animation.js && node tests/fnh-browser-smoke.js"
+    "preview": "node dist/fear-and-hunger-web/server.js --port 8140 --open",
+    "import:game": "node tools/import-game.js",
+    "test": "npm run check && node tests/build.js && node tests/import.js && node tests/weapon-animation.js && node tests/browser.js",
+    "test:browser": "node tests/browser.js"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

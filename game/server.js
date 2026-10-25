@@ -1,8 +1,7 @@
 'use strict';
 /* ============================================================
-   Fear & Hunger — máy chủ chạy cục bộ cho bản RPG Maker MV
-   Phục vụ nguyên thư mục www gốc, chỉ chèn thêm compat.js.
-   Không sao chép, không tải và không sửa asset của game.
+   Fear & Hunger — máy chủ cho dự án web độc lập.
+   Phục vụ source tại thư mục hiện tại hoặc thư mục chỉ định bằng --game.
    ============================================================ */
 const http = require('http');
 const fs = require('fs');
@@ -10,13 +9,9 @@ const fsp = fs.promises;
 const path = require('path');
 const { spawn } = require('child_process');
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const PACKAGED = fs.existsSync(path.join(__dirname, 'web-build.json'));
-const COMPAT_FILE = path.join(__dirname, ...(PACKAGED ? ['__fnh', 'compat.js'] : ['compat.js']));
-const DEFAULT_GAME_ROOT = PACKAGED ? __dirname : path.join(
-    REPO_ROOT, 'Fear.and.Hunger.v1.4.1', 'Fear.and.Hunger.v1.4.1', 'www'
-);
-const DEFAULT_PORT = 8138;
+const COMPAT_FILE = path.join(__dirname, '__fnh/compat.js');
+const DEFAULT_GAME_ROOT = __dirname;
+const DEFAULT_PORT = 8140;
 const DEFAULT_HOST = '127.0.0.1';
 
 const MIME = {
@@ -52,9 +47,9 @@ const MIME = {
 
 function usage() {
     return [
-        'Cách dùng: node tools/fnh-browser/server.js [tuỳ chọn]',
+        'Cách dùng: node server.js [tuỳ chọn]',
         '',
-        '  --game <thư mục>   Thư mục www hoặc thư mục game (mặc định: bản 1.4.1 trong repo)',
+        '  --game <thư mục>   Thư mục source hoặc bản build (mặc định: cùng thư mục server)',
         '  --port <số>        Cổng HTTP (mặc định: ' + DEFAULT_PORT + ')',
         '  --host <địa chỉ>   Địa chỉ lắng nghe (mặc định: ' + DEFAULT_HOST + ')',
         '  --open             Mở trình duyệt sau khi máy chủ chạy',
@@ -101,10 +96,7 @@ function isGameRoot(directory) {
 }
 
 function findGameRoot(input) {
-    const candidates = [];
-    if (input) candidates.push(input);
-    if (process.env.FNH_GAME_ROOT) candidates.push(process.env.FNH_GAME_ROOT);
-    candidates.push(DEFAULT_GAME_ROOT);
+    const candidates = [input || process.env.FNH_GAME_ROOT || DEFAULT_GAME_ROOT];
 
     for (const candidate of candidates) {
         const resolved = path.resolve(candidate);
@@ -114,12 +106,12 @@ function findGameRoot(input) {
     }
 
     const message = [
-        'Không tìm thấy thư mục game RPG Maker MV hợp lệ.',
+        'Không tìm thấy source hoặc bản build của game.',
         'Đã thử:',
         ...candidates.map(function (item) { return '  - ' + path.resolve(item); }),
         '',
-        'Hãy chỉ định thư mục www bằng:',
-        '  node tools/fnh-browser/server.js --game "/đường/dẫn/tới/www"',
+        'Hãy chỉ định thư mục game bằng:',
+        '  node server.js --game "/đường/dẫn/tới/game"',
         'hoặc đặt biến môi trường FNH_GAME_ROOT.'
     ].join('\n');
     const error = new Error(message);

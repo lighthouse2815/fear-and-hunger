@@ -1,10 +1,10 @@
 'use strict';
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { buildIndexHtml, findGameRoot, isGameRoot } = require('./server');
+const { buildIndexHtml, findGameRoot } = require('./server');
 
-const REPO_ROOT = path.resolve(__dirname, '../..');
-const CONTENT = ['index.html', 'audio', 'data', 'fonts', 'icon', 'img', 'js', 'movies'];
+const REPO_ROOT = path.resolve(__dirname, '..');
+const CONTENT = ['index.html', 'audio', 'data', 'fonts', 'icon', 'img', 'js', 'movies', 'NOTICE.md'];
 const MARKER = 'web-build.json';
 const FORMAT = 'fear-and-hunger-web';
 
@@ -14,8 +14,7 @@ function inside(directory, parent) {
 }
 
 async function buildWeb(options = {}) {
-    const editable = path.join(REPO_ROOT, 'game');
-    const source = await fs.realpath(findGameRoot(options.gameRoot || (isGameRoot(editable) ? editable : undefined)));
+    const source = await fs.realpath(findGameRoot(options.gameRoot || __dirname));
     const requested = path.resolve(options.output || path.join(REPO_ROOT, 'dist/fear-and-hunger-web'));
     await fs.mkdir(path.dirname(requested), { recursive: true });
     const output = path.join(await fs.realpath(path.dirname(requested)), path.basename(requested));
@@ -40,7 +39,7 @@ async function buildWeb(options = {}) {
             if (options.onProgress) options.onProgress(entry);
             const sourcePath = path.join(source, entry);
             try { await fs.access(sourcePath); } catch (error) {
-                if (entry === 'icon' || entry === 'movies') continue;
+                if (entry === 'icon' || entry === 'movies' || entry === 'NOTICE.md') continue;
                 throw new Error('Thiếu tài nguyên nguồn: ' + entry);
             }
             await fs.cp(sourcePath, path.join(staging, entry), {
@@ -60,9 +59,7 @@ async function buildWeb(options = {}) {
         const sourceCompat = path.join(source, '__fnh/compat.js');
         let compatFile = sourceCompat;
         try { await fs.access(sourceCompat); } catch (error) {
-            const localCompat = path.join(__dirname, '__fnh/compat.js');
-            try { await fs.access(localCompat); compatFile = localCompat; }
-            catch (error) { compatFile = path.join(__dirname, 'compat.js'); }
+            compatFile = path.join(__dirname, '__fnh/compat.js');
         }
         await fs.copyFile(compatFile, path.join(staging, '__fnh/compat.js'));
         await fs.copyFile(path.join(__dirname, 'server.js'), path.join(staging, 'server.js'));
@@ -73,7 +70,7 @@ async function buildWeb(options = {}) {
         const maps = (await fs.readdir(path.join(staging, 'data'))).filter((name) => /^Map\d+\.json$/.test(name)).length;
         const manifest = { format: FORMAT, version: 1, gameVersion: '1.4.1', sourceFiles: files, sourceBytes: bytes, maps };
         await fs.writeFile(path.join(staging, MARKER), JSON.stringify(manifest, null, 2) + '\n');
-        await fs.writeFile(path.join(staging, 'README.md'), `# Fear & Hunger — bản web độc lập\n\nGói này chứa tài nguyên và mã chạy từ bản game bạn sở hữu.\nKhông cần thư mục cài game gốc sau khi đã đóng gói.\n\n## Chạy\n\nCài Node.js 18+ rồi chạy trong thư mục này:\n\n\`\`\`sh\nnpm start\n\`\`\`\n\nKhông cần npm install. Mở http://127.0.0.1:8140 để vào thẳng menu.\nÂm thanh mở khi bấm phím hoặc chuột lần đầu trong game.\nCó thể phục vụ nguyên thư mục này bằng máy chủ tĩnh khác, kể cả dưới một đường dẫn con.\nTrình duyệt cần HTTP(S); mở trực tiếp index.html bằng file:// không hỗ trợ tải dữ liệu game.\n\n## Nội dung và lưu game\n\nCó ${maps} bản đồ cùng hình, âm thanh, phim, dữ liệu, runtime RPG Maker MV và plugin gốc.\nSteamworks không chạy trong trình duyệt. Save dùng localStorage, giữ nguyên địa chỉ/cổng\nđể tiếp tục save; save của engine tự viết ở cổng 8139 không tương thích.\n\nTài nguyên và mã game vẫn thuộc chủ sở hữu gốc; gói này không thay đổi quyền phân phối.\n`);
+        await fs.writeFile(path.join(staging, 'README.md'), `# Fear & Hunger — bản web độc lập\n\nGói này chứa tài nguyên và mã chạy từ bản game bạn sở hữu.\nKhông cần thư mục cài game gốc sau khi đã đóng gói.\n\n## Chạy\n\nCài Node.js 18+ rồi chạy trong thư mục này:\n\n\`\`\`sh\nnpm start\n\`\`\`\n\nKhông cần npm install. Mở http://127.0.0.1:8140 để vào thẳng menu.\nÂm thanh mở khi bấm phím hoặc chuột lần đầu trong game.\nCó thể phục vụ nguyên thư mục này bằng máy chủ tĩnh khác, kể cả dưới một đường dẫn con.\nTrình duyệt cần HTTP(S); mở trực tiếp index.html bằng file:// không hỗ trợ tải dữ liệu game.\n\n## Nội dung và lưu game\n\nCó ${maps} bản đồ cùng hình, âm thanh, phim, dữ liệu, runtime RPG Maker MV và plugin gốc.\nSteamworks không chạy trong trình duyệt. Save dùng localStorage, giữ nguyên địa chỉ/cổng\nđể tiếp tục save.\n\nTài nguyên và mã game vẫn thuộc chủ sở hữu gốc; gói này không thay đổi quyền phân phối.\n`);
         // Chỉ thay gói cũ sau khi bản mới đã được tạo xong; lỗi copy giữ gói cũ nguyên vẹn.
         let backup;
         if (existing) {
@@ -100,7 +97,7 @@ async function main() {
             if (!args[i + 1] || args[i + 1].startsWith('--')) throw new Error('Thiếu giá trị cho ' + args[i]);
             options[key] = args[++i];
         } else if (args[i] === '--help') {
-            console.log('Cách dùng: node tools/fnh-browser/build.js [--game thư_mục_www] [--out thư_mục_xuất]');
+            console.log('Cách dùng: node build.js [--game thư_mục_source] [--out thư_mục_xuất]');
             return;
         } else throw new Error('Tuỳ chọn không hợp lệ: ' + args[i]);
     }

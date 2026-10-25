@@ -2,8 +2,8 @@
 
 Đây là thư mục nguồn để chỉnh sửa và phát triển tiếp. Code, dữ liệu và asset đã
 được nhập vào đây; không cần thư mục cài Fear & Hunger hoặc RPG Maker để chạy web.
-Mã engine, plugin và nội dung nhập vẫn giữ nguồn gốc tác giả, không thuộc giấy phép
-MIT của game Cối Hầm ở thư mục cha. Thông tin nhập nằm trong `source-info.json`.
+Thông tin tác giả được giữ trong code và `NOTICE.md`. Thông tin nhập nằm trong
+`source-info.json`.
 
 ## Chạy và build
 

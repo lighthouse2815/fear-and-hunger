@@ -5,9 +5,9 @@ const path = require('node:path');
 const os = require('node:os');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
-const { createProject } = require('../tools/fnh-browser/project');
-const { buildWeb } = require('../tools/fnh-browser/build');
-const { checkProject } = require('../tools/fnh-browser/check-project');
+const { createProject } = require('../tools/import-game');
+const { buildWeb } = require('../game/build');
+const { checkProject } = require('../game/check');
 
 (async () => {
     const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'fnh-source-test-'));
