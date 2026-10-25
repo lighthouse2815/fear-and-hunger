@@ -1,4 +1,24 @@
-# CỐI HẦM
+# Fear & Hunger — gói web chạy độc lập
+
+Để dùng hình ảnh, âm thanh, bản đồ và logic gốc mà không cần thư mục cài game sau khi
+đóng gói:
+
+```sh
+npm run build:fnh-web     # tạo dist/fear-and-hunger-web/
+npm run fnh:web           # mở http://127.0.0.1:8140/
+```
+
+Gói xuất chứa runtime RPG Maker MV, plugin và tài nguyên từ bản game bạn sở hữu;
+không dùng combat Guard thử nghiệm của `fnh-engine`. Có thể chuyển nguyên thư mục
+`dist/fear-and-hunger-web/` sang máy khác rồi chạy `npm start` ngay trong đó (Node.js
+18+, không cần `npm install`). Hoặc phục vụ thư mục bằng HTTP(S) tĩnh, kể cả dưới một
+đường dẫn con. Thư mục game nguồn chỉ cần lúc build. Tài nguyên gói xuất được ignore
+khỏi Git; mã công cụ và test được quản lý trong repository. Xem [PORT.md](PORT.md).
+
+Bản engine tự viết ở cổng 8139 vẫn là thử nghiệm; bản ở cổng **8140** giữ logic,
+di chuyển và chiến đấu từ game gốc.
+
+## Cối Hầm — game riêng trong repository
 
 Một **game web dungeon-horror** hoàn toàn nội dung gốc: chui xuống lòng đất quản lý cơn đói,
 đấu theo lệnh với các vùng cơ thể tính máu riêng, sống nhờ ném xu may mắn, và quay về lối lên

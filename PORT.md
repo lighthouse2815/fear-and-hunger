@@ -1,12 +1,62 @@
 # Fear & Hunger 1.4.1 — chạy trên trình duyệt
 
-Công cụ này chạy **bản game Fear & Hunger 1.4.1 do bạn sở hữu** ngay trong trình duyệt,
-bằng chính thư mục `www` của bản RPG Maker MV gốc. Nó không tải game, không sao chép
-asset và không đóng gói lại game. Toàn bộ hình ảnh, âm thanh, dữ liệu và mã plugin vẫn
-được đọc trực tiếp từ thư mục game trên máy bạn.
+Công cụ này chạy **bản game Fear & Hunger 1.4.1 do bạn sở hữu** trong trình duyệt,
+dùng runtime RPG Maker MV và plugin gốc. Có thể đóng gói thành thư mục web độc lập,
+hoặc chạy trực tiếp từ thư mục `www` của bản cài hiện có. Công cụ không tải game.
 
 > Thư mục `Fear.and.Hunger.v1.4.1/` đã nằm trong `.gitignore`. Không commit hoặc tải
 > asset của game lên GitHub. Bạn cần tự mua/sở hữu bản game gốc để sử dụng công cụ này.
+
+## Đóng gói thành bản web độc lập
+
+```sh
+npm run build:fnh-web
+npm run fnh:web
+```
+
+Bước build đọc bản cài hiện có và tạo `dist/fear-and-hunger-web/`. Mặc định bản cài
+được kiểm tra có **169 bản đồ**; toàn bộ `audio`, `data`, `fonts`, `icon`, `img`, `js`
+và `movies` được mang vào gói, gồm runtime RPG Maker MV và plugin gốc. Ảnh/âm thanh
+mã hóa vẫn giữ nguyên bytes. `index.html` nhận lớp tương thích bằng đường dẫn tương
+đối `./__fnh/compat.js`, chạy được khi host ở thư mục con.
+
+Gói xuất không đọc thư mục cài game ban đầu, không gọi engine thử nghiệm và không
+cần cài dependency npm. Copy nguyên gói sang vị trí/máy khác, cài Node.js 18+ rồi chạy:
+
+```sh
+cd fear-and-hunger-web
+npm start                        # http://127.0.0.1:8140/
+```
+
+Có thể dùng máy chủ tĩnh khác hoặc hosting HTTP(S). Mở trực tiếp `index.html` bằng
+`file://` không hỗ trợ XHR của runtime. Bấm BẮT ĐẦU để mở âm thanh/video theo yêu cầu
+của trình duyệt. Save nằm trong localStorage của địa chỉ đang chơi; giữ cùng origin
+để dùng tiếp save. Save cũ của engine tự viết ở cổng 8139 không chuyển sang được.
+
+Chỉ định nguồn và nơi xuất:
+
+```sh
+npm run build:fnh-web -- --game "/đường/dẫn/www" --out "/đường/dẫn/fear-and-hunger-web"
+```
+
+Công cụ từ chối ghi đè thư mục không có dấu nhận dạng gói web và không nhận symlink
+trong dữ liệu nguồn. Build lại tạo gói tạm trước rồi mới thay gói đã tạo lần trước;
+lỗi copy giữ nguyên gói cũ. Không mang save cá nhân hoặc thư viện native của NW.js
+vào gói web. Nội dung gốc không bị sửa. Gói xuất nằm trong `.gitignore`; công cụ này
+không thay đổi quyền phân phối tài nguyên và mã game gốc.
+
+Kiểm chứng bộ đóng gói và chạy test bằng đúng server/tài nguyên trong gói:
+
+```sh
+node tests/fnh-browser-build.js
+FNH_WEB_PACKAGE=dist/fear-and-hunger-web npm run test:fnh
+```
+
+Test đóng gói dùng nguồn tạm, xóa nguồn rồi chạy server từ gói xuất để kiểm tra tính
+độc lập, thứ tự script, ảnh/âm thanh và HTTP Range. Smoke test dùng Chromium kiểm tra
+di chuyển, đi qua event cửa thật 74 → 1 → 74, combat chọn bộ phận Guard, video,
+âm thanh và lưu/đọc qua tải lại trang. Đây không phải bằng chứng đã chơi kiểm thử
+mọi nhánh cốt truyện hoặc mọi kết thúc.
 
 ## Yêu cầu
 
@@ -15,7 +65,7 @@ asset và không đóng gói lại game. Toàn bộ hình ảnh, âm thanh, dữ
 - Trình duyệt hiện đại có WebGL và Web Audio. Đã kiểm tra với Chrome/Chromium; Firefox
   có thể chạy nhưng chưa được kiểm chứng trong repo này. Bài test tự động dùng
   Chrome/Chromium.
-- Thư mục game đặt đúng vị trí mặc định:
+- Khi build hoặc chạy trực tiếp từ nguồn, thư mục game đặt đúng vị trí mặc định:
 
   ```text
   Fear.and.Hunger.v1.4.1/

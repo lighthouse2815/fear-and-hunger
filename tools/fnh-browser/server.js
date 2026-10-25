@@ -11,8 +11,9 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const COMPAT_FILE = path.join(__dirname, 'compat.js');
-const DEFAULT_GAME_ROOT = path.join(
+const PACKAGED = fs.existsSync(path.join(__dirname, 'web-build.json'));
+const COMPAT_FILE = path.join(__dirname, ...(PACKAGED ? ['__fnh', 'compat.js'] : ['compat.js']));
+const DEFAULT_GAME_ROOT = PACKAGED ? __dirname : path.join(
     REPO_ROOT, 'Fear.and.Hunger.v1.4.1', 'Fear.and.Hunger.v1.4.1', 'www'
 );
 const DEFAULT_PORT = 8138;
@@ -126,10 +127,10 @@ function findGameRoot(input) {
     throw error;
 }
 
-function buildIndexHtml(originalHtml) {
+function buildIndexHtml(originalHtml, compatUrl = '/__fnh/compat.js') {
     if (originalHtml.indexOf('/__fnh/compat.js') !== -1) return originalHtml;
 
-    const compatTag = '        <script type="text/javascript" src="/__fnh/compat.js"></script>';
+    const compatTag = '        <script type="text/javascript" src="' + compatUrl + '"></script>';
     const pluginPattern = /([ \t]*)<script\b[^>]*\bsrc=["']js\/plugins\.js["'][^>]*>\s*<\/script>/i;
     if (pluginPattern.test(originalHtml)) {
         return originalHtml.replace(pluginPattern, function (match, indent) {

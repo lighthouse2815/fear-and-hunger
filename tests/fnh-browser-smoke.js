@@ -13,7 +13,9 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 
-const { findGameRoot, startServer } = require('../tools/fnh-browser/server');
+const { findGameRoot, startServer } = process.env.FNH_WEB_PACKAGE
+    ? require(path.resolve(process.env.FNH_WEB_PACKAGE, 'server.js'))
+    : require('../tools/fnh-browser/server');
 
 const GAME_HINT = 'Fear.and.Hunger.v1.4.1/Fear.and.Hunger.v1.4.1/www';
 const SAVE_SLOT = 20;
@@ -310,6 +312,10 @@ async function main() {
         // ---------------------------------------------------------
         const health = await (await fetch(running.url + '__fnh/health')).json();
         check('health trả về đúng chế độ', health.ok === true && health.mode === 'fnh-browser');
+        if (process.env.FNH_WEB_PACKAGE) {
+            check('máy chủ và dữ liệu đều chạy từ gói độc lập',
+                path.resolve(health.gameRoot) === path.resolve(process.env.FNH_WEB_PACKAGE));
+        }
 
         const indexResponse = await fetch(running.url);
         const indexHtml = await indexResponse.text();
@@ -588,6 +594,34 @@ async function main() {
         check('nhân vật di chuyển được trên bản đồ', moveState.spot !== null && moveState.moved === true, JSON.stringify(moveState));
         await screenshot('move');
 
+        // Đi qua event cửa thật, không chỉ gọi API chuyển map trực tiếp.
+        // Tạo lượt chơi từ title: reset dữ liệu ngay trong Scene_Map đang chạy
+        // khiến runtime cũ đọc $dataMap đã bị xoá khi chụp nền chuyển scene.
+        await evalPage(cdp, 'SceneManager.goto(Scene_Title)', false, false);
+        await waitFor(cdp, 'SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()',
+            20000, 'trở về title trước lượt kiểm tra cửa');
+        await evalPage(cdp, `(() => {
+            DataManager.setupNewGame();
+            $gameSwitches.setValue(246, true);
+            $gameSwitches.setValue(3480, true);
+            $gameVariables.setValue(121, 1);
+            $gamePlayer.reserveTransfer(74, 15, 5, 8, 0);
+            SceneManager.goto(Scene_Map);
+        })()`, false, false);
+        await waitFor(cdp, 'SceneManager._scene instanceof Scene_Map && $gameMap.mapId() === 74 && !$gamePlayer.isTransferring() && !$gameMap.isEventRunning()',
+            30000, 'cổng ngục sẵn sàng');
+        await evalPage(cdp, '$gamePlayer.moveStraight(8)', false, false);
+        await waitFor(cdp, '$gameMap.mapId() === 1 && !$gamePlayer.isTransferring() && !$gameMap.isEventRunning()',
+            30000, 'đi qua cửa vào ngục');
+        check('event cửa thật đưa từ cổng ngục vào map 1', await evalPage(cdp,
+            '$gamePlayer.x === 27 && $gamePlayer.y === 68', false, false));
+        await screenshot('entrance-to-dungeon');
+        await evalPage(cdp, '$gamePlayer.moveStraight(2)', false, false);
+        await waitFor(cdp, '$gameMap.mapId() === 74 && !$gamePlayer.isTransferring() && !$gameMap.isEventRunning()',
+            30000, 'quay về cổng ngục');
+        check('event cửa thật cho phép quay lại map trước', await evalPage(cdp,
+            '$gamePlayer.x === 15 && $gamePlayer.y === 5', false, false));
+
         const battleState = await evalPage(cdp, [
             '(async () => {',
             '  const troop = $dataTroops.find(function (item) { return item && item.members && item.members.length > 0; });',
@@ -610,6 +644,14 @@ async function main() {
         check('trận đấu có quái và sprites', battleState.members > 0 && battleState.enemySprites > 0, JSON.stringify(battleState));
         check('trận đấu có nhân vật và giao diện', battleState.actorSprites > 0 && !!battleState.phase, JSON.stringify(battleState));
         await screenshot('battle');
+        await waitFor(cdp, 'BattleManager.isInputting() && BattleManager.actor()', 20000, 'lượt nhập lệnh chiến đấu');
+        await evalPage(cdp, 'SceneManager._scene.commandAttack()', false, false);
+        await waitFor(cdp, 'SceneManager._scene._enemyWindow.active', 10000, 'chọn bộ phận khi tấn công');
+        check('Guard gốc gồm đủ bảy mục tiêu bộ phận', await evalPage(cdp,
+            '$gameTroop.members().length === 7 && $gameTroop.members().every(enemy => enemy.mhp === $dataEnemies[enemy.enemyId()].params[0])', false, false));
+        check('tấn công mở chọn bộ phận bằng cửa sổ gốc', await evalPage(cdp,
+            'SceneManager._scene._enemyWindow.maxItems() > 1 && BattleManager.inputtingAction().isAttack()', false, false));
+        await screenshot('battle-targets');
 
         // ---------------------------------------------------------
         // 6. Tải lại trang để chứng minh save nằm trong localStorage.
