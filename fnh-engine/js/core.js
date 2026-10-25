@@ -308,6 +308,8 @@
             this.mouse = { x: 0, y: 0, down: false };
             this.enabled = true;
             this.pointerEnabled = true;
+            this.keyBindings = {};
+            this.captureKey = null;
             this._bind();
         }
 
@@ -315,15 +317,23 @@
             const self = this;
             window.addEventListener('keydown', function (event) {
                 if (!self.enabled) return;
+                if (self.captureKey && !event.repeat) {
+                    event.preventDefault();
+                    const capture = self.captureKey;
+                    self.captureKey = null;
+                    capture(event.code, event.key);
+                    return;
+                }
+                const key = self.keyBindings[event.code] || event.key;
                 if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter', 'Escape', 'Tab'].includes(event.key)) {
                     event.preventDefault();
                 }
-                if (!event.repeat) self.pressed.add(event.key);
-                self.down.add(event.key);
+                if (!event.repeat) self.pressed.add(key);
+                self.down.add(key);
             }, { passive: false });
 
             window.addEventListener('keyup', function (event) {
-                self.down.delete(event.key);
+                self.down.delete(self.keyBindings[event.code] || event.key);
             });
 
             window.addEventListener('blur', function () {

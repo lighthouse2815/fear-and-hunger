@@ -13,7 +13,7 @@
                 throw new Error('Chưa hỗ trợ công thức sát thương');
             }
             for (const effect of item.effects || []) {
-                if (![21, 22, 43, 44].includes(effect.code)) throw new Error('Chưa hỗ trợ hiệu ứng hành động ' + effect.code);
+                if (![11, 12, 21, 22, 43, 44].includes(effect.code)) throw new Error('Chưa hỗ trợ hiệu ứng hành động ' + effect.code);
             }
             this.formula = formula;
         }
@@ -22,8 +22,8 @@
             return Math.floor((this.item.mpCost || 0) * (user.mcr === undefined ? 1 : user.mcr));
         }
 
-        canUse(user, isSkill) {
-            if (user.hp <= 0 || user.restriction === 4 || ![0, 1].includes(this.item.occasion)) return false;
+        canUse(user, isSkill, occasion = 1) {
+            if (user.hp <= 0 || user.restriction === 4 || ![0, occasion].includes(this.item.occasion)) return false;
             if (!isSkill) return true;
             const traits = this.data.battlerTraits(user);
             const requiredWeapons = [this.item.requiredWtypeId1, this.item.requiredWtypeId2].filter((id) => id > 0);
@@ -92,6 +92,19 @@
                 }
             }
             for (const effect of item.effects || []) {
+                if (effect.code === 11 || effect.code === 12) {
+                    const amount = Math.floor(((effect.code === 11 ? target.maxHp : target.maxMp) * effect.value1 + effect.value2)
+                        * (target.rec === undefined ? 1 : target.rec) * (this.data.items[item.id] === item ? (user.pha === undefined ? 1 : user.pha) : 1));
+                    if (effect.code === 11) {
+                        const before = target.hp;
+                        data.setActorHp(target, target.hp + amount);
+                        result.hp -= target.hp - before;
+                    } else {
+                        const before = target.mp;
+                        target.mp = Math.max(0, Math.min(target.maxMp, target.mp + amount));
+                        result.mp -= target.mp - before;
+                    }
+                }
                 if (effect.code === 21) {
                     const states = effect.dataId === 0 ? data.battlerTraits(user).filter((trait) => trait.code === 32)
                         .map((trait) => ({ id: trait.dataId, rate: trait.value })) : [{ id: effect.dataId, rate: 1 }];

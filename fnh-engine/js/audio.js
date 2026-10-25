@@ -13,6 +13,8 @@
             this.currentBgm = null;
             this.currentBgs = null;
             this.muted = false;
+            this.volumes = { master: 100, bgm: 100, bgs: 100, me: 100, se: 100 };
+            this.buses = {};
             this._bgmToken = 0;
             this._pendingBgm = null;
             this._bgsToken = 0;
@@ -37,7 +39,7 @@
                 }
                 this.context = new AudioContextClass();
                 this.master = this.context.createGain();
-                this.master.gain.value = this.muted ? 0 : 0.9;
+                this.master.gain.value = this.muted ? 0 : 0.9 * this.volumes.master / 100;
                 this.master.connect(this.context.destination);
             }
             if (this.context.state === 'suspended') {
@@ -50,7 +52,7 @@
         setMuted(value) {
             this.muted = !!value;
             if (this.master) {
-                this.master.gain.setTargetAtTime(this.muted ? 0 : 0.9, this.context.currentTime, 0.02);
+                this.master.gain.setTargetAtTime(this.muted ? 0 : 0.9 * this.volumes.master / 100, this.context.currentTime, 0.02);
             }
         }
 
@@ -59,17 +61,33 @@
             return this.muted;
         }
 
-        connectSound(source, gain, options) {
+        setVolume(channel, volume) {
+            if (!Object.prototype.hasOwnProperty.call(this.volumes, channel) || !Number.isFinite(volume)) return false;
+            this.volumes[channel] = Math.max(0, Math.min(100, volume));
+            const bus = channel === 'master' ? this.master : this.buses[channel];
+            if (bus && this.context) bus.gain.setTargetAtTime(channel === 'master'
+                ? (this.muted ? 0 : 0.9 * this.volumes.master / 100) : this.volumes[channel] / 100, this.context.currentTime, 0.02);
+            return true;
+        }
+
+        connectSound(source, gain, options, channel) {
+            if (!this.buses[channel]) {
+                const bus = this.context.createGain();
+                bus.gain.value = this.volumes[channel] / 100;
+                bus.connect(this.master);
+                this.buses[channel] = bus;
+            }
+            const output = this.buses[channel];
             source.playbackRate.value = options.pitch === undefined ? 1 : Math.max(0.01, options.pitch / 100);
             source.connect(gain);
             if (this.context.createStereoPanner) {
                 const pan = this.context.createStereoPanner();
                 pan.pan.value = Math.max(-1, Math.min(1, (options.pan || 0) / 100));
                 gain.connect(pan);
-                pan.connect(this.master);
+                pan.connect(output);
                 return pan;
             }
-            gain.connect(this.master);
+            gain.connect(output);
             return null;
         }
 
@@ -127,7 +145,7 @@
             source.loop = opts.loop !== false;
             const gain = this.context.createGain();
             gain.gain.value = 0;
-            const pan = this.connectSound(source, gain, opts);
+            const pan = this.connectSound(source, gain, opts, 'bgm');
             const position = Math.max(0, Number(opts.position) || 0) % buffer.duration;
             source.start(0, position);
             const target = (opts.volume === undefined ? 0.7 : opts.volume) * 0.55;
@@ -185,7 +203,7 @@
             source.loop = opts.loop !== false;
             const gain = this.context.createGain();
             gain.gain.value = 0;
-            const pan = this.connectSound(source, gain, opts);
+            const pan = this.connectSound(source, gain, opts, 'bgs');
             const position = Math.max(0, Number(opts.position) || 0) % buffer.duration;
             source.start(0, position);
             const target = (opts.volume === undefined ? 0.42 : opts.volume) * 0.55;
@@ -242,7 +260,7 @@
                 source.loop = false;
                 const gain = this.context.createGain();
                 gain.gain.value = (opts.volume === undefined ? 0.7 : opts.volume) * 0.55;
-                const pan = this.connectSound(source, gain, opts);
+                const pan = this.connectSound(source, gain, opts, 'me');
                 const entry = { name, source, gain, pan };
                 this.currentMe = entry;
                 this._mePending = false;
@@ -286,7 +304,7 @@
                 source.buffer = buffer;
                 const gain = this.context.createGain();
                 gain.gain.value = (opts.volume === undefined ? 0.7 : opts.volume) * 0.6;
-                this.connectSound(source, gain, opts);
+                this.connectSound(source, gain, opts, 'se');
                 this.seSources.add(source);
                 source.onended = () => { this.seSources.delete(source); };
                 source.start();

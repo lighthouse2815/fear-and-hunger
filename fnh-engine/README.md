@@ -156,17 +156,18 @@ Trong trận đấu: `↑`/`↓` chọn **TẤN CÔNG**, **PHÒNG THỦ** hoặc
   của hành động chạy trong trận, có thể chờ hội thoại và áp dụng vào tổ đội. Hiệu ứng
   chưa hỗ trợ báo lỗi trước khi trả chi phí. Chưa có action sequence/plugin battle.
 - Thắng, thua (màn hình chết) và bỏ chạy đều có đường quay lại game.
-- **Một ô lưu** trong `localStorage`:
-  - khoá: `FNH_ENGINE:<namespace>:save1`;
+- **20 ô lưu** trong `localStorage`:
+  - khoá: `FNH_ENGINE:<namespace>:save1` đến `save20`;
   - namespace mặc định `default`, đổi bằng `?fnh_engine_ns=...` khi test;
-  - Continue ở màn hình tiêu đề, Lưu/Đọc trong menu tạm dừng, Đọc ở màn hình chết.
+  - Continue mở danh sách File ở màn hình tiêu đề; điểm lưu event mở danh sách 20 File.
+  Save cũ ở `save1` vẫn được đọc như trước.
 - Hình ảnh, tileset, battleback, nhân vật, khuôn mặt và âm thanh đều đọc từ bản gốc.
 
 ## Kiến trúc
 
 ```text
 fnh-engine/
-  index.html              khung canvas + overlay bắt đầu
+  index.html              khung canvas + trạng thái tải
   css/engine.css          giao diện ngoài canvas
   js/core.js              hằng số, Input, Storage, Transition, Scene, helper vẽ
   js/assets.js            nạp/giải mã ảnh và âm thanh RPG Maker MV
@@ -369,7 +370,7 @@ Bài test sẽ:
 
 1. khởi động máy chủ tạm trên cổng ngẫu nhiên;
 2. kiểm tra route, asset mã hoá gốc, HTTP Range và chặn traversal;
-3. mở Chrome headless, bấm **BẮT ĐẦU**;
+3. mở Chrome headless, chờ splash và tương tác để mở âm thanh;
 4. kiểm tra tiêu đề, Web Audio, nhạc nền, giải mã ảnh/SE;
 5. tạo nhân vật, kiểm tra 4 nghề và chân dung;
 6. vào bản đồ 1, di chuyển tới Guard, đánh thắng;
@@ -458,8 +459,8 @@ trong battle event, giữ nguyên vị trí khi scene tạm dừng.
 
 ### Điểm lưu từ event
 
-Lệnh 352 mở màn hình lưu dùng lại giao diện và một slot của game, với hai lựa chọn
-lưu/hủy. Event chờ người chơi đóng màn hình; lỗi ghi dữ liệu giữ màn hình để thử lại
+Lệnh 352 mở danh sách 20 File khi chạy luồng gốc; Enter lưu vào File được chọn,
+Esc hủy. Encounter thử nghiệm giữ giao diện lưu cũ. Event chờ người chơi đóng màn hình; lỗi ghi dữ liệu giữ màn hình để thử lại
 hoặc hủy. Điểm lưu do event mở được phép lưu khi menu lưu bị khóa, giữ nguyên cờ khóa;
 lệnh không mở trong trận đấu. Save này lưu con trỏ và nhánh của event, các frame common
 event đang gọi cùng ngữ cảnh event ID. Tải lại tiếp tục ngay sau lệnh mở lưu, kể cả
@@ -494,3 +495,22 @@ Các lệnh `EnableDashing`/`DisableDashing` điều khiển chạy bằng Shift
 sáng áp dụng mặt nạ quanh người chơi. `Light on/off` giữ ID đèn toàn cục và self-switch D
 của event tương ứng. Đây chưa phải toàn bộ TerraxLighting hoặc các shader filter gốc;
 xóa filter chưa tồn tại là thao tác hợp lệ, còn tạo filter chưa hỗ trợ vẫn báo lỗi.
+
+### Menu theo bố cục bản gốc
+
+Esc/X mở cột sáu biểu tượng Item, Eq, Synthesis, Sk, Options và Q. Cửa sổ tổ đội dùng
+chân dung lớn cùng Hunger/Body/Mind; không còn nút lưu tự do trong menu của luồng gốc.
+Hunger hiển thị EXP còn tới mốc kế tiếp theo cách menu gốc tính, Body/Mind đọc HP/MP.
+Mũi tên chọn mục, Enter/Z xác nhận, Esc/X quay lại; PageUp/PageDown đổi nhân vật.
+
+Item phân loại Item/Weapon/Armor/Books; kỹ năng lọc theo loại được actor cho phép.
+Hành động dùng lại bộ thực thi chiến đấu nhưng kiểm tra occasion ngoài trận, trả chi
+phí và tiêu thụ đồ thật. Common event đóng menu rồi tiếp tục trên bản đồ. Equip,
+Optimize và Clear dùng cùng logic slot, quyền trang bị và túi đồ chung của engine.
+Synthesis đọc note công thức trong đồ đang sở hữu, kiểm tra đủ toàn bộ nguyên liệu
+và vàng trước khi trừ; lịch sử chế tạo được lưu trong flags.
+
+Options có âm lượng Master/BGM/BGS/ME/SE riêng và Command Remember. Controls cho đổi
+phím; cấu hình được lưu riêng dưới khóa `saveconfig` trong namespace hiện tại và tự
+khôi phục khi tải trang. Filter shader và toàn bộ plugin menu gốc chưa được hỗ trợ.
+Chế tạo hiện thao tác từng sản phẩm; giao diện chọn số lượng hàng loạt chưa có.

@@ -10,6 +10,7 @@
     const PRELOAD = [
         'titles2/title2',
         'system/Window',
+        'system/IconSet',
         'pictures/splash_screen1',
         'pictures/character_select_bg',
         'pictures/background_character',
@@ -80,6 +81,7 @@
             this.toast = null;
             this.toastTimer = 0;
             this.saveSlot = SAVE_SLOT;
+            this.options = { commandRemember: false, keyboard: {} };
             this.preloadDone = 0;
             this.preloadTotal = PRELOAD.length;
             this.lastError = null;
@@ -90,6 +92,13 @@
         async boot(onProgress) {
             this.assets.system = await this.assets.init();
             await this.data.loadCore();
+            const config = this.storage.load('config');
+            if (config) {
+                this.options.commandRemember = !!config.commandRemember;
+                this.options.keyboard = config.keyboard || {};
+                this.input.keyBindings = this.options.keyboard;
+                for (const [channel, volume] of Object.entries(config.volumes || {})) this.audio.setVolume(channel, volume);
+            }
             FNH.windowTone = this.data.system.windowTone;
             let done = 0;
             const total = PRELOAD.length;
@@ -277,29 +286,40 @@
                 screenEffects: this.screenEffects,
                 pictures: this.pictures
             };
-            return this.storage.save(this.saveSlot, payload);
+            const slot = options && options.slot !== undefined ? options.slot : this.saveSlot;
+            if (!Number.isInteger(slot) || slot < 1 || slot > 20) return false;
+            const saved = this.storage.save(slot, payload);
+            if (saved) this.saveSlot = slot;
+            return saved;
         }
 
-        getSaveInfo() {
-            const save = this.storage.load(this.saveSlot);
-            if (!save || save.version !== 1 || !save.player) return null;
-            return {
-                savedAt: save.savedAt,
-                playtime: save.playtime || 0,
-                mapId: save.mapId || 1,
-                playerName: save.player.name || 'Nhân vật',
-                className: save.player.className || '',
-                level: save.player.level || 1,
-                guardDefeated: !!save.guardDefeated
-            };
+        getSaveInfo(slot) {
+            const slots = slot === undefined ? [this.saveSlot,
+                ...Array.from({ length: 20 }, (entry, index) => index + 1).filter((id) => id !== this.saveSlot)] : [slot];
+            for (const id of slots) {
+                const save = this.storage.load(id);
+                if (!save || save.version !== 1 || !save.player) continue;
+                return {
+                    slot: id,
+                    savedAt: save.savedAt,
+                    playtime: save.playtime || 0,
+                    mapId: save.mapId || 1,
+                    playerName: save.player.name || 'Nhân vật',
+                    className: save.player.className || '',
+                    level: save.player.level || 1,
+                    guardDefeated: !!save.guardDefeated
+                };
+            }
+            return null;
         }
 
-        loadGame() {
-            const save = this.storage.load(this.saveSlot);
+        loadGame(slot = this.getSaveInfo()?.slot || this.saveSlot) {
+            const save = this.storage.load(slot);
             if (!save || save.version !== 1 || !save.player) {
                 this.showToast('Không tìm thấy dữ liệu lưu.');
                 return false;
             }
+            this.saveSlot = slot;
             this.player = save.player;
             this.actorStates = save.actorStates || {};
             for (const actor of [this.player, ...Object.values(this.actorStates)]) this.data.restoreActorProgression(actor);

@@ -487,6 +487,7 @@ async function main() {
             30000, 'đặt tên từ sự kiện mở đầu gốc');
         check('ván mới chạy bản đồ mở đầu gốc thay vì bỏ qua cốt truyện', await evalPage(cdp,
             'FNH.game.mapId === 10 && FNH.game.flags["switch:246"] && FNH.game.scene.usesOriginalPresentation()', false, false));
+        await waitFor(cdp, 'FNH.game.transition.mode === "idle"', 5000, 'khung đặt tên hiện đầy đủ');
         await screenshot('name-original');
         check('đặt tên dùng bàn phím và cửa sổ trong game', await evalPage(cdp,
             '!document.querySelector(".fnh-name-dialog") && FNH.game.scene.paused && FNH.game.scene.nameInput.value === "Cahara"', false, false));
@@ -535,6 +536,71 @@ async function main() {
             'FNH.game.player.id === 1 && FNH.game.player.skills.length > 0 && !FNH.game.lastError', false, false),
             await evalPage(cdp, 'JSON.stringify({actor:FNH.game.player.id,skills:FNH.game.player.skills,error:FNH.game.lastError?.message})', false, false));
         await screenshot('entrance');
+
+        await evalPage(cdp, 'FNH.game.scene.openPause(); true', false, false);
+        check('menu gốc mở cột biểu tượng và chân dung thay cho bảng tạm dừng', await evalPage(cdp,
+            'FNH.game.scene.nativeMenu?.page === "main" && FNH.game.scene.paused', false, false));
+        await screenshot('menu-original');
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.scene.nativeMenu.page === "items"', 5000, 'menu vật phẩm gốc');
+        await screenshot('items-original');
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.scene.nativeMenu.page === "equip"', 5000, 'menu trang bị gốc');
+        await tapKey(cdp, 'ArrowRight', 'ArrowRight', 39);
+        await tapKey(cdp, 'ArrowRight', 'ArrowRight', 39);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        check('Clear tháo trang bị và trả đồ vào túi thật', await evalPage(cdp,
+            'FNH.game.player.equipment.length === 0 && FNH.game.player.inventory.some(item => item.kind === "weapon")', false, false));
+        await tapKey(cdp, 'ArrowLeft', 'ArrowLeft', 37);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        check('Optimize mặc lại trang bị hợp lệ từ túi đồ', await evalPage(cdp,
+            'FNH.game.player.equipment.length > 0', false, false));
+        await screenshot('equip-original');
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        for (let index = 0; index < 2; index += 1) await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        check('Synthesis đọc danh sách công thức từ vật phẩm đang sở hữu', await evalPage(cdp,
+            'FNH.game.scene.nativeMenu.page === "synthesis" && Array.isArray(FNH.game.scene.nativeMenu.recipes())', false, false));
+        await screenshot('synthesis-original');
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        for (let index = 0; index < 3; index += 1) await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        check('menu kỹ năng đọc loại kỹ năng và nhân vật thật', await evalPage(cdp,
+            'FNH.game.scene.nativeMenu.page === "skills" && FNH.game.scene.nativeMenu.skillTypes().length > 0', false, false));
+        await screenshot('skills-original');
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        for (let index = 0; index < 4; index += 1) await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await tapKey(cdp, 'ArrowLeft', 'ArrowLeft', 37);
+        check('Options đổi Master Volume và lưu cấu hình', await evalPage(cdp,
+            'FNH.game.audio.volumes.master === 90 && FNH.game.storage.load("config").volumes.master === 90', false, false));
+        await screenshot('options-original');
+        await tapKey(cdp, 'ArrowRight', 'ArrowRight', 39);
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        await tapKey(cdp, 'ArrowDown', 'ArrowDown', 40);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await tapKey(cdp, 'i', 'KeyI', 73);
+        check('Controls lưu ánh xạ phím mới', await evalPage(cdp,
+            'FNH.game.input.keyBindings.KeyI === "ArrowUp" && FNH.game.storage.load("config").keyboard.KeyI === "ArrowUp"', false, false));
+        await tapKey(cdp, 'i', 'KeyI', 73);
+        check('phím đã đổi điều khiển được menu thật', await evalPage(cdp,
+            'FNH.game.scene.nativeMenu.index === 8', false, false));
+        await screenshot('controls-original');
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        await tapKey(cdp, 'Escape', 'Escape', 27);
+        await evalPage(cdp, 'FNH.game.scene.openPause(true); true', false, false);
+        await tapKey(cdp, 'ArrowUp', 'ArrowUp', 38);
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        check('cửa sổ lưu gốc ghi được File 20 và đóng menu', await evalPage(cdp,
+            'FNH.game.getSaveInfo(20)?.playerName === "Cahara" && !FNH.game.scene.nativeMenu && !FNH.game.scene.paused', false, false));
+        await evalPage(cdp, 'FNH.game.storage.remove(20); FNH.game.saveSlot=1; true', false, false);
 
         for (const [actorId, mode, name] of [[3, 1, "D'arce"], [4, 2, 'Enki'], [5, 0, 'Ragnvaldr']]) {
             await evalPage(cdp, 'FNH.game.newGame(' + actorId + ', {opening:true}); true', false, false);
@@ -1045,6 +1111,9 @@ async function main() {
             'FNH.game.scene.entries[1].enabled === true && FNH.game.scene.index === 1',
             false, false
         ));
+        await tapKey(cdp, 'Enter', 'Enter', 13);
+        await waitFor(cdp, 'FNH.game.scene.fileMenu?.page === "load"', 10000, 'danh sách File sau Continue');
+        await screenshot('load-original');
         await tapKey(cdp, 'Enter', 'Enter', 13);
         await waitFor(cdp, 'FNH.game.sceneName === "map" && FNH.game.scene.ready === true && !FNH.game.scene.leaving && FNH.game.transition.mode === "idle"',
             30000, 'bản đồ sau Continue');

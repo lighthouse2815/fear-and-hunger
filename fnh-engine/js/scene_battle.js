@@ -88,7 +88,7 @@
             this.animations = [];
             this.phase = 'intro';
             this.timer = 1.7;
-            this.index = 0;
+            this.index = this.game.options?.commandRemember ? this.player.lastMenuCommand || 0 : 0;
             this.hoverIndex = -1;
             this.log = this.enemy.intro || (this.encounter ? this.encounter.name : this.enemy.name);
             this.turn = 1;
@@ -264,7 +264,7 @@
         selectMember(index) {
             this.memberIndex = index;
             this.player = this.members[index];
-            this.index = 0;
+            this.index = this.game.options?.commandRemember ? this.player.lastMenuCommand || 0 : 0;
             this.hoverIndex = -1;
             this.guarding = this.guardedActors.has(this.player.id);
             this.game.assets.loadImage('faces/' + this.player.faceName).catch((error) => {
@@ -320,6 +320,7 @@
         choose(index) {
             if (this.phase !== 'command') return;
             this.index = index;
+            this.player.lastMenuCommand = index;
             this.game.audio.playSe('fnh_choice', { volume: 0.5 });
             if (index === 0) {
                 this.playerAttack();

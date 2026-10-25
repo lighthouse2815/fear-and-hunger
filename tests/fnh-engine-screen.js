@@ -60,6 +60,7 @@ assert.equal(scene.game.screenEffects.fadeTarget, 255);
 let saved;
 const game = Object.create(FNH.Game.prototype);
 game.input = { pointerEnabled: true };
+game.saveSlot = 1;
 game.data = new FNH.DataStore();
 game.player = { hp: 50, maxHp: 100, mapX: 1, mapY: 2 };
 game.flags = {};

@@ -9,7 +9,7 @@ for (const file of ['core', 'interpreter', 'scene_map', 'game']) {
 }
 const scene = new FNH.Scene_Map();
 let over = 0, title = 0, saved = 0;
-scene.game = { flags: {}, gold: 0, player: { hp: 10 }, data: {},
+scene.game = { flags: {}, gold: 0, saveSlot: 1, player: { hp: 10 }, data: {},
     audio: { playSe() {} }, getSaveInfo: () => null, gameOver() { over += 1; }, returnToTitle() { title += 1; },
     storage: { save() { saved += 1; return true; } } };
 scene.input = { isPressed: () => false };

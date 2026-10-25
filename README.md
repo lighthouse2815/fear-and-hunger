@@ -47,7 +47,9 @@ npm run test:fnh-engine   # smoke test Chrome/CDP
 ```
 
 Menu New Game hiện đi qua chọn nhân vật, đặt tên, phim giới thiệu, chọn chế độ và
-câu chuyện xuất thân gốc tới cổng ngục. Combat vẫn là vertical slice thử nghiệm với
+câu chuyện xuất thân gốc tới cổng ngục. Menu có cột biểu tượng, chân dung lớn, vật
+phẩm/trang bị/kỹ năng/chế tạo, chỉnh âm lượng/phím và danh sách 20 File lưu.
+Combat vẫn là vertical slice thử nghiệm với
 Guard, thắng/thua và lưu/đọc game. Asset vẫn được đọc read-only
 từ thư mục `www` gốc qua `/game/`, không được sao chép vào repo.
 

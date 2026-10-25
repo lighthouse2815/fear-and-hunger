@@ -116,6 +116,7 @@
         }
 
         exit() {
+            if (this.nativeMenu) this.nativeMenu.close();
             if (this.closeNameInput) this.closeNameInput();
             if (this.closeMovie) this.closeMovie();
         }
@@ -694,6 +695,7 @@
             this.pauseHover = -1;
             this.pauseSaveInfo = this.game.getSaveInfo();
             this.game.audio.playSe('fnh_choice', { volume: 0.45 });
+            if (this.usesOriginalPresentation()) this.nativeMenu = new FNH.NativeMenu(this, saveOnly ? 'save' : 'main');
         }
 
         closePause() {
@@ -830,6 +832,7 @@
             if (!this.ready || this.leaving) return;
             if (this.paused) {
                 if (this.nameInput) { this.nameInput.update(dt); return; }
+                if (this.nativeMenu) { this.nativeMenu.update(dt); return; }
                 if (this.nameInputDialog) return;
                 this.updatePause(dt);
                 return;
@@ -2306,6 +2309,7 @@
 
         draw(ctx) {
             if (this.nameInput) { this.nameInput.draw(ctx); return; }
+            if (this.nativeMenu) { this.nativeMenu.draw(ctx); return; }
             if (!this.ready) {
                 FNH.drawBackdrop(ctx, '#0a0a0b', '#020202');
                 FNH.text(ctx, 'ĐANG MỞ CÁNH CỬA…', FNH.WIDTH / 2, FNH.HEIGHT / 2, {

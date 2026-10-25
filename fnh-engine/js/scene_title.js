@@ -18,6 +18,8 @@
 
         enter() {
             this.time = 0;
+            this.leaving = false;
+            this.fileMenu = null;
             this.input.pointerEnabled = true;
             this.saveInfo = this.game.getSaveInfo();
             this.entries = [
@@ -59,17 +61,15 @@
             if (!entry || !entry.enabled) return;
             this.game.audio.playSe('fnh_choice', { volume: 0.55 });
             if (entry.id === 'continue') {
-                if (!this.game.loadGame()) {
-                    this.saveInfo = null;
-                    this.entries[1].enabled = false;
-                    this.index = 0;
-                }
+                this.fileMenu = new FNH.NativeMenu(this, 'load');
             } else if (entry.id === 'new') {
                 this.game.changeScene(FNH.Scene_Creation);
             }
         }
 
         update(dt) {
+            if (this.fileMenu) { this.fileMenu.update(dt); return; }
+            if (this.leaving) return;
             this.time += dt;
             const input = this.input;
 
@@ -104,6 +104,7 @@
         }
 
         draw(ctx) {
+            if (this.fileMenu) { this.fileMenu.draw(ctx); return; }
             const title = this.game.assets.imageCache.get('titles2/' + this.game.data.system.title2Name);
             if (title) ctx.drawImage(title, 0, 0, FNH.WIDTH, FNH.HEIGHT);
             const rects = this.entryRects();
