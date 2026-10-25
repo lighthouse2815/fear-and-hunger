@@ -71,8 +71,23 @@ Cách quản lý nguồn và asset trong repo tham khảo
 
 ## Cloudflare Pages
 
-Project Cloudflare: `fear-and-hunger-web`, nhánh production `main`.
-Triển khai trực tiếp bản build; không phụ thuộc việc GitHub đã nhận commit hay chưa.
+Game: https://fear-and-hunger-web.pages.dev/
+
+Cloudflare đã kết nối trực tiếp với GitHub repository
+`lighthouse2815/fear-and-hunger`, nhánh production **`main`**. Mỗi lần push/merge vào
+`main`, Cloudflare tự build và cập nhật game. Không cần chạy lệnh deploy trên máy.
+
+Cấu hình trong Dashboard → Settings → Build:
+
+- Build command: `npm run check && npm run build`.
+- Build output directory: `dist/fear-and-hunger-web`.
+- Root directory: thư mục gốc repository.
+- Production branch: `main`; Automatic deployments: Enabled.
+
+Có thể xem tiến trình và lỗi tại tab Deployments. Cấu hình này đã được thiết lập
+trong Chrome bằng Git Integration, không cần thêm API token vào GitHub.
+
+Khi cần upload thủ công để khôi phục hoặc kiểm tra nhanh:
 
 ```sh
 npm ci                     # cài công cụ deploy, dùng Node.js 22+
