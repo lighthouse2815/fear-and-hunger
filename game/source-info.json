@@ -1,0 +1,12 @@
+{
+  "format": "fear-and-hunger-source",
+  "version": 1,
+  "engine": "RPG Maker MV",
+  "originalGame": "Fear & Hunger 1.4.1",
+  "maps": 169,
+  "converted": {
+    "images": 2074,
+    "audio": 433
+  },
+  "authorship": "Mã engine, plugin và nội dung nhập giữ nguồn gốc tác giả; mã chỉnh sửa được quản lý trong dự án này."
+}

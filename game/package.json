@@ -1,0 +1,14 @@
+{
+  "name": "fear-and-hunger-source",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js --port 8140 --open",
+    "dev": "node server.js --port 8140 --open",
+    "check": "node check.js .",
+    "build": "node build.js --game . --out ../dist/fear-and-hunger-web"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

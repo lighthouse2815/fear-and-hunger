@@ -1,11 +1,29 @@
-# Fear & Hunger 1.4.1 — chạy trên trình duyệt
+# Fear & Hunger 1.4.1 — dự án nguồn và bản web
 
 Công cụ này chạy **bản game Fear & Hunger 1.4.1 do bạn sở hữu** trong trình duyệt,
 dùng runtime RPG Maker MV và plugin gốc. Có thể đóng gói thành thư mục web độc lập,
 hoặc chạy trực tiếp từ thư mục `www` của bản cài hiện có. Công cụ không tải game.
 
-> Thư mục `Fear.and.Hunger.v1.4.1/` đã nằm trong `.gitignore`. Không commit hoặc tải
-> asset của game lên GitHub. Bạn cần tự mua/sở hữu bản game gốc để sử dụng công cụ này.
+Thư mục **`game/`** hiện chứa mã nguồn JavaScript, dữ liệu gameplay, 169 map và
+asset PNG/OGG/font/video đã nhập, được theo dõi bằng Git. `npm start` chạy trực tiếp
+nguồn này ở cổng 8140; `npm run build` tạo bản phát hành trong `dist/`. Không cần
+thư mục cài game để phát triển tiếp. Xem [hướng dẫn sửa source](game/README.md).
+Bộ cài nguyên bản `Fear.and.Hunger.v1.4.1/` và kết quả build `dist/` vẫn được ignore.
+
+```sh
+npm start
+npm run check
+npm test
+npm run build
+```
+
+`npm run import:game` chỉ tạo source lần đầu khi đích chưa tồn tại. Import xuất
+ảnh/âm thanh bằng Decrypter của runtime gốc, tắt cờ mã hoá trong `data/System.json`,
+và giữ nguyên code/runtime/plugin. Một PSD mang đuôi RPGMVP được giữ lại ở định dạng
+PSD và xuất thêm PNG bằng ImageMagick. Các file xuất ra dùng trực tiếp, không cần
+bộ giải mã hoặc ImageMagick để phát triển, chạy hay build.
+
+Phần bên dưới cũng mô tả công cụ chạy trực tiếp bộ cài cũ và engine thử nghiệm.
 
 ## Đóng gói thành bản web độc lập
 
@@ -14,11 +32,12 @@ npm run build:fnh-web
 npm run fnh:web
 ```
 
-Bước build đọc bản cài hiện có và tạo `dist/fear-and-hunger-web/`. Mặc định bản cài
-được kiểm tra có **169 bản đồ**; toàn bộ `audio`, `data`, `fonts`, `icon`, `img`, `js`
+Bước build ưu tiên thư mục nguồn `game/` nếu đã có; khi chưa nhập source, công cụ
+có thể đọc bản cài hiện có. Kết quả nằm ở `dist/fear-and-hunger-web/`. Nguồn hiện có
+**169 bản đồ**; toàn bộ `audio`, `data`, `fonts`, `icon`, `img`, `js`
 và `movies` được mang vào gói, gồm runtime RPG Maker MV và plugin gốc. Ảnh/âm thanh
-mã hóa vẫn giữ nguyên bytes. `index.html` nhận lớp tương thích bằng đường dẫn tương
-đối `./__fnh/compat.js`, chạy được khi host ở thư mục con.
+trong nguồn giữ nguyên bytes; nguồn đã nhập dùng PNG/OGG mở. `index.html` nhận lớp
+tương thích bằng đường dẫn tương đối `./__fnh/compat.js`, chạy được khi host ở thư mục con.
 
 Gói xuất không đọc thư mục cài game ban đầu, không gọi engine thử nghiệm và không
 cần cài dependency npm. Copy nguyên gói sang vị trí/máy khác, cài Node.js 18+ rồi chạy:
@@ -152,7 +171,7 @@ npm run test:fnh-engine   # smoke test Chrome/CDP
 
 Bản dựng hiện tại là vertical slice: tiêu đề → tạo nhân vật (4 nghề) → bản đồ 1 → gặp
 Guard → trận đấu theo lượt → thắng/thua → lưu và đọc game. Asset vẫn được đọc read-only
-từ `www` gốc qua `/game/`; không có asset nào được sao chép vào repo.
+từ `www` gốc qua `/game/`. Engine thử nghiệm này tách biệt với nguồn chính ở `game/`.
 
 Máy chủ engine mặc định ở cổng **8139**, có các tuỳ chọn `--game`, `--port`, `--host`,
 `--open`, `--help`; biến môi trường `FNH_GAME_ROOT`, `FNH_ENGINE_PORT`, `FNH_ENGINE_HOST`.
@@ -224,7 +243,7 @@ thiết cho cả hai bài test trình duyệt.
 - `tools/fnh-browser/server.js` là máy chủ HTTP không dependency, phục vụ nguyên cây
   `www`. Với `index.html`, server chèn thêm một thẻ script trỏ tới
   `/__fnh/compat.js`; các tệp khác được trả nguyên bản.
-- `tools/fnh-browser/compat.js` chạy trước `main.js` và:
+- Bản chính dùng `game/__fnh/compat.js`, chạy trước `main.js` và:
   - tắt các plugin Steamworks/Greenworks trước khi `PluginManager.setup()`;
   - ép `Utils.isNwjs()` trả `false` để engine dùng đường lưu localStorage;
   - để runtime tự khởi động và bỏ qua pre-title để hiện menu ngay;
@@ -232,7 +251,7 @@ thiết cho cả hai bài test trình duyệt.
   - thay `SceneManager.terminate()` bằng màn hình kết thúc, vì trình duyệt thường chặn
     `window.close()`;
   - hỗ trợ namespace save và tuỳ chọn bật lại pre-title gốc.
-- Không có asset nào bị sửa, sao chép hoặc ghi vào repo.
+- Nguồn `game/` cùng asset đã nhập được quản lý bằng Git; bản cài ban đầu không bị sửa.
 
 ## Giới hạn đã biết
 

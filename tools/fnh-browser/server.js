@@ -299,7 +299,8 @@ function createRequestHandler(gameRoot) {
             }
 
             if (pathname === '/__fnh/compat.js') {
-                await serveFile(req, res, COMPAT_FILE);
+                const localCompat = path.join(root, '__fnh/compat.js');
+                await serveFile(req, res, fs.existsSync(localCompat) ? localCompat : COMPAT_FILE);
                 return;
             }
 

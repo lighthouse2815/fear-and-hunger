@@ -2,7 +2,11 @@
 
 ## Repository state
 
-- This repository is empty apart from this file: there is no application code, stack, build config, or test suite yet. Do not assume a language or framework; confirm the intended stack with the user before scaffolding.
+- The active game source is `game/`: JavaScript runtime/plugins, JSON gameplay data, and imported PNG/OGG/font/video assets are tracked in Git. Edit source here, never the generated `dist/` output.
+- `npm start` / `npm run dev` run editable source on port 8140. `npm run check`, `npm test`, and `npm run build` validate and package this source. Browser tests need Node.js 22+ and Chrome.
+- `tools/fnh-browser/` contains import/build templates; `game/` also includes standalone copies of the server/build/check tools so the source folder can be moved independently. Keep those helper copies in sync when changing packaging behavior. Web/gameplay changes belong in `game/`, especially `game/__fnh/compat.js` for browser adjustments.
+- `npm run import:game` creates source only when the destination is absent; never re-import over edits. No original installation is needed after import.
+- `fnh-engine/` is a separate experimental reimplementation. The root `js/` game Cối Hầm remains available via `npm run coi-ham`; it is not the primary application.
 - Remote: `origin` → https://github.com/lighthouse2815/fear-and-hunger.git, default branch `main`.
 
 ## Workflow requirement

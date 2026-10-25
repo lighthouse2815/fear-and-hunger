@@ -1,22 +1,46 @@
-# Fear & Hunger — gói web chạy độc lập
+# Fear & Hunger Web — dự án nguồn
 
-Để dùng hình ảnh, âm thanh, bản đồ và logic gốc mà không cần thư mục cài game sau khi
-đóng gói:
+Code logic, dữ liệu và asset đã được chép vào **`game/`**, có thể mở và chỉnh sửa
+trực tiếp. Ảnh được xuất thành PNG, âm thanh thành OGG. Clone repository là có
+nguồn và tài nguyên để chạy; không cần bộ cài Fear & Hunger hoặc RPG Maker.
 
 ```sh
-npm run build:fnh-web     # tạo dist/fear-and-hunger-web/
-npm run fnh:web           # mở http://127.0.0.1:8140/
+npm start          # chạy source tại http://127.0.0.1:8140/
+npm run dev        # tương tự, sửa file rồi tải lại trang
+npm run check      # kiểm tra JavaScript và JSON của game
+npm test           # kiểm tra dự án, build và trình duyệt Chrome
+npm run build      # tạo dist/fear-and-hunger-web/
 ```
 
-Gói xuất chứa runtime RPG Maker MV, plugin và tài nguyên từ bản game bạn sở hữu;
-không dùng combat Guard thử nghiệm của `fnh-engine`. Có thể chuyển nguyên thư mục
-`dist/fear-and-hunger-web/` sang máy khác rồi chạy `npm start` ngay trong đó (Node.js
-18+, không cần `npm install`). Hoặc phục vụ thư mục bằng HTTP(S) tĩnh, kể cả dưới một
-đường dẫn con. Thư mục game nguồn chỉ cần lúc build. Tài nguyên gói xuất được ignore
-khỏi Git; mã công cụ và test được quản lý trong repository. Xem [PORT.md](PORT.md).
+Cần Node.js 18+, không cần npm install. Test trình duyệt cần Node.js 22+ và Chrome.
+Xem **[game/README.md](game/README.md)** để biết file nào xử lý combat, di chuyển,
+nhân vật, hộp thoại, map, sự kiện, nhạc và hình ảnh.
 
-Bản engine tự viết ở cổng 8139 vẫn là thử nghiệm; bản ở cổng **8140** giữ logic,
-di chuyển và chiến đấu từ game gốc.
+`game/` là nguồn phát triển được quản lý bằng Git; `dist/` là kết quả build có thể
+xóa và tạo lại. Build giữ thay đổi của bạn trong source, không đọc lại bộ cài cũ.
+Có thể copy nguyên thư mục `game/` sang máy khác, chạy `npm start` trong đó và tiếp
+tục sửa/build mà không cần các công cụ ở thư mục cha.
+
+Cách tổ chức nguồn và asset trong repository tham khảo
+[Jump King Web](https://github.com/lighthouse2815/jump-king). Bản này giữ mã RPG Maker
+MV và plugin JavaScript sẵn có; code và nội dung nhập giữ thông tin tác giả.
+Đây là dự án chuyển sang web để phát triển tiếp, không phải tuyên bố tự viết toàn
+bộ mã gốc. Các sửa đổi web hiện nằm trong `game/__fnh/compat.js`.
+
+`npm run import:game` chỉ dùng để tạo thư mục nguồn lần đầu từ bản cài hoặc gói web
+đã có. Lệnh từ chối ghi đè `game/` đang tồn tại. Muốn nhập ra chỗ khác:
+
+```sh
+npm run import:game -- --game "/đường/dẫn/www" --out "/đường/dẫn/dự-án"
+```
+
+Import nguồn mã hoá dùng Decrypter đi kèm game; một ảnh PSD cần ImageMagick
+(`magick`) để xuất PNG và giữ lại bản PSD. Chỉ bước nhập lại cần công cụ này;
+chạy, build và chỉnh sửa nội dung đã nhập không cần bộ cài hoặc ImageMagick.
+
+Chi tiết bản chuyển web và các giới hạn ở [PORT.md](PORT.md).
+Engine tự viết ở cổng 8139 vẫn là thử nghiệm; game Cối Hầm cũ có thể chạy riêng
+bằng `npm run coi-ham` tại cổng 8137.
 
 ## Cối Hầm — game riêng trong repository
 
@@ -35,7 +59,7 @@ sau khi trùm đáy gục ngã.
 Không cần build. Từ thư mục dự án:
 
 ```sh
-npm start          # python3 -m http.server 8137
+npm run coi-ham    # python3 -m http.server 8137
 ```
 
 Mở `http://localhost:8137` và chơi. Hoặc dùng `npm run start:node` nếu chỉ có Node.
@@ -50,8 +74,8 @@ npm run fnh        # mở http://127.0.0.1:8138/
 npm run fnh:open   # tự mở trình duyệt
 ```
 
-Đây là phần tách biệt với game Cối Hầm ở trên. Công cụ không chứa, không tải và không
-sao chép asset của Fear & Hunger; thư mục game đã được ignore trong Git. Xem hướng dẫn
+Đây là công cụ chạy trực tiếp bộ cài cũ, tách biệt với nguồn đã nhập trong `game/`.
+Thư mục bộ cài ban đầu vẫn được ignore trong Git. Xem hướng dẫn
 đầy đủ, cách lưu game, kiểm thử và các giới hạn tại [`PORT.md`](PORT.md).
 
 ## Engine web độc lập cho Fear & Hunger (thử nghiệm)
@@ -71,7 +95,7 @@ câu chuyện xuất thân gốc tới cổng ngục. Menu có cột biểu tư�
 phẩm/trang bị/kỹ năng/chế tạo, chỉnh âm lượng/phím và danh sách 20 File lưu.
 Combat vẫn là vertical slice thử nghiệm với
 Guard, thắng/thua và lưu/đọc game. Asset vẫn được đọc read-only
-từ thư mục `www` gốc qua `/game/`, không được sao chép vào repo.
+từ thư mục `www` gốc qua `/game/`; nguồn chính và asset đã nhập nằm ở `game/`.
 
 Xem [`fnh-engine/README.md`](fnh-engine/README.md) để biết kiến trúc, điều khiển, phạm vi,
 cách giải mã asset và các giới hạn.

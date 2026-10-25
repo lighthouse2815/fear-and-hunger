@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { buildIndexHtml, findGameRoot } = require('./server');
+const { buildIndexHtml, findGameRoot, isGameRoot } = require('./server');
 
 const REPO_ROOT = path.resolve(__dirname, '../..');
 const CONTENT = ['index.html', 'audio', 'data', 'fonts', 'icon', 'img', 'js', 'movies'];
@@ -14,7 +14,8 @@ function inside(directory, parent) {
 }
 
 async function buildWeb(options = {}) {
-    const source = await fs.realpath(findGameRoot(options.gameRoot));
+    const editable = path.join(REPO_ROOT, 'game');
+    const source = await fs.realpath(findGameRoot(options.gameRoot || (isGameRoot(editable) ? editable : undefined)));
     const requested = path.resolve(options.output || path.join(REPO_ROOT, 'dist/fear-and-hunger-web'));
     await fs.mkdir(path.dirname(requested), { recursive: true });
     const output = path.join(await fs.realpath(path.dirname(requested)), path.basename(requested));
@@ -56,7 +57,14 @@ async function buildWeb(options = {}) {
         const html = await fs.readFile(path.join(staging, 'index.html'), 'utf8');
         await fs.writeFile(path.join(staging, 'index.html'), buildIndexHtml(html, './__fnh/compat.js'));
         await fs.mkdir(path.join(staging, '__fnh'));
-        await fs.copyFile(path.join(__dirname, 'compat.js'), path.join(staging, '__fnh/compat.js'));
+        const sourceCompat = path.join(source, '__fnh/compat.js');
+        let compatFile = sourceCompat;
+        try { await fs.access(sourceCompat); } catch (error) {
+            const localCompat = path.join(__dirname, '__fnh/compat.js');
+            try { await fs.access(localCompat); compatFile = localCompat; }
+            catch (error) { compatFile = path.join(__dirname, 'compat.js'); }
+        }
+        await fs.copyFile(compatFile, path.join(staging, '__fnh/compat.js'));
         await fs.copyFile(path.join(__dirname, 'server.js'), path.join(staging, 'server.js'));
         await fs.writeFile(path.join(staging, 'package.json'), JSON.stringify({
             name: 'fear-and-hunger-web', private: true, version: '1.4.1',

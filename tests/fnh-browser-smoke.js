@@ -13,8 +13,9 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 
-const { findGameRoot, startServer } = process.env.FNH_WEB_PACKAGE
-    ? require(path.resolve(process.env.FNH_WEB_PACKAGE, 'server.js'))
+const packageRoot = process.env.FNH_WEB_PACKAGE || (!process.env.FNH_GAME_ROOT && fs.existsSync(path.resolve(__dirname, '../game/source-info.json')) ? path.resolve(__dirname, '../game') : null);
+const { findGameRoot, startServer } = packageRoot
+    ? require(path.resolve(packageRoot, 'server.js'))
     : require('../tools/fnh-browser/server');
 
 const GAME_HINT = 'Fear.and.Hunger.v1.4.1/Fear.and.Hunger.v1.4.1/www';
@@ -317,9 +318,9 @@ async function main() {
         // ---------------------------------------------------------
         const health = await (await fetch(running.url + '__fnh/health')).json();
         check('health trả về đúng chế độ', health.ok === true && health.mode === 'fnh-browser');
-        if (process.env.FNH_WEB_PACKAGE) {
+        if (packageRoot) {
             check('máy chủ và dữ liệu đều chạy từ gói độc lập',
-                path.resolve(health.gameRoot) === path.resolve(process.env.FNH_WEB_PACKAGE));
+                path.resolve(health.gameRoot) === path.resolve(packageRoot));
         }
 
         const indexResponse = await fetch(running.url);
