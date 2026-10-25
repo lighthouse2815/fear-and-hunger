@@ -527,6 +527,7 @@ async function main() {
             '  DataManager.setupNewGame();',
             '  $gameVariables.setValue(123, 4242);',
             '  $gameParty.gainGold(777);',
+            '  $gameParty.leader().setName("lighthous");',
             '  const goldBefore = $gameParty.gold();',
             '  const saved = DataManager.saveGame(' + SAVE_SLOT + ');',
             '  const exists = StorageManager.exists(' + SAVE_SLOT + ');',
@@ -537,11 +538,13 @@ async function main() {
             '  $gameVariables.setValue(123, 0);',
             '  $gameParty.loseGold($gameParty.gold());',
             '  const loaded = DataManager.loadGame(' + SAVE_SLOT + ');',
+            '  $gameParty.leader().gainHp(-999999);',
             '  return {',
             '    saved: saved,',
             '    exists: exists,',
             '    info: !!info,',
             '    loaded: loaded,',
+            '    cheat: $gameParty.leader().name() === "lighthous" && $gameParty.leader().hp === $gameParty.leader().mhp,',
             '    variable: $gameVariables.value(123),',
             '    gold: $gameParty.gold(),',
             '    goldBefore: goldBefore,',
@@ -554,6 +557,7 @@ async function main() {
         check('save tồn tại trong localStorage', saveState.exists === true && saveState.info === true, JSON.stringify(saveState));
         check('save dùng đúng namespace test', saveState.keys.length >= 2 && saveState.keyName.indexOf('FNH_WEB:' + namespace + ':') === 0, JSON.stringify(saveState));
         check('loadGame khôi phục biến và vàng', saveState.loaded === true && saveState.variable === 4242 && saveState.gold === saveState.goldBefore, JSON.stringify(saveState));
+        check('cheat theo tên vẫn hoạt động sau lưu/đọc', saveState.cheat === true, JSON.stringify(saveState));
 
         // ---------------------------------------------------------
         // 5. Bản đồ, di chuyển và trận đấu.
@@ -675,6 +679,68 @@ async function main() {
         await evalPage(cdp, 'SceneManager._scene._messageWindow._choiceWindow.processOk()', false, false);
         await waitFor(cdp, '!$gameMessage.isBusy() && !$gameMap.isEventRunning()', 10000, 'đóng hội thoại');
 
+        await evalPage(cdp, `(() => {
+            SceneManager.push(Scene_Name);
+            SceneManager.prepareNextScene($gameParty.leader().actorId(), 10);
+        })()`, false, false);
+        await waitFor(cdp, 'SceneManager._scene instanceof Scene_Name && SceneManager.isCurrentSceneStarted()', 10000, 'màn hình nhập tên');
+        check('nhập được đầy đủ tên cheat qua cửa sổ đặt tên gốc', await evalPage(cdp, `(() => {
+            const edit = SceneManager._scene._editWindow;
+            while (edit.back()) {}
+            for (const character of 'lighthous') edit.add(character);
+            const complete = edit.name() === 'lighthous';
+            SceneManager._scene.onInputOk();
+            return complete;
+        })()`, false, false));
+        await waitFor(cdp, 'SceneManager._scene instanceof Scene_Map && SceneManager.isCurrentSceneStarted()', 10000, 'trở về map sau đặt tên');
+        const cheatState = await evalPage(cdp, `(() => {
+            const actor = $gameParty.leader(), normal = new Game_Actor(3);
+            actor.gainHp(-999999);
+            const damage = actor.hp === actor.mhp && actor.isAlive();
+            actor.setHp(0);
+            const directHp = actor.hp === actor.mhp && actor.isAlive();
+            actor.addState(actor.deathStateId());
+            const deathState = !actor.isDeathStateAffected() && actor.isAlive();
+            actor.die();
+            const directDeath = actor.hp === actor.mhp && actor.isAlive();
+            normal.gainHp(-999999);
+            const normalDies = normal.isDead();
+            normal.setName(' LIGHTHOUS ');
+            const revived = normal.isAlive() && normal.hp === normal.mhp;
+            const previousMaxHp = normal.mhp;
+            normal.addParam(0, 50);
+            const maxHp = normal.mhp > previousMaxHp && normal.hp === normal.mhp;
+            normal.setName('lighthouse');
+            normal.setHp(0);
+            const disabled = normal.isDead();
+            const enemy = new Game_Enemy(1, 0, 0), comparisons = [];
+            for (const type of [1, 2, 3, 4, 5]) {
+                const skill = $dataSkills.find(item => item && item.damage.type === type);
+                const item = $dataItems.find(item => item && item.damage.type === type);
+                if (!skill && !item) throw new Error('Thiếu kỹ năng/vật phẩm kiểm tra loại ' + type);
+                const action = new Game_Action(actor);
+                if (skill) action.setSkill(skill.id);
+                else action.setItem(item.id);
+                action.evalDamageFormula = () => type === 3 || type === 4 ? -10 : 10;
+                action.applyVariance = value => value;
+                actor.setName('D\u2019arce');
+                const base = action.makeDamageValue(enemy, false);
+                const allyBase = action.makeDamageValue(normal, false);
+                actor.setName('lighthous');
+                const boosted = action.makeDamageValue(enemy, false);
+                comparisons.push({ type, base, boosted, ally: action.makeDamageValue(normal, false) === allyBase });
+            }
+            return { damage, directHp, deathState, directDeath, normalDies, revived, maxHp, disabled, comparisons };
+        })()`, false, false);
+        check('lighthous bất tử trước sát thương, đặt HP bằng 0, trạng thái chết và die()',
+            cheatState.damage && cheatState.directHp && cheatState.deathState && cheatState.directDeath, JSON.stringify(cheatState));
+        check('tên khác vẫn chết bình thường; đổi tên bật/tắt cheat ngay',
+            cheatState.normalDies && cheatState.revived && cheatState.disabled, JSON.stringify(cheatState));
+        check('HP vẫn đầy sau khi chỉ số HP tối đa tăng', cheatState.maxHp, JSON.stringify(cheatState));
+        check('chỉ tăng sát thương mất/hút HP lên quái; giữ hồi máu, MP và đồng đội',
+            cheatState.comparisons.every(item => item.ally &&
+                ([1, 5].includes(item.type) ? item.boosted >= 9999 : item.boosted === item.base)), JSON.stringify(cheatState));
+
         const battleState = await evalPage(cdp, [
             '(async () => {',
             '  const troop = $dataTroops.find(function (item) { return item && item.members && item.members.length > 0; });',
@@ -706,17 +772,19 @@ async function main() {
             'SceneManager._scene._enemyWindow.maxItems() > 1 && BattleManager.inputtingAction().isAttack()', false, false));
         await screenshot('battle-targets');
 
-        // Trận kiểm tra có chỉ số kiểm soát để tránh phụ thuộc RNG; dùng luồng ra đòn,
-        // event chết của Guard, thắng trận và trở về map thật, không gọi processVictory.
+        // Trận kiểm tra dùng cheat theo tên, kiểm soát tốc độ và độ chính xác;
+        // đi qua luồng ra đòn, event chết của Guard, thắng trận và trở về map thật.
         await evalPage(cdp, `(() => {
             const actor = BattleManager.actor(), action = BattleManager.inputtingAction();
-            actor.addParam(2, 1000);
+            if (actor.name() !== 'lighthous') throw new Error('Cheat chưa bật cho nhân vật chiến đấu');
             actor.addParam(6, 1000);
-            $gameTroop.members()[0].setHp(1);
             action.itemHit = () => 1;
             action.itemEva = () => 0;
-            SceneManager._scene._enemyWindow.select(0);
-            SceneManager._scene._enemyWindow.processOk();
+            const targets = SceneManager._scene._enemyWindow;
+            const torsoIndex = targets._enemies.indexOf($gameTroop.members()[0]);
+            if (torsoIndex < 0) throw new Error('Không tìm thấy thân Guard trong danh sách mục tiêu');
+            targets.select(torsoIndex);
+            targets.processOk();
         })()`, false, false);
         const battleDeadline = Date.now() + 40000;
         let battleResult;
@@ -762,9 +830,11 @@ async function main() {
             '(() => {',
             '  const exists = StorageManager.exists(' + SAVE_SLOT + ');',
             '  const loaded = DataManager.loadGame(' + SAVE_SLOT + ');',
+            '  $gameParty.leader().setHp(0);',
             '  return {',
             '    exists: exists,',
             '    loaded: loaded,',
+            '    cheat: $gameParty.leader().name() === "lighthous" && $gameParty.leader().isAlive(),',
             '    variable: $gameVariables.value(123),',
             '    gold: $gameParty.gold(),',
             '    audio: FNHBrowser.audioState(),',
@@ -774,6 +844,7 @@ async function main() {
         ].join('\n'), false, false);
         check('save vẫn còn sau khi tải lại trang', persistState.exists === true && persistState.loaded === true, JSON.stringify(persistState));
         check('save khôi phục đúng dữ liệu sau tải lại', persistState.variable === 4242 && persistState.gold === saveState.goldBefore, JSON.stringify(persistState));
+        check('cheat hoạt động khi tải save sau khi tải lại trang', persistState.cheat === true, JSON.stringify(persistState));
         check('âm thanh vẫn chạy sau tải lại', persistState.audio === 'running' && persistState.bgm === 'fear_and_hunger', JSON.stringify(persistState));
 
         // Dọn save test khỏi localStorage.
