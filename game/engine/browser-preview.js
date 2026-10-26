@@ -12,7 +12,7 @@
     var engine = new FNHStandaloneEngine.GameEngine({ baseUrl: '.' });
     var renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { baseUrl: '.' });
     var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
-    var audio = new FNHStandaloneAudio.AudioManager({ baseUrl: '.', masterVolume: 0.25, onError: function (error) { setStatus(error.message); } });
+    var audio = new FNHStandaloneAudio.AudioManager({ baseUrl: '.', masterVolume: 0.05, onError: function (error) { setStatus(error.message); } });
     var ready = false;
     var busy = false;
     var audioMap = null;
