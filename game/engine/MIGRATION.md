@@ -21,7 +21,10 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    Hiện action effect, số lần lặp, action animation, wait animation, death break,
    motion wait cơ bản và WeaponSkill đã được đối chiếu với 560 skill/item; các
    phase còn lại vẫn cần kiểm tra trực quan theo từng skill có note đặc biệt.
-2. Menu: chế tạo theo recipe/ingredient JSON, đội hình, trang bị và các lựa chọn
+2. Menu: đội hình, trang bị và các lựa chọn
+   Chế tạo item/weapon/armor theo recipe và ingredient note đã chạy trong menu,
+   kiểm tra bạc/nguyên liệu và save số lần chế tạo; cần đối chiếu thêm recipe
+   dùng tên thay vì ID và custom synthesis effect.
    menu theo cấu hình gốc; hoàn thiện lưu/tải nhiều ô và tùy chọn người chơi.
 3. Bản đồ: di chuyển mượt, follower/guest và touch, fog/overlay, parallax, tiếng
    bước chân, âm thanh stereo và nhạc trận. Chỉ đánh dấu xong sau khi xác minh.

@@ -14,6 +14,7 @@ assert.match(html, /engine\/vendor\/pixi-filters\.js/);
 assert.match(html, /engine\/animation-runtime\.js/);
 assert.match(html, /engine\/browser-menu\.js/);
 assert.match(html, /id="fnh-menu-dialog"/);
+assert.match(html, /data-menu-tab="synthesis"/);
 assert.match(html, /id="fnh-battle-use-skill"/);
 assert.match(html, /id="fnh-battle-use-item"/);
 assert.match(html, /id="fnh-battle-start"/);

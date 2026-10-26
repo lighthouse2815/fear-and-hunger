@@ -1057,6 +1057,25 @@ async function main() {
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.menuSkillBefore).then(()=>true)',true,false);
         await evalPage(cdp,'delete window.menuSkillBefore',false,false);
         await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;window.synthesisBefore=e.save();
+            e.state.gainItem('items',7,1);e.state.gainItem('items',27,1);e.state.gainItem('items',8,1);
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-menu'); await clickElement(cdp,'[data-menu-tab="synthesis"]');
+        await waitFor(cdp,'document.querySelector("button[data-synthesis=\\"item:5\\"]") && !document.querySelector("button[data-synthesis=\\"item:5\\"]").disabled',5000,'mở công thức Torch');
+        check('menu chế tạo đọc công thức và đủ nguyên liệu',await evalPage(cdp,`(() => {
+            const row=document.querySelector('button[data-synthesis="item:5"]').parentElement;
+            return row.textContent.includes('Torch') && row.textContent.includes('Tinderbox') && row.textContent.includes('Stick');
+        })()`,false,false));
+        await clickElement(cdp,'button[data-synthesis="item:5"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.itemCount("items",5)===1',5000,'chế tạo Torch');
+        check('menu chế tạo trừ đúng nguyên liệu và lưu số lần chế tạo',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;
+            return e.state.itemCount('items',7)===0 && e.state.itemCount('items',27)===0 && e.state.itemCount('items',8)===0 && e.state.synthesis.crafted.items[5]===1;
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-menu-close');
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.synthesisBefore).then(()=>true)',true,false);
+        await evalPage(cdp,'delete window.synthesisBefore',false,false);
+        await evalPage(cdp,`(() => {
             const engine=FNHStandalonePreview.engine;window.bookBefore=engine.save();engine.state.gainItem('items',40,1);
         })()`,false,false);
         await clickElement(cdp,'#fnh-menu'); await clickElement(cdp,'[data-menu-tab="inventory"]');

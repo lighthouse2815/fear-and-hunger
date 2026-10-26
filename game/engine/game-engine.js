@@ -611,6 +611,74 @@
         }))) return false;
         return this.state.equipActor(actorId, slot, itemId);
     };
+    GameEngine.prototype.synthesisIngredients = function (kind, id) {
+        var table = this.database[{ item: 'Items', weapon: 'Weapons', armor: 'Armors' }[kind]], target = table && table[id];
+        if (!target) return [];
+        var block = /<Synthesis Ingredients>([\s\S]*?)<\/Synthesis Ingredients>/i.exec(target.note || ''), result = [];
+        if (!block) return result;
+        block[1].split(/\r?\n/).forEach(function (line) {
+            line = line.trim(); if (!line) return;
+            var match = /^(item|weapon|armor)\s+(\d+)(?:\s*:\s*(\d+))?$/i.exec(line);
+            if (match) result.push({ kind: match[1].toLowerCase(), id: Number(match[2]), amount: Number(match[3] || 1) });
+            else {
+                match = /^gold\s*:\s*(\d+)$/i.exec(line);
+                if (match) result.push({ kind: 'gold', id: 0, amount: Number(match[1]) });
+                else throw new Error('Nguyên liệu chế tạo chưa hỗ trợ: ' + line);
+            }
+        });
+        return result;
+    };
+    GameEngine.prototype.synthesisRecipes = function (kind) {
+        var engine = this, recipes = [], seen = {};
+        function scanSource(sourceKind, key) {
+            var table = engine.database[{ items: 'Items', weapons: 'Weapons', armors: 'Armors' }[sourceKind]];
+            if (!table[key]) return;
+            if (engine.state.itemCount(sourceKind, Number(key)) <= 0 && !engine.state.party.some(function (actorId) {
+                return engine.state.actor(actorId).equips.includes(Number(key));
+            })) return;
+                var source = table[key], note = source && source.note || '';
+                ['Item', 'Weapon', 'Armor'].forEach(function (label) {
+                    var match = new RegExp('<' + label + ' Recipe:\\s*([^>]+)>', 'ig'), found;
+                    while ((found = match.exec(note))) found[1].split(',').forEach(function (value) {
+                        var targetId = Number(value.trim());
+                        if (!targetId || (kind && kind !== label.toLowerCase())) return;
+                        var targetKind = label.toLowerCase(), targetTable = engine.database[{ item: 'Items', weapon: 'Weapons', armor: 'Armors' }[targetKind]];
+                        if (!targetTable[targetId] || seen[targetKind + ':' + targetId]) return;
+                        var ingredients = engine.synthesisIngredients(targetKind, targetId);
+                        if (!ingredients.length) return;
+                        seen[targetKind + ':' + targetId] = true;
+                        recipes.push({ kind: targetKind, id: targetId, item: targetTable[targetId], ingredients: ingredients });
+                    });
+                });
+        }
+        ['items', 'weapons', 'armors'].forEach(function (sourceKind) {
+            Object.keys(engine.state.inventory[sourceKind]).forEach(function (key) { scanSource(sourceKind, key); });
+        });
+        engine.state.party.forEach(function (actorId) {
+            engine.state.actor(actorId).equips.forEach(function (key, slot) {
+                if (key) scanSource(slot === 0 ? 'weapons' : 'armors', String(key));
+            });
+        });
+        return recipes;
+    };
+    GameEngine.prototype.canSynthesize = function (recipe) {
+        if (this.state.scene !== 'menu' || !recipe) return false;
+        return recipe.ingredients.every(function (ingredient) {
+            return ingredient.kind === 'gold' ? this.state.gold >= ingredient.amount :
+                this.state.itemCount({ item: 'items', weapon: 'weapons', armor: 'armors' }[ingredient.kind], ingredient.id) >= ingredient.amount;
+        }, this);
+    };
+    GameEngine.prototype.synthesize = function (recipe) {
+        if (!this.canSynthesize(recipe)) throw new Error('Chưa đủ nguyên liệu chế tạo.');
+        recipe.ingredients.forEach(function (ingredient) {
+            if (ingredient.kind === 'gold') this.state.gold -= ingredient.amount;
+            else this.state.gainItem({ item: 'items', weapon: 'weapons', armor: 'armors' }[ingredient.kind], ingredient.id, -ingredient.amount);
+        }, this);
+        this.state.gainItem({ item: 'items', weapon: 'weapons', armor: 'armors' }[recipe.kind], recipe.id, 1);
+        var crafted = this.state.synthesis.crafted[recipe.kind + 's'];
+        crafted[recipe.id] = (crafted[recipe.id] || 0) + 1;
+        return recipe.item;
+    };
     GameEngine.prototype.menuActionTargets = function (data, actorId, targetId) {
         var state = this.state;
         if (data.scope === 0 || data.scope <= 6) return [];

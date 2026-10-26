@@ -203,6 +203,10 @@ Hồi phục trực tiếp giữ menu mở và cập nhật chỉ số; kỹ nă
 menu để chạy hội thoại/lựa chọn, khóa di chuyển đến khi xong. Simple transmutation
 chạy common event 186 thật, đổi bread hoặc water vial theo lựa chọn. Save từ menu
 trong common event tiếp tục sau lệnh lưu, không trả chi phí kỹ năng lần nữa.
+Tab **Chế tạo** đọc recipe/ingredient từ note JSON của vật phẩm, vũ khí và giáp;
+sách công thức phải có trong túi để mở công thức. Engine kiểm tra số lượng nguyên
+liệu, bạc, trừ đúng một lần, cộng vật phẩm tạo ra và lưu số lần chế tạo. Công thức
+và nguyên liệu bằng ID được giữ nguyên; dòng tên chưa có trong dữ liệu sẽ báo lỗi.
 Lệnh game over/về tiêu đề dừng cả chuỗi common event đang gọi và hủy các sự kiện
 nền đang chờ. Hai màn này dùng ảnh/nhạc có sẵn, cho tải ô lưu 1 hoặc chơi mới.
 Chơi mới mở luồng chọn nhân vật độc lập từ Map010. Tải save trở lại map và tiếp

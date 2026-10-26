@@ -103,6 +103,25 @@
                 }); };
                 content.appendChild(use);
             });
+        } else if (this.tab === 'synthesis') {
+            ['item', 'weapon', 'armor'].forEach(function (kind) {
+                var recipes = engine.synthesisRecipes(kind);
+                if (!recipes.length) return;
+                content.appendChild(node('h3', { item: 'Vật phẩm', weapon: 'Vũ khí', armor: 'Giáp' }[kind]));
+                recipes.forEach(function (recipe) {
+                    var row = node('div'), ingredients = recipe.ingredients.map(function (ingredient) {
+                        if (ingredient.kind === 'gold') return 'Bạc ' + ingredient.amount;
+                        var table = engine.database[{ item: 'Items', weapon: 'Weapons', armor: 'Armors' }[ingredient.kind]];
+                        return (table[ingredient.id] && table[ingredient.id].name || ingredient.kind + ' ' + ingredient.id) + ' × ' + ingredient.amount;
+                    }).join(', ');
+                    row.appendChild(node('strong', recipe.item.name));
+                    row.appendChild(node('p', 'Nguyên liệu: ' + ingredients));
+                    var craft = node('button', 'Chế tạo'); craft.type = 'button'; craft.dataset.synthesis = recipe.kind + ':' + recipe.id;
+                    craft.disabled = ui.busy || !engine.canSynthesize(recipe);
+                    craft.onclick = function () { ui.act(function () { engine.synthesize(recipe); }); };
+                    row.appendChild(craft); content.appendChild(row);
+                });
+            });
         } else if (this.tab === 'equipment' && actor) {
             actor.equips.forEach(function (equipped, slot) {
                 var kind = slot === 0 ? 'weapons' : 'armors';

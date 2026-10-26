@@ -86,6 +86,9 @@
         this.switches = Object.assign({}, source.switches);
         this.variables = Object.assign({}, source.variables);
         this.selfSwitches = Object.assign({}, source.selfSwitches);
+        this.synthesis = {
+            crafted: Object.assign({ items: {}, weapons: {}, armors: {} }, source.synthesis && source.synthesis.crafted)
+        };
     }
 
     GameState.prototype.switchValue = function (id) {
@@ -312,6 +315,7 @@
             switches: this.switches,
             variables: this.variables,
             selfSwitches: this.selfSwitches
+            ,synthesis: this.synthesis
         });
     };
 
