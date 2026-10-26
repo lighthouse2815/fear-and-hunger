@@ -118,6 +118,13 @@
         var lastAction = battle.lastAction;
         document.getElementById('fnh-battle-log').textContent = lastAction ? engine.battle.actionData(lastAction).name +
             ' · ' + lastAction.hits.map(function (hit) { return hit.missed ? 'Trượt' : hit.evaded ? 'Né' : String(hit.damage); }).join(', ') : '';
+        var turnEffects = (battle.turnEffects || []).map(function (effect) {
+            var subject = effect.subject === 'actor' ? engine.state.actor(effect.subjectId) : engine.battle.enemy(effect.subjectId);
+            return subject.name + ': ' + ['hp', 'mp', 'tp'].filter(function (key) { return effect[key]; }).map(function (key) {
+                return key.toUpperCase() + ' ' + (effect[key] > 0 ? '+' : '') + effect[key];
+            }).join(', ');
+        });
+        if (turnEffects.length) document.getElementById('fnh-battle-log').textContent += ' · Cuối lượt: ' + turnEffects.join(' | ');
         document.getElementById('fnh-battle-attack').disabled = battle.phase !== 'input' || !battleActor || !engine.battle.canUseSkill(engine.battle.actor(battleActor), engine.database.Skills[1]);
         document.getElementById('fnh-battle-escape').disabled = !battle.canEscape || battle.phase !== 'input';
     }

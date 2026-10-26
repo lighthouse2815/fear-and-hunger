@@ -708,7 +708,7 @@
         var runtime = this.battle, battle = runtime.battle, context = this.battleContext || {}, engine = this;
         this.validateBattleActions(actions, false);
         battle.managed = true; battle.turn++; battle.forcedThisTurn = [];
-        battle.inputActions = []; battle.turnActions = [];
+        battle.inputActions = []; battle.turnActions = []; battle.turnEffects = [];
         try {
             if (context.signal && context.signal.aborted) throw context.signal.reason;
             await this.runBattlePages(false, handlers || context.handlers, context.signal);
@@ -753,7 +753,7 @@
         var runtime = this.battle, battle = runtime.battle, context = this.battleContext || {};
         if (this.state.scene !== 'battle' || !battle || battle.result || battle.phase !== 'input' || !battle.canEscape) return false;
         battle.managed = true;
-        battle.inputActions = [];
+        battle.inputActions = []; battle.turnEffects = [];
         if (runtime.escape()) {
             if (!this.battleContext) this.leaveBattle(battle.result);
             return true;

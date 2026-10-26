@@ -1161,11 +1161,33 @@ async function main() {
             return b.turnActions.length===2 && b.turnActions[0].subjectId===3 && b.turnActions[0].skillId===2 &&
                 b.turnActions[1].subjectId===1 && b.inputActions.length===0;
         })()`,false,false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;
+            e.battle.random=()=>0.5;e.state.party.forEach(id=>e.state.recoverActor(id));
+            e.battle.battle.enemies.forEach(enemy=>{e.battle.handleEffect(334,[enemy.index]);});
+            e.state.changeActorState(1,5,true);e.state.changeActorState(1,17,true);
+            e.battle.handleEffect(333,[0,0,29]);
+            const actors=document.querySelector('#fnh-battle-actor');actors.value='1';actors.dispatchEvent(new Event('change',{bubbles:true}));
+            const kind=document.querySelector('#fnh-battle-kind');kind.value='skill';kind.dispatchEvent(new Event('change',{bubbles:true}));
+            const skills=document.querySelector('#fnh-battle-skill');skills.value='2';skills.dispatchEvent(new Event('change',{bubbles:true}));
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-battle-use-skill');
+        await clickElement(cdp,'#fnh-battle-use-skill');
+        await clickElement(cdp,'#fnh-battle-start');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===5 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'tick trạng thái sau toàn bộ đội');
+        check('trạng thái trừ HP một lần cuối lượt và hiện log trên Chrome',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;
+            return e.state.actor(1).hp===87 && e.battle.enemy(0).hp===1170 &&
+                e.battle.battle.turnEffects.length===2 && /Cuối lượt:.*HP -13/.test(document.querySelector('#fnh-battle-log').textContent);
+        })()`,false,false));
         await evalPage(cdp,'delete window.beforeBattleItemHp;delete window.beforeBattleBottles',false,false);
         await evalPage(cdp,`(async()=>{
             const engine=FNHStandalonePreview.engine;engine.battle.finish('escape');engine.leaveBattle('escape');
             await engine.restore(window.skillUiBefore);delete window.skillUiBefore;
         })()`,true,false);
+        // restore đổi state trước frame cập nhật panel; chờ DOM để vị trí click trên điện thoại ổn định.
+        await waitFor(cdp, 'document.querySelector("#fnh-battle").hidden && !document.querySelector("#fnh-menu-dialog").open',
+            5000, 'UI khôi phục bản đồ trước khi tương tác sự kiện kế tiếp');
         await evalPage(cdp, `(() => {
             const engine = FNHStandalonePreview.engine;
             const page = engine.map.eventPage(engine.map.eventById(39));

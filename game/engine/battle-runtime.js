@@ -487,8 +487,28 @@
         }, this);
         return actions;
     };
+    BattleRuntime.prototype.regenerate = function (battler) {
+        if (!battler.alive || battler.hidden) return null;
+        var data = this.battlerState(battler), hp = data.hp, mp = data.mp, tp = data.tp || 0;
+        var hpGain = Math.floor(this.battlerParam(battler, 0) * this.traitRate(battler, 22, 7, true));
+        var mpGain = Math.floor(this.battlerParam(battler, 1) * this.traitRate(battler, 22, 8, true));
+        var tpGain = Math.floor(100 * this.traitRate(battler, 22, 9, true));
+        var maxLoss = this.database.System.optSlipDeath ? hp : Math.max(0, hp - 1);
+        hpGain = Math.max(-maxLoss, hpGain);
+        if (hpGain) this.changeResource(battler, 'hp', hpGain);
+        if (mpGain) this.changeResource(battler, 'mp', mpGain);
+        data = this.battlerState(battler);
+        data.tp = Math.max(0, Math.min(100, (data.tp || 0) + tpGain));
+        var effect = { subject: battler.enemyId != null ? 'enemy' : 'actor',
+            subjectId: battler.enemyId != null ? battler.index : battler.id, hp: data.hp - hp, mp: data.mp - mp, tp: data.tp - tp };
+        return effect.hp || effect.mp || effect.tp ? effect : null;
+    };
     BattleRuntime.prototype.endTurn = function () {
+        this.syncActors();
+        var effects = this.battle.turnEffects = [];
         this.battle.actors.concat(this.battle.enemies).forEach(function (battler) {
+            var effect = this.regenerate(battler);
+            if (effect) effects.push(effect);
             var data = this.battlerState(battler), turns = data.stateTurns || (data.stateTurns = {});
             data.states.slice().forEach(function (id) {
                 var state = this.database.States[id];
@@ -500,6 +520,7 @@
             }, this);
         }, this);
         this.syncActors();
+        return effects;
     };
     BattleRuntime.prototype.enemyTurn = function () {
         if (!this.battle || this.battle.result || this.battle.phase !== 'enemy') return [];

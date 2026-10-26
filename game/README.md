@@ -104,6 +104,14 @@ và lấy ngẫu nhiên theo rating. Quái ẩn/chết hoặc không có hành �
 Engine chạy animation, common event và kiểm tra troop page sau từng hành động;
 quái không còn tự đánh cố định vào nhân vật đầu tiên. State có bộ đếm lượt, giữ
 qua save/update actor; Guard hết sau lượt và state tạm được dọn khi rời trận.
+Cuối lượt, engine cộng dồn trait hồi/mất HP/MP/TP từ nhân vật, class, trang bị
+và state. Bleeding, Poisoned, Bleeding_enemy, Burning, Toxic và Tentacles gây
+sát thương thật theo States.json. Tỉ lệ được nhân với HP/MP tối đa hoặc 100 TP,
+làm tròn xuống và chặn giới hạn. `System.optSlipDeath=false` hiện có giữ ít nhất
+1 HP; quái ẩn/chết và nhân vật chết không được tick. Trạng thái hết hạn sau khi
+hiệu ứng cuối lượt đã chạy; giải độc trước đó ngăn tick ngay lượt đó. Log trận
+hiện thay đổi tài nguyên cuối lượt; HP thay đổi được troop page đọc ngay và save
+không tick lại. Chưa triển khai sát thương trạng thái theo bước đi ngoài trận.
 Hiện mới chuyển hiệu ứng kỹ năng cơ bản trong JSON, chưa thay toàn bộ cơ chế
 combat mở rộng trong note/plugin (counter, taunt, action sequence và state script).
 Preview có nút **Menu** (hoặc Escape trên bản đồ): chọn nhân vật để xem chỉ số,
