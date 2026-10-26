@@ -9,11 +9,26 @@ const { GameDataStore } = require('../game/engine/data-store');
     const engine = new GameEngine({ dataStore: store });
     await engine.boot({ mapId: 74, x: 15, y: 22, direction: 8, party: [1] });
     const troop = engine.database.Troops.find(item => item && item.members && item.members.length);
-    engine.battle.setup(troop.id, true, false);
+    function reset() {
+        if (engine.battle.battle && !engine.battle.battle.result) engine.battle.finish('escape');
+        engine.battle.setup(troop.id, true, false);
+    }
+    reset();
     assert.throws(() => engine.battle.attack(1, 0, 999), /Công thức damage|Không tìm thấy/);
     const base = engine.battle.enemy(0).hp;
     const result = engine.battle.attack(1, 0, 1);
-    assert.equal(result.damage, Math.max(1, Math.round(engine.state.actorParam(1, 2) * 4 - engine.database.Enemies[1].params[3] * 2 - engine.database.Enemies[1].params[3] / 2)));
-    assert.ok(engine.battle.enemy(0).hp < base);
-    console.log('ĐẠT: battle dùng công thức damage thật của Skills.json và tham số actor/enemy.');
+    assert.equal(result.damage, engine.state.actorParam(1, 2) * 4 - engine.database.Enemies[1].params[3] * 2,
+        'Attack chỉ trừ phòng thủ trong công thức JSON một lần');
+    assert.equal(engine.battle.enemy(0).hp, base - result.damage);
+    reset();
+    assert.equal(engine.battle.attack(1, 0, 3).damage, 35, 'Hack có công thức cố định 35, không trừ thêm phòng thủ');
+    reset();
+    const before = engine.battle.enemy(0).hp;
+    assert.equal(engine.battle.attack(1, 0, 5).damage, 0, 'kỹ năng không gây damage không làm mất 1 HP');
+    assert.equal(engine.battle.enemy(0).hp, before);
+    reset();
+    engine.state.changeActorParam(1, 2, -999);
+    assert.equal(engine.battle.attack(1, 0, 1).damage, 0, 'công thức âm không làm mất HP');
+    assert.equal(engine.battle.enemy(0).hp, before);
+    console.log('ĐẠT: công thức Attack/Hack thật không trừ phòng thủ hai lần; sát thương bằng 0 hoặc âm giữ nguyên HP.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

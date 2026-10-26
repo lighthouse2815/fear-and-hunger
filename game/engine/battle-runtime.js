@@ -97,8 +97,8 @@
         var attack = this.state.actorParam(actorId, 2), actorValues = { atk: attack, def: this.state.actorParam(actorId, 3), mat: this.state.actorParam(actorId, 4), mdf: this.state.actorParam(actorId, 5), agi: this.state.actorParam(actorId, 6), luk: this.state.actorParam(actorId, 7), level: actorState.level, hp: actorState.hp, mp: actorState.mp };
         var enemyData = this.database.Enemies[enemy.enemyId], enemyValues = { atk: enemyData.params[2] || 0, def: enemyData.params[3] || 0, mat: enemyData.params[4] || 0, mdf: enemyData.params[5] || 0, agi: enemyData.params[6] || 0, luk: enemyData.params[7] || 0, level: 1, hp: enemy.hp, mp: enemy.mp };
         var power = formulaValue(skill && skill.damage ? skill.damage.formula : 'a.atk', { a: actorValues, b: enemyValues });
-        var defense = this.database.Enemies[enemy.enemyId].params[3] || 0;
-        var damage = Math.max(1, Math.round(power - defense / 2));
+        // Phòng thủ đã nằm trong công thức JSON; không trừ thêm lần nữa.
+        var damage = skill.damage.type === 0 ? 0 : Math.max(0, Math.round(power));
         enemy.hp = Math.max(0, enemy.hp - damage); enemy.alive = enemy.hp > 0;
         this.battle.phase = 'enemy';
         this.checkResult();
