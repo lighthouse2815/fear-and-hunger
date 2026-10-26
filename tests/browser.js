@@ -1867,7 +1867,7 @@ async function main() {
         await waitFor(cdp, 'FNHStandalonePreview.audio.buffers.bgm && !FNHStandalonePreview.audio.buffers.bgm.paused && FNHStandalonePreview.audio.buffers.bgm.currentTime > 0',
             20000, 'OGG phát trong audio manager độc lập');
         check('interpreter mới phát được BGM OGG thật', await evalPage(cdp,
-            'FNHStandalonePreview.audio.buffers.bgm.src.endsWith("/audio/bgm/fear_and_hunger.ogg") && FNHStandalonePreview.audio.buffers.bgm.volume === 0.04', false, false));
+            'FNHStandalonePreview.audio.buffers.bgm.src.endsWith("/audio/bgm/fear_and_hunger.ogg") && Math.abs(FNHStandalonePreview.audio.buffers.bgm.volume - 0.04) < 0.000001', false, false));
         await evalPage(cdp, `(() => {
             const volume = document.querySelector('#fnh-volume');
             volume.value = 50;
