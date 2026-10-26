@@ -26,13 +26,16 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    chế tạo; cần đối chiếu thêm recipe dùng tên thay vì ID và custom synthesis effect.
 3. Bản đồ: di chuyển mượt, fog/overlay, parallax và nhạc trận.
    Chỉ đánh dấu xong sau khi xác minh.
-4. Điều khiển: phím gọi common event, đặt lại phím và thao tác trên điện thoại.
+4. Điều khiển: đặt lại phím và đối chiếu thêm thao tác trên điện thoại.
 5. Luồng chính: Map072 trước tiêu đề, chơi mới/tiếp tục, nội dung kết thúc,
    cheat theo tên và cập nhật server/build/check khi chuyển entry chính.
 6. Quét nội dung toàn bộ, kiểm tra các nhánh đại diện và loại các giả định chỉ
    đúng trong fixture. Cập nhật README để chỉ rõ kết quả và giới hạn còn lại.
 
 ## Đã đối chiếu
+
+- T/C gọi common event 289/257 thật trên bản đồ, có nút cho điện thoại, giữ
+  khóa điều khiển khi chờ thoại và tôn trọng MP/switch; Z/X xác nhận/hủy.
 
 - Các mã lệnh xuất hiện trong JSON đều có nhánh interpreter; 401/405/505 là
   dòng tiếp nối. Cần kiểm chứng handler thực thi, không chỉ đếm nhánh.

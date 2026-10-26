@@ -1067,6 +1067,14 @@
         } finally { this.eventRunning = false; event.locked = false; }
     };
 
+    GameEngine.prototype.runCommonEvent = async function (id, handlers, signal) {
+        if (!this.state || this.state.scene !== 'map' || this.eventRunning || this.messageRunning || this.stepRunning) return false;
+        var interpreter = this.commonInterpreterFor(id, handlers, signal);
+        this.eventRunning = true;
+        try { await interpreter.run(); return true; }
+        finally { this.eventRunning = false; }
+    };
+
     GameEngine.prototype.showBalloon = function (character, id) {
         if (!Number.isInteger(id) || id < 1 || id > 15) throw new RangeError('ID balloon không hợp lệ.');
         character.balloon = { id: id, remaining: 76 };

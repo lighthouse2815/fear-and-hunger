@@ -19,6 +19,7 @@
     var scheduler = null;
     var errors = [];
     var inputPulses = new Map();
+    var commonKeys = new Map(), commonBindings = { t: 289, c: 257 };
     var video = document.getElementById('fnh-video');
     var videoPlay = document.getElementById('fnh-video-play');
     var stopVideo = null;
@@ -418,6 +419,12 @@
                     lastActionRevision !== (engine.battle.battle && engine.battle.battle.actionRevision);
                 if (sceneChanged) { renderBattleUi(); renderEndScreen(); menuUi.render(); }
                 if (scheduler) scheduler.tick();
+                commonKeys.forEach(function (held, key) {
+                    held.remaining -= frames;
+                    if (held.remaining > 0 || busy || engine.eventRunning || engine.messageRunning || engine.state.scene !== 'map') return;
+                    held.remaining = 6;
+                    perform(async function () { await engine.runCommonEvent(commonBindings[key], eventHandlers); await draw(); });
+                });
                 var active = sceneChanged || !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
                     lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
                     return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0);
@@ -468,25 +475,37 @@
     }
     document.addEventListener('pointerdown', function () { audio.unlock(); });
     function inputName(key) {
+        if (key.length === 1) key = key.toLowerCase();
         return { ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up',
-            Enter: 'ok', ' ': 'ok', Escape: 'cancel', Shift: 'shift', PageUp: 'pageup', PageDown: 'pagedown' }[key];
+            Enter: 'ok', ' ': 'ok', z: 'ok', x: 'cancel', Escape: 'cancel', Shift: 'shift', PageUp: 'pageup', PageDown: 'pagedown' }[key];
     }
     function pictureInput() {
         return automaticEvents && (!video.hidden || engine.state.mapId === 10);
     }
-    document.addEventListener('keyup', function (event) { engine.buttons.delete(inputName(event.key)); });
-    window.addEventListener('blur', function () { engine.buttons.clear(); inputPulses.clear(); });
+    document.addEventListener('keyup', function (event) {
+        engine.buttons.delete(inputName(event.key)); commonKeys.delete(event.key.toLowerCase());
+    });
+    window.addEventListener('blur', function () { engine.buttons.clear(); inputPulses.clear(); commonKeys.clear(); });
     document.addEventListener('keydown', function (event) {
         audio.unlock();
         if (document.querySelector('dialog[open]')) return;
-        if (event.key === 'Escape' && engine.state && engine.state.scene === 'map' &&
+        var buttonName = inputName(event.key);
+        if (buttonName === 'cancel' && engine.state && engine.state.scene === 'map' &&
             !scrollAnimation && !pictureInput() && !engine.eventRunning && !engine.messageRunning && engine.openMenu()) {
             event.preventDefault(); menuUi.render(); return;
         }
         if (event.target.closest('button,input,select,textarea')) return;
-        var buttonName = inputName(event.key);
+        var commonKey = event.key.toLowerCase();
+        if (commonBindings[commonKey]) {
+            event.preventDefault();
+            if (!commonKeys.has(commonKey)) {
+                commonKeys.set(commonKey, { remaining: 24 });
+                perform(async function () { await engine.runCommonEvent(commonBindings[commonKey], eventHandlers); await draw(); });
+            }
+            return;
+        }
         if (buttonName) engine.buttons.add(buttonName);
-        if (!next.hidden && (event.key === 'Enter' || event.key === ' ')) {
+        if (!next.hidden && buttonName === 'ok') {
             event.preventDefault();
             if (!event.repeat) next.click();
             return;
@@ -496,12 +515,17 @@
         if (direction) {
             event.preventDefault();
             perform(function () { return step(direction); });
-        } else if (event.key === 'Enter' || event.key === ' ') {
+        } else if (buttonName === 'ok') {
             event.preventDefault();
             if (!event.repeat) perform(interact);
         }
     });
     document.getElementById('fnh-controls').addEventListener('click', function (event) {
+        var shortcut = event.target.closest('button[data-common-event]');
+        if (shortcut) {
+            perform(async function () { await engine.runCommonEvent(Number(shortcut.dataset.commonEvent), eventHandlers); await draw(); });
+            return;
+        }
         var button = event.target.closest('button[data-direction]');
         if (!button) return;
         var direction = Number(button.dataset.direction);

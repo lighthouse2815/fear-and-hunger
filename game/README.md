@@ -31,6 +31,9 @@ Preview mở cạnh thùng đồ trên Map074. Bấm Enter hoặc **Tương tác
 bấm **Tiếp tục** để đọc hội thoại. Dùng mũi tên hoặc các nút hướng để di chuyển;
 khi hội thoại/sự kiện đang chạy, engine khóa di chuyển và các sự kiện khác.
 Các lựa chọn hiển thị bằng nút trong trang, không mở hộp thoại `prompt`.
+Phím T đốt đuốc qua common event 289, C dùng Phase qua common event 257. Các
+nút **Đốt đuốc**/**Kỹ năng** gọi cùng luồng trên điện thoại. Z xác nhận/tương tác,
+X hủy/mở menu; phím tắt chỉ chạy trên bản đồ khi không có sự kiện đang chờ.
 Đi qua cửa ở cổng ngục có thể vào Map001 và quay lại bằng sự kiện chạm thật.
 Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro.

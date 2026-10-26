@@ -920,6 +920,32 @@ async function main() {
             }
             return different > 10000;
         })()`, false, false));
+        await evalPage(cdp, `(() => {
+            const e = FNHStandalonePreview.engine;
+            window.shortcutBefore = e.save();
+            e.state.gainItem('items', 5, 2); e.state.setSwitch(2845, true);
+            document.querySelector('#fnh-canvas').focus();
+        })()`, false, false);
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 't', code: 'KeyT', windowsVirtualKeyCode: 84 });
+        await waitFor(cdp, 'document.querySelector("#fnh-message-text").textContent.includes("light the torch") && !document.querySelector("#fnh-next").hidden', 5000, 'phím T gọi common event đốt đuốc');
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 't', code: 'KeyT', windowsVirtualKeyCode: 84 });
+        check('phím T khóa điều khiển và chỉ trừ một đuốc khi chờ thoại', await evalPage(cdp,
+            'FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.itemCount("items",5) === (window.shortcutBefore.inventory.items[5] || 0) + 1 && !FNHStandalonePreview.engine.move(6)', false, false));
+        await clickElement(cdp, '#fnh-next');
+        await waitFor(cdp, '!FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.switchValue(3151)', 5000, 'đuốc bật ánh sáng và bộ đếm');
+        await clickElement(cdp, '[data-common-event="289"]');
+        await waitFor(cdp, '!document.querySelector("#fnh-next").hidden', 5000, 'nút đốt đuốc trên điện thoại');
+        await clickElement(cdp, '#fnh-next');
+        await waitFor(cdp, '!FNHStandalonePreview.engine.eventRunning', 5000, 'kết thúc đuốc thứ hai');
+        check('nút đốt đuốc chạy cùng common event thật', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.itemCount("items",5) === (window.shortcutBefore.inventory.items[5] || 0) && FNHStandalonePreview.engine.state.variableValue(398) === 40 && FNHStandalonePreview.engine.lighting.lighting.radius === 300', false, false));
+        await evalPage(cdp, 'window.shortcutMp = FNHStandalonePreview.engine.state.actor(1).mp; document.querySelector("#fnh-canvas").focus()', false, false);
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'c', code: 'KeyC', windowsVirtualKeyCode: 67 });
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.switchValue(2844)', 5000, 'phím C gọi Phase');
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'c', code: 'KeyC', windowsVirtualKeyCode: 67 });
+        check('phím C dùng Phase theo MP và switch trong JSON', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.actor(1).mp === window.shortcutMp - 10', false, false));
+        await evalPage(cdp, '(async () => { await FNHStandalonePreview.engine.restore(window.shortcutBefore); delete window.shortcutBefore; delete window.shortcutMp; })()', true, false);
         check('Canvas vẽ follower và guest ở vị trí lưu, ẩn cả hai đúng lệnh', await evalPage(cdp, `(async () => {
             const source = FNHStandalonePreview.engine;
             const state = new FNHStandaloneState.GameState({ mapId: 74, x: 15, y: 15, party: [1, 2], guests: [3],
