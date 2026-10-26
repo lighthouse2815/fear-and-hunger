@@ -118,6 +118,10 @@
         case 217:
             this.state.followersGathering = true;
             return;
+        case 351: this.state.scene = 'menu'; return;
+        case 352: this.state.scene = 'save'; return;
+        case 353: this.state.scene = 'gameover'; return;
+        case 354: this.state.scene = 'title'; return;
         case 134: case 135:
             this.state[command.code === 134 ? 'saveEnabled' : 'menuEnabled'] = command.parameters[0] !== 0;
             return;
