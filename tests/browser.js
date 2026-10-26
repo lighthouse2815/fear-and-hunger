@@ -271,7 +271,7 @@ async function main() {
     let ws = null;
     let cdp = null;
     let chromeStderr = '';
-    let keepShots = false;
+    let keepShots = process.env.FNH_KEEP_SHOTS === '1';
     const shotsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fnh-smoke-'));
     const runtimeErrors = [];
     const logErrors = [];
@@ -894,6 +894,36 @@ async function main() {
             }
             return different > 10000;
         })()`, false, false));
+        check('renderer cắt đúng hai khối tileset B–E', await evalPage(cdp, `(async () => {
+            const canvas = document.createElement('canvas');
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { width: 96, height: 48 });
+            const sheet = await renderer.loadImage('img/tilesets/Fortress_B.png');
+            const sheets = []; sheets[5] = sheet;
+            renderer.drawTile(sheets, 8, 0, 0);
+            renderer.drawTile(sheets, 128, 1, 0);
+            const reference = document.createElement('canvas');
+            reference.width = 96; reference.height = 48;
+            const context = reference.getContext('2d');
+            context.drawImage(sheet, 0, 48, 48, 48, 0, 0, 48, 48);
+            context.drawImage(sheet, 384, 0, 48, 48, 48, 0, 48, 48);
+            const actual = canvas.getContext('2d').getImageData(0, 0, 96, 48).data;
+            const expected = context.getImageData(0, 0, 96, 48).data;
+            return actual.every((value, index) => value === expected[index]);
+        })()`, true, false));
+        check('sprite lớn giữ kích thước và nhận diện dấu $', await evalPage(cdp, `(async () => {
+            const canvas = document.createElement('canvas');
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { width: 400, height: 300 });
+            const bitmap = await renderer.loadImage('img/characters/$guard1.png');
+            renderer.drawActor([], { x: 3, y: 3, bitmap, image: {
+                characterName: '$guard1', characterIndex: 0, pattern: 0, direction: 6
+            } }, 0, 0);
+            const reference = document.createElement('canvas');
+            reference.width = 400; reference.height = 300;
+            reference.getContext('2d').drawImage(bitmap, 0, 220, 80, 110, 128, 76, 80, 110);
+            const actual = canvas.getContext('2d').getImageData(0, 0, 400, 300).data;
+            const expected = reference.getContext('2d').getImageData(0, 0, 400, 300).data;
+            return actual.every((value, index) => value === expected[index]);
+        })()`, true, false));
         // Chạy các lệnh audio dữ liệu bằng interpreter mới, không dùng AudioManager MV.
         await evalPage(cdp, `new FNHStandaloneEvents.EventInterpreter({
             state: FNHStandalonePreview.engine.state,
@@ -927,6 +957,7 @@ async function main() {
         }))));
 
         log('Hoàn tất ' + passed + ' kiểm tra.');
+        if (keepShots) log('Ảnh chụp: ' + shotsDir);
     } catch (error) {
         keepShots = true;
         const failureShot = await screenshot('failure');
