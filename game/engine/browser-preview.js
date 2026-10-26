@@ -222,7 +222,8 @@
                     return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0);
                 });
                 active = active || filterRevision !== engine.filters.revision || engine.filters.active();
-                active = active || engine.animations.entries.length > 0 || animationRevision !== engine.animations.revision;
+                active = active || engine.animations.entries.length > 0 || animationRevision !== engine.animations.revision ||
+                    !!(engine.state.regionCover && engine.state.regionCover.enabled);
                 engine.advanceRoutes(frames);
                 var heldDirection = engine.buttons.has('down') ? 2 : engine.buttons.has('left') ? 4 :
                     engine.buttons.has('right') ? 6 : engine.buttons.has('up') ? 8 : 0;

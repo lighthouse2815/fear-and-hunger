@@ -133,6 +133,7 @@
             }
             if (engine.lighting) this.drawLighting(engine.lighting, lightSources, state, viewport);
         animationBitmaps.forEach(function (animation) { renderer.drawAnimation(animation, state, map, startX, startY); });
+        if (state.regionCover && state.regionCover.enabled) this.drawRegionCover(map, state.regionCover, startX, startY, cols, rows);
             // Tint thuộc lớp bản đồ; picture giao diện giữ màu riêng.
             if (screen) this.applyTone(context, this.canvas.width, this.canvas.height, screen.tone);
             this.drawWeather(screen && screen.weather);
@@ -236,6 +237,17 @@
             renderer.context.drawImage(bitmap, sourceX, sourceY, 192, 192, -96 * scale, -96 * scale, 192 * scale, 192 * scale);
             renderer.context.restore();
         });
+    };
+
+    CanvasRenderer.prototype.drawRegionCover = function (map, cover, startX, startY, cols, rows) {
+        var context = this.context;
+        context.save(); context.fillStyle = '#000';
+        for (var y = startY; y < Math.min(map.height, startY + rows); y += 1) {
+            for (var x = startX; x < Math.min(map.width, startX + cols); x += 1) {
+                if (!cover.open.includes(map.regionId(x, y))) context.fillRect((x - startX) * TILE_SIZE, (y - startY) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
+        }
+        context.restore();
     };
 
     CanvasRenderer.prototype.drawGab = function (gab, state) {

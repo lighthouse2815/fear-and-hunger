@@ -342,6 +342,17 @@
             this.state.dashEnabled = text === 'ToggleDashing' ? !this.state.dashEnabled : text === 'EnableDashing';
             return;
         }
+        var region = /^(RegionReveal|RegionHide)\s+\[?(\d+)\]?$/i.exec(text);
+        if (region) {
+            var id = Number(region[2]), open = this.state.regionCover.open;
+            this.state.regionCover.enabled = true;
+            if (region[1].toLowerCase() === 'regionreveal' && !open.includes(id)) open.push(id);
+            if (region[1].toLowerCase() === 'regionhide' && id !== 0) this.state.regionCover.open = open.filter(function (value) { return value !== id; });
+            return;
+        }
+        if (/^RegionReset$/i.test(text)) {
+            this.state.regionCover.enabled = true; this.state.regionCover.open = [0]; return;
+        }
         if ((match = /^choice_text\s+(\d+)\s+(.*)$/i.exec(text))) {
             this.state.pendingChoices.text[Number(match[1]) - 1] = match[2];
             return;
