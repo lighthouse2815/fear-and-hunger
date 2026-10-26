@@ -192,7 +192,7 @@
     };
 
     GameEngine.prototype.advanceRoutes = function (frames) {
-        if (this.state && ['gameover', 'title'].includes(this.state.scene)) return;
+        if (this.state && ['gameover', 'title', 'menu', 'save'].includes(this.state.scene)) return;
         if (this.state && this.state.scene === 'battle') {
             if (this.routeErrors.length) throw this.routeErrors.shift();
             this.screen.advance(frames, 'battle');
@@ -316,6 +316,7 @@
             if (text == null) engine.screen.clearGabs();
             else engine.screen.showGab(text);
         };
+        eventHandlers.menu = function (_, interpreter) { return engine.waitForMenu(interpreter.signal, interpreter); };
         var gameData = eventHandlers.gameData;
         eventHandlers.gameData = function (type, id, field, interpreter) {
             if (type === 4 && field >= 0 && field <= 9) {
@@ -505,6 +506,95 @@
         });
     };
 
+    GameEngine.prototype.openMenu = function () {
+        if (!this.state || this.state.scene !== 'map' || !this.state.menuEnabled || this.eventRunning || this.messageRunning || this.stepRunning) return false;
+        this.state.scene = 'menu'; this.buttons.clear();
+        return true;
+    };
+    GameEngine.prototype.waitForMenu = function (signal, interpreter) {
+        var engine = this;
+        if (!this.menuWaiters) this.menuWaiters = new Set();
+        this.menuInterpreter = interpreter;
+        return new Promise(function (resolve, reject) {
+            function cleanup() {
+                engine.menuWaiters.delete(done);
+                if (engine.menuInterpreter === interpreter) engine.menuInterpreter = null;
+                if (signal) signal.removeEventListener('abort', abort);
+            }
+            function done() { cleanup(); resolve(); }
+            function abort() { cleanup(); engine.closeMenu(); reject(signal.reason); }
+            if (signal && signal.aborted) { abort(); return; }
+            engine.menuWaiters.add(done);
+            if (signal) signal.addEventListener('abort', abort, { once: true });
+        });
+    };
+    GameEngine.prototype.closeMenu = function () {
+        if (!this.state || !['menu', 'save'].includes(this.state.scene)) return false;
+        this.state.scene = 'map'; this.buttons.clear();
+        if (this.menuWaiters) this.menuWaiters.forEach(function (done) { done(); });
+        return true;
+    };
+    GameEngine.prototype.saveMenuTo = function (saveStore, slot) {
+        if (!['menu', 'save'].includes(this.state.scene) || !this.state.saveEnabled) throw new Error('Chưa thể lưu lúc này.');
+        var snapshot = this.save(); snapshot.scene = 'map';
+        snapshot.pendingEventStack = [];
+        for (var interpreter = this.menuInterpreter; interpreter; interpreter = interpreter.parent) {
+            snapshot.pendingEventStack.push(interpreter.snapshot());
+        }
+        return saveStore.save(slot, snapshot);
+    };
+    GameEngine.prototype.equipMenuActor = function (actorId, slot, itemId) {
+        if (this.state.scene !== 'menu' || !this.state.party.includes(actorId)) return false;
+        var traits = this.battle.battlerTraits({ id: actorId });
+        if (traits.some(function (trait) { return [53, 54].includes(trait.code) && trait.dataId === slot + 1; })) return false;
+        var item = (slot === 0 ? this.database.Weapons : this.database.Armors)[itemId];
+        if (itemId && (!item || !traits.some(function (trait) {
+            return trait.code === (slot === 0 ? 51 : 52) && trait.dataId === (slot === 0 ? item.wtypeId : item.atypeId);
+        }))) return false;
+        return this.state.equipActor(actorId, slot, itemId);
+    };
+    GameEngine.prototype.canUseMenuItem = function (itemId, actorId) {
+        var item = this.database.Items[itemId], actor = actorId && this.state.actor(actorId);
+        return this.state.scene === 'menu' && !this.eventRunning && !this.messageRunning && !!item &&
+            [0, 2].includes(item.occasion) && [0, 7, 11].includes(item.scope) && this.state.itemCount('items', itemId) > 0 &&
+            (item.scope === 0 || !!actor && this.state.party.includes(actorId) && actor.hp > 0);
+    };
+    GameEngine.prototype.useMenuItem = async function (itemId, actorId, handlers) {
+        if (!this.canUseMenuItem(itemId, actorId)) throw new Error('Chưa thể dùng vật phẩm này.');
+        var item = this.database.Items[itemId], target = { id: actorId }, engine = this;
+        var effects = item.effects || [];
+        effects.forEach(function (effect) {
+            if (![21, 22, 43, 44].includes(effect.code)) throw new Error('Hiệu ứng vật phẩm chưa hỗ trợ: ' + effect.code);
+            if ([21, 22].includes(effect.code) && !engine.database.States[effect.dataId]) throw new Error('Không tìm thấy state ' + effect.dataId);
+            if (effect.code === 43 && !engine.database.Skills[effect.dataId]) throw new Error('Không tìm thấy skill ' + effect.dataId);
+            if (effect.code === 44 && !engine.database.CommonEvents[effect.dataId]) throw new Error('Không tìm thấy common event ' + effect.dataId);
+        });
+        var damage = item.damage.type > 0 && item.scope !== 0 ? this.battle.damageValue(target, target, item) : null;
+        if (item.consumable) this.state.gainItem('items', itemId, -1);
+        if (item.scope !== 0) {
+            if (damage) {
+                if (damage.resource === 'hp') this.state.changeActorHp(actorId, -damage.damage, true);
+                else this.state.changeActorMp(actorId, -damage.damage);
+            }
+            effects.forEach(function (effect) {
+                if (effect.code === 21) {
+                    var immune = engine.battle.battlerTraits(target).some(function (trait) { return trait.code === 14 && trait.dataId === effect.dataId; });
+                    if (!immune && engine.random() < effect.value1) engine.state.changeActorState(actorId, effect.dataId, true);
+                }
+                if (effect.code === 22 && engine.random() < effect.value1) engine.state.changeActorState(actorId, effect.dataId, false);
+                if (effect.code === 43) engine.state.changeActorSkill(actorId, effect.dataId, true);
+            });
+        }
+        this.closeMenu(); this.eventRunning = true;
+        try {
+            for (var index = 0; index < effects.length; index++) {
+                if (effects[index].code === 44) await this.createInterpreter([{ code: 117, parameters: [effects[index].dataId] }], 0, handlers).run();
+                if (this.state.scene === 'gameover' || this.state.scene === 'title') break;
+            }
+        } finally { this.eventRunning = false; }
+        return true;
+    };
+
     GameEngine.prototype.runEnemyTurn = async function (handlers, signal) {
         var runtime = this.battle, battle = runtime.battle;
         var actions = runtime.enemyActions();
@@ -523,11 +613,19 @@
         }
     };
 
-    GameEngine.prototype.battleAttack = async function (actorId, enemyIndex, handlers) {
+    GameEngine.prototype.battleAttack = function (actorId, enemyIndex, handlers) {
+        return this.battleSkill(actorId, 1, enemyIndex, handlers);
+    };
+
+    GameEngine.prototype.battleSkill = async function (actorId, skillId, targetIndex, handlers) {
         var runtime = this.battle, battle = runtime.battle, context = this.battleContext || {};
         if (this.state.scene !== 'battle' || !battle || battle.result || battle.phase !== 'input') throw new Error('Chưa đến lượt nhân vật.');
-        var subject = runtime.actor(actorId), chosen = runtime.enemy(enemyIndex);
-        if (!subject || !subject.alive || !chosen || !chosen.alive || chosen.hidden) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
+        var subject = runtime.actor(actorId), skill = this.database.Skills[skillId];
+        if (!subject || !subject.alive || !skill) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
+        if (![1, 2].includes(skillId) && !runtime.actorSkills(actorId).some(function (entry) { return entry.id === skillId; })) throw new Error('Nhân vật chưa học kỹ năng này.');
+        if (!runtime.canUseSkill(subject, skill)) throw new Error('Chưa thể dùng kỹ năng ' + skill.name);
+        var chosen = skill.scope === 1 ? runtime.enemy(targetIndex) : skill.scope === 7 ? battle.actors[targetIndex] : null;
+        if ([1, 7].includes(skill.scope) && (!chosen || !chosen.alive || chosen.hidden)) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
         battle.managed = true;
         battle.turn++;
         battle.forcedThisTurn = [];
@@ -536,11 +634,8 @@
             if (battle.result) return;
             var result;
             subject = runtime.actor(actorId);
-            if (subject && subject.alive && !(battle.forcedThisTurn || []).includes('actor:' + actorId)) {
-                chosen = runtime.enemy(enemyIndex);
-                if (!chosen || !chosen.alive || chosen.hidden) chosen = runtime.aliveEnemies()[0];
-                battle.phase = 'input';
-                result = runtime.attack(actorId, chosen.index);
+            if (subject && runtime.canUseSkill(subject, skill) && !(battle.forcedThisTurn || []).includes('actor:' + actorId)) {
+                result = runtime.useSkill(subject, skillId, targetIndex);
                 battle.phase = 'action';
                 await this.completeBattleSkill(result, handlers || context.handlers, context.signal);
                 await this.runBattlePages(false, handlers || context.handlers, context.signal);
@@ -686,12 +781,44 @@
         return saveStore.save(slot, this.save());
     };
 
-    GameEngine.prototype.loadFrom = async function (saveStore, slot) {
+    GameEngine.prototype.loadFrom = async function (saveStore, slot, handlers) {
         if (!saveStore || typeof saveStore.load !== 'function') throw new TypeError('SaveStore không hợp lệ.');
         var snapshot = saveStore.load(slot);
         if (!snapshot) return false;
         await this.restore(snapshot);
+        await this.resumeSavedEvents(handlers);
         return true;
+    };
+
+    GameEngine.prototype.resumeSavedEvents = async function (handlers) {
+        var stack = this.state.pendingEventStack;
+        if (!stack.length) return;
+        if (this.eventRunning) throw new Error('Một sự kiện khác đang chạy.');
+        var engine = this, budget = { remaining: stack[0].remaining };
+        var interpreters = stack.map(function (frame) {
+            var interpreter = engine.createInterpreter(frame.commands, frame.eventId, handlers);
+            ['index', 'mapId', 'depth', 'result', 'choiceFrames', 'conditionFrames', 'loopFrames', 'battleFrames'].forEach(function (key) {
+                interpreter[key] = frame[key];
+            });
+            interpreter.budget = budget;
+            return interpreter;
+        });
+        interpreters.forEach(function (interpreter, index) { interpreter.parent = interpreters[index + 1] || null; });
+        var root = interpreters[interpreters.length - 1];
+        var event = root.mapId === this.map.id && this.map.eventById(root.eventId);
+        if (event) event.locked = true;
+        this.state.pendingEventStack = []; this.eventRunning = true;
+        try {
+            for (var index = 0; index < interpreters.length; index++) {
+                var result = await interpreters[index].run();
+                if (result.terminated) break;
+                var parent = interpreters[index + 1];
+                if (parent) {
+                    parent.result.choices.push.apply(parent.result.choices, result.choices);
+                    if (result.transferred) parent.result.transferred = result.transferred;
+                }
+            }
+        } finally { this.eventRunning = false; if (event) event.locked = false; }
     };
 
     GameEngine.prototype.restore = async function (snapshot) {

@@ -148,7 +148,11 @@ async function evalPage(cdp, expression, awaitPromise, userGesture) {
 async function waitFor(cdp, expression, timeoutMs, label) {
     const started = Date.now();
     while (Date.now() - started < (timeoutMs || 30000)) {
-        if (await evalPage(cdp, '!!(' + expression + ')', false, false)) return;
+        try {
+            if (await evalPage(cdp, '!!(' + expression + ')', false, false)) return;
+        } catch (error) {
+            if (!/Inspected target navigated or closed|Execution context was destroyed|Cannot find context with specified id/.test(error.message)) throw error;
+        }
         await sleep(200);
     }
     throw new Error('Hết thời gian chờ: ' + (label || expression));
@@ -974,6 +978,94 @@ async function main() {
         await clickElement(cdp, '#fnh-load');
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.y === 8', 5000, 'tải save preview');
 
+        await evalPage(cdp, `(() => {
+            const engine=FNHStandalonePreview.engine;
+            window.menuBefore=engine.save();
+            engine.state.changeActorHp(1,-50,true); engine.state.gainItem('items',28,1);
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-menu');
+        await waitFor(cdp,'document.querySelector("#fnh-menu-dialog").open',5000,'mở menu độc lập');
+        check('menu hiện chỉ số và khóa di chuyển trên bản đồ',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;
+            return e.state.scene==='menu' && /HP: 50/.test(document.querySelector('#fnh-menu-content').textContent) && !e.move(2);
+        })()`,false,false));
+        await clickElement(cdp,'[data-menu-tab="equipment"]');
+        check('menu đổi trang bị và trả vật phẩm vào túi',await evalPage(cdp,`(() => {
+            const select=document.querySelector('#fnh-menu-content select[data-slot="0"]');
+            select.value='0';select.dispatchEvent(new Event('change',{bubbles:true}));
+            return FNHStandalonePreview.engine.state.itemCount('weapons',44)===1;
+        })()`,false,false));
+        await clickElement(cdp,'[data-menu-tab="inventory"]');
+        await clickElement(cdp,'#fnh-menu-content button[data-item="28"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.itemCount("items",9)===(window.menuBefore.inventory.items[9]||0)+1 && !document.querySelector("#fnh-menu-dialog").open',5000,'dùng vial và trả vỏ chai');
+        check('dùng vật phẩm trong menu hồi HP và chạy common event thật',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.actor(1).hp===70 && FNHStandalonePreview.engine.state.itemCount("items",28)===(window.menuBefore.inventory.items[28]||0)',false,false));
+        await clickElement(cdp,'#fnh-menu'); await clickElement(cdp,'[data-menu-tab="system"]');
+        await clickElement(cdp,'#fnh-menu-save');
+        check('lưu từ menu tạo checkpoint trở về bản đồ',await evalPage(cdp,
+            'JSON.parse(localStorage.getItem("FNH_STANDALONE_PREVIEW:1")).state.scene==="map"',false,false));
+        await clickElement(cdp,'#fnh-menu-close');
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.menuBefore).then(()=>true)',true,false);
+        await evalPage(cdp,`(async()=>{
+            const engine=FNHStandalonePreview.engine;
+            const running=engine.createInterpreter([{code:351},{code:121,parameters:[6240,6240,0]}],0).run();
+            window.menuEvent=running;
+        })()`,true,false);
+        await waitFor(cdp,'document.querySelector("#fnh-menu-dialog").open',5000,'lệnh 351 mở menu');
+        check('351 chờ người chơi đóng menu',await evalPage(cdp,'!FNHStandalonePreview.engine.state.switchValue(6240)',false,false));
+        await clickElement(cdp,'#fnh-menu-close');
+        await evalPage(cdp,'window.menuEvent',true,false);
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.menuBefore).then(()=>true)',true,false);
+        await evalPage(cdp,'delete window.menuBefore;delete window.menuEvent',false,false);
+        await evalPage(cdp,`(() => {
+            const engine=FNHStandalonePreview.engine;window.bookBefore=engine.save();engine.state.gainItem('items',40,1);
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-menu'); await clickElement(cdp,'[data-menu-tab="inventory"]');
+        await clickElement(cdp,'#fnh-menu-content button[data-item="40"]');
+        for(let i=0;i<8;i++) {
+            await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="save" || !document.querySelector("#fnh-next").hidden',5000,'đọc sách lưu game');
+            if(await evalPage(cdp,'FNHStandalonePreview.engine.state.scene==="save"',false,false)) break;
+            await clickElement(cdp,'#fnh-next');
+        }
+        await waitFor(cdp,'document.querySelector("#fnh-menu-dialog").open && !document.querySelector("#fnh-menu-save").disabled',5000,'sách mở màn lưu');
+        await clickElement(cdp,'#fnh-menu-save');
+        check('sách lưu game giữ stack common event trong save',await evalPage(cdp,
+            'JSON.parse(localStorage.getItem("FNH_STANDALONE_PREVIEW:1")).state.pendingEventStack.length===2',false,false));
+        await clickElement(cdp,'#fnh-menu-close');
+        for(let i=0;i<4;i++) {
+            await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning || !document.querySelector("#fnh-next").hidden',5000,'đọc phần kết của sách');
+            if(await evalPage(cdp,'!FNHStandalonePreview.engine.eventRunning',false,false)) break;
+            await clickElement(cdp,'#fnh-next');
+        }
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'sách dọn hiệu ứng');
+        await clickElement(cdp,'#fnh-load');
+        for(let i=0;i<4;i++) {
+            await waitFor(cdp,'!document.querySelector("#fnh-next").hidden || !FNHStandalonePreview.engine.state.switchValue(3350)',5000,'tiếp tục sách từ save');
+            if(await evalPage(cdp,'!FNHStandalonePreview.engine.state.switchValue(3350)',false,false)) break;
+            await clickElement(cdp,'#fnh-next');
+        }
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'tải save chạy xong common event');
+        check('tải sách tiếp tục hội thoại và dọn picture/switch đúng một lần',await evalPage(cdp,
+            '!FNHStandalonePreview.engine.state.screen.pictures[1] && !FNHStandalonePreview.engine.state.switchValue(3350) && FNHStandalonePreview.engine.state.itemCount("items",40)===(window.bookBefore.inventory.items[40]||0)',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.bookBefore).then(()=>true)',true,false);
+        await evalPage(cdp,'delete window.bookBefore',false,false);
+        await evalPage(cdp,`(() => {
+            const engine=FNHStandalonePreview.engine;
+            window.skillUiBefore=engine.save();
+            const enemyId=engine.database.Enemies.length,troopId=engine.database.Troops.length;
+            engine.database.Enemies.push({...engine.database.Enemies[1],id:enemyId,actions:[]});
+            engine.database.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400,hidden:false}]});
+            engine.battle.setup(troopId,true,true);engine.state.scene='battle';
+        })()`,false,false);
+        await waitFor(cdp,'!document.querySelector("#fnh-battle").hidden',5000,'mở trận để kiểm tra chọn kỹ năng');
+        await clickElement(cdp,'#fnh-battle-use-skill');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'dùng Guard từ danh sách kỹ năng');
+        check('giao diện chọn kỹ năng thực thi Guard và hết state cuối lượt',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.lastAction.skillId===2 && !FNHStandalonePreview.engine.state.actor(1).states.includes(2)',false,false));
+        await evalPage(cdp,`(async()=>{
+            const engine=FNHStandalonePreview.engine;engine.battle.finish('escape');engine.leaveBattle('escape');
+            await engine.restore(window.skillUiBefore);delete window.skillUiBefore;
+        })()`,true,false);
         await evalPage(cdp, `(() => {
             const engine = FNHStandalonePreview.engine;
             const page = engine.map.eventPage(engine.map.eventById(39));

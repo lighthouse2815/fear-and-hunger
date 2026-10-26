@@ -75,7 +75,7 @@ Trận đấu vẽ nền battleback và sprite quái từ PNG, đặt từng b�
 và xếp lớp theo tọa độ. Bộ phận ẩn hoặc đã chết không được vẽ. Khi không có nền
 chỉ định, renderer làm mờ ảnh bản đồ hiện tại. Giao diện hiển thị HP/MP trong đội.
 Luồng 301 chờ kết quả rồi chỉ chạy nhánh 601/602/603 tương ứng; trận thua bắt buộc
-dừng event và mở màn game over. Combat còn thiếu giao diện chọn kỹ năng/menu và cơ chế plugin mở rộng để thay entry chính.
+dừng event và mở màn game over. Combat còn thiếu cơ chế plugin mở rộng để thay entry chính.
 Lệnh 337 phát animation trên quái bằng sprite sheet PNG hiện có: chọn một hoặc
 toàn bộ mục tiêu còn sống/đang hiện, không chờ animation kết thúc. Frame, SE,
 flash/ẩn sprite, vị trí đầu/giữa/chân/toàn màn hình và phản chiếu được xử lý trong
@@ -106,6 +106,21 @@ quái không còn tự đánh cố định vào nhân vật đầu tiên. State 
 qua save/update actor; Guard hết sau lượt và state tạm được dọn khi rời trận.
 Hiện mới chuyển hiệu ứng kỹ năng cơ bản trong JSON, chưa thay toàn bộ cơ chế
 combat mở rộng trong note/plugin (counter, taunt, action sequence và state script).
+Preview có nút **Menu** (hoặc Escape trên bản đồ): chọn nhân vật để xem chỉ số,
+trạng thái, kỹ năng, túi đồ và đổi trang bị. Trang bị trao đổi với túi đồ và tôn
+trọng loại trang bị/ô bị khóa. Vật phẩm dùng ngoài trận đọc công thức hồi HP/MP,
+state, học skill và common event từ JSON; Blue vial trả vỏ chai và scroll dạy
+đúng nhân vật được chọn. Khi menu mở, map/di chuyển/timer được tạm dừng.
+Trong trận có thể chọn nhân vật, kỹ năng đã học hoặc Guard, mục tiêu quái/đồng đội.
+Kỹ năng chưa học hoặc thiếu MP/TP bị từ chối trước khi tiêu lượt; log hiện trượt,
+né và sát thương. Hiện mỗi lượt điều khiển một hành động của đội; chưa có hàng đợi
+chọn hành động riêng cho toàn bộ thành viên, dùng item trong trận hay menu dùng
+kỹ năng ngoài trận. Lệnh 351/352 chờ đóng menu/lưu rồi mới tiếp tục event.
+Lưu từ menu trở về scene bản đồ, giữ stack common event, vị trí lệnh, nhánh và
+vòng lặp của event đang gọi menu. Tải save tiếp tục từ sau lệnh menu, giữ khóa
+điều khiển đến khi event xong. Book of enlightenment có thể lưu giữa common
+event rồi tiếp tục hội thoại, dọn picture và switch sau khi tải. Vật phẩm chỉ
+dùng được khi menu mở ngoài sự kiện.
 Lệnh game over/về tiêu đề dừng cả chuỗi common event đang gọi và hủy các sự kiện
 nền đang chờ. Hai màn này dùng ảnh/nhạc có sẵn, cho tải ô lưu 1 hoặc chơi mới.
 Chơi mới mở luồng chọn nhân vật độc lập từ Map010. Tải save trở lại map và tiếp

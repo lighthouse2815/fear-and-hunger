@@ -30,6 +30,10 @@
         #fnh-end-screen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
         #fnh-end-actions { position: absolute; inset: auto 0 8%; text-align: center; }
         #fnh-end-title { font: 28px GameFont, serif; text-shadow: 1px 1px #000; }
+        #fnh-menu-dialog { width: min(720px, 92vw); max-height: 85vh; overflow: auto; }
+        #fnh-menu-dialog nav { display: flex; flex-wrap: wrap; gap: 6px; }
+        #fnh-menu-content label { display: block; margin: 12px 0; }
+        [aria-pressed="true"] { outline: 2px solid #e7ddca; }
         dialog { color: inherit; background: #17120f; border: 1px solid #8c7759; }
         dialog::backdrop { background: #000b; }
         #fnh-name-input { display: block; margin-top: 12px; padding: 8px; font: inherit; }
@@ -62,6 +66,20 @@
             <button type="submit">Xác nhận</button>
         </form>
     </dialog>
+    <dialog id="fnh-menu-dialog" aria-labelledby="fnh-menu-title">
+        <h2 id="fnh-menu-title">Menu</h2>
+        <button id="fnh-menu-close" type="button">Đóng</button>
+        <label for="fnh-menu-actor">Nhân vật</label><select id="fnh-menu-actor"></select>
+        <nav aria-label="Danh mục menu">
+            <button type="button" data-menu-tab="status">Chỉ số</button>
+            <button type="button" data-menu-tab="inventory">Túi đồ</button>
+            <button type="button" data-menu-tab="equipment">Trang bị</button>
+            <button type="button" data-menu-tab="skills">Kỹ năng</button>
+            <button type="button" data-menu-tab="system">Lưu/Tải</button>
+        </nav>
+        <p id="fnh-menu-message" aria-live="polite"></p>
+        <div id="fnh-menu-content"></div>
+    </dialog>
     <div id="fnh-status">Đang tải engine độc lập…</div>
     <div id="fnh-message" aria-live="polite">
         <div id="fnh-message-text"></div>
@@ -76,6 +94,7 @@
         <button type="button" data-direction="6" aria-label="Đi phải">→</button>
         <button type="button" data-direction="0">Tương tác</button>
     </nav>
+    <button id="fnh-menu" type="button">Menu</button>
     <button id="fnh-save" type="button">Lưu ô 1</button>
     <button id="fnh-load" type="button">Tải ô 1</button>
     <label for="fnh-volume">Âm lượng <input id="fnh-volume" type="range" min="0" max="100" value="100"></label>
@@ -84,6 +103,11 @@
         <strong id="fnh-battle-title">Trận chiến</strong>
         <div id="fnh-battle-party"></div>
         <div id="fnh-battle-targets"></div>
+        <label for="fnh-battle-actor">Nhân vật</label><select id="fnh-battle-actor"></select>
+        <label for="fnh-battle-skill">Kỹ năng</label><select id="fnh-battle-skill"></select>
+        <div id="fnh-battle-friends" aria-label="Mục tiêu trong đội"></div>
+        <button id="fnh-battle-use-skill" type="button">Dùng kỹ năng</button>
+        <p id="fnh-battle-log" aria-live="polite"></p>
         <button id="fnh-battle-attack" type="button">Đánh</button>
         <button id="fnh-battle-escape" type="button">Chạy</button>
     </section>
@@ -109,6 +133,7 @@
 <script src="engine/event-scheduler.js"></script>
 <script src="engine/text-format.js"></script>
 <script src="engine/canvas-renderer.js"></script>
+<script src="engine/browser-menu.js"></script>
 <script src="engine/browser-preview.js"></script>
 </body>
 </html>

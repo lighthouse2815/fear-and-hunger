@@ -27,10 +27,18 @@
         this.battleFrames = [];
         this.commonEvents = options.commonEvents || (this.state.database && this.state.database.CommonEvents) || [];
         this.random = options.random || Math.random;
+        this.parent = options.parent || null;
         this.depth = options.depth || 0;
         this.budget = options.budget || { remaining: options.maxSteps || 100000 };
         this.signal = options.signal || null;
     }
+
+    EventInterpreter.prototype.snapshot = function () {
+        return JSON.parse(JSON.stringify({ commands: this.commands, index: this.index, mapId: this.mapId,
+            eventId: this.eventId, depth: this.depth, remaining: this.budget.remaining, result: this.result,
+            choiceFrames: this.choiceFrames, conditionFrames: this.conditionFrames,
+            loopFrames: this.loopFrames, battleFrames: this.battleFrames }));
+    };
 
     EventInterpreter.prototype.run = async function () {
         if (this.running) throw new Error('Event interpreter đang chạy.');
@@ -129,8 +137,10 @@
         case 217:
             this.state.followersGathering = true;
             return;
-        case 351: this.state.scene = 'menu'; return;
-        case 352: this.state.scene = 'save'; return;
+        case 351: case 352:
+            if (this.state.scene === 'battle') return;
+            this.state.scene = command.code === 351 ? 'menu' : 'save';
+            return this.handlers.menu ? this.handlers.menu(this.state.scene, this) : undefined;
         case 353: this.state.scene = 'gameover'; return;
         case 354: this.state.scene = 'title'; return;
         case 281: this.state.mapNameDisplay = command.parameters[0] === 0; return;
@@ -257,7 +267,7 @@
         var result = await new EventInterpreter({
             commands: event.list, state: this.state, mapId: this.mapId, eventId: this.eventId,
             handlers: this.handlers, commonEvents: this.commonEvents, random: this.random,
-            depth: this.depth + 1, budget: this.budget, signal: this.signal
+            depth: this.depth + 1, budget: this.budget, signal: this.signal, parent: this
         }).run();
         this.result.choices.push.apply(this.result.choices, result.choices);
         if (result.transferred) this.result.transferred = result.transferred;
@@ -281,11 +291,8 @@
             if (!actor) return;
             if (code === 315 || code === 316) state.changeActorExp(id, this.operateSigned(p[2], p[3], p[4]), code === 316);
             else if (code === 317) state.changeActorParam(id, p[2], this.operateSigned(p[3], p[4], p[5]));
-            else if (code === 318) {
-                if (p[2] === 0 && !actor.skills.includes(p[3])) actor.skills.push(p[3]);
-                if (p[2] !== 0) actor.skills = actor.skills.filter(function (skill) { return skill !== p[3]; });
-                actor.skills.sort(function (a, b) { return a - b; });
-            } else if (code === 319) state.equipActor(id, p[1] - 1, p[2]);
+            else if (code === 318) state.changeActorSkill(id, p[3], p[2] === 0);
+            else if (code === 319) state.equipActor(id, p[1] - 1, p[2]);
             else if (code === 320) actor.name = p[1];
             else if (code === 321) {
                 if (!state.database.Classes[p[1]]) throw new Error('Không tìm thấy class ' + p[1]);

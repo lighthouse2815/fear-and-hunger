@@ -167,14 +167,16 @@
                 var stateId = p[2];
                 var immune = this.enemyTraits(enemy).some(function (trait) { return trait.code === 14 && trait.dataId === stateId; });
                 if (p[1] === 0 && enemy.alive && !immune) {
+                    if (enemy.stateTurns) delete enemy.stateTurns[stateId];
                     if (!enemy.states.includes(stateId)) enemy.states.push(stateId);
                     if (stateId === 1) enemy.hp = 0;
                 } else if (p[1] === 1) {
+                    if (enemy.stateTurns) delete enemy.stateTurns[stateId];
                     enemy.states = enemy.states.filter(function (id) { return id !== stateId; });
                     if (stateId === 1 && enemy.hp === 0) enemy.hp = 1;
                 }
             }
-            if (code === 334) { enemy.states = []; enemy.hp = this.enemyParam(enemy, 0); enemy.mp = this.enemyParam(enemy, 1); }
+            if (code === 334) { enemy.states = []; enemy.stateTurns = {}; enemy.hp = this.enemyParam(enemy, 0); enemy.mp = this.enemyParam(enemy, 1); }
             if (code === 335) enemy.hidden = false;
             if (code === 336) {
                 enemy.enemyId = p[1];
@@ -232,7 +234,7 @@
         return true;
     };
     BattleRuntime.prototype.actorSkills = function (id) {
-        var actor = this.actor(id), data = this.state.actor(id);
+        var actor = this.actor(id) || { id: id }, data = this.state.actor(id);
         var ids = data.skills.concat(this.battlerTraits(actor).filter(function (trait) { return trait.code === 43; })
             .map(function (trait) { return trait.dataId; }));
         return Array.from(new Set(ids)).map(function (skillId) { return this.database.Skills[skillId]; }, this).filter(Boolean);
@@ -297,6 +299,28 @@
         this.resetStateTurns(target, id);
         this.syncActors();
     };
+    BattleRuntime.prototype.damageValue = function (subject, target, skill) {
+        var damage = skill.damage, value = 0, hit = {};
+        value = Math.max(0, formulaValue(damage.formula, { a: this.values(subject), b: this.values(target) }));
+        var element = damage.elementId;
+        if (element < 0) {
+            var elements = this.battlerTraits(subject).filter(function (trait) { return trait.code === 31; });
+            value *= elements.length ? Math.max.apply(null, elements.map(function (trait) { return this.traitRate(target, 11, trait.dataId); }, this)) : 1;
+        } else if (element > 0) value *= this.traitRate(target, 11, element);
+        if (skill.hitType === 1) value *= this.traitRate(target, 23, 6);
+        if (skill.hitType === 2) value *= this.traitRate(target, 23, 7);
+        hit.critical = !!damage.critical && this.random() < this.traitRate(subject, 22, 2, true) * (1 - this.traitRate(target, 22, 3, true));
+        if (hit.critical) value *= 3;
+        var amplitude = Math.floor(value * (damage.variance || 0) / 100);
+        value += Math.floor(this.random() * (amplitude + 1)) + Math.floor(this.random() * (amplitude + 1)) - amplitude;
+        var recovery = damage.type === 3 || damage.type === 4;
+        if (recovery) value = -value * this.traitRate(target, 23, 2);
+        else if (this.battlerTraits(target).some(function (trait) { return trait.code === 62 && trait.dataId === 1; })) value /= 2 * this.traitRate(target, 23, 1);
+        value = Math.round(value);
+        var resource = [2, 4, 6].includes(damage.type) ? 'mp' : 'hp';
+        if (damage.type === 5 || damage.type === 6) value = Math.min(value, this.battlerState(target)[resource]);
+        return { damage: value, resource: resource, critical: !!hit.critical };
+    };
     BattleRuntime.prototype.useSkill = function (subject, skillId, index, forced) {
         if (!this.battle || this.battle.result) throw new Error('Trận chiến không hoạt động.');
         var skill = this.database.Skills[skillId];
@@ -330,24 +354,9 @@
                 if (!hit.missed && !hit.evaded) {
                     var damage = skill.damage || { type: 0 }, value = 0;
                     if (damage.type > 0) {
-                        value = Math.max(0, formulaValue(damage.formula, { a: runtime.values(subject), b: runtime.values(target) }));
-                        var element = damage.elementId;
-                        if (element < 0) {
-                            var elements = runtime.battlerTraits(subject).filter(function (trait) { return trait.code === 31; });
-                            value *= elements.length ? Math.max.apply(null, elements.map(function (trait) { return runtime.traitRate(target, 11, trait.dataId); })) : 1;
-                        } else if (element > 0) value *= runtime.traitRate(target, 11, element);
-                        if (skill.hitType === 1) value *= runtime.traitRate(target, 23, 6);
-                        if (skill.hitType === 2) value *= runtime.traitRate(target, 23, 7);
-                        hit.critical = !!damage.critical && runtime.random() < runtime.traitRate(subject, 22, 2, true) * (1 - runtime.traitRate(target, 22, 3, true));
-                        if (hit.critical) value *= 3;
-                        var amplitude = Math.floor(value * (damage.variance || 0) / 100);
-                        value += Math.floor(runtime.random() * (amplitude + 1)) + Math.floor(runtime.random() * (amplitude + 1)) - amplitude;
-                        var recovery = damage.type === 3 || damage.type === 4;
-                        if (recovery) value = -value * runtime.traitRate(target, 23, 2);
-                        else if (runtime.battlerTraits(target).some(function (trait) { return trait.code === 62 && trait.dataId === 1; })) value /= 2 * runtime.traitRate(target, 23, 1);
-                        value = Math.round(value);
-                        var resource = [2, 4, 6].includes(damage.type) ? 'mp' : 'hp';
-                        if (damage.type === 5 || damage.type === 6) value = Math.min(value, runtime.battlerState(target)[resource]);
+                        var calculated = runtime.damageValue(subject, target, skill);
+                        value = calculated.damage; hit.critical = calculated.critical;
+                        var resource = calculated.resource;
                         runtime.changeResource(target, resource, -value);
                         if (damage.type === 5 || damage.type === 6) runtime.changeResource(subject, resource, value);
                         hit.damage = value; hit.resource = resource; report.damage += value;

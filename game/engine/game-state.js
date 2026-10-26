@@ -54,6 +54,7 @@
         this.followersGathering = source.followersGathering === true;
         this.vehicleBgm = source.vehicleBgm || null;
         this.scene = source.scene || 'map';
+        this.pendingEventStack = source.pendingEventStack || [];
         this.mapNameDisplay = source.mapNameDisplay !== false;
         this.battle = source.battle || null;
         if (!Array.isArray(this.regionCover.open)) this.regionCover.open = [0];
@@ -212,6 +213,15 @@
         return this.updateActor(id, function (actor, data, classData) { actor.changeMp(data, classData, amount); });
     };
 
+    GameState.prototype.changeActorSkill = function (id, skillId, learn) {
+        var actor = this.actor(id);
+        if (!actor) return false;
+        if (learn && !actor.skills.includes(skillId)) actor.skills.push(skillId);
+        if (!learn) actor.skills = actor.skills.filter(function (skill) { return skill !== skillId; });
+        actor.skills.sort(function (a, b) { return a - b; });
+        return true;
+    };
+
     GameState.prototype.changeActorState = function (id, stateId, add) {
         var actor = this.actor(id);
         if (!actor) return false;
@@ -219,6 +229,7 @@
         if (add && states.indexOf(stateId) < 0) states.push(stateId);
         if (!add) states = states.filter(function (value) { return value !== stateId; });
         actor.states = states;
+        if (actor.stateTurns) delete actor.stateTurns[stateId];
         if (stateId === 1) actor.hp = add ? 0 : Math.max(1, actor.hp);
         return true;
     };
@@ -232,7 +243,7 @@
         state.states = [];
         actor.hp = state.maxHp(data, classData);
         actor.mp = state.maxMp(data, classData);
-        actor.states = [];
+        actor.states = []; actor.stateTurns = {};
         return true;
     };
 
@@ -273,7 +284,7 @@
             regionCover: this.regionCover,
             achievements: this.achievements,
             followersVisible: this.followersVisible, followersGathering: this.followersGathering, vehicleBgm: this.vehicleBgm,
-            scene: this.scene,
+            scene: this.scene, pendingEventStack: this.pendingEventStack,
             mapNameDisplay: this.mapNameDisplay,
             battle: this.battle,
             timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,

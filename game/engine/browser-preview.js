@@ -29,7 +29,8 @@
     window.FNHStandalonePreview = { engine: engine, audio: audio, errors: errors };
 
     function setStatus(text) { status.textContent = text; }
-    var battleTarget = 0;
+    var menuUi;
+    var battleTarget = 0, battleActor = 0, battleFriend = 0, battleSkill = 2;
     var lastBattle = null, lastScene = null, lastBattlePhase = null;
     function renderBattleUi() {
         var panel = document.getElementById('fnh-battle'), battle = engine.battle && engine.battle.battle;
@@ -54,6 +55,38 @@
         document.getElementById('fnh-battle-party').textContent = battle.actors.map(function (actor) {
             return actor.name + ' · HP ' + actor.hp + ' · MP ' + actor.mp;
         }).join(' | ');
+        var actors = document.getElementById('fnh-battle-actor'); actors.replaceChildren();
+        if (!engine.battle.aliveActors().some(function (actor) { return actor.id === battleActor; })) {
+            var leader = engine.battle.aliveActors()[0]; battleActor = leader ? leader.id : 0;
+        }
+        battle.actors.forEach(function (actor) {
+            var option = document.createElement('option'); option.value = actor.id; option.textContent = actor.name;
+            option.disabled = !actor.alive; actors.appendChild(option);
+        });
+        actors.value = battleActor; actors.disabled = battle.phase !== 'input';
+        var skills = document.getElementById('fnh-battle-skill'); skills.replaceChildren();
+        var learned = battleActor ? [engine.database.Skills[2]].concat(engine.battle.actorSkills(battleActor)).filter(function (skill, index, list) {
+            return skill && skill.id !== 1 && list.findIndex(function (entry) { return entry.id === skill.id; }) === index;
+        }) : [];
+        if (!learned.some(function (skill) { return skill.id === battleSkill; })) battleSkill = 2;
+        learned.forEach(function (skill) {
+            var option = document.createElement('option'); option.value = skill.id;
+            option.textContent = skill.name + ' · MP ' + skill.mpCost + ' · TP ' + skill.tpCost;
+            option.disabled = !engine.battle.canUseSkill(engine.battle.actor(battleActor), skill); skills.appendChild(option);
+        });
+        skills.value = battleSkill; skills.disabled = battle.phase !== 'input';
+        var selected = engine.database.Skills[battleSkill], friends = document.getElementById('fnh-battle-friends');
+        friends.replaceChildren(); friends.hidden = !selected || ![7, 9].includes(selected.scope);
+        battle.actors.forEach(function (actor, index) {
+            var button = document.createElement('button'); button.type = 'button'; button.textContent = actor.name + ' · HP ' + actor.hp;
+            button.dataset.index = index; button.setAttribute('aria-pressed', String(index === battleFriend));
+            button.disabled = selected && selected.scope === 9 ? actor.alive : !actor.alive;
+            button.onclick = function () { battleFriend = index; renderBattleUi(); }; friends.appendChild(button);
+        });
+        document.getElementById('fnh-battle-use-skill').disabled = battle.phase !== 'input' || !battleActor || !engine.battle.canUseSkill(engine.battle.actor(battleActor), selected);
+        var lastAction = battle.lastAction;
+        document.getElementById('fnh-battle-log').textContent = lastAction ? engine.database.Skills[lastAction.skillId].name +
+            ' · ' + lastAction.hits.map(function (hit) { return hit.missed ? 'Trượt' : hit.evaded ? 'Né' : String(hit.damage); }).join(', ') : '';
         document.getElementById('fnh-battle-attack').disabled = battle.phase !== 'input';
         document.getElementById('fnh-battle-escape').disabled = !battle.canEscape || battle.phase !== 'input';
     }
@@ -86,6 +119,7 @@
         await renderer.draw(engine);
         renderBattleUi();
         renderEndScreen();
+        if (menuUi) menuUi.render();
         document.getElementById('fnh-always-dash').checked = engine.state.alwaysDash;
         if (audioMap !== engine.map && engine.state.scene === 'map') {
             audioMap = engine.map;
@@ -307,6 +341,7 @@
         }
     };
     engine.onRouteEffect = eventHandlers.effect;
+    menuUi = new FNHStandaloneMenu.MenuUi(engine, saveStore, eventHandlers, draw);
     var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;
     function animate(now) {
         var frames = Math.min(6, Math.max(0, (now - previousFrame) * 60 / 1000));
@@ -317,7 +352,7 @@
                     (scrollFastHeld || engine.buttons.has('ok') || engine.buttons.has('cancel') || engine.buttons.has('shift')) ? 3 : 1;
                 var sceneChanged = lastBattle !== engine.battle.battle || lastScene !== engine.state.scene ||
                     lastBattlePhase !== (engine.battle.battle && engine.battle.battle.phase);
-                if (sceneChanged) { renderBattleUi(); renderEndScreen(); }
+                if (sceneChanged) { renderBattleUi(); renderEndScreen(); menuUi.render(); }
                 if (scheduler) scheduler.tick();
                 var active = sceneChanged || !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
                     lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
@@ -373,6 +408,11 @@
     window.addEventListener('blur', function () { engine.buttons.clear(); inputPulses.clear(); });
     document.addEventListener('keydown', function (event) {
         audio.unlock();
+        if (document.querySelector('dialog[open]')) return;
+        if (event.key === 'Escape' && engine.state && engine.state.scene === 'map' &&
+            !scrollAnimation && !pictureInput() && !engine.eventRunning && !engine.messageRunning && engine.openMenu()) {
+            event.preventDefault(); menuUi.render(); return;
+        }
         if (event.target.closest('button,input,select,textarea')) return;
         var buttonName = inputName(event.key);
         if (buttonName) engine.buttons.add(buttonName);
@@ -415,7 +455,7 @@
     });
     document.getElementById('fnh-load').addEventListener('click', function () {
         perform(async function () {
-            if (!await engine.loadFrom(saveStore, 1)) {
+            if (!await engine.loadFrom(saveStore, 1, eventHandlers)) {
                 setStatus('Ô 1 chưa có dữ liệu lưu.');
                 return;
             }
@@ -440,10 +480,16 @@
     }
     document.getElementById('fnh-battle-attack').addEventListener('click', function () {
         battleAction(async function () {
-            var actor = engine.battle.aliveActors()[0];
+            var actor = engine.battle.actor(battleActor);
             if (!actor) return;
             await engine.battleAttack(actor.id, battleTarget, eventHandlers);
         });
+    });
+    document.getElementById('fnh-battle-actor').addEventListener('change', function (event) { battleActor = Number(event.target.value); renderBattleUi(); });
+    document.getElementById('fnh-battle-skill').addEventListener('change', function (event) { battleSkill = Number(event.target.value); renderBattleUi(); });
+    document.getElementById('fnh-battle-use-skill').addEventListener('click', function () {
+        var skill = engine.database.Skills[battleSkill];
+        battleAction(function () { return engine.battleSkill(battleActor, battleSkill, [7, 9].includes(skill.scope) ? battleFriend : battleTarget, eventHandlers); });
     });
     document.getElementById('fnh-battle-escape').addEventListener('click', function () {
         battleAction(function () { return engine.battleEscape(eventHandlers); });
@@ -453,7 +499,7 @@
     });
     document.getElementById('fnh-end-load').addEventListener('click', function () {
         perform(async function () {
-            if (!await engine.loadFrom(saveStore, 1)) { setStatus('Ô 1 chưa có dữ liệu lưu.'); return; }
+            if (!await engine.loadFrom(saveStore, 1, eventHandlers)) { setStatus('Ô 1 chưa có dữ liệu lưu.'); return; }
             audioMap = null;
             await draw();
         });
