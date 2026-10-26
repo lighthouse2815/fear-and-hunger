@@ -24,6 +24,7 @@
         this.choiceFrames = [];
         this.conditionFrames = [];
         this.loopFrames = [];
+        this.battleFrames = [];
         this.commonEvents = options.commonEvents || (this.state.database && this.state.database.CommonEvents) || [];
         this.random = options.random || Math.random;
         this.depth = options.depth || 0;
@@ -76,6 +77,13 @@
             return this.choiceBranchMarker(command);
         case 404:
             return this.choiceEnd(command);
+        case 301:
+            return this.processBattle(command);
+        case 601: case 602: case 603:
+            return this.battleBranchMarker(command);
+        case 604:
+            this.battleFrames = this.battleFrames.filter(function (frame) { return frame.indent !== (command.indent || 0); });
+            return;
         case 111:
             return this.condition(command);
         case 112:
@@ -162,7 +170,7 @@
         case 241: case 242: case 243: case 244: case 245: case 246:
         case 249: case 250: case 251: case 261:
         case 281: case 282: case 283: case 284: case 285:
-        case 301: case 302: case 303:
+        case 302: case 303:
         case 323:
         case 331: case 332: case 333: case 334: case 335: case 336: case 337: case 338:
         case 339: case 340: case 342: case 343: case 344: case 345: case 346:
@@ -183,6 +191,31 @@
     EventInterpreter.prototype.unsupported = function (command) {
         if (this.handlers.unsupported) return this.handlers.unsupported(command, this);
         throw new Error('Chưa hỗ trợ lệnh ' + command.code + ' (map ' + this.mapId + ', event ' + this.eventId + ').');
+    };
+
+    EventInterpreter.prototype.processBattle = async function (command) {
+        var result = await this.effect(command);
+        if (![0, 1, 2].includes(result)) throw new Error('Kết quả trận chiến không hợp lệ.');
+        var indent = command.indent || 0;
+        var next = this.commands[this.index];
+        if (!next || (next.indent || 0) !== indent || ![601, 602, 603, 604].includes(next.code)) return;
+        var end = this.findCommand(604, indent, this.index);
+        if (end < 0) return;
+        var wanted = 601 + result, marker = -1;
+        for (var i = this.index; i < end; i++) {
+            if ((this.commands[i].indent || 0) === indent && this.commands[i].code === wanted) { marker = i; break; }
+        }
+        if (marker < 0) { this.index = end + 1; return; }
+        this.battleFrames.push({ indent: indent, end: end });
+        this.index = marker + 1;
+    };
+
+    EventInterpreter.prototype.battleBranchMarker = function (command) {
+        var indent = command.indent || 0;
+        var frame = this.battleFrames.find(function (entry) { return entry.indent === indent; });
+        if (!frame) throw new Error('Nhánh trận chiến thiếu lệnh mở trận.');
+        this.index = frame.end + 1;
+        this.battleFrames.splice(this.battleFrames.indexOf(frame), 1);
     };
 
     EventInterpreter.prototype.showMessage = async function (command) {

@@ -250,7 +250,9 @@ async function sendAudioGesture(cdp, type) {
 
 async function clickElement(cdp, selector) {
     const point = await evalPage(cdp, `(() => {
-        const rect = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
+        const element = document.querySelector(${JSON.stringify(selector)});
+        element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        const rect = element.getBoundingClientRect();
         return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
     })()`, false, false);
     await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button: 'left', clickCount: 1 });
@@ -953,6 +955,41 @@ async function main() {
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.y === 9', 5000, 'nút di chuyển preview');
         await clickElement(cdp, '#fnh-load');
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.y === 8', 5000, 'tải save preview');
+
+        await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine;
+            const page = engine.map.eventPage(engine.map.eventById(39));
+            window.battleOriginalPage = { page, list: page.list };
+            page.list = [
+                { code: 301, indent: 0, parameters: [0, 1, true, true] },
+                { code: 601, indent: 0, parameters: [] },
+                { code: 122, indent: 1, parameters: [999, 999, 0, 0, 10] },
+                { code: 602, indent: 0, parameters: [] },
+                { code: 122, indent: 1, parameters: [999, 999, 0, 0, 20] },
+                { code: 603, indent: 0, parameters: [] },
+                { code: 122, indent: 1, parameters: [999, 999, 0, 0, 30] },
+                { code: 604, indent: 0, parameters: [] }
+            ];
+            engine.battle.random = () => 0;
+        })()`, false, false);
+        await clickElement(cdp, '#fnh-controls [data-direction="0"]');
+        await waitFor(cdp, '!document.querySelector("#fnh-battle").hidden', 5000, 'event mở giao diện battle');
+        check('event chờ battle và chưa chạy nhánh kết quả', await evalPage(cdp,
+            'FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.variableValue(999) === 0', false, false));
+        await clickElement(cdp, '#fnh-controls [data-direction="2"]');
+        check('battle khóa nút di chuyển trên map', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.y === 8', false, false));
+        await clickElement(cdp, '#fnh-battle-attack');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.battle.battle.turn === 1', 5000, 'đánh khi event vẫn đang chờ');
+        check('nút đánh hoạt động trong event đang chờ battle', await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.enemy(0).hp < FNHStandalonePreview.engine.battle.enemy(0).mhp', false, false));
+        await clickElement(cdp, '#fnh-battle-escape');
+        await waitFor(cdp, '!FNHStandalonePreview.engine.eventRunning && document.querySelector("#fnh-battle").hidden',
+            5000, 'thoát battle và tiếp tục event');
+        check('chạy đúng nhánh thoát và trở lại map', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.scene === "map" && FNHStandalonePreview.engine.state.variableValue(999) === 20', false, false));
+        await evalPage(cdp, `battleOriginalPage.page.list = battleOriginalPage.list;
+            FNHStandalonePreview.engine.state.recoverActor(1); delete window.battleOriginalPage;`, false, false);
         check('save preview khôi phục vị trí, vật phẩm và trạng thái thùng', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.itemCount("items", 15) === 2 && FNHStandalonePreview.engine.state.selfSwitchValue(74, 39, "A")', false, false));
         await evalPage(cdp, 'localStorage.removeItem("FNH_STANDALONE_PREVIEW:1")', false, false);

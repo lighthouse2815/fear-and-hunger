@@ -94,6 +94,7 @@
 
     GameEngine.prototype.move = function (direction) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
+        if (this.state.scene !== 'map') return false;
         if (this.eventRunning || this.messageRunning || (this.movement && this.movement.jobs.has(this.state))) return false;
         var moved = this.moveCharacter(this.state, direction);
         if (moved) this.state.moveFrames = this.playerStepFrames();
@@ -139,6 +140,7 @@
     };
 
     GameEngine.prototype.advanceRoutes = function (frames) {
+        if (this.state && this.state.scene === 'battle') return;
         if (this.routeErrors.length) throw this.routeErrors.shift();
         if (this.state && this.state.timer.active) this.state.timer.frames = Math.max(0, this.state.timer.frames - frames);
         if (this.map && this.state) [this.state].concat(this.map.events).forEach(function (character) {
@@ -183,6 +185,7 @@
 
     GameEngine.prototype.step = async function (direction, handlers) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
+        if (this.state.scene !== 'map') return false;
         if (this.eventRunning || this.messageRunning || this.stepRunning || !mapApi.DIRECTION_BITS[direction]) return false;
         this.stepRunning = true;
         try {
@@ -204,6 +207,7 @@
 
     GameEngine.prototype.interact = async function (handlers) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
+        if (this.state.scene !== 'map') return null;
         if (this.eventRunning || this.messageRunning || this.stepRunning) return null;
         var direction = this.state.direction;
         var x = this.state.x + (direction === 4 ? -1 : direction === 6 ? 1 : 0);
@@ -298,10 +302,7 @@
             if (code === 205) return engine.applyRoute(parameters, interpreter);
             if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }
             if (code === 204) { engine.state.vehicleBgm = parameters[0] ? Object.assign({}, parameters[1]) : null; return true; }
-            if (code === 301) {
-                engine.battle.setup(parameters[1], parameters[2] !== false, parameters[3] === true);
-                engine.state.scene = 'battle'; return true;
-            }
+            if (code === 301) return engine.startBattle(parameters, interpreter);
             if (code === 216) { engine.state.followersVisible = parameters[0] !== 0; return true; }
             if (code === 217) { engine.state.followersGathering = true; return true; }
             if (code === 212) {
@@ -336,6 +337,35 @@
             commands: commands, state: this.state, mapId: this.state.mapId,
             eventId: eventId, handlers: eventHandlers, commonEvents: this.database.CommonEvents, random: this.random, signal: signal
         });
+    };
+
+    GameEngine.prototype.startBattle = async function (parameters, interpreter) {
+        var troopId;
+        if (parameters[0] === 0) troopId = parameters[1];
+        else if (parameters[0] === 1) troopId = this.state.variableValue(parameters[1]);
+        else if (parameters[0] === 2) {
+            var region = this.map.regionId(this.state.x, this.state.y);
+            var encounters = (this.map.data.encounterList || []).filter(function (entry) {
+                return entry.weight > 0 && (!entry.regionSet.length || entry.regionSet.includes(region));
+            });
+            var total = encounters.reduce(function (sum, entry) { return sum + entry.weight; }, 0);
+            if (!total) throw new Error('Bản đồ không có troop phù hợp cho cuộc chạm trán.');
+            var selected = this.random() * total;
+            troopId = encounters.find(function (entry) { selected -= entry.weight; return selected < 0; }).troopId;
+        } else throw new Error('Kiểu chọn troop không hợp lệ.');
+        this.battle.setup(troopId, parameters[2] === true, parameters[3] === true);
+        this.state.scene = 'battle';
+        try {
+            var result = await this.battle.wait(interpreter && interpreter.signal);
+            if (result === 'defeat') {
+                this.state.scene = 'gameover';
+                if (interpreter) interpreter.index = interpreter.commands.length;
+                return 2;
+            }
+            return result === 'victory' ? 0 : result === 'escape' ? 1 : 2;
+        } finally {
+            if (this.state.scene === 'battle') this.state.scene = 'map';
+        }
     };
 
     GameEngine.prototype.runEvent = async function (eventId, handlers, signal) {

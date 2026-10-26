@@ -29,12 +29,19 @@
 
     function setStatus(text) { status.textContent = text; }
     var battleTarget = 0;
+    var lastBattle = null, lastScene = null;
     function renderBattleUi() {
         var panel = document.getElementById('fnh-battle'), battle = engine.battle && engine.battle.battle;
+        lastBattle = battle; lastScene = engine.state.scene;
         if (!battle || engine.state.scene !== 'battle' || battle.result) { panel.hidden = true; return; }
         panel.hidden = false;
+        if (!battle.enemies.some(function (enemy) { return enemy.index === battleTarget && enemy.alive && !enemy.hidden; })) {
+            var target = engine.battle.aliveEnemies()[0];
+            battleTarget = target ? target.index : -1;
+        }
         var targets = document.getElementById('fnh-battle-targets'); targets.replaceChildren();
         battle.enemies.forEach(function (enemy) {
+            if (enemy.hidden) return;
             var button = document.createElement('button'); button.type = 'button'; button.textContent = enemy.name + ' · ' + enemy.hp + '/' + enemy.mhp;
             button.disabled = !enemy.alive; button.dataset.index = enemy.index;
             if (enemy.index === battleTarget) button.setAttribute('aria-pressed', 'true');
@@ -42,6 +49,7 @@
             targets.appendChild(button);
         });
         document.getElementById('fnh-battle-title').textContent = battle.result || ('Lượt ' + (battle.turn + 1));
+        document.getElementById('fnh-battle-escape').disabled = !battle.canEscape;
     }
     async function draw() {
         await renderer.draw(engine);
@@ -232,6 +240,7 @@
         previousFrame = now;
         if (ready) {
             try {
+                if (lastBattle !== engine.battle.battle || lastScene !== engine.state.scene) renderBattleUi();
                 if (scheduler) scheduler.tick();
                 var active = !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
                     lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
@@ -270,6 +279,7 @@
         await draw();
     }
     async function step(direction) {
+        if (engine.state.scene !== 'map') return;
         if (engine.state.moveFrames > 0) await engine.screen.tween([], {}, engine.state.moveFrames);
         await engine.step(direction, eventHandlers);
         await draw();
@@ -342,17 +352,25 @@
     document.getElementById('fnh-always-dash').addEventListener('change', function (event) {
         if (engine.state) engine.state.alwaysDash = event.target.checked;
     });
-    document.getElementById('fnh-battle-attack').addEventListener('click', function () {
-        perform(async function () {
-            var battle = engine.battle.battle, actor = engine.state.party[0];
-            engine.battle.attack(actor, battleTarget);
-            if (!battle.result) engine.battle.enemyTurn();
+    async function battleAction(action) {
+        if (!ready || engine.state.scene !== 'battle') return;
+        try {
+            action();
+            // Cho event đang chờ nhận kết quả và trở về map trước khi vẽ UI.
+            await Promise.resolve();
             await draw();
-            if (battle.result) setStatus('Kết quả: ' + battle.result);
+        } catch (error) { setStatus(error.message); }
+    }
+    document.getElementById('fnh-battle-attack').addEventListener('click', function () {
+        battleAction(function () {
+            var battle = engine.battle.battle, actor = engine.battle.aliveActors()[0];
+            if (!actor) return;
+            engine.battle.attack(actor.id, battleTarget);
+            if (!battle.result) engine.battle.enemyTurn();
         });
     });
     document.getElementById('fnh-battle-escape').addEventListener('click', function () {
-        perform(async function () { engine.battle.escape(); await draw(); });
+        battleAction(function () { engine.battle.escape(); });
     });
     window.addEventListener('pagehide', function () {
         if (scheduler) scheduler.stop();
