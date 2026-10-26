@@ -99,6 +99,8 @@
             this.state.y = destination.y;
             if (destination.direction && !this.state.directionFixed) this.state.direction = destination.direction;
         }
+        this.state.followers(true);
+        this.state.followersGathering = false;
         this.resetCamera();
         return this.map;
     };
@@ -156,7 +158,7 @@
     GameEngine.prototype.move = function (direction) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
         if (this.state.scene !== 'map') return false;
-        if (this.eventRunning || this.messageRunning || (this.movement && this.movement.jobs.has(this.state))) return false;
+        if (this.eventRunning || this.messageRunning || this.state.followersGathering || (this.movement && this.movement.jobs.has(this.state))) return false;
         var moved = this.moveCharacter(this.state, direction);
         if (moved) { this.state.moveFrames = this.playerStepFrames(); this.onPlayerWalk(); }
         return moved;
@@ -208,7 +210,10 @@
         this.movement = new movementApi.MovementRuntime({
             player: this.state, state: this.state, random: function () { return engine.random(); },
             move: this.moveCharacter.bind(this),
-            locate: function (character, x, y) { character.x = x; character.y = y; },
+            locate: function (character, x, y) {
+                character.x = x; character.y = y;
+                if (character === engine.state) engine.state.followers(true);
+            },
             changed: function (character) {
                 if (character !== engine.state) engine.map.locateEvent(character.id, character.x, character.y, character.direction);
             },
@@ -244,6 +249,17 @@
             if (character.balloon) character.balloon.remaining = Math.max(0, character.balloon.remaining - frames);
         });
         if (this.movement) this.movement.advance(frames);
+        if (this.state && this.state.followersGathering) {
+            if (!this.state.followersVisible) this.state.followersGathering = false;
+            this.state.followerFrames += frames;
+            while (this.state.followerFrames >= this.playerStepFrames() && this.state.followersGathering) {
+                this.state.followerFrames -= this.playerStepFrames();
+                this.followPlayer();
+                this.state.followersGathering = this.state.followers().some(function (entry) {
+                    return entry.x !== this.state.x || entry.y !== this.state.y;
+                }, this);
+            }
+        }
         if (this.autonomous && this.autonomousEnabled) this.autonomous.advance(frames);
         if (this.screen) this.screen.advance(frames);
         if (this.lighting) this.lighting.advance(frames);
@@ -264,17 +280,45 @@
                 (this.map.isPassable(character.x, character.y, vertical) && this.map.isPassable(character.x, y, direction)) :
                 this.map.isPassable(character.x, character.y, direction);
             if (!passable || this.map.eventBlocks(x, y, character.id)) return false;
-            if (character !== this.state && character.priorityType === 1 && this.state.x === x && this.state.y === y) {
+            var playerHit = this.state.x === x && this.state.y === y;
+            var followerHit = this.state.followersVisible && this.state.followers().some(function (entry) { return entry.x === x && entry.y === y; });
+            if (character !== this.state && character.priorityType === 1 && (playerHit || followerHit)) {
                 var page = this.map.eventPage(character);
-                if (!this.eventRunning && page && page.trigger === 2 && !this.pendingTouchEvents.some(function (entry) { return entry.event === character; })) {
+                if (playerHit && !this.eventRunning && page && page.trigger === 2 && !this.pendingTouchEvents.some(function (entry) { return entry.event === character; })) {
                     this.pendingTouchEvents.push({ map: this.map, event: character, page: page });
                 }
                 return false;
             }
         }
         var dx = x - character.x, dy = y - character.y;
+        if (character === this.state) this.followPlayer();
         character.x = x; character.y = y;
         if (character === this.state) this.followCamera(dx, dy);
+        return true;
+    };
+
+    GameEngine.prototype.followPlayer = function () {
+        var followers = this.state.followers();
+        for (var i = followers.length - 1; i >= 0; i--) {
+            var follower = followers[i], ahead = i ? followers[i - 1] : this.state;
+            var dx = Math.sign(ahead.x - follower.x), dy = Math.sign(ahead.y - follower.y);
+            follower.x += dx; follower.y += dy;
+            if (!this.state.directionFixed) {
+                if (dy) follower.direction = dy > 0 ? 2 : 8;
+                else if (dx) follower.direction = dx > 0 ? 6 : 4;
+            }
+        }
+    };
+
+    GameEngine.prototype.gatherFollowers = async function (interpreter) {
+        this.state.followersGathering = this.state.followersVisible && this.state.followers().some(function (entry) {
+            return entry.x !== this.state.x || entry.y !== this.state.y;
+        }, this);
+        this.state.followerFrames = 0;
+        while (this.state.followersGathering) {
+            if (interpreter.signal && interpreter.signal.aborted) throw interpreter.signal.reason;
+            await this.screen.tween([], {}, 1);
+        }
         return true;
     };
 
@@ -422,7 +466,7 @@
             if (code === 204) return engine.scrollMap(parameters, interpreter);
             if (code === 301) return engine.startBattle(parameters, interpreter, handlers);
             if (code === 216) { engine.state.followersVisible = parameters[0] !== 0; return true; }
-            if (code === 217) { engine.state.followersGathering = true; return true; }
+            if (code === 217) return engine.gatherFollowers(interpreter);
             if (code === 212) {
                 var animated = engine.characterFor(parameters[0], interpreter);
                 if (!animated) return true;
@@ -978,6 +1022,7 @@
             if (targetId < 0) {
                 engine.state.x = x; engine.state.y = y;
                 if (direction && !engine.state.directionFixed) engine.state.direction = direction;
+                engine.state.followers(true);
                 engine.resetCamera();
             } else engine.map.locateEvent(targetId, x, y, direction);
         }

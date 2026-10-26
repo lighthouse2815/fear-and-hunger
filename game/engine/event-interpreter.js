@@ -135,6 +135,7 @@
             this.state.followersVisible = command.parameters[0] !== 0;
             return;
         case 217:
+            if (this.handlers.effect) return this.effect(command);
             this.state.followersGathering = true;
             return;
         case 351: case 352:
@@ -559,6 +560,10 @@
         if (type === 8) return this.state.itemCount('items', parameters[1]) > 0;
         if (type === 9) return this.state.itemCount('weapons', parameters[1]) > 0;
         if (type === 10) return this.state.itemCount('armors', parameters[1]) > 0;
+        if (type === 12) {
+            var guest = /^\$gameParty\.hasGuestActor\(\s*(\d+)\s*\)\s*;?$/.exec(parameters[1]);
+            if (guest) return this.state.hasGuestActor(Number(guest[1]));
+        }
         if (this.handlers.condition) return this.handlers.condition(parameters, this);
         throw new Error('Chưa hỗ trợ điều kiện sự kiện: ' + JSON.stringify(parameters));
     };

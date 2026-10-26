@@ -26,7 +26,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    kiểm tra bạc/nguyên liệu và save số lần chế tạo; cần đối chiếu thêm recipe
    dùng tên thay vì ID và custom synthesis effect.
    menu theo cấu hình gốc; hoàn thiện lưu/tải nhiều ô và tùy chọn người chơi.
-3. Bản đồ: di chuyển mượt, follower/guest và touch, fog/overlay, parallax, tiếng
+3. Bản đồ: di chuyển mượt, fog/overlay, parallax, tiếng
    bước chân, âm thanh stereo và nhạc trận. Chỉ đánh dấu xong sau khi xác minh.
 4. Điều khiển: phím gọi common event, đặt lại phím và thao tác trên điện thoại.
 5. Luồng chính: Map072 trước tiêu đề, chơi mới/tiếp tục, nội dung kết thúc,
@@ -42,6 +42,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 - 169 map không có encounter ngẫu nhiên. Enemies.json không cấp EXP, gold hoặc
   drop tự động; vật phẩm và tiến trình chiến thắng được xử lý qua sự kiện.
 - State 15/22 có modifier `b.hp - 1`; state 22 có animation thêm 22.
+- Follower/guest lưu vị trí, đuổi người phía trước, chặn event khi đang hiện;
+  lệnh 217 chờ tập hợp, chuyển map/nhảy đặt lại vị trí. Không đưa guest vào combat.
 - State 23 buộc crit trong Select rồi khôi phục trong Deselect. Engine thực thi
   hiệu ứng theo từng đích, không dùng eval hay cờ crit toàn cục.
 - CriticalControl gốc đứng trước DamageCore nên phần khởi tạo bị bỏ qua.

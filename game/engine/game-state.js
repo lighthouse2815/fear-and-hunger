@@ -26,6 +26,7 @@
             direction: 2,
             gold: 0,
             party: [],
+            guests: [],
             inventory: { items: {}, weapons: {}, armors: {} },
             switches: {},
             variables: {},
@@ -52,6 +53,8 @@
         this.achievements = Object.assign({}, source.achievements);
         this.followersVisible = source.followersVisible !== false;
         this.followersGathering = source.followersGathering === true;
+        this.followerPositions = source.followerPositions || [];
+        this.followerFrames = Math.max(0, Number(source.followerFrames) || 0);
         this.vehicleBgm = source.vehicleBgm || null;
         this.scene = source.scene || 'map';
         this.pendingEventStack = source.pendingEventStack || [];
@@ -76,6 +79,7 @@
         this.eventLocations = Object.assign({}, source.eventLocations);
         this.gold = Math.max(0, Number(source.gold) || 0);
         this.party = Array.isArray(source.party) ? source.party.slice() : [];
+        this.guests = Array.isArray(source.guests) ? source.guests.slice() : [];
         this.actors = Object.assign({}, source.actors);
         this.database = database || null;
         this.inventory = {
@@ -148,10 +152,31 @@
         positiveId(id, 'ID actor');
         if (!this.actor(id, data)) throw new Error('Thiếu dữ liệu actor ' + id);
         if (!this.hasActor(id)) this.party.push(id);
+        this.removeGuestActor(id);
     };
 
     GameState.prototype.removeActor = function (id) {
         this.party = this.party.filter(function (actorId) { return actorId !== id; });
+    };
+    GameState.prototype.addGuestActor = function (id) {
+        positiveId(id, 'ID guest actor');
+        if (!this.actor(id) || this.party.includes(id) || this.guests.includes(id)) return false;
+        this.guests.push(id); return true;
+    };
+    GameState.prototype.removeGuestActor = function (id) {
+        var before = this.guests.length;
+        this.guests = this.guests.filter(function (actorId) { return actorId !== id; });
+        return this.guests.length !== before;
+    };
+    GameState.prototype.hasGuestActor = function (id) { return this.guests.includes(id); };
+
+    GameState.prototype.followers = function (reset) {
+        var state = this, positions = this.followerPositions;
+        this.followerPositions = this.party.slice(1, 4).concat(this.guests).map(function (id) {
+            var position = !reset && positions.find(function (entry) { return entry.id === id; });
+            return position || { id: id, x: state.x, y: state.y, direction: state.direction };
+        });
+        return this.followerPositions;
     };
 
     GameState.prototype.updateActor = function (id, change) {
@@ -294,7 +319,8 @@
             animations: this.animations,
             regionCover: this.regionCover,
             achievements: this.achievements,
-            followersVisible: this.followersVisible, followersGathering: this.followersGathering, vehicleBgm: this.vehicleBgm,
+            followersVisible: this.followersVisible, followersGathering: this.followersGathering,
+            followerPositions: this.followerPositions, followerFrames: this.followerFrames, vehicleBgm: this.vehicleBgm,
             scene: this.scene, pendingEventStack: this.pendingEventStack,
             mapNameDisplay: this.mapNameDisplay,
             battle: this.battle, walkSteps: this.walkSteps, walkEffects: this.walkEffects,
@@ -310,6 +336,7 @@
             eventLocations: this.eventLocations,
             gold: this.gold,
             party: this.party,
+            guests: this.guests,
             actors: this.actors,
             inventory: this.inventory,
             switches: this.switches,

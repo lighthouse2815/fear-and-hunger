@@ -209,6 +209,11 @@ liệu, bạc, trừ đúng một lần, cộng vật phẩm tạo ra và lưu s
 và nguyên liệu bằng ID được giữ nguyên; dòng tên chưa có trong dữ liệu sẽ báo lỗi.
 Lệnh game over/về tiêu đề dừng cả chuỗi common event đang gọi và hủy các sự kiện
 nền đang chờ. Hai màn này dùng ảnh/nhạc có sẵn, cho tải ô lưu 1 hoặc chơi mới.
+Party giữ guest actor riêng với đội chiến đấu; script `addGuestActor`/
+`removeGuestActor` và điều kiện `hasGuestActor` cập nhật/đọc save. Follower và guest
+đi theo vị trí người phía trước qua góc rẽ, không dời theo hướng nhìn. Lệnh 217
+chờ cả nhóm tập hợp; ẩn follower bỏ va chạm với event. Save giữ vị trí và tiến
+trình tập hợp; chuyển map đặt cả nhóm ở ô đích. Guest không vào menu hay hàng đợi chiến đấu.
 Chơi mới mở luồng chọn nhân vật độc lập từ Map010. Tải save trở lại map và tiếp
 tục scheduler; ô lưu trống được báo ngay trên giao diện.
 Tải map/save lỗi giữ map và trạng thái hiện tại nhất quán.

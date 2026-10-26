@@ -23,6 +23,8 @@
             match = /^this\._alertSound\s*=\s*(['"])(.*?)\1\s*;?$/.exec(text);
             if (match) return { type: 'alertSound', value: match[2] };
             if (/^\$gamePlayer\.refresh\(\)\s*;?$/.test(text)) return { type: 'refresh' };
+            match = /^\$gameParty\.(addGuestActor|removeGuestActor)\(\s*(\d+)\s*\)\s*;?$/.exec(text);
+            if (match) return { type: match[1], id: Number(match[2]) };
             if (/^TouchInput\.update\s*=\s*function\(\)\s*\{\s*\}\s*;?$/.test(text)) return { type: 'disableTouch' };
             throw new Error('Chưa chuyển đổi script nội dung: ' + text);
         });
@@ -42,6 +44,8 @@
                     context.state.setActorMaxHp(operation.id, operation.value);
                 }
             } else if (operation.type === 'disableTouch') context.state.touchEnabled = false;
+            else if (operation.type === 'addGuestActor') context.state.addGuestActor(operation.id);
+            else if (operation.type === 'removeGuestActor') context.state.removeGuestActor(operation.id);
             else if (operation.type !== 'refresh') {
                 if (!context.character) throw new Error('Script cần nhân vật đang chạy movement route.');
                 context.character[operation.type] = operation.value;

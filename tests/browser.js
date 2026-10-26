@@ -920,6 +920,24 @@ async function main() {
             }
             return different > 10000;
         })()`, false, false));
+        check('Canvas vẽ follower và guest ở vị trí lưu, ẩn cả hai đúng lệnh', await evalPage(cdp, `(async () => {
+            const source = FNHStandalonePreview.engine;
+            const state = new FNHStandaloneState.GameState({ mapId: 74, x: 15, y: 15, party: [1, 2], guests: [3],
+                followerPositions: [{ id: 2, x: 14, y: 15, direction: 6 }, { id: 3, x: 13, y: 15, direction: 2 }] }, source.database);
+            const map = new FNHStandaloneMap.GameMap({ ...source.map.data, id: 74, events: [], parallaxName: '' }, source.map.tileset, state);
+            const canvas = document.createElement('canvas');
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas);
+            const drawn = [], drawActor = renderer.drawActor;
+            renderer.drawActor = function (sheets, entry, x, y) { drawn.push(entry); return drawActor.call(this, sheets, entry, x, y); };
+            await renderer.draw({ state, map });
+            const withFollowers = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+            const positionsCorrect = drawn.length === 3 && drawn.some(entry => entry.x === 14 && entry.image.characterName === state.actor(2).characterName) &&
+                drawn.some(entry => entry.x === 13 && entry.image.direction === 2 && entry.image.characterName === state.actor(3).characterName);
+            state.followersVisible = false; drawn.length = 0;
+            await renderer.draw({ state, map });
+            const hidden = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+            return positionsCorrect && drawn.length === 1 && withFollowers.some((value, index) => value !== hidden[index]);
+        })()`, true, false));
         check('renderer cắt đúng hai khối tileset B–E', await evalPage(cdp, `(async () => {
             const canvas = document.createElement('canvas');
             const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { width: 96, height: 48 });

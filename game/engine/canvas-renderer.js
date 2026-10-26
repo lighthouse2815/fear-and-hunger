@@ -161,6 +161,16 @@
             characterIndex: state.characterIndex == null ? actor.characterIndex : state.characterIndex,
             direction: state.direction, pattern: animationPattern(state, 1)
         }, transparent: state.transparent, opacity: state.opacity, blendMode: state.blendMode, balloon: state.balloon });
+        if (state.followersVisible) {
+            state.followers().forEach(function (position) {
+                var follower = state.actor(position.id);
+                if (!follower) return;
+                actors.push({ x: position.x, y: position.y, priority: 1, id: 100000 + position.id, image: {
+                    characterName: follower.characterName, characterIndex: follower.characterIndex,
+                    direction: position.direction, pattern: animationPattern(state, 1)
+                }, transparent: state.transparent, opacity: state.opacity, blendMode: state.blendMode, balloon: null });
+            });
+        }
         await Promise.all(actors.map(async function (entry) {
             var name = entry.image.characterName;
             if (name) entry.bitmap = await this.loadImage('img/characters/' + name + '.png');
