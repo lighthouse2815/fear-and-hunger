@@ -28,6 +28,7 @@ const watchdog = setTimeout(() => { console.error('Phản đòn chưa hoàn tấ
         runtime.finish('escape'); engine.animations.dispose();
         engine.state.party.forEach(id => { engine.state.recoverActor(id); engine.state.changeActorSkill(id, skillId, true); });
         runtime.setup(troopId, true, true); engine.state.scene = 'battle'; runtime.random = () => 0.5;
+        runtime.battle.enemies.forEach(enemy => { enemy.tp = 0; });
         db.Skills[skillId].repeats = 1; db.Skills[skillId].hitType = 1; db.Skills[skillId].effects = [];
     }
     const strike = () => runtime.useSkill(runtime.actor(1), skillId, 0);

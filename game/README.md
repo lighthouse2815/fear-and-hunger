@@ -181,6 +181,11 @@ bị khóa hoặc đã hành động cưỡng chế sẽ bỏ lệnh thường; 
 lại trong cùng phe. Kết quả thắng/thua dừng phần hàng đợi còn lại. Chọn/sửa/bỏ
 lệnh không trừ MP/TP/item; số item giữ chỗ được kiểm tra chung cả đội, lựa chọn
 được giữ qua save.
+TP đầu trận ngẫu nhiên 0–24 nếu không có trait giữ TP; Baby Demon giữ theo class.
+Mỗi effect trúng cấp TP cho người dùng; nhận sát thương HP dương cấp TP theo tỷ
+lệ HP tối đa và TCR, làm tròn từng hit. Trượt/né, mất MP và hồi HP không cấp TP
+nhận damage. TP bị chặn ở 0–100, lưu/tải giữ đúng giá trị; rời trận xóa TP trừ
+các thành viên có trait giữ TP.
 Đồng đội có trait auto-battle (62/0) tự chọn Attack hoặc kỹ năng đang dùng được;
 Moonless, Ghoul, Skeleton, Blood golem, Baby Demon và Buckman đọc flag từ dữ liệu
 actor/class. Các nguồn trang bị/state cũng dùng chung cách đọc trait. AI chấm

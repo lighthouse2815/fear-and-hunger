@@ -20,6 +20,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     function reset() {
         e.animations.dispose(); e.battle.finish('escape'); e.state.recoverActor(1); e.state.actor(1).tp = 20;
         e.battle.setup(troopId, true, true); e.state.scene = 'battle'; e.state.setVariable(7300, 0);
+        e.state.actor(1).tp = 20;
     }
     async function until(test) {
         for (let frame = 0; frame < 2000 && !test(); frame++) { e.advanceRoutes(4); await flush(); }

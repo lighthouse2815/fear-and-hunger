@@ -50,6 +50,9 @@
         this.battle.enemies.forEach(function (enemy) {
             enemy.hp = this.enemyParam(enemy, 0); enemy.mp = this.enemyParam(enemy, 1); this.refreshEnemy(enemy);
         }, this);
+        this.battle.actors.concat(this.battle.enemies).forEach(function (battler) {
+            if (!this.preserveTp(battler)) this.battlerState(battler).tp = Math.floor(this.random() * 25);
+        }, this);
         return this.battle;
     };
     BattleRuntime.prototype.pageMatches = function (page, turnEnding) {
@@ -115,6 +118,9 @@
             this.state.actor(actor.id).states.slice().forEach(function (id) {
                 if ((this.database.States[id] || {}).removeAtBattleEnd) this.removeState(actor, id);
             }, this);
+        }, this);
+        this.battle.actors.concat(this.battle.enemies).forEach(function (battler) {
+            if (!this.preserveTp(battler)) this.battlerState(battler).tp = 0;
         }, this);
         this.syncActors();
         this.waiters.forEach(function (done) { done(result); });
@@ -228,6 +234,13 @@
     };
     BattleRuntime.prototype.battlerTraits = function (battler) {
         return this.battlerSources(battler).reduce(function (traits, data) { return traits.concat(data.traits || []); }, []);
+    };
+    BattleRuntime.prototype.preserveTp = function (battler) {
+        return this.battlerTraits(battler).some(function (trait) { return trait.code === 62 && trait.dataId === 3; });
+    };
+    BattleRuntime.prototype.gainTp = function (battler, value) {
+        var data = this.battlerState(battler);
+        data.tp = Math.max(0, Math.min(100, (data.tp || 0) + value));
     };
     BattleRuntime.prototype.hasBattlerTag = function (battler, tag) {
         tag = '<' + tag.toLowerCase() + '>';
@@ -598,6 +611,8 @@
                                 var state = runtime.database.States[id];
                                 if (state.removeByDamage && runtime.random() * 100 < state.chanceByDamage) runtime.removeState(target, id);
                             });
+                            if (resource === 'hp' && value > 0) runtime.gainTp(target,
+                                Math.floor(50 * value / runtime.battlerParam(target, 0) * runtime.traitRate(target, 23, 5)));
                             if (damage.type === 5 || damage.type === 6) runtime.changeResource(subject, resource, value);
                             hit.damage = value; hit.resource = resource; report.damage += value;
                             report.critical = report.critical || hit.critical;
@@ -611,6 +626,7 @@
                             });
                             else runtime.addState(target, effect.dataId, effect.value1, skill.hitType === 0);
                         });
+                        runtime.gainTp(subject, Math.floor((skill.tpGain || 0) * runtime.traitRate(subject, 23, 5)));
                     }
                     hit.defeated = !target.alive; report.hits.push(hit);
                     if (counter && runtime.canCounter(target)) {
@@ -625,8 +641,6 @@
         function finish() {
             if (finished) return;
             finished = true;
-            var data = runtime.battlerState(subject);
-            data.tp = Math.min(100, (data.tp || 0) + Math.floor((skill.tpGain || 0) * runtime.traitRate(subject, 23, 5)));
             var state = runtime.battlerState(subject);
             if (!menu && !counterTarget) state.states.slice().forEach(function (id) {
                 var definition = runtime.database.States[id];

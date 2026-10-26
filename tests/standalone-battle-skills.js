@@ -38,7 +38,7 @@ const watchdog = setTimeout(() => { console.error('Kỹ năng chưa kết thúc 
     const report = runtime.useSkill(runtime.actor(1), id, 0);
     assert.equal(report.damage, 15, 'đòn thứ hai giảm một nửa vì state Guard của đòn thứ nhất');
     assert.equal(runtime.enemy(0).hp, hp - 15);
-    assert.equal(engine.state.actor(1).mp, mp - 10); assert.equal(engine.state.actor(1).tp, 18);
+    assert.equal(engine.state.actor(1).mp, mp - 10); assert.equal(engine.state.actor(1).tp, 21, 'trả 5 TP rồi nhận 3 TP cho mỗi effect trúng');
     assert.deepEqual(report.commonEvents, [commonId], 'common event chỉ một lần dù lặp đòn');
     let completed = false;
     const completing = engine.completeBattleSkill(report).then(() => { completed = true; });

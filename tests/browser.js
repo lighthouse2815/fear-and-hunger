@@ -1698,6 +1698,21 @@ async function main() {
             await turn;
             return engine.battle.battle.lastAction.skillId===7 && engine.state.switchValue(16) && engine.state.actor(1).hp===hp;
         })()`,true,false));
+        check('TP nhận theo từng hit, giữ qua save và theo trait Baby Demon', await evalPage(cdp, `(async () => {
+            const source=FNHStandalonePreview.engine,e=new FNHStandaloneEngine.GameEngine({dataStore:source.dataStore,random:()=>0.5});
+            await e.boot({mapId:74,x:8,y:8,party:[1,12]});const db=e.database,enemyId=db.Enemies.length,troopId=db.Troops.length,id=db.Skills.length;
+            db.Enemies.push({...db.Enemies[1],id:enemyId,params:[100,100,1,1,1,1,1,1],traits:[],actions:[]});
+            db.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400}]});
+            db.Skills.push({...db.Skills[3],id,note:'',animationId:0,scope:1,repeats:2,hitType:0,effects:[],mpCost:0,tpCost:4,tpGain:3,
+                damage:{type:1,formula:'20',critical:false,variance:0,elementId:0}});
+            e.state.actor(12).tp=66;e.battle.setup(troopId,true,true);e.state.scene='battle';
+            if(e.state.actor(1).tp!==12||e.state.actor(12).tp!==66)return false;
+            e.battle.useSkill(e.battle.actor(1),id,0);
+            if(e.state.actor(1).tp!==14||e.battle.enemy(0).tp!==32)return false;
+            await e.restore(e.save());
+            if(e.state.actor(1).tp!==14||e.battle.enemy(0).tp!==32)return false;
+            e.battle.finish('escape');return e.state.actor(1).tp===0&&e.state.actor(12).tp===66;
+        })()`,true,false));
         check('event độc lập điều khiển quái và giữ thay đổi qua save', await evalPage(cdp, `(async () => {
             const source = FNHStandalonePreview.engine;
             const engine = new FNHStandaloneEngine.GameEngine({ dataStore: source.dataStore });

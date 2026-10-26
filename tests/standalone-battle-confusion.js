@@ -23,6 +23,7 @@ const watchdog = setTimeout(() => { console.error('Rối loạn chưa hoàn tấ
         r.finish('escape'); engine.animations.dispose(); db.Troops[troopId].pages = pages;
         [1, 3].forEach(id => { engine.state.recoverActor(id); engine.state.actor(id).tp = 50; engine.state.changeActorSkill(id, skillId, true); });
         r.setup(troopId, true, true); r.battle.enemies.forEach(enemy => { enemy.tp = 50; });
+        [1, 3].forEach(id => { engine.state.actor(id).tp = 50; });
         engine.state.scene = 'battle'; r.random = () => 0.5;
     }
     const confuse = (id, stateId) => engine.state.changeActorState(id, stateId, true);
