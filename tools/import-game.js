@@ -82,6 +82,7 @@ async function createProject(options = {}) {
         await fs.writeFile(systemFile, JSON.stringify(system) + '\n');
         await fs.copyFile(path.join(REPO_ROOT, 'game/build.js'), path.join(staging, 'build.js'));
         await fs.copyFile(path.join(REPO_ROOT, 'game/check.js'), path.join(staging, 'check.js'));
+        await fs.cp(path.join(REPO_ROOT, 'game/engine'), path.join(staging, 'engine'), { recursive: true });
         await fs.copyFile(path.join(REPO_ROOT, 'game/README.md'), path.join(staging, 'README.md'));
         await fs.copyFile(path.join(REPO_ROOT, 'game/NOTICE.md'), path.join(staging, 'NOTICE.md'));
         await fs.unlink(path.join(staging, 'web-build.json'));

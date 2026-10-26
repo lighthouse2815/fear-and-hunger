@@ -64,7 +64,10 @@ async function checkProject(root) {
         new vm.Script(await fs.readFile(filename, 'utf8'), { filename });
         scripts += 1;
     }
-    for (const directory of ['js', 'data', '__fnh']) await walk(path.join(root, directory));
+    for (const directory of ['js', 'data', '__fnh', 'engine']) {
+        try { await walk(path.join(root, directory)); }
+        catch (error) { if (error.code !== 'ENOENT') throw error; }
+    }
     for (const directory of ['img', 'audio', 'fonts']) await fs.access(path.join(root, directory));
     return { scripts, data, maps, transfers, audioCommands, pictureCommands };
 }
