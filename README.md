@@ -50,6 +50,8 @@ Engine viết lại có bản xem thử tại `/standalone.html`. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro
 từ các sự kiện JSON bằng engine mới. Lựa chọn độ khó, khóa chế độ ẩn, mô tả lựa
 chọn và thông báo Gab ở cổng ngục đã có implementation độc lập.
+Animation JSON cũng được phát bằng sprite sheet và timing trong `engine/animation-runtime.js`,
+giữ chờ lệnh, âm thanh, flash và trạng thái khi lưu.
 Trang này nạp mã trong `game/engine/` cùng thư viện Pixi có sẵn, không nạp runtime
 RPG Maker hay plugin gốc. Bộ điều khiển filter mới dùng thư viện MIT
 `pixi-filters` được tách từ bản đã có trong repo; xem

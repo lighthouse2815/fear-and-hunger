@@ -5,15 +5,15 @@
     if (typeof module === 'object' && module.exports) {
         module.exports = factory(
             require('./data-store'), require('./game-state'),
-            require('./map-model'), require('./event-interpreter'), require('./script-runtime'), require('./movement-runtime'), require('./screen-runtime'), require('./autonomous-movement'), require('./lighting-runtime'), require('./filter-runtime')
+            require('./map-model'), require('./event-interpreter'), require('./script-runtime'), require('./movement-runtime'), require('./screen-runtime'), require('./autonomous-movement'), require('./lighting-runtime'), require('./filter-runtime'), require('./animation-runtime')
         );
     } else {
         root.FNHStandaloneEngine = factory(
             root.FNHStandaloneData, root.FNHStandaloneState,
-            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts, root.FNHStandaloneMovement, root.FNHStandaloneScreen, root.FNHStandaloneAutonomous, root.FNHStandaloneLighting, root.FNHStandaloneFilters
+            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts, root.FNHStandaloneMovement, root.FNHStandaloneScreen, root.FNHStandaloneAutonomous, root.FNHStandaloneLighting, root.FNHStandaloneFilters, root.FNHStandaloneAnimations
         );
     }
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi, screenApi, autonomousApi, lightingApi, filterApi) {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi, screenApi, autonomousApi, lightingApi, filterApi, animationApi) {
     function GameEngine(options) {
         options = options || {};
         this.dataStore = options.dataStore || new dataApi.GameDataStore({ baseUrl: options.baseUrl || '' });
@@ -49,6 +49,7 @@
         this.screen = new screenApi.ScreenRuntime(this.state);
         this.lighting = new lightingApi.LightingRuntime(this.state);
         this.filters = new filterApi.FilterRuntime(this.state);
+        this.animations = new animationApi.AnimationRuntime(this);
         this.state.party.slice().forEach(function (actorId) {
             if (!this.state.actor(actorId) && this.database.Actors[actorId]) this.state.addActor(actorId);
         }, this);
@@ -74,6 +75,7 @@
             this.state.eventSnapshots = {};
         }
         if (this.movement) this.movement.clear();
+        if (this.animations) this.animations.dispose();
         this.state.mapId = mapId;
         this.map = map;
         this.lighting.sources(map);
@@ -149,6 +151,7 @@
         if (this.screen) this.screen.advance(frames);
         if (this.lighting) this.lighting.advance(frames);
         if (this.filters) this.filters.advance(frames);
+        if (this.animations) this.animations.advance(frames);
     };
 
     GameEngine.prototype.moveCharacter = function (character, direction, vertical, backward) {
@@ -292,6 +295,12 @@
             if (code === 203) { engine.setEventLocation(parameters, interpreter); return true; }
             if (code === 205) return engine.applyRoute(parameters, interpreter);
             if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }
+            if (code === 212) {
+                var animated = engine.characterFor(parameters[0], interpreter);
+                if (!animated) return true;
+                var animation = engine.animations.start(animated === engine.state ? -1 : animated.id, parameters[1], engine.map.id);
+                return parameters[2] ? animation : true;
+            }
             if (code === 213) {
                 var target = engine.characterFor(parameters[0], interpreter);
                 if (!target) return true;
@@ -404,6 +413,8 @@
         this.lighting = new lightingApi.LightingRuntime(state);
         if (this.filters) this.filters.dispose();
         this.filters = new filterApi.FilterRuntime(state);
+        if (this.animations) this.animations.dispose();
+        this.animations = new animationApi.AnimationRuntime(this);
         if (this.movement) this.movement.clear();
         this.map = map;
         this.lighting.sources(map);

@@ -210,7 +210,7 @@
         }
     };
     engine.onRouteEffect = eventHandlers.effect;
-    var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1;
+    var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;
     function animate(now) {
         var frames = Math.min(6, Math.max(0, (now - previousFrame) * 60 / 1000));
         previousFrame = now;
@@ -222,6 +222,7 @@
                     return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0);
                 });
                 active = active || filterRevision !== engine.filters.revision || engine.filters.active();
+                active = active || engine.animations.entries.length > 0 || animationRevision !== engine.animations.revision;
                 engine.advanceRoutes(frames);
                 var heldDirection = engine.buttons.has('down') ? 2 : engine.buttons.has('left') ? 4 :
                     engine.buttons.has('right') ? 6 : engine.buttons.has('up') ? 8 : 0;
@@ -238,6 +239,7 @@
                     screenRevision = engine.screen.revision;
                     lightingRevision = engine.lighting.revision;
                     filterRevision = engine.filters.revision;
+                    animationRevision = engine.animations.revision;
                     renderer.draw(engine).catch(function (error) { setStatus(error.message); })
                         .finally(function () { drawing = false; });
                 }
@@ -327,6 +329,7 @@
         if (scheduler) scheduler.stop();
         if (stopVideo) stopVideo();
         if (engine.filters) engine.filters.dispose();
+        if (engine.animations) engine.animations.dispose();
         audio.dispose();
     });
     (async function () {

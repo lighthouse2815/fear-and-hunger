@@ -1166,6 +1166,18 @@ async function main() {
         await evalPage(cdp, 'FNHStandalonePreview.engine.createInterpreter([{code:213,parameters:[-1,1,true]},{code:121,parameters:[501,501,0]}],39).run()', true, false);
         check('lệnh balloon chờ kết thúc trước khi chạy lệnh tiếp', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.balloon.remaining === 0 && FNHStandalonePreview.engine.state.switchValue(501)', false, false));
+        check('renderer vẽ animation sprite sheet theo frame, scale và blend', await evalPage(cdp, `(async () => {
+            const canvas = document.createElement('canvas');
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { width: 384, height: 384 });
+            const bitmap = await renderer.loadImage('img/animations/coin_flip.png');
+            const data = FNHStandalonePreview.engine.database.Animations[7];
+            renderer.drawAnimation({ entry: { elapsed: 0, targetId: -1, mirror: false }, data, first: bitmap, second: null },
+                { x: 4, y: 4 }, { eventById: () => null }, 0, 0);
+            const pixels = canvas.getContext('2d').getImageData(0, 0, 384, 384).data;
+            let visible = 0;
+            for (let index = 0; index < pixels.length; index += 4) if (pixels[index + 3] > 0) visible++;
+            return visible > 100 && pixels.some((value, index) => index % 4 === 0 && value > 150);
+        })()`, true, false));
         check('lệnh nhân vật chạy bằng interpreter mới trên Chrome', await evalPage(cdp, `(async () => {
             const state = FNHStandalonePreview.engine.state;
             await new FNHStandaloneEvents.EventInterpreter({ state, commands: [

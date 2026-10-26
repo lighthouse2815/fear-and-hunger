@@ -47,6 +47,7 @@
         this.screen = source.screen || null;
         this.lighting = source.lighting || null;
         this.filters = source.filters || {};
+        this.animations = source.animations || [];
         this.mapTileset = source.mapTileset || null;
         this.timer = source.timer || { active: false, frames: 0 };
         this.menuEnabled = source.menuEnabled !== false;
@@ -259,6 +260,7 @@
             eventSnapshots: this.eventSnapshots,
             routeSnapshots: this.routeSnapshots,
             screen: this.screen, lighting: this.lighting, filters: this.filters, mapTileset: this.mapTileset,
+            animations: this.animations,
             timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
             wordWrap: this.wordWrap, pendingChoices: this.pendingChoices,
             dashEnabled: this.dashEnabled,

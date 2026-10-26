@@ -48,6 +48,13 @@
             var picture = screen.pictures[id];
             return { picture: picture, bitmap: picture.name ? await this.loadImage('img/pictures/' + picture.name + '.png') : null };
         }, this)) : [];
+        var animationEntries = engine.animations ? engine.animations.entries.slice() : [];
+        var animationBitmaps = await Promise.all(animationEntries.map(async function (entry) {
+            var data = engine.database.Animations[entry.animationId];
+            return { entry: entry, data: data,
+                first: data.animation1Name ? await this.loadImage('img/animations/' + data.animation1Name + '.png') : null,
+                second: data.animation2Name ? await this.loadImage('img/animations/' + data.animation2Name + '.png') : null };
+        }, this));
         var names = map.tileset.tilesetNames || [];
         var sheets = await Promise.all(names.map(function (name) {
             return name ? this.loadImage('img/tilesets/' + name + '.png') : null;
@@ -125,6 +132,7 @@
                 context.drawImage(filtered,0,0); context.restore();
             }
             if (engine.lighting) this.drawLighting(engine.lighting, lightSources, state, viewport);
+        animationBitmaps.forEach(function (animation) { renderer.drawAnimation(animation, state, map, startX, startY); });
             // Tint thuộc lớp bản đồ; picture giao diện giữ màu riêng.
             if (screen) this.applyTone(context, this.canvas.width, this.canvas.height, screen.tone);
             this.drawWeather(screen && screen.weather);
@@ -203,6 +211,31 @@
         var frame = Math.min(7, Math.floor((76 - balloon.remaining) / 8));
         this.context.drawImage(bitmap, frame * 48, (balloon.id - 1) * 48, 48, 48,
             (actor.x - startX) * 48, (actor.y - startY + 1) * 48 - height - 48 - (object ? 0 : 6), 48, 48);
+    };
+
+    CanvasRenderer.prototype.drawAnimation = function (animation, state, map, startX, startY) {
+        var entry = animation.entry, data = animation.data;
+        var frame = Math.floor(entry.elapsed / 4);
+        if (frame < 0 || frame >= data.frames.length) return;
+        var target = entry.targetId === -1 ? state : map.eventById(entry.targetId);
+        if (!target) return;
+        var cells = data.frames[frame] || [], renderer = this;
+        cells.forEach(function (cell) {
+            var pattern = cell[0], bitmap = pattern >= 100 ? animation.second : animation.first;
+            if (!bitmap) return;
+            pattern %= 100;
+            var sourceX = (pattern % 5) * 192, sourceY = Math.floor(pattern / 5) * 192;
+            var x = (target.x - startX + 0.5) * TILE_SIZE + Number(cell[1] || 0);
+            var y = (target.y - startY + (data.position === 2 ? 1 : data.position === 0 ? 0.35 : 0.5)) * TILE_SIZE + Number(cell[2] || 0);
+            var scale = Number(cell[3] == null ? 100 : cell[3]) / 100;
+            renderer.context.save();
+            renderer.context.globalAlpha = Math.max(0, Math.min(1, Number(cell[6] == null ? 255 : cell[6]) / 255));
+            renderer.context.globalCompositeOperation = ['source-over', 'lighter', 'multiply', 'screen'][cell[7] || 0] || 'source-over';
+            renderer.context.translate(x, y);
+            renderer.context.rotate(Number(cell[4] || 0) * Math.PI / 180);
+            renderer.context.drawImage(bitmap, sourceX, sourceY, 192, 192, -96 * scale, -96 * scale, 192 * scale, 192 * scale);
+            renderer.context.restore();
+        });
     };
 
     CanvasRenderer.prototype.drawGab = function (gab, state) {
