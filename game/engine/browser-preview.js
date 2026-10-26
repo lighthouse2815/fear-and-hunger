@@ -13,7 +13,7 @@
     var renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { baseUrl: '.' });
     var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
     var settings = new FNHStandaloneSettings.PlayerSettings({ key: 'FNH_STANDALONE_PREVIEW_SETTINGS' });
-    var audio = new FNHStandaloneAudio.AudioManager({ baseUrl: '.', masterVolume: 0.05, maxMasterVolume: 0.05, onError: function (error) { setStatus(error.message); } });
+    var audio = new FNHStandaloneAudio.AudioManager({ baseUrl: '.', onError: function (error) { setStatus(error.message); } });
     FNHStandaloneSettings.categories.forEach(function (category) { audio.setVolume(category, settings.volumes[category] / 100); });
     document.getElementById('fnh-volume').value = settings.volumes.master;
     var ready = false;

@@ -24,16 +24,6 @@ class FakeAudio extends EventTarget {
     const errors = [];
     const manager = new AudioManager({ baseUrl: './subpath', audioFactory: () => new FakeAudio(), onError: error => errors.push(error) });
     try {
-        const capped = new AudioManager({ audioFactory: () => new FakeAudio(), masterVolume: 1, maxMasterVolume: 0.05 });
-        const quietBgm = capped.play('bgm', { name: 'quiet', volume: 80 });
-        assert.ok(Math.abs(quietBgm.volume - 0.04) < 0.000001, 'giới hạn ngay khi tạo audio');
-        capped.setVolume('master', 1);
-        assert.equal(capped.masterVolume, 0.05, 'API không nâng master quá giới hạn');
-        assert.ok(Math.abs(quietBgm.volume - 0.04) < 0.000001);
-        for (const category of ['bgs', 'me', 'se']) assert.equal(capped.play(category, { name: 'quiet', volume: 100 }).volume, 0.05);
-        capped.setVolume('master', 0); assert.equal(quietBgm.volume, 0);
-        capped.setVolume('master', 0.02); assert.ok(Math.abs(quietBgm.volume - 0.016) < 0.000001);
-        capped.dispose();
         const bgm = manager.play('bgm', { name: 'nhạc nền', volume: 80, pitch: 70 });
         assert.equal(bgm.src, './subpath/audio/bgm/nh%E1%BA%A1c%20n%E1%BB%81n.ogg');
         assert.equal(bgm.loop, true);

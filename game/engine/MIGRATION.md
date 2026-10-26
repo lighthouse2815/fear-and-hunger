@@ -36,7 +36,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 - T/C gọi common event 289/257 thật trên bản đồ, có nút cho điện thoại, giữ
   khóa điều khiển khi chờ thoại và tôn trọng MP/switch; Z/X xác nhận/hủy.
-- Tùy chọn âm lượng tổng/nhóm (giới hạn tổng 0–5%, kể cả cấu hình cũ và API), gán/bỏ phím, WASD và reset
+- Tùy chọn âm lượng tổng/nhóm (0–100%, giữ cấu hình đã lưu), gán/bỏ phím, WASD và reset
   bàn phím giữ qua tải lại trang; preset/reset không đổi âm lượng.
 
 - Các mã lệnh xuất hiện trong JSON đều có nhánh interpreter; 401/405/505 là
@@ -76,7 +76,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   lặp kín vùng nhìn, tạm dừng trong trận và giữ offset qua save/chuyển map.
 - Tiếng bước chân đọc 122 note terrain, ưu tiên region/terrain/mặc định; quái,
   follower/guest giảm âm theo khoảng cách, tôn trọng ẩn/No Footsteps/phương tiện,
-  lệnh bật tắt giữ qua save. Volume vẫn nhân mức tổng 5%.
+  lệnh bật tắt giữ qua save. Volume nhân mức tổng người chơi đã chọn; test dùng mức 5% riêng.
 - Menu lưu/tải 20 ô, thông tin checkpoint và đọc ô được chọn từ game over/title;
   save trong common event giữ stack, ô hỏng không ngăn chọn các ô khác.
 - State 23 buộc crit trong Select rồi khôi phục trong Deselect. Engine thực thi

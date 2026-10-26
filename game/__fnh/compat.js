@@ -139,33 +139,6 @@
 
     // Cài đặt âm thanh dùng ConfigManager gốc để đồng bộ với menu Options và save.
     window.addEventListener('load', function () {
-        // Giới hạn tại đầu ra, kể cả khi plugin hoặc cấu hình cũ tăng master.
-        var masterVolume = Object.getOwnPropertyDescriptor(AudioManager, 'masterVolume');
-        Object.defineProperty(AudioManager, 'masterVolume', {
-            get: masterVolume.get,
-            set: function (value) {
-                masterVolume.set.call(this, Math.max(0, Math.min(0.05, Number(value) || 0)));
-            },
-            configurable: true
-        });
-        AudioManager.masterVolume = AudioManager.masterVolume;
-        // OptionsCore nạp cấu hình sau lớp gốc. Chuẩn hóa sau tất cả plugin,
-        // gồm masterVolume dùng cho video; chỉ nâng cấp cấu hình cũ một lần.
-        var applyData = ConfigManager.applyData, makeData = ConfigManager.makeData;
-        ConfigManager.makeData = function () {
-            var config = makeData.call(this);
-            config.fnhQuietVolumeApplied = true;
-            return config;
-        };
-        ConfigManager.applyData = function (config) {
-            applyData.call(this, config);
-            if (config.fnhQuietVolumeApplied !== true) {
-                ['masterVolume', 'bgmVolume', 'bgsVolume', 'meVolume', 'seVolume'].forEach(function (key) {
-                    ConfigManager[key] = Math.min(Number(ConfigManager[key]) || 0, 5);
-                });
-                this.save();
-            }
-        };
         var viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) viewport.content = 'width=device-width, initial-scale=1';
         var style = document.createElement('style');
@@ -205,7 +178,7 @@
             row.className = 'fnh-volume-row';
             row.innerHTML = '<label for="fnh-' + key + '">' + entry[1] +
                 '<output for="fnh-' + key + '"></output></label>' +
-                '<input id="fnh-' + key + '" type="range" min="0" max="' + (key === 'masterVolume' ? 5 : 100) + '" step="1">';
+                '<input id="fnh-' + key + '" type="range" min="0" max="100" step="1">';
             var slider = row.querySelector('input'), output = row.querySelector('output');
             slider.addEventListener('input', function () {
                 ConfigManager[key] = Number(slider.value);

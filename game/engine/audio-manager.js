@@ -12,8 +12,7 @@
         this.audioFactory = options.audioFactory || (typeof Audio !== 'undefined' ? function () { return new Audio(); } : null);
         if (!this.audioFactory) throw new Error('AudioManager cần Audio hoặc audioFactory.');
         this.onError = options.onError || function (error) { console.error(error); };
-        this.maxMasterVolume = volumeValue(options.maxMasterVolume == null ? 1 : options.maxMasterVolume);
-        this.masterVolume = Math.min(this.maxMasterVolume, volumeValue(options.masterVolume == null ? 1 : options.masterVolume));
+        this.masterVolume = volumeValue(options.masterVolume == null ? 1 : options.masterVolume);
         this.volumes = { bgm: 1, bgs: 1, me: 1, se: 1 };
         this.buffers = { bgm: null, bgs: null, me: null };
         this.seBuffers = [];
@@ -155,7 +154,7 @@
     };
 
     AudioManager.prototype.setVolume = function (category, value) {
-        if (category === 'master') this.masterVolume = Math.min(this.maxMasterVolume, volumeValue(value));
+        if (category === 'master') this.masterVolume = volumeValue(value);
         else if (CATEGORIES.indexOf(category) >= 0) this.volumes[category] = volumeValue(value);
         else throw new RangeError('Nhóm âm thanh không hợp lệ: ' + category);
         this.tracks.forEach(function (track, audio) { this.updateVolume(audio); }, this);

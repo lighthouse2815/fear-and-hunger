@@ -22,6 +22,6 @@ assert.match(html, /engine\/battle-runtime\.js/);
 assert.match(html, /fnh-battle-targets/);
 assert.doesNotMatch(html, /js\/plugins\//);
 assert.match(fs.readFileSync(path.join(root, 'engine/browser-preview.js'), 'utf8'), /new FNHStandaloneEngine\.GameEngine/);
-assert.match(fs.readFileSync(path.join(root, 'engine/browser-preview.js'), 'utf8'), /masterVolume: 0\.05/);
-assert.match(html, /id="fnh-volume"[^>]*value="5"/);
+assert.doesNotMatch(fs.readFileSync(path.join(root, 'engine/browser-preview.js'), 'utf8'), /maxMasterVolume|masterVolume: 0\.05/);
+assert.match(html, /id="fnh-volume"[^>]*max="100"[^>]*value="100"/);
 console.log('ĐẠT: trang preview độc lập chỉ nạp engine mới và asset/data hiện có.');

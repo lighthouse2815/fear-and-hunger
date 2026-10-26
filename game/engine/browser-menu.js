@@ -155,7 +155,7 @@
             var settings = this.options.settings;
             [['master','Âm lượng tổng'],['bgm','Nhạc nền'],['bgs','Môi trường'],['me','Nhạc sự kiện'],['se','Hiệu ứng']].forEach(function (entry) {
                 var label = node('label', entry[1] + ': '), slider = node('input'), value = node('output', settings.volumes[entry[0]] + '%');
-                slider.type = 'range'; slider.min = 0; slider.max = entry[0] === 'master' ? 5 : 100; slider.value = settings.volumes[entry[0]];
+                slider.type = 'range'; slider.min = 0; slider.max = 100; slider.value = settings.volumes[entry[0]];
                 slider.dataset.volume = entry[0]; slider.disabled = ui.busy;
                 slider.oninput = function () {
                     try { ui.options.updateVolume(entry[0], Number(slider.value)); value.textContent = slider.value + '%'; }
