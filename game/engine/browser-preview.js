@@ -128,7 +128,13 @@
         catch (_) { start.disabled = true; }
         var lastAction = battle.lastAction;
         document.getElementById('fnh-battle-log').textContent = lastAction ? engine.battle.actionData(lastAction).name +
-            ' · ' + lastAction.hits.map(function (hit) { return hit.missed ? 'Trượt' : hit.evaded ? 'Né' : String(hit.damage); }).join(', ') : '';
+            ' · ' + lastAction.hits.map(function (hit) {
+                var text = hit.missed ? 'Trượt' : hit.evaded ? 'Né' : String(hit.damage);
+                if (hit.counter) text += ' → Phản đòn: ' + hit.counter.hits.map(function (reply) {
+                    return reply.missed ? 'Trượt' : reply.evaded ? 'Né' : String(reply.damage);
+                }).join(', ');
+                return text;
+            }).join(', ') : '';
         var turnEffects = (battle.turnEffects || []).map(formatResourceChanges);
         if (turnEffects.length) document.getElementById('fnh-battle-log').textContent += ' · Cuối lượt: ' + turnEffects.join(' | ');
         document.getElementById('fnh-battle-attack').disabled = battle.phase !== 'input' || !battleActor || !engine.battle.canUseSkill(engine.battle.actor(battleActor), engine.database.Skills[1]);

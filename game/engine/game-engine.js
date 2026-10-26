@@ -463,6 +463,10 @@
                 activeAnimations.push(engine.animations.entries[engine.animations.entries.length - 1]);
                 return waiting;
             })));
+            for (var hitIndex = 0; hitIndex < report.hits.length; hitIndex++) {
+                if (signal && signal.aborted) throw signal.reason;
+                if (report.hits[hitIndex].counter) await this.completeBattleAction(report.hits[hitIndex].counter, handlers, signal);
+            }
             for (var index = 0; index < report.commonEvents.length; index++) {
                 if (signal && signal.aborted) throw signal.reason;
                 if (this.state.scene !== 'battle' || this.battle.battle.result) return;

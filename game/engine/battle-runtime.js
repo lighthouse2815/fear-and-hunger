@@ -375,19 +375,25 @@
         if (!item) throw new Error('Không tìm thấy item ' + itemId);
         return this.useAction(subject, item, index, true, false);
     };
-    BattleRuntime.prototype.useAction = function (subject, skill, index, item, forced, menuTargets) {
+    BattleRuntime.prototype.canCounter = function (battler) {
+        return battler.alive && !battler.hidden && !this.battlerState(battler).states.some(function (id) {
+            return (this.database.States[id] || {}).restriction >= 4;
+        }, this);
+    };
+    BattleRuntime.prototype.useAction = function (subject, skill, index, item, forced, menuTargets, counterTarget) {
         var menu = Array.isArray(menuTargets);
         if (!menu && (!this.battle || this.battle.result)) throw new Error('Trận chiến không hoạt động.');
         if (!subject || !subject.alive || subject.hidden) throw new Error('Chủ thể chiến đấu không hợp lệ.');
         if (!forced && !(item ? this.canUseItem(subject, skill, menu) : this.canUseSkill(subject, skill, menu))) {
             throw new Error(item ? 'Chưa thể dùng vật phẩm ' + skill.name : 'Chưa thể dùng kỹ năng ' + skill.name);
         }
-        var targets = menu ? menuTargets : this.skillTargets(subject, skill, index), runtime = this;
+        var targets = counterTarget ? [counterTarget] : menu ? menuTargets : this.skillTargets(subject, skill, index), runtime = this;
         var report = { subject: subject.enemyId != null ? 'enemy' : 'actor',
             subjectId: subject.enemyId != null ? subject.index : subject.id, hits: [], commonEvents: [], targets: [], damage: 0, critical: false };
         report[item ? 'itemId' : 'skillId'] = skill.id;
         (skill.effects || []).forEach(function (effect) {
             if (effect.code === 44) {
+                if (counterTarget) return;
                 if (!runtime.database.CommonEvents[effect.dataId]) throw new Error('Không tìm thấy common event ' + effect.dataId);
                 report.commonEvents.push(effect.dataId);
             } else if ([21, 22].includes(effect.code)) {
@@ -396,7 +402,9 @@
                 if (!runtime.database.Skills[effect.dataId]) throw new Error('Không tìm thấy skill ' + effect.dataId);
             } else throw new Error('Hiệu ứng hành động chưa hỗ trợ: ' + effect.code);
         });
-        if (item) {
+        if (counterTarget) {
+            report.counter = true;
+        } else if (item) {
             if (skill.consumable) this.state.gainItem('items', skill.id, -1);
         } else {
             var cost = this.skillCost(subject, skill);
@@ -405,14 +413,18 @@
             subjectData.tp = Math.max(0, (subjectData.tp || 0) - cost.tp);
         }
         targets.forEach(function (target) {
+            if (!subject.alive) return;
             report.targets.push({ type: target.enemyId != null ? 'enemy' : 'actor', id: target.enemyId != null ? target.index : target.id });
-            if (!menu) {
+            if (!menu && !counterTarget) {
                 var key = report.subject + ':' + report.subjectId;
                 var unit = target.enemyId != null ? runtime.battle.enemies : runtime.battle.actors;
                 (runtime.battle.lastTargets || (runtime.battle.lastTargets = {}))[key] = unit.indexOf(target);
             }
-            for (var repeat = 0; repeat < (skill.repeats || 1); repeat++) {
+            for (var repeat = 0; repeat < (counterTarget ? 1 : skill.repeats || 1); repeat++) {
+                if (!subject.alive) break;
                 if ([9, 10].includes(skill.scope) ? target.alive : !target.alive) break;
+                var counterRate = !menu && !counterTarget && skill.hitType === 1 && runtime.canCounter(target) ? runtime.traitRate(target, 22, 6, true) : 0;
+                var counter = counterRate > 0 && runtime.random() < counterRate;
                 var hit = { target: target.enemyId != null ? target.index : target.id, targetType: target.enemyId != null ? 'enemy' : 'actor', damage: 0 };
                 var success = (skill.successRate == null ? 100 : skill.successRate) / 100;
                 if (skill.hitType === 1) success *= runtime.traitRate(subject, 22, 0, true);
@@ -440,6 +452,9 @@
                     });
                 }
                 hit.defeated = !target.alive; report.hits.push(hit);
+                if (counter && runtime.canCounter(target)) {
+                    hit.counter = runtime.useAction(target, runtime.database.Skills[1], 0, false, true, null, subject);
+                }
             }
         });
         var data = this.battlerState(subject);
@@ -447,11 +462,11 @@
         var first = report.targets[0];
         report.target = first && first.id; report.defeated = !!(report.hits.length && report.hits[report.hits.length - 1].defeated);
         var state = this.battlerState(subject);
-        if (!menu) state.states.slice().forEach(function (id) {
+        if (!menu && !counterTarget) state.states.slice().forEach(function (id) {
             var definition = this.database.States[id];
             if (definition.autoRemovalTiming === 1 && state.stateTurns && state.stateTurns[id] === 0) this.removeState(subject, id);
         }, this);
-        if (!menu) this.battle.lastAction = report;
+        if (!menu && !counterTarget) this.battle.lastAction = report;
         return report;
     };
     BattleRuntime.prototype.attack = function (actorId, enemyIndex, skillId) {
