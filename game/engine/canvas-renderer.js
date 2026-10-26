@@ -41,6 +41,7 @@
         if (!map || !state) return;
         var frame = ++this.frame;
         var screen = engine.screen && engine.screen.screen;
+        var lightSources = engine.lighting ? engine.lighting.sources(map) : [];
         var parallaxName = screen && screen.parallax ? screen.parallax.name : map.data.parallaxName;
         var parallax = parallaxName ? await this.loadImage('img/parallaxes/' + parallaxName + '.png') : null;
         var pictures = screen ? await Promise.all(Object.keys(screen.pictures).sort(function (a, b) { return a - b; }).map(async function (id) {
@@ -103,6 +104,7 @@
             if (entry.priority === 2) renderer.drawActor(sheets, entry, startX, startY);
         });
         if (balloonBitmap) actors.forEach(function (entry) { renderer.drawBalloon(balloonBitmap, entry, startX, startY); });
+        if (engine.lighting) this.drawLighting(engine.lighting, lightSources, state, viewport);
         // Tint thuộc lớp bản đồ; picture giao diện giữ màu riêng.
         if (screen) this.applyTone(context, this.canvas.width, this.canvas.height, screen.tone);
         this.drawWeather(screen && screen.weather);
@@ -121,6 +123,54 @@
             this.drawGab(screen.gab, state);
         }
         return { startX: startX, startY: startY };
+    };
+
+    CanvasRenderer.prototype.drawLighting = function (runtime, sources, player, viewport) {
+        if (!runtime.definitions.length) return;
+        if (!this.lightCanvas) this.lightCanvas = document.createElement('canvas');
+        var mask = this.lightCanvas;
+        if (mask.width !== this.canvas.width) mask.width = this.canvas.width;
+        if (mask.height !== this.canvas.height) mask.height = this.canvas.height;
+        var context = mask.getContext('2d'), light = runtime.lighting, renderer = this;
+        context.globalCompositeOperation = 'source-over';
+        context.fillStyle = '#000'; context.fillRect(0, 0, mask.width, mask.height);
+        context.globalCompositeOperation = 'lighter';
+        var x = (player.x - viewport.startX + 0.5) * 48, y = (player.y - viewport.startY + 0.5) * 48;
+        if (light.flashlight) {
+            this.drawLight(context, x, y, { radius: 40, color: '#999999', brightness: 0 }, light.time, 0);
+            var beam = light.flashlight, delta = { 2: [0,1], 4: [-1,0], 6: [1,0], 8: [0,-1] }[player.direction] || [0,1];
+            for (var index = 1; index < beam.length; index++) {
+                var distance = 3 * index * (index + 1);
+                this.drawLight(context, x + delta[0] * distance, y + delta[1] * distance,
+                    { radius: index * beam.width, color: beam.color, brightness: Math.min(0.99, 3 / beam.width) }, light.time, 0);
+            }
+        } else this.drawLight(context, x, y, { radius: light.radius, color: light.color, fire: light.fire,
+            brightness: light.radius > 0 ? Math.min(0.99, 20 / light.radius) : 0 }, light.time, 0);
+        sources.forEach(function (source) {
+            renderer.drawLight(context, (source.event.x - viewport.startX + 0.5) * 48,
+                (source.event.y - viewport.startY + 0.5) * 48, source, light.time, source.event.id);
+        });
+        this.context.save(); this.context.globalCompositeOperation = 'multiply';
+        this.context.drawImage(mask, 0, 0); this.context.restore();
+    };
+
+    CanvasRenderer.prototype.drawLight = function (context, x, y, source, time, seed) {
+        var radius = Math.max(0, source.radius + (source.fire ? Math.sin(time * 0.4 + seed) * 7 : 0));
+        if (source.radius <= 0 || radius <= 0) return;
+        context.save();
+        if (source.direction) {
+            context.beginPath();
+            var horizontal = source.direction === 2 || source.direction === 4;
+            context.rect(x - (source.direction === 4 ? 0 : radius), y - (source.direction === 1 ? 0 : radius),
+                radius * (horizontal ? 1 : 2), radius * (horizontal ? 2 : 1));
+            context.clip();
+        }
+        var gradient = context.createRadialGradient(x, y, 0, x, y, radius);
+        gradient.addColorStop(0, source.color);
+        if (source.brightness > 0) gradient.addColorStop(Math.min(0.99, source.brightness), source.color);
+        gradient.addColorStop(1, '#000');
+        context.fillStyle = gradient; context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+        context.restore();
     };
 
     CanvasRenderer.prototype.drawBalloon = function (bitmap, actor, startX, startY) {

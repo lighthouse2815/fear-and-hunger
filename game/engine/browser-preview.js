@@ -209,14 +209,15 @@
         }
     };
     engine.onRouteEffect = eventHandlers.effect;
-    var previousFrame = performance.now(), drawing = false, screenRevision = -1;
+    var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1;
     function animate(now) {
         var frames = Math.min(6, Math.max(0, (now - previousFrame) * 60 / 1000));
         previousFrame = now;
         if (ready) {
             try {
                 if (scheduler) scheduler.tick();
-                var active = !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
+                var active = !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
+                    lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
                     return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0);
                 });
                 engine.advanceRoutes(frames);
@@ -227,6 +228,7 @@
                 if (active && !drawing) {
                     drawing = true;
                     screenRevision = engine.screen.revision;
+                    lightingRevision = engine.lighting.revision;
                     renderer.draw(engine).catch(function (error) { setStatus(error.message); })
                         .finally(function () { drawing = false; });
                 }

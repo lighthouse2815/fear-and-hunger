@@ -1025,6 +1025,27 @@ async function main() {
             const expected = reference.getContext('2d').getImageData(0,0,400,300).data;
             return actual.every((value,index) => value === expected[index]);
         })()`, true, false));
+        check('ánh sáng Canvas nhận công tắc, màu đèn, vị trí và hướng đèn pin', await evalPage(cdp, `(() => {
+            const state = new FNHStandaloneState.GameState({ x: 8, y: 6, direction: 6 });
+            const runtime = new FNHStandaloneLighting.LightingRuntime(state);
+            const map = { id: 1, events: [{ id: 1, x: 3, y: 3, note: 'Light 60 #FF0000 7' }] };
+            const canvas = document.createElement('canvas'), renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas);
+            const context = canvas.getContext('2d'), view = { startX: 0, startY: 0 };
+            function pixel(x,y) { return Array.from(context.getImageData(x,y,1,1).data).slice(0,3); }
+            function draw() {
+                context.fillStyle = '#fff'; context.fillRect(0,0,816,624);
+                renderer.drawLighting(runtime, runtime.sources(map), state, view);
+            }
+            runtime.handleCommand('Light radius 0 #FFFFFF'); draw();
+            if (pixel(168,168).some(Boolean)) return false;
+            runtime.handleCommand('Light on 7', map); draw();
+            if (pixel(168,168)[0] < 250 || pixel(168,168)[1] !== 0 || pixel(300,300).some(Boolean)) return false;
+            map.events[0].x = 4; draw();
+            if (pixel(216,168)[0] < 250 || pixel(168,168)[0] > 128) return false;
+            runtime.handleCommand('Light off 7', map);
+            runtime.handleCommand('Flashlight on 8 12 #FFFFFF'); draw();
+            return pixel(534,312)[0] > 50 && pixel(282,312)[0] === 0 && !state.selfSwitchValue(1,1,'D');
+        })()`, false, false));
         await evalPage(cdp, 'FNHStandalonePreview.engine.createInterpreter([{code:213,parameters:[-1,1,true]},{code:121,parameters:[501,501,0]}],39).run()', true, false);
         check('lệnh balloon chờ kết thúc trước khi chạy lệnh tiếp', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.balloon.remaining === 0 && FNHStandalonePreview.engine.state.switchValue(501)', false, false));

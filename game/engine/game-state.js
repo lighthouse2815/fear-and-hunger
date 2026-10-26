@@ -45,6 +45,7 @@
         this.eventSnapshots = Object.assign({}, source.eventSnapshots);
         this.routeSnapshots = Array.isArray(source.routeSnapshots) ? source.routeSnapshots : [];
         this.screen = source.screen || null;
+        this.lighting = source.lighting || null;
         this.mapTileset = source.mapTileset || null;
         this.timer = source.timer || { active: false, frames: 0 };
         this.menuEnabled = source.menuEnabled !== false;
@@ -254,7 +255,7 @@
             touchEnabled: this.touchEnabled,
             eventSnapshots: this.eventSnapshots,
             routeSnapshots: this.routeSnapshots,
-            screen: this.screen, mapTileset: this.mapTileset,
+            screen: this.screen, lighting: this.lighting, mapTileset: this.mapTileset,
             timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
             wordWrap: this.wordWrap, pendingChoices: this.pendingChoices,
             characterName: this.characterName, characterIndex: this.characterIndex,
