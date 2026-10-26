@@ -1008,6 +1008,55 @@ async function main() {
             'FNHStandalonePreview.engine.state.scene === "map" && FNHStandalonePreview.engine.state.variableValue(999) === 20', false, false));
         await evalPage(cdp, `battleOriginalPage.page.list = battleOriginalPage.list;
             FNHStandalonePreview.engine.state.recoverActor(1); delete window.battleOriginalPage;`, false, false);
+        await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine;
+            const list = engine.database.CommonEvents[310].list;
+            const start = list.findIndex(command => command.code === 105);
+            let end = start + 1;
+            while (list[end] && list[end].code === 405) end++;
+            const page = engine.map.eventPage(engine.map.eventById(39));
+            window.creditsOriginal = { page, list: page.list, runEvent: engine.runEvent };
+            window.creditsController = new AbortController();
+            engine.runEvent = function (id, handlers) { return creditsOriginal.runEvent.call(this, id, handlers, creditsController.signal); };
+            page.list = [...list.slice(start, end),
+                { code: 121, parameters: [997, 997, 0] },
+                { code: 105, parameters: [1, true] }, { code: 405, parameters: ['Không chạy nhanh'] },
+                { code: 121, parameters: [998, 998, 0] }];
+        })()`, false, false);
+        await clickElement(cdp, '#fnh-controls [data-direction="0"]');
+        await waitFor(cdp, '!document.querySelector("#fnh-scroll-text").hidden && document.querySelector("#fnh-scroll-content").getAnimations().length > 0',
+            5000, 'mở chữ chạy credits thật');
+        check('credits thật đang chạy và event chờ hoàn tất', await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine;
+            const content = document.querySelector('#fnh-scroll-content');
+            return engine.eventRunning && engine.messageRunning && !engine.state.switchValue(997) &&
+                content.textContent.includes('CREDITS') && content.textContent.includes('Miro') &&
+                content.getAnimations()[0].effect.getTiming().duration > 10000;
+        })()`, false, false));
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16 });
+        await waitFor(cdp, 'document.querySelector("#fnh-scroll-content").getAnimations()[0].playbackRate === 3',
+            5000, 'giữ Shift tăng tốc credits');
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16 });
+        await waitFor(cdp, 'document.querySelector("#fnh-scroll-content").getAnimations()[0].playbackRate === 1',
+            5000, 'nhả Shift trả tốc độ gốc');
+        check('chữ credits dịch chuyển theo animation trình duyệt', await evalPage(cdp,
+            'document.querySelector("#fnh-scroll-content").getAnimations()[0].currentTime > 0', false, false));
+        await evalPage(cdp, 'document.querySelector("#fnh-scroll-content").getAnimations()[0].finish()', false, false);
+        await waitFor(cdp, 'document.querySelector("#fnh-scroll-content").textContent === "Không chạy nhanh"',
+            5000, 'credits hết cho event chạy tiếp');
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16 });
+        await new Promise(resolve => setTimeout(resolve, 100));
+        check('cờ cấm tua nhanh được giữ đúng', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.switchValue(997) && document.querySelector("#fnh-scroll-fast").hidden && document.querySelector("#fnh-scroll-content").getAnimations()[0].playbackRate === 1', false, false));
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16 });
+        await evalPage(cdp, 'creditsController.abort()', false, false);
+        await waitFor(cdp, '!FNHStandalonePreview.engine.eventRunning && document.querySelector("#fnh-scroll-text").hidden',
+            5000, 'hủy event đóng chữ chạy');
+        check('hủy credits giải phóng UI và không chạy lệnh sau', await evalPage(cdp,
+            '!FNHStandalonePreview.engine.messageRunning && !FNHStandalonePreview.engine.state.switchValue(998) && document.querySelector("#fnh-scroll-content").getAnimations().length === 0', false, false));
+        await evalPage(cdp, `creditsOriginal.page.list = creditsOriginal.list;
+            FNHStandalonePreview.engine.runEvent = creditsOriginal.runEvent;
+            delete window.creditsOriginal; delete window.creditsController;`, false, false);
         check('save preview khôi phục vị trí, vật phẩm và trạng thái thùng', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.itemCount("items", 15) === 2 && FNHStandalonePreview.engine.state.selfSwitchValue(74, 39, "A")', false, false));
         await evalPage(cdp, 'localStorage.removeItem("FNH_STANDALONE_PREVIEW:1")', false, false);

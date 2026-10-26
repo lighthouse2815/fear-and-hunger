@@ -69,6 +69,8 @@
             return;
         case 101:
             return this.showMessage(command);
+        case 105:
+            return this.showScrollingText(command);
         case 102:
             return this.showChoices(command);
         case 356:
@@ -127,7 +129,7 @@
         case 352: this.state.scene = 'save'; return;
         case 353: this.state.scene = 'gameover'; return;
         case 354: this.state.scene = 'title'; return;
-        case 105: this.state.mapNameDisplay = command.parameters[0] !== false; return;
+        case 281: this.state.mapNameDisplay = command.parameters[0] === 0; return;
         case 134: case 135:
             this.state[command.code === 134 ? 'saveEnabled' : 'menuEnabled'] = command.parameters[0] !== 0;
             return;
@@ -224,6 +226,16 @@
         await this.handlers.message(lines.join('\n'), command.parameters || [], this, {
             choicesFollow: !!(this.commands[this.index] && this.commands[this.index].code === 102)
         });
+    };
+
+    EventInterpreter.prototype.showScrollingText = async function (command) {
+        var parameters = command.parameters || [], lines = [];
+        if (!Number.isFinite(parameters[0]) || parameters[0] <= 0) throw new Error('Tốc độ chữ chạy không hợp lệ.');
+        while (this.commands[this.index] && this.commands[this.index].code === 405) {
+            lines.push(this.commands[this.index++].parameters[0] || '');
+        }
+        if (!this.handlers.scrollText) return this.unsupported(command);
+        return this.handlers.scrollText(lines.join('\n'), parameters, this);
     };
 
     EventInterpreter.prototype.effect = async function (command) {

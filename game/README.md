@@ -64,6 +64,10 @@ Lệnh cuộn bản đồ 204 điều khiển camera theo hướng, khoảng cá
 Camera cuộn theo frame, giữ tiến trình qua save, dừng ở mép map và tiếp tục theo
 nhân vật khi di chuyển. Hai lệnh cuộn nối tiếp chạy lần lượt; cờ chờ giữ event
 đến khi cuộn xong. Chuyển map đặt lại camera. Renderer vẽ được vị trí giữa hai ô.
+Credits dùng lệnh 105/405, đọc đủ dòng và tốc độ trong JSON. Preview dùng Web
+Animations API để cuộn chữ trên màn hình; event chờ cuộn hết. Giữ Shift, Enter,
+Escape hoặc nút chạy nhanh để tăng tốc khi JSON cho phép. Hủy event đóng credits
+và giải phóng điều khiển. Cờ hiện tên bản đồ thuộc lệnh 281, tách khỏi credits.
 Tải map/save lỗi giữ map và trạng thái hiện tại nhất quán.
 Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, fade, nhớ/phát tiếp
 BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.

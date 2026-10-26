@@ -23,6 +23,7 @@
     var videoPlay = document.getElementById('fnh-video-play');
     var stopVideo = null;
     var uiTail = Promise.resolve();
+    var scrollAnimation = null, scrollFastHeld = false, scrollNoFast = false, stopScrollText = null;
 
     // Cho phép xem trạng thái engine đang chạy trong công cụ phát triển.
     window.FNHStandalonePreview = { engine: engine, audio: audio, errors: errors };
@@ -219,9 +220,50 @@
             play();
         });
     }
+    function showScrollingText(text, parameters, interpreter) {
+        return queueUi(function () {
+            var panel = document.getElementById('fnh-scroll-text');
+            var content = document.getElementById('fnh-scroll-content');
+            var fast = document.getElementById('fnh-scroll-fast');
+            var signal = interpreter && interpreter.signal;
+            content.textContent = FNHStandaloneText.formatText(text, engine.state);
+            engine.messageRunning = true; engine.buttons.clear();
+            scrollNoFast = parameters[1] === true; scrollFastHeld = false;
+            fast.hidden = scrollNoFast; panel.hidden = false;
+            panel.scrollIntoView({ block: 'nearest', behavior: 'instant' }); panel.focus({ preventScroll: true });
+            var height = panel.clientHeight, contentHeight = content.scrollHeight;
+            scrollAnimation = content.animate([
+                { transform: 'translateY(' + height + 'px)' },
+                { transform: 'translateY(-' + contentHeight + 'px)' }
+            ], { duration: (height + contentHeight) / (parameters[0] / 2) * 1000 / 60, easing: 'linear', fill: 'forwards' });
+            return new Promise(function (resolve, reject) {
+                var animation = scrollAnimation, finished = false;
+                function finish(error) {
+                    if (finished) return;
+                    finished = true;
+                    if (signal) signal.removeEventListener('abort', abort);
+                    fast.onpointerdown = fast.onpointerup = fast.onpointercancel = fast.onpointerleave = null;
+                    scrollAnimation = null; scrollFastHeld = false; stopScrollText = null;
+                    animation.cancel(); panel.hidden = true; content.textContent = '';
+                    engine.messageRunning = false; engine.buttons.clear(); canvas.focus({ preventScroll: true });
+                    if (error) reject(error); else resolve();
+                }
+                function abort() { finish(signal.reason); }
+                fast.onpointerdown = function (event) { event.preventDefault(); scrollFastHeld = true; };
+                fast.onpointerup = fast.onpointercancel = fast.onpointerleave = function () { scrollFastHeld = false; };
+                animation.finished.then(function () { finish(); }, function (error) { finish(error); });
+                stopScrollText = function () { finish(new DOMException('Đã dừng chữ chạy.', 'AbortError')); };
+                if (signal) {
+                    signal.addEventListener('abort', abort, { once: true });
+                    if (signal.aborted) abort();
+                }
+            });
+        }, interpreter);
+    }
     var eventHandlers = {
         message: showMessage,
         choice: showChoices,
+        scrollText: showScrollingText,
         effect: async function (code, parameters, command, interpreter) {
             if (audio.handleEffect(code, parameters)) return;
             if (code === 303) return showName(parameters, interpreter);
@@ -240,6 +282,8 @@
         previousFrame = now;
         if (ready) {
             try {
+                if (scrollAnimation) scrollAnimation.playbackRate = !scrollNoFast &&
+                    (scrollFastHeld || engine.buttons.has('ok') || engine.buttons.has('cancel') || engine.buttons.has('shift')) ? 3 : 1;
                 if (lastBattle !== engine.battle.battle || lastScene !== engine.state.scene) renderBattleUi();
                 if (scheduler) scheduler.tick();
                 var active = !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
@@ -375,6 +419,7 @@
     window.addEventListener('pagehide', function () {
         if (scheduler) scheduler.stop();
         if (stopVideo) stopVideo();
+        if (stopScrollText) stopScrollText();
         if (engine.filters) engine.filters.dispose();
         if (engine.animations) engine.animations.dispose();
         audio.dispose();
