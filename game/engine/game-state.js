@@ -53,7 +53,7 @@
         this.vehicleId = source.vehicleId == null ? -1 : source.vehicleId;
         this.wordWrap = source.wordWrap === true;
         this.pendingChoices = source.pendingChoices || { text: {}, disabled: [] };
-        ['characterName', 'characterIndex', 'transparent', 'opacity', 'blendMode', 'moveSpeed', 'moveFrequency', 'walkAnime', 'stepAnime', 'moveFrames', 'animationFrames'].forEach(function (key) {
+        ['characterName', 'characterIndex', 'transparent', 'opacity', 'blendMode', 'moveSpeed', 'moveFrequency', 'walkAnime', 'stepAnime', 'moveFrames', 'animationFrames', 'balloon'].forEach(function (key) {
             if (source[key] !== undefined) this[key] = source[key];
         }, this);
         this.eventLocations = Object.assign({}, source.eventLocations);
@@ -260,6 +260,7 @@
             characterName: this.characterName, characterIndex: this.characterIndex,
             transparent: this.transparent, opacity: this.opacity, blendMode: this.blendMode,
             moveSpeed: this.moveSpeed, moveFrequency: this.moveFrequency, walkAnime: this.walkAnime, stepAnime: this.stepAnime,
+            balloon: this.balloon,
             moveFrames: this.moveFrames, animationFrames: this.animationFrames,
             eventLocations: this.eventLocations,
             gold: this.gold,

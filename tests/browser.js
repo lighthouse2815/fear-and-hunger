@@ -998,6 +998,36 @@ async function main() {
             ], 39).run();
             return engine.state.variableValue(5005) === engine.state.x && engine.state.variableValue(5006) === engine.map.eventById(102).y;
         })()`, true, false));
+        await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine;
+            window.__beforeAutonomous = engine.save();
+            engine.state.x = 15; engine.state.y = 22;
+            engine.state.setSwitch(1781, true);
+            engine.autonomousEnabled = true;
+        })()`, false, false);
+        await waitFor(cdp, 'FNHStandalonePreview.engine.map.eventById(102).y < 25', 5000, 'hound thật tự tiến về người chơi');
+        check('hound Map074 di chuyển bằng bộ tự động của engine mới', await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine, hound = engine.map.eventById(102);
+            engine.autonomousEnabled = false;
+            return engine.map.eventPage(hound).moveType === 2 && hound.autonomous &&
+                Math.abs(hound.x - 15) + Math.abs(hound.y - 22) < 4;
+        })()`, false, false));
+        await evalPage(cdp, 'FNHStandalonePreview.engine.restore(window.__beforeAutonomous).then(() => { delete window.__beforeAutonomous; return true; })', true, false);
+        check('balloon dùng đúng sprite và frame từ asset có sẵn', await evalPage(cdp, `(async () => {
+            const canvas = document.createElement('canvas');
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { width: 400, height: 300 });
+            const bitmap = await renderer.loadImage('img/system/Balloon.png');
+            const character = await renderer.loadImage('img/characters/$guard1.png');
+            renderer.drawBalloon(bitmap, { x: 3, y: 3, bitmap: character, image: { characterName: '$guard1' }, balloon: { id: 1, remaining: 60 } }, 0, 0);
+            const reference = document.createElement('canvas'); reference.width = 400; reference.height = 300;
+            reference.getContext('2d').drawImage(bitmap, 96, 0, 48, 48, 144, 28, 48, 48);
+            const actual = canvas.getContext('2d').getImageData(0,0,400,300).data;
+            const expected = reference.getContext('2d').getImageData(0,0,400,300).data;
+            return actual.every((value,index) => value === expected[index]);
+        })()`, true, false));
+        await evalPage(cdp, 'FNHStandalonePreview.engine.createInterpreter([{code:213,parameters:[-1,1,true]},{code:121,parameters:[501,501,0]}],39).run()', true, false);
+        check('lệnh balloon chờ kết thúc trước khi chạy lệnh tiếp', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.balloon.remaining === 0 && FNHStandalonePreview.engine.state.switchValue(501)', false, false));
         check('lệnh nhân vật chạy bằng interpreter mới trên Chrome', await evalPage(cdp, `(async () => {
             const state = FNHStandalonePreview.engine.state;
             await new FNHStandaloneEvents.EventInterpreter({ state, commands: [

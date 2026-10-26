@@ -13,9 +13,12 @@
         this.failedPages = new Set();
         this.autorun = null;
         this.enabled = true;
+        this.movementWasEnabled = engine.autonomousEnabled;
+        engine.autonomousEnabled = true;
     }
     EventScheduler.prototype.stop = function () {
         this.enabled = false;
+        this.engine.autonomousEnabled = this.movementWasEnabled;
         this.parallel.forEach(function (job) { job.controller.abort(); });
         this.parallel.clear();
         if (this.autorun) this.autorun.controller.abort();
@@ -34,18 +37,20 @@
                 job.controller.abort(); scheduler.parallel.delete(event);
             }
         });
-        function start(event, page, common) {
+        function start(event, page, common, touched) {
             if (!page || scheduler.failedPages.has(page)) return;
-            var trigger = common ? (event.trigger === 1 ? 3 : 4) : page.trigger;
+            var trigger = touched ? 3 : common ? (event.trigger === 1 ? 3 : 4) : page.trigger;
             if (trigger === 3 && !engine.eventRunning && !engine.stepRunning && !scheduler.autorun) {
                 var foreground = { page: page, controller: new AbortController() };
                 scheduler.autorun = foreground;
                 engine.eventRunning = true;
+                if (!common) event.locked = true;
                 var interpreter = common ? engine.commonInterpreterFor(event.id, scheduler.handlers, foreground.controller.signal) :
                     engine.interpreterFor(event.id, scheduler.handlers, foreground.controller.signal);
                 interpreter.run().catch(function (error) {
                     if (error.name !== 'AbortError') { scheduler.failedPages.add(page); scheduler.onError(error); }
                 }).finally(function () {
+                    if (!common) event.locked = false;
                     if (scheduler.autorun === foreground) { scheduler.autorun = null; engine.eventRunning = false; }
                 });
             }
@@ -61,6 +66,10 @@
                     if (scheduler.parallel.get(event) === job) scheduler.parallel.delete(event);
                 });
             }
+        }
+        while (!engine.eventRunning && !engine.stepRunning && engine.pendingTouchEvents.length) {
+            var pending = engine.pendingTouchEvents.shift();
+            if (pending.map === engine.map && engine.map.eventPage(pending.event) === pending.page) start(pending.event, pending.page, false, true);
         }
         this.map.events.forEach(function (event) {
             var page = scheduler.map.eventPage(event);

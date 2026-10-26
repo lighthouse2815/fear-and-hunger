@@ -57,18 +57,20 @@
             var image = { characterName: event.characterName, characterIndex: event.characterIndex,
                 direction: event.direction, pattern: animationPattern(event, event.pattern), tileId: event.tileId };
             return { x: event.x, y: event.y, image: image, priority: page.priorityType, id: event.id,
-                transparent: event.transparent, opacity: event.opacity, blendMode: event.blendMode };
+                transparent: event.transparent, opacity: event.opacity, blendMode: event.blendMode, balloon: event.balloon };
         }).filter(Boolean);
         var actor = state.actor(state.party[0] || 1);
         if (actor) actors.push({ x: state.x, y: state.y, priority: 1, id: Infinity, image: {
             characterName: state.characterName == null ? actor.characterName : state.characterName,
             characterIndex: state.characterIndex == null ? actor.characterIndex : state.characterIndex,
             direction: state.direction, pattern: animationPattern(state, 1)
-        }, transparent: state.transparent, opacity: state.opacity, blendMode: state.blendMode });
+        }, transparent: state.transparent, opacity: state.opacity, blendMode: state.blendMode, balloon: state.balloon });
         await Promise.all(actors.map(async function (entry) {
             var name = entry.image.characterName;
             if (name) entry.bitmap = await this.loadImage('img/characters/' + name + '.png');
         }, this));
+        var balloonBitmap = actors.some(function (entry) { return entry.balloon && entry.balloon.remaining > 0; }) ?
+            await this.loadImage('img/system/Balloon.png') : null;
         // Một lần vẽ mới đã bắt đầu: không cho promise ảnh cũ đè lên map mới.
         if (frame !== this.frame) return;
         var cols = Math.ceil(this.canvas.width / TILE_SIZE);
@@ -100,6 +102,7 @@
         actors.forEach(function (entry) {
             if (entry.priority === 2) renderer.drawActor(sheets, entry, startX, startY);
         });
+        if (balloonBitmap) actors.forEach(function (entry) { renderer.drawBalloon(balloonBitmap, entry, startX, startY); });
         // Tint thuộc lớp bản đồ; picture giao diện giữ màu riêng.
         if (screen) this.applyTone(context, this.canvas.width, this.canvas.height, screen.tone);
         this.drawWeather(screen && screen.weather);
@@ -118,6 +121,18 @@
             this.drawGab(screen.gab, state);
         }
         return { startX: startX, startY: startY };
+    };
+
+    CanvasRenderer.prototype.drawBalloon = function (bitmap, actor, startX, startY) {
+        var balloon = actor.balloon;
+        if (!balloon || balloon.remaining <= 0 || actor.transparent) return;
+        var prefix = /^[!$]+/.exec(actor.image.characterName || '');
+        var single = prefix && prefix[0].includes('$');
+        var object = prefix && prefix[0].includes('!');
+        var height = actor.bitmap ? actor.bitmap.height / (single ? 4 : 8) : TILE_SIZE;
+        var frame = Math.min(7, Math.floor((76 - balloon.remaining) / 8));
+        this.context.drawImage(bitmap, frame * 48, (balloon.id - 1) * 48, 48, 48,
+            (actor.x - startX) * 48, (actor.y - startY + 1) * 48 - height - 48 - (object ? 0 : 6), 48, 48);
     };
 
     CanvasRenderer.prototype.drawGab = function (gab, state) {

@@ -101,7 +101,9 @@
         if (dx === 0 && dy === 0) return [];
         var first = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 6 : 4) : (dy > 0 ? 2 : 8);
         var second = Math.abs(dx) > Math.abs(dy) ? (dy > 0 ? 2 : 8) : (dx > 0 ? 6 : 4);
-        return away ? [10 - first, 10 - second] : [first, second];
+        var directions = [first];
+        if (Math.abs(dx) > Math.abs(dy) ? dy !== 0 : dx !== 0) directions.push(second);
+        return away ? directions.map(function (direction) { return 10 - direction; }) : directions;
     };
 
     MovementRuntime.prototype.execute = function (character, command) {
@@ -119,7 +121,7 @@
             if (!directions.length) return { frames: duration };
             var diagonal = code >= 5 && code <= 8;
             var moved = environment.move(character, directions[0], diagonal ? directions[1] : null, code === 13);
-            if (!moved && !diagonal && (code === 10 || code === 11)) moved = environment.move(character, directions[1]);
+            if (!moved && !diagonal && directions.length > 1 && (code === 10 || code === 11)) moved = environment.move(character, directions[1]);
             if (moved) character.moveFrames = duration;
             return { moved: moved, frames: moved ? duration : 0 };
         }

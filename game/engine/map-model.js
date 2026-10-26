@@ -62,6 +62,29 @@
         };
     };
 
+    GameMap.prototype.findDirection = function (character, target, limit) {
+        var queue = [{ x: character.x, y: character.y, depth: 0, direction: 0 }], visited = new Set();
+        var distance = function (point) { return Math.abs(point.x - target.x) + Math.abs(point.y - target.y); };
+        var best = queue[0], directions = [2, 4, 6, 8];
+        visited.add(character.x + ',' + character.y);
+        for (var index = 0; index < queue.length; index++) {
+            var point = queue[index];
+            if (distance(point) === 0) return point.direction;
+            if (distance(point) < distance(best)) best = point;
+            if (point.depth >= (limit || 12)) continue;
+            for (var direction of directions) {
+                var x = point.x + (direction === 4 ? -1 : direction === 6 ? 1 : 0);
+                var y = point.y + (direction === 8 ? -1 : direction === 2 ? 1 : 0);
+                var key = x + ',' + y;
+                if (visited.has(key) || !this.isValid(x, y)) continue;
+                if (!character.through && (!this.isPassable(point.x, point.y, direction) || this.eventBlocks(x, y, character.id))) continue;
+                visited.add(key);
+                queue.push({ x: x, y: y, depth: point.depth + 1, direction: point.direction || direction });
+            }
+        }
+        return best.direction;
+    };
+
     GameMap.prototype.eventAt = function (x, y) {
         return this.events.filter(function (event) { return event.x === x && event.y === y; });
     };
@@ -103,11 +126,13 @@
                         through: !!page.through, priorityType: page.priorityType,
                         walkAnime: page.walkAnime, stepAnime: page.stepAnime,
                         moveSpeed: page.moveSpeed, moveFrequency: page.moveFrequency,
-                        opacity: 255, blendMode: 0, transparent: false });
+                        opacity: 255, blendMode: 0, transparent: false,
+                        chaseRange: 0, seePlayer: true, alertSound: 'horror_chord', autonomous: null });
                 }
                 return page;
             }
         }
+        event.activePage = null;
         return null;
     };
 
@@ -156,7 +181,7 @@
             var page = map.eventPage(event), properties = {};
             ['x', 'y', 'direction', 'pattern', 'characterName', 'characterIndex', 'tileId', 'moveSpeed',
                 'moveFrequency', 'directionFixed', 'through', 'transparent', 'opacity', 'blendMode',
-                'walkAnime', 'stepAnime', 'chaseRange', 'seePlayer', 'alertSound', 'moveFrames', 'animationFrames', 'erased'].forEach(function (key) {
+                'walkAnime', 'stepAnime', 'chaseRange', 'seePlayer', 'alertSound', 'moveFrames', 'animationFrames', 'erased', 'autonomous', 'balloon'].forEach(function (key) {
                 if (event[key] !== undefined) properties[key] = event[key];
             });
             snapshot[event.id] = { mapId: map.id, pageIndex: event.pages.indexOf(page), properties: properties };

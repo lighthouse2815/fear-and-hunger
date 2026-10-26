@@ -60,12 +60,14 @@
         }, interpreter);
     }
     function messageDialog(text, interpreter) {
+        engine.messageRunning = true;
         message.textContent = FNHStandaloneText.formatText(engine.state.wordWrap ? text.replace(/\n/g, ' ') : text, engine.state);
         next.hidden = false;
         next.focus({ preventScroll: true });
         return new Promise(function (resolve, reject) {
             var signal = interpreter && interpreter.signal;
             function close() {
+                engine.messageRunning = false;
                 next.hidden = true;
                 next.onclick = null;
                 if (signal) signal.removeEventListener('abort', abort);
@@ -80,12 +82,14 @@
         return queueUi(function () { return choiceDialog(choices, cancelType, interpreter, details); }, interpreter);
     }
     function choiceDialog(choices, cancelType, interpreter, details) {
+        engine.messageRunning = true;
         return new Promise(function (resolve, reject) {
             var signal = interpreter && interpreter.signal;
             details = details || { disabled: [], help: [], message: [], defaultIndex: 0 };
             var help = document.getElementById('fnh-choice-help');
             choicesPanel.replaceChildren();
             function close() {
+                engine.messageRunning = false;
                 choicesPanel.replaceChildren();
                 help.textContent = '';
                 if (signal) signal.removeEventListener('abort', abort);
@@ -121,6 +125,7 @@
     function nameDialog(parameters, interpreter) {
         var actor = engine.state.actor(parameters[0]);
         if (!actor) throw new Error('Không tìm thấy nhân vật ' + parameters[0]);
+        engine.messageRunning = true;
         var dialog = document.getElementById('fnh-name-dialog');
         var form = document.getElementById('fnh-name-form');
         var input = document.getElementById('fnh-name-input');
@@ -132,6 +137,7 @@
         input.focus(); input.select();
         return new Promise(function (resolve, reject) {
             function close() {
+                engine.messageRunning = false;
                 form.onsubmit = null; dialog.oncancel = null;
                 if (signal) signal.removeEventListener('abort', abort);
                 dialog.close(); canvas.focus({ preventScroll: true });
@@ -210,8 +216,8 @@
         if (ready) {
             try {
                 if (scheduler) scheduler.tick();
-                var active = !!scheduler || screenRevision !== engine.screen.revision || engine.screen.active() || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
-                    return character.stepAnime || character.moveFrames > 0;
+                var active = !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
+                    return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0);
                 });
                 engine.advanceRoutes(frames);
                 inputPulses.forEach(function (remaining, button) {

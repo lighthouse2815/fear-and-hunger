@@ -5,15 +5,15 @@
     if (typeof module === 'object' && module.exports) {
         module.exports = factory(
             require('./data-store'), require('./game-state'),
-            require('./map-model'), require('./event-interpreter'), require('./script-runtime'), require('./movement-runtime'), require('./screen-runtime')
+            require('./map-model'), require('./event-interpreter'), require('./script-runtime'), require('./movement-runtime'), require('./screen-runtime'), require('./autonomous-movement')
         );
     } else {
         root.FNHStandaloneEngine = factory(
             root.FNHStandaloneData, root.FNHStandaloneState,
-            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts, root.FNHStandaloneMovement, root.FNHStandaloneScreen
+            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts, root.FNHStandaloneMovement, root.FNHStandaloneScreen, root.FNHStandaloneAutonomous
         );
     }
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi, screenApi) {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi, screenApi, autonomousApi) {
     function GameEngine(options) {
         options = options || {};
         this.dataStore = options.dataStore || new dataApi.GameDataStore({ baseUrl: options.baseUrl || '' });
@@ -22,6 +22,7 @@
         this.state = null;
         this.map = null;
         this.eventRunning = false;
+        this.messageRunning = false;
         this.stepRunning = false;
         this.movement = null;
         this.routeErrors = [];
@@ -30,6 +31,8 @@
         this.buttons = new Set();
         this.width = options.width || 816;
         this.height = options.height || 624;
+        this.autonomousEnabled = options.autonomousMovement === true;
+        this.pendingTouchEvents = [];
     }
 
     GameEngine.prototype.boot = async function (initialState) {
@@ -71,6 +74,7 @@
         if (this.movement) this.movement.clear();
         this.state.mapId = mapId;
         this.map = map;
+        this.pendingTouchEvents = [];
         this.state.routeSnapshots = [];
         this.resetMovement();
         if (destination) {
@@ -83,7 +87,7 @@
 
     GameEngine.prototype.move = function (direction) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
-        if (this.eventRunning || (this.movement && this.movement.jobs.has(this.state))) return false;
+        if (this.eventRunning || this.messageRunning || (this.movement && this.movement.jobs.has(this.state))) return false;
         return this.moveCharacter(this.state, direction);
     };
 
@@ -106,6 +110,7 @@
             var job = engine.movement.start(character, entry.route, entry);
             job.done.catch(function (error) { engine.routeErrors.push(error); });
         });
+        this.autonomous = new autonomousApi.AutonomousMovement(this);
     };
 
     GameEngine.prototype.advanceRoutes = function (frames) {
@@ -116,8 +121,10 @@
                 character.animationFrames = (character.animationFrames || 0) + frames;
             } else character.animationFrames = 0;
             character.moveFrames = Math.max(0, (character.moveFrames || 0) - frames);
+            if (character.balloon) character.balloon.remaining = Math.max(0, character.balloon.remaining - frames);
         });
         if (this.movement) this.movement.advance(frames);
+        if (this.autonomous && this.autonomousEnabled) this.autonomous.advance(frames);
         if (this.screen) this.screen.advance(frames);
     };
 
@@ -134,7 +141,13 @@
                 (this.map.isPassable(character.x, character.y, vertical) && this.map.isPassable(character.x, y, direction)) :
                 this.map.isPassable(character.x, character.y, direction);
             if (!passable || this.map.eventBlocks(x, y, character.id)) return false;
-            if (character !== this.state && character.priorityType === 1 && this.state.x === x && this.state.y === y) return false;
+            if (character !== this.state && character.priorityType === 1 && this.state.x === x && this.state.y === y) {
+                var page = this.map.eventPage(character);
+                if (!this.eventRunning && page && page.trigger === 2 && !this.pendingTouchEvents.some(function (entry) { return entry.event === character; })) {
+                    this.pendingTouchEvents.push({ map: this.map, event: character, page: page });
+                }
+                return false;
+            }
         }
         character.x = x; character.y = y;
         return true;
@@ -142,7 +155,7 @@
 
     GameEngine.prototype.step = async function (direction, handlers) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
-        if (this.eventRunning || this.stepRunning || !mapApi.DIRECTION_BITS[direction]) return false;
+        if (this.eventRunning || this.messageRunning || this.stepRunning || !mapApi.DIRECTION_BITS[direction]) return false;
         this.stepRunning = true;
         try {
             var sourceMap = this.map;
@@ -163,7 +176,7 @@
 
     GameEngine.prototype.interact = async function (handlers) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
-        if (this.eventRunning || this.stepRunning) return null;
+        if (this.eventRunning || this.messageRunning || this.stepRunning) return null;
         var direction = this.state.direction;
         var x = this.state.x + (direction === 4 ? -1 : direction === 6 ? 1 : 0);
         var y = this.state.y + (direction === 8 ? -1 : direction === 2 ? 1 : 0);
@@ -254,6 +267,12 @@
             if (code === 203) { engine.setEventLocation(parameters, interpreter); return true; }
             if (code === 205) return engine.applyRoute(parameters, interpreter);
             if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }
+            if (code === 213) {
+                var target = engine.characterFor(parameters[0], interpreter);
+                if (!target) return true;
+                engine.showBalloon(target, parameters[1]);
+                return parameters[2] ? engine.screen.tween([], {}, 76) : true;
+            }
             if (code === 214) {
                 var erased = engine.map.id === interpreter.mapId && engine.map.eventById(interpreter.eventId);
                 if (erased) erased.erased = true;
@@ -281,9 +300,17 @@
         var interpreter = this.interpreterFor(eventId, handlers, signal);
         if (!interpreter) return null;
         this.eventRunning = true;
+        var event = this.map.eventById(eventId);
+        event.locked = true;
         try {
             return await interpreter.run();
-        } finally { this.eventRunning = false; }
+        } finally { this.eventRunning = false; event.locked = false; }
+    };
+
+    GameEngine.prototype.showBalloon = function (character, id) {
+        if (!Number.isInteger(id) || id < 1 || id > 15) throw new RangeError('ID balloon không hợp lệ.');
+        character.balloon = { id: id, remaining: 76 };
+        this.screen.revision++;
     };
 
     GameEngine.prototype.setEventLocation = function (parameters, interpreter) {
@@ -351,6 +378,7 @@
         this.screen = new screenApi.ScreenRuntime(state);
         if (this.movement) this.movement.clear();
         this.map = map;
+        this.pendingTouchEvents = [];
         this.resetMovement(state.routeSnapshots);
         return this;
     };
