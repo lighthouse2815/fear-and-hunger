@@ -555,46 +555,68 @@
         }))) return false;
         return this.state.equipActor(actorId, slot, itemId);
     };
+    GameEngine.prototype.menuActionTargets = function (data, actorId, targetId) {
+        var state = this.state;
+        if (data.scope === 0 || data.scope <= 6) return [];
+        var ids = data.scope === 11 ? [actorId] : [8, 10].includes(data.scope) ? state.party : [targetId];
+        return ids.filter(function (id) {
+            var actor = state.party.includes(id) && state.actor(id);
+            return actor && (actor.hp > 0) !== [9, 10].includes(data.scope);
+        }).map(function (id) {
+            var actor = state.actor(id);
+            return { id: id, name: actor.name, hp: actor.hp, mp: actor.mp, alive: actor.hp > 0 };
+        });
+    };
+    GameEngine.prototype.canUseMenuAction = function (kind, id, actorId, targetId) {
+        if (!['item', 'skill'].includes(kind) || this.state.scene !== 'menu' || this.eventRunning || this.messageRunning ||
+            this.menuWaiters && this.menuWaiters.size || !this.state.party.includes(actorId)) return false;
+        var item = kind === 'item', data = (item ? this.database.Items : this.database.Skills)[id];
+        var actor = this.state.actor(actorId), subject = { id: actorId, alive: actor.hp > 0 };
+        if (!data || !(item ? this.battle.canUseItem(subject, data, true) : this.battle.canUseSkill(subject, data, true))) return false;
+        if (!item && !this.battle.actorSkills(actorId).some(function (skill) { return skill.id === id; })) return false;
+        if (item && ![0, 7, 11].includes(data.scope)) return false;
+        var targets = this.menuActionTargets(data, actorId, targetId);
+        if ([7, 9, 11].includes(data.scope) && !targets.length) return false;
+        if (item || (data.effects || []).some(function (effect) { return effect.code === 44; })) return true;
+        return targets.some(function (target) {
+            var actor = this.state.actor(target.id);
+            if (data.damage.type === 3 && actor.hp < this.state.actorParam(target.id, 0)) return true;
+            if (data.damage.type === 4 && actor.mp < this.state.actorParam(target.id, 1)) return true;
+            if ((data.damage.type === 1 || data.damage.type === 2) && data.scope >= 7) return true;
+            return (data.effects || []).some(function (effect) {
+                return effect.code === 21 && !actor.states.includes(effect.dataId) || effect.code === 22 && actor.states.includes(effect.dataId) ||
+                    effect.code === 43 && !actor.skills.includes(effect.dataId);
+            });
+        }, this);
+    };
     GameEngine.prototype.canUseMenuItem = function (itemId, actorId) {
-        var item = this.database.Items[itemId], actor = actorId && this.state.actor(actorId);
-        return this.state.scene === 'menu' && !this.eventRunning && !this.messageRunning && !!item &&
-            [0, 2].includes(item.occasion) && [0, 7, 11].includes(item.scope) && this.state.itemCount('items', itemId) > 0 &&
-            (item.scope === 0 || !!actor && this.state.party.includes(actorId) && actor.hp > 0);
+        return this.canUseMenuAction('item', itemId, actorId, actorId);
+    };
+    GameEngine.prototype.canUseMenuSkill = function (actorId, skillId, targetId) {
+        return this.canUseMenuAction('skill', skillId, actorId, targetId);
     };
     GameEngine.prototype.useMenuItem = async function (itemId, actorId, handlers) {
-        if (!this.canUseMenuItem(itemId, actorId)) throw new Error('Chưa thể dùng vật phẩm này.');
-        var item = this.database.Items[itemId], target = { id: actorId }, engine = this;
-        var effects = item.effects || [];
-        effects.forEach(function (effect) {
-            if (![21, 22, 43, 44].includes(effect.code)) throw new Error('Hiệu ứng vật phẩm chưa hỗ trợ: ' + effect.code);
-            if ([21, 22].includes(effect.code) && !engine.database.States[effect.dataId]) throw new Error('Không tìm thấy state ' + effect.dataId);
-            if (effect.code === 43 && !engine.database.Skills[effect.dataId]) throw new Error('Không tìm thấy skill ' + effect.dataId);
-            if (effect.code === 44 && !engine.database.CommonEvents[effect.dataId]) throw new Error('Không tìm thấy common event ' + effect.dataId);
-        });
-        var damage = item.damage.type > 0 && item.scope !== 0 ? this.battle.damageValue(target, target, item) : null;
-        if (item.consumable) this.state.gainItem('items', itemId, -1);
-        if (item.scope !== 0) {
-            if (damage) {
-                if (damage.resource === 'hp') this.state.changeActorHp(actorId, -damage.damage, true);
-                else this.state.changeActorMp(actorId, -damage.damage);
-            }
-            effects.forEach(function (effect) {
-                if (effect.code === 21) {
-                    var immune = engine.battle.battlerTraits(target).some(function (trait) { return trait.code === 14 && trait.dataId === effect.dataId; });
-                    if (!immune && engine.random() < effect.value1) engine.state.changeActorState(actorId, effect.dataId, true);
-                }
-                if (effect.code === 22 && engine.random() < effect.value1) engine.state.changeActorState(actorId, effect.dataId, false);
-                if (effect.code === 43) engine.state.changeActorSkill(actorId, effect.dataId, true);
-            });
-        }
+        await this.useMenuAction('item', itemId, actorId, actorId, handlers);
+        return true;
+    };
+    GameEngine.prototype.useMenuSkill = function (actorId, skillId, targetId, handlers) {
+        return this.useMenuAction('skill', skillId, actorId, targetId, handlers);
+    };
+    GameEngine.prototype.useMenuAction = async function (kind, id, actorId, targetId, handlers) {
+        if (!this.canUseMenuAction(kind, id, actorId, targetId)) throw new Error(kind === 'item' ? 'Chưa thể dùng vật phẩm này.' : 'Chưa thể dùng kỹ năng này.');
+        var data = (kind === 'item' ? this.database.Items : this.database.Skills)[id];
+        var actor = this.state.actor(actorId), subject = { id: actorId, hp: actor.hp, mp: actor.mp, alive: actor.hp > 0 };
+        var targets = this.menuActionTargets(data, actorId, targetId);
+        var report = this.battle.useAction(subject, data, 0, kind === 'item', false, targets);
+        if (!report.commonEvents.length) return report;
         this.closeMenu(); this.eventRunning = true;
         try {
-            for (var index = 0; index < effects.length; index++) {
-                if (effects[index].code === 44) await this.createInterpreter([{ code: 117, parameters: [effects[index].dataId] }], 0, handlers).run();
+            for (var index = 0; index < report.commonEvents.length; index++) {
+                await this.createInterpreter([{ code: 117, parameters: [report.commonEvents[index]] }], 0, handlers).run();
                 if (this.state.scene === 'gameover' || this.state.scene === 'title') break;
             }
         } finally { this.eventRunning = false; }
-        return true;
+        return report;
     };
 
     GameEngine.prototype.runEnemyTurn = async function (handlers, signal) {

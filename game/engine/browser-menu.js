@@ -12,7 +12,7 @@
         this.content = document.getElementById('fnh-menu-content');
         this.message = document.getElementById('fnh-menu-message');
         this.actorSelect = document.getElementById('fnh-menu-actor');
-        this.tab = 'status'; this.busy = false;
+        this.tab = 'status'; this.busy = false; this.skillTarget = null;
         var ui = this;
         document.getElementById('fnh-menu').onclick = function () { if (engine.openMenu()) ui.render(); };
         document.getElementById('fnh-menu-close').onclick = function () { ui.close(); };
@@ -81,9 +81,27 @@
                 });
             });
         } else if (this.tab === 'skills' && actor) {
+            if (!state.party.includes(this.skillTarget)) this.skillTarget = actorId;
+            content.appendChild(node('p', 'Người thi triển: ' + actor.name));
+            var targetLabel = node('label', 'Mục tiêu: '), targets = node('select'); targets.id = 'fnh-menu-skill-target';
+            state.party.forEach(function (id) {
+                var friend = state.actor(id), option = node('option', friend.name + ' · HP ' + friend.hp + '/' + state.actorParam(id, 0) + ' · MP ' + friend.mp);
+                option.value = id; targets.appendChild(option);
+            });
+            targets.value = this.skillTarget; targets.disabled = this.busy;
+            targets.onchange = function () { ui.skillTarget = Number(targets.value); ui.render(); };
+            targetLabel.appendChild(targets); content.appendChild(targetLabel);
             engine.battle.actorSkills(actorId).forEach(function (skill) {
-                content.appendChild(node('h3', skill.name + ' · MP ' + skill.mpCost + ' · TP ' + skill.tpCost));
+                var cost = engine.battle.skillCost({ id: actorId }, skill);
+                content.appendChild(node('h3', skill.name + ' · MP ' + cost.mp + ' · TP ' + cost.tp));
                 content.appendChild(node('p', skill.description));
+                var label = [8, 10].includes(skill.scope) ? 'Dùng cho cả đội' : skill.scope === 11 ? 'Dùng cho bản thân' : 'Dùng';
+                var use = node('button', label); use.type = 'button'; use.dataset.skill = skill.id;
+                use.disabled = ui.busy || !engine.canUseMenuSkill(actorId, skill.id, ui.skillTarget);
+                use.onclick = function () { ui.act(function () {
+                    var using = engine.useMenuSkill(actorId, skill.id, ui.skillTarget, ui.handlers); ui.render(); return using;
+                }); };
+                content.appendChild(use);
             });
         } else if (this.tab === 'equipment' && actor) {
             actor.equips.forEach(function (equipped, slot) {

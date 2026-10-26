@@ -1018,6 +1018,40 @@ async function main() {
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.menuBefore).then(()=>true)',true,false);
         await evalPage(cdp,'delete window.menuBefore;delete window.menuEvent',false,false);
         await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;window.menuSkillBefore=e.save();e.state.addActor(3);
+            [1,3].forEach(id=>{e.state.recoverActor(id);e.state.changeActorHp(id,-80,true);});
+            [151,238,189,218].forEach(id=>e.state.changeActorSkill(1,id,true));
+            e.state.gainItem('items',31,1);e.battle.random=()=>0.5;
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-menu'); await clickElement(cdp,'[data-menu-tab="skills"]');
+        await evalPage(cdp,`(() => {
+            const caster=document.querySelector('#fnh-menu-actor');caster.value='1';caster.dispatchEvent(new Event('change',{bubbles:true}));
+            const target=document.querySelector('#fnh-menu-skill-target');target.value='3';target.dispatchEvent(new Event('change',{bubbles:true}));
+        })()`,false,false);
+        check('menu kỹ năng phân biệt caster/mục tiêu và khóa kỹ năng chỉ trong trận',await evalPage(cdp,
+            `document.querySelector('#fnh-menu-actor').value==="1" && document.querySelector('#fnh-menu-skill-target').value==="3" && document.querySelector('button[data-skill="218"]').disabled`,false,false));
+        await clickElement(cdp,'button[data-skill="238"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.actor(3).hp===100',5000,'Loving whispers hồi đồng đội');
+        check('menu dùng kỹ năng hồi một mục tiêu và chỉ trừ MP caster',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;
+            return e.state.scene==='menu' && e.state.actor(1).hp===20 && e.state.actor(1).mp===70 && e.state.actor(3).mp===100 &&
+                document.querySelector('button[data-skill="238"]').disabled;
+        })()`,false,false));
+        await clickElement(cdp,'button[data-skill="151"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.actor(1).mp===40',5000,'Healing whispers hồi cả đội');
+        check('menu giữ mở sau hồi phục và cập nhật HP cả đội',await evalPage(cdp,
+            'document.querySelector("#fnh-menu-dialog").open && FNHStandalonePreview.engine.state.actor(1).hp===56 && FNHStandalonePreview.engine.state.actor(3).hp===100',false,false));
+        await clickElement(cdp,'button[data-skill="189"]');
+        await waitFor(cdp,'document.querySelectorAll("#fnh-choices button").length===2 && !document.querySelector("#fnh-menu-dialog").open',5000,'kỹ năng chuyển hóa mở lựa chọn JSON');
+        await clickElement(cdp,'#fnh-choices button:first-child');
+        await waitFor(cdp,'!document.querySelector("#fnh-next").hidden && document.querySelector("#fnh-message-text").textContent.includes("successful")',5000,'chuyển hóa xong');
+        await clickElement(cdp,'#fnh-next');
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'common event kỹ năng xong');
+        check('kỹ năng menu chạy common event thật và trừ MP một lần',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.actor(1).mp===25 && FNHStandalonePreview.engine.state.itemCount("items",31)===(window.menuSkillBefore.inventory.items[31]||0)+3 && FNHStandalonePreview.engine.state.scene==="map"',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.menuSkillBefore).then(()=>true)',true,false);
+        await evalPage(cdp,'delete window.menuSkillBefore',false,false);
+        await evalPage(cdp,`(() => {
             const engine=FNHStandalonePreview.engine;window.bookBefore=engine.save();engine.state.gainItem('items',40,1);
         })()`,false,false);
         await clickElement(cdp,'#fnh-menu'); await clickElement(cdp,'[data-menu-tab="inventory"]');

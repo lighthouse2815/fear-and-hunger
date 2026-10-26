@@ -122,10 +122,9 @@ cả đội chỉ tăng một lượt và cập nhật state cuối lượt mộ
 bị khóa hoặc đã hành động cưỡng chế sẽ bỏ lệnh thường; mục tiêu chết được chọn
 lại trong cùng phe. Kết quả thắng/thua dừng phần hàng đợi còn lại. Chọn/sửa/bỏ
 lệnh không trừ MP/TP/item; số item giữ chỗ được kiểm tra chung cả đội, lựa chọn
-được giữ qua save. Chưa có menu dùng kỹ năng ngoài trận hoặc AI cho đồng đội
-bị confusion/auto-battle.
+được giữ qua save. Chưa có AI cho đồng đội bị confusion/auto-battle.
 Trong trận, chọn loại hành động **Vật phẩm**, vật phẩm trong túi và mục tiêu rồi
-bấm **Dùng vật phẩm**. Item dùng chung luồng sát thương/animation/common event
+bấm **Chọn vật phẩm**, sau đó xác nhận cả lượt. Item dùng chung luồng sát thương/animation/common event
 với kỹ năng, trừ số lượng đúng một lần, không trừ MP/TP. Bộ lọc occasion giữ các
 vật phẩm chỉ dùng trên bản đồ khỏi trận. Blue vial trả chai qua common event,
 White vial giải độc; Murky/Purple vial áp damage/state lên mục tiêu trong JSON. Lệnh 351/352 chờ đóng menu/lưu rồi mới tiếp tục event.
@@ -134,6 +133,16 @@ vòng lặp của event đang gọi menu. Tải save tiếp tục từ sau lện
 điều khiển đến khi event xong. Book of enlightenment có thể lưu giữa common
 event rồi tiếp tục hội thoại, dọn picture và switch sau khi tải. Vật phẩm chỉ
 dùng được khi menu mở ngoài sự kiện.
+Trong tab **Kỹ năng** của menu, nhân vật ở đầu menu là người thi triển; chọn
+mục tiêu riêng trong đội rồi bấm **Dùng** hoặc **Dùng cho cả đội**. Healing whispers
+hồi các thành viên còn sống, Loving whispers hồi đúng mục tiêu. Skill từ trang
+bị/trait cũng dùng được; MP/TP, Silence, loại vũ khí và occasion được kiểm tra
+như combat. Kỹ năng hồi phục không thể dùng vào mục tiêu đã đầy tài nguyên nếu
+không có hiệu ứng hữu ích khác. Chi phí/hiệu ứng dùng chung luồng với combat.
+Hồi phục trực tiếp giữ menu mở và cập nhật chỉ số; kỹ năng có common event đóng
+menu để chạy hội thoại/lựa chọn, khóa di chuyển đến khi xong. Simple transmutation
+chạy common event 186 thật, đổi bread hoặc water vial theo lựa chọn. Save từ menu
+trong common event tiếp tục sau lệnh lưu, không trả chi phí kỹ năng lần nữa.
 Lệnh game over/về tiêu đề dừng cả chuỗi common event đang gọi và hủy các sự kiện
 nền đang chờ. Hai màn này dùng ảnh/nhạc có sẵn, cho tải ô lưu 1 hoặc chơi mới.
 Chơi mới mở luồng chọn nhân vật độc lập từ Map010. Tải save trở lại map và tiếp
