@@ -534,6 +534,7 @@ ConfigManager.makeData = function() {
     config.bgsVolume = this.bgsVolume;
     config.meVolume = this.meVolume;
     config.seVolume = this.seVolume;
+    config.fnhVolumeDefaultsApplied = true;
     return config;
 };
 
@@ -544,6 +545,12 @@ ConfigManager.applyData = function(config) {
     this.bgsVolume = this.readVolume(config, 'bgsVolume');
     this.meVolume = this.readVolume(config, 'meVolume');
     this.seVolume = this.readVolume(config, 'seVolume');
+    if (config.fnhVolumeDefaultsApplied !== true) {
+        this.bgmVolume = Math.min(this.bgmVolume, 5);
+        this.bgsVolume = Math.min(this.bgsVolume, 5);
+        this.meVolume = Math.min(this.meVolume, 5);
+        this.seVolume = Math.min(this.seVolume, 5);
+    }
 };
 
 ConfigManager.readFlag = function(config, name) {

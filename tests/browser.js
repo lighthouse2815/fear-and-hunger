@@ -428,6 +428,8 @@ async function main() {
         check('âm thanh mở khoá bằng phím trên menu', await evalPage(
             cdp, 'FNHBrowser.audioState() === "running"', false, false
         ));
+        check('cấu hình âm lượng cũ được hạ về năm phần trăm một lần', await evalPage(cdp,
+            'ConfigManager.bgmVolume <= 5 && ConfigManager.bgsVolume <= 5 && ConfigManager.meVolume <= 5 && ConfigManager.seVolume <= 5', false, false));
         check('nhạc tiêu đề đang phát', await evalPage(
             cdp,
             'AudioManager._currentBgm && AudioManager._currentBgm.name === "fear_and_hunger" && !!(AudioManager._bgmBuffer && AudioManager._bgmBuffer.isPlaying())',
