@@ -15,7 +15,7 @@ const watchdog = setTimeout(() => { console.error('Phản đòn chưa hoàn tấ
     const db = engine.database;
     const skillId = db.Skills.length, enemyId = db.Enemies.length, troopId = db.Troops.length, stateId = db.States.length;
     const originalAttack = db.Skills[1];
-    db.Skills.push({ ...originalAttack, id: skillId, name: 'Đòn kiểm tra', animationId: 0, repeats: 1,
+    db.Skills.push({ ...originalAttack, id: skillId, note: '', name: 'Đòn kiểm tra', animationId: 0, repeats: 1,
         effects: [], mpCost: 0, tpCost: 0, tpGain: 0, damage: { type: 1, formula: '10', variance: 0, critical: false, elementId: 0 } });
     db.Enemies.push({ ...db.Enemies[1], id: enemyId, params: [1000, 100, 20, 10, 10, 10, 10, 10],
         traits: [{ code: 22, dataId: 0, value: 1 }], actions: [] });

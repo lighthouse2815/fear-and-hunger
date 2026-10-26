@@ -13,7 +13,7 @@ const watchdog = setTimeout(() => { console.error('Rối loạn chưa hoàn tấ
     await engine.boot({ mapId: 74, x: 8, y: 8, party: [1, 3] });
     let r = engine.battle;
     const db = engine.database, skillId = db.Skills.length, enemyId = db.Enemies.length, troopId = db.Troops.length;
-    db.Skills[1] = { ...db.Skills[1], animationId: 0, hitType: 0, successRate: 100, effects: [],
+    db.Skills[1] = { ...db.Skills[1], note: '', animationId: 0, hitType: 0, successRate: 100, effects: [],
         damage: { type: 1, formula: '10', variance: 0, critical: false, elementId: 0 }, mpCost: 2, tpCost: 1, tpGain: 0 };
     db.Skills.push({ ...db.Skills[1], id: skillId, name: 'Đòn chọn', repeats: 1, mpCost: 3,
         damage: { ...db.Skills[1].damage, formula: '3' } });

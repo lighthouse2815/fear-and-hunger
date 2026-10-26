@@ -1236,10 +1236,10 @@ async function main() {
         await waitFor(cdp,'FNHStandalonePreview.engine.animations.entries.some(entry=>entry.scope==="battle" && entry.targetType==="actor")',10000,'animation phản công về nhân vật');
         check('phản công có animation đúng phía và giữ khóa lượt',await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.battle.phase==="action" && document.querySelector("#fnh-battle-start").disabled',false,false));
-        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'hoàn tất ba lần Counter');
-        check('Attack thật nhận ba phản đòn đơn và hiện log trên Chrome',await evalPage(cdp,`(() => {
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'hoàn tất Counter theo Target Action');
+        check('Attack thật nhận một phản đòn theo note và hiện log trên Chrome',await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine,r=e.battle.battle.lastAction;
-            return r.hits.length===3 && r.hits.every(hit=>hit.counter?.hits.length===1 && !hit.counter.hits[0].counter) &&
+            return r.hits.length===1 && r.hits.every(hit=>hit.counter?.hits.length===1 && !hit.counter.hits[0].counter) &&
                 e.state.actor(1).hp===window.counterBeforeHp-r.hits.reduce((sum,hit)=>sum+hit.counter.damage,0) &&
                 e.battle.enemy(0).hp===10000-r.damage && e.state.actor(1).hp<window.counterBeforeHp &&
                 document.querySelector('#fnh-battle-log').textContent.includes('Phản đòn:');
@@ -1266,7 +1266,7 @@ async function main() {
         check('rối loạn đánh đồng đội bằng Attack thật và hiện log',await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine,r=e.battle.battle.lastAction;
             return e.battle.battle.turnActions.length===1 && r.skillId===1 && r.confusion===3 &&
-                r.hits.length===3 && r.hits.every(hit=>hit.targetType==='actor' && hit.target===3) &&
+                r.hits.length===1 && r.hits.every(hit=>hit.targetType==='actor' && hit.target===3) &&
                 e.state.actor(3).hp===window.confusionAllyHp-r.damage && r.damage>0 &&
                 document.querySelector('#fnh-battle-log').textContent.includes('Rối loạn');
         })()`,false,false));
@@ -1332,7 +1332,7 @@ async function main() {
             const e=FNHStandalonePreview.engine;e.battle.enemy(0).hp=700;e.battle.random=()=>0.5;
             e.battle.handleEffect(333,[0,0,23]);const critical=e.battle.useSkill(e.battle.actor(7),1,0,true);
             e.battle.handleEffect(333,[0,1,23]);const normal=e.battle.useSkill(e.battle.actor(7),1,0,true);
-            return critical.hits.length===3 && critical.hits.every(hit=>hit.critical) && !normal.critical && normal.damage>0;
+            return critical.hits.length===1 && critical.hits.every(hit=>hit.critical) && !normal.critical && normal.damage>0;
         })()`,false,false));
         await evalPage(cdp,'delete window.beforeBattleItemHp;delete window.beforeBattleBottles',false,false);
         await evalPage(cdp,`(async()=>{

@@ -466,12 +466,29 @@
             animationId = weapon && weapon.animationId || 1;
         }
         var activeAnimations = [], waiter = this.createInterpreter([], 0, handlers, signal);
-        try {
-            if (animationId > 0) await waiter.awaitCommand(Promise.all(report.targets.map(function (target) {
-                var waiting = engine.animations.startBattle(target.id, animationId, report.subject === 'enemy', target.type);
+        function startAnimation() {
+            if (animationId <= 0) return Promise.resolve();
+            var animations = report.targets.map(function (target) {
+                var animation = engine.animations.startBattle(target.id, animationId, report.subject === 'enemy', target.type);
                 activeAnimations.push(engine.animations.entries[engine.animations.entries.length - 1]);
-                return waiting;
-            })));
+                return animation;
+            });
+            return Promise.all(animations);
+        }
+        try {
+            var sequence = report.sequence, lines = sequence && Object.keys(sequence).reduce(function (all, phase) {
+                return all.concat(sequence[phase].map(function (line) { return line.toLowerCase(); }));
+            }, []);
+            if (!sequence) {
+                await waiter.awaitCommand(startAnimation());
+            } else if (lines.some(function (line) { return line === 'action animation'; })) {
+                for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+                    if (signal && signal.aborted) throw signal.reason;
+                    if (lines[lineIndex] === 'action animation') await waiter.awaitCommand(startAnimation());
+                    if (lines[lineIndex] === 'motion wait: user') await waiter.awaitCommand(new Promise(function (resolve) { setTimeout(resolve, 80); }));
+                    if (lines[lineIndex] === 'death break' && report.defeated) break;
+                }
+            }
             for (var hitIndex = 0; hitIndex < report.hits.length; hitIndex++) {
                 if (signal && signal.aborted) throw signal.reason;
                 if (report.hits[hitIndex].counter) await this.completeBattleAction(report.hits[hitIndex].counter, handlers, signal);

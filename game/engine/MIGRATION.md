@@ -18,6 +18,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 1. Combat: action sequence trong sáu nhóm note, WeaponSkill, animation vũ khí,
    phản phép/thế thân, TP khi nhận damage, thoát trận, lượt thêm theo AGI và
    trigger cuối trận. Đối chiếu phần thưởng và số thành viên tham chiến.
+   Hiện action effect, số lần lặp, action animation, wait animation, death break,
+   motion wait cơ bản và WeaponSkill đã được đối chiếu với 560 skill/item; các
+   phase còn lại vẫn cần kiểm tra trực quan theo từng skill có note đặc biệt.
 2. Menu: chế tạo theo recipe/ingredient JSON, đội hình, trang bị và các lựa chọn
    menu theo cấu hình gốc; hoàn thiện lưu/tải nhiều ô và tùy chọn người chơi.
 3. Bản đồ: di chuyển mượt, follower/guest và touch, fog/overlay, parallax, tiếng

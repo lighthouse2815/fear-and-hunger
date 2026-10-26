@@ -20,7 +20,7 @@ const watchdog = setTimeout(() => { console.error('AI đồng đội chưa hoàn
         engine.state.removeActor(id);
     }
     db.States.push({ ...db.States[26], id: stateId, traits: [{ code: 62, dataId: 0, value: 1 }] });
-    db.Skills[1] = { ...db.Skills[1], hitType: 0, animationId: 0, effects: [], mpCost: 0, tpCost: 0, tpGain: 0,
+    db.Skills[1] = { ...db.Skills[1], note: '', hitType: 0, animationId: 0, effects: [], mpCost: 0, tpCost: 0, tpGain: 0,
         damage: { type: 1, formula: '10', variance: 0, critical: false, elementId: 0 } };
     const skill = (offset, changes) => ({ ...db.Skills[1], id: skillId + offset, repeats: 1, mpCost: 5, ...changes });
     db.Skills.push(skill(0, { damage: { ...db.Skills[1].damage, formula: '60' } }),

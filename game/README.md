@@ -93,8 +93,9 @@ trong trận; wait bản đồ được tạm dừng. Guard thật có thể th�
 và nhớ chân đã bị chặt. Lệnh chưa hỗ trợ trong page báo lỗi và dừng trận; không
 tự bỏ qua. Sự kiện lặp liên tục có giới hạn để tránh treo trình duyệt.
 Kỹ năng đọc công thức, phạm vi, lặp đòn, MP/TP, tỉ lệ trúng/né/chí mạng, nguyên tố,
-Guard và hiệu ứng thêm state/common event từ JSON. Attack thực hiện đủ ba lần đánh
-trong dữ liệu, không còn là một đòn đơn. Lệnh 339 ép quái theo index hoặc nhân vật
+Guard và hiệu ứng thêm state/common event từ JSON. Số đòn lấy từ phase action
+sequence sau khi note ghi đè mặc định: Attack chạy một effect, Pummel hai effect
+trên mỗi đích, Mad rush năm effect. Skill/item không ghi đè phase giữ repeats JSON. Lệnh 339 ép quái theo index hoặc nhân vật
 theo ID hành động, chọn mục tiêu chỉ định/ngẫu nhiên/mục tiêu trước, chạy cả khi
 không đủ MP/TP nhưng bỏ qua chủ thể ẩn/chết. Event chờ animation và common event
 xong mới tiếp tục; hủy event dọn animation và ngăn common event chạy muộn.
@@ -118,8 +119,8 @@ phương tiện không tăng nhịp này. Save giữ tổng bước, tiến trì
 Flash đỏ và thanh trạng thái báo mất HP khi đi bộ. HP cập nhật trước event chạm;
 nếu cả đội bị hạ theo cấu hình slip death thì mở game over và không chạy event
 ở ô đích. Biến sự kiện đọc được tổng bước qua toán hạng dữ liệu 7/3.
-Engine đã xử lý các note state hiện có, nhưng chưa thay toàn bộ cơ chế combat
-mở rộng trong plugin; action sequence còn cần chuyển.
+Engine đã xử lý các note state và số effect của action sequence hiện có;
+thời điểm animation/effect và motion trong sequence còn cần hoàn thiện.
 Danh sách nghiệm thu toàn bộ được theo dõi tại [engine/MIGRATION.md](engine/MIGRATION.md).
 Modifier của Terror/Critical state đọc công thức số học trong note và chạy sau
 damage/Guard/cap, giữ đích ở 1 HP theo `b.hp - 1`. Nhận damage xóa state theo

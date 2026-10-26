@@ -37,7 +37,7 @@ const { GameDataStore } = require('../game/engine/data-store');
     const expected = (engine.state.actorParam(1, 2) * 4 - 30) * 1.15;
     assert.ok(defended.hits.every(hit => Math.abs(hit.damage - expected) <= expected * 0.2 + 1), 'đọc phòng thủ state và nguyên tố từ JSON');
     assert.equal(enemy.hp, beforeAttack - defended.damage);
-    assert.equal(defended.hits.length, 3, 'Attack lặp ba lần theo JSON');
+    assert.equal(defended.hits.length, 1, 'note Target Action ghi đè số effect của Attack');
     await run(333, [0, 1, 57]); assert.equal(reader.gameDataOperand(4, 0, 5), 10);
     await run(342, [0, 0, 0, 500]); assert.equal(enemy.tp, 100);
     await run(342, [0, 1, 1, 60]); assert.equal(enemy.tp, 0);

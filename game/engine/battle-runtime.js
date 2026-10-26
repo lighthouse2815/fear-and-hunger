@@ -286,6 +286,38 @@
             .map(function (trait) { return trait.dataId; }));
         return Array.from(new Set(ids)).map(function (skillId) { return this.database.Skills[skillId]; }, this).filter(Boolean);
     };
+    BattleRuntime.prototype.actionSequence = function (skill) {
+        var phases = {}, blocks = /<(setup|whole|target|follow|finish) action>([\s\S]*?)<\/\1 action>/gi, match;
+        while ((match = blocks.exec(skill.note || ''))) {
+            phases[match[1].toLowerCase()] = match[2].split(/\r?\n/).map(function (line) { return line.trim(); }).filter(Boolean);
+        }
+        return Object.keys(phases).length ? phases : null;
+    };
+    BattleRuntime.prototype.actionEffectCount = function (skill) {
+        var animation = this.database.Animations[skill.animationId];
+        var whole = animation && (animation.position === 3 || [2, 8, 10].includes(skill.scope));
+        var counts = { setup: 0, whole: whole ? skill.repeats || 1 : 0, target: whole ? 0 : skill.repeats || 1, follow: 0, finish: 0 };
+        var phases = this.actionSequence(skill), phase;
+        for (phase in (phases || {})) {
+            var effects = 0;
+            phases[phase].forEach(function (line) {
+                line = line.trim().toLowerCase();
+                if (!line) return;
+                if (line === 'action effect') effects++;
+                else if (!/^(perform action|action animation|wait for animation|death break|motion wait: user|motion (swing|evade): user)$/.test(line)) {
+                    throw new Error('Lệnh action sequence chưa hỗ trợ: ' + line);
+                }
+            });
+            counts[phase] = effects;
+        }
+        return Object.values(counts).reduce(function (total, count) { return total + count; }, 0);
+    };
+    BattleRuntime.prototype.attackSkillId = function (battler) {
+        if (!battler || battler.enemyId != null) return 1;
+        var data = this.battlerState(battler), weapon = this.database.Weapons[data.equips[0]], match;
+        match = weapon && /<skill_id\s*:\s*(\d+)>/i.exec(weapon.note || '');
+        return match ? Number(match[1]) : 1;
+    };
     BattleRuntime.prototype.chooseActorAction = function (actor) {
         if (!actor || !actor.alive || actor.hidden || this.restriction(actor) > 0) return null;
         var skills = [this.database.Skills[1]].concat(this.actorSkills(actor.id)), best = null, bestScore = 0;
@@ -306,7 +338,7 @@
                 if (all) score += value;
                 else if (value > score) { score = value; targetIndex = unit.indexOf(target); }
             }, this);
-            score *= skill.repeats || 1;
+            score *= this.actionEffectCount(skill);
             if (score > 0) score += this.random();
             if (score > bestScore) {
                 bestScore = score;
@@ -431,6 +463,7 @@
         return { damage: value, resource: resource, critical: !!hit.critical };
     };
     BattleRuntime.prototype.useSkill = function (subject, skillId, index, forced) {
+        if (skillId === 1) skillId = this.attackSkillId(subject);
         var skill = this.database.Skills[skillId];
         if (!skill) throw new Error('Không tìm thấy skill ' + skillId);
         return this.useAction(subject, skill, index, false, forced);
@@ -452,10 +485,12 @@
         if (!forced && !(item ? this.canUseItem(subject, skill, menu) : this.canUseSkill(subject, skill, menu))) {
             throw new Error(item ? 'Chưa thể dùng vật phẩm ' + skill.name : 'Chưa thể dùng kỹ năng ' + skill.name);
         }
+        var effectCount = counterTarget ? 1 : menu ? skill.repeats || 1 : this.actionEffectCount(skill);
         var targets = counterTarget ? [counterTarget] : menu ? menuTargets : confusion ? this.confusionTarget(subject, skill) : this.skillTargets(subject, skill, index), runtime = this;
         var report = { subject: subject.enemyId != null ? 'enemy' : 'actor',
             subjectId: subject.enemyId != null ? subject.index : subject.id, hits: [], commonEvents: [], targets: [], damage: 0, critical: false };
         report[item ? 'itemId' : 'skillId'] = skill.id;
+        if (!item) report.sequence = runtime.actionSequence(skill);
         if (confusion) report.confusion = confusion;
         (skill.effects || []).forEach(function (effect) {
             if (effect.code === 44) {
@@ -486,7 +521,7 @@
                 var unit = target.enemyId != null ? runtime.battle.enemies : runtime.battle.actors;
                 (runtime.battle.lastTargets || (runtime.battle.lastTargets = {}))[key] = unit.indexOf(target);
             }
-            for (var repeat = 0; repeat < (counterTarget ? 1 : skill.repeats || 1); repeat++) {
+            for (var repeat = 0; repeat < effectCount; repeat++) {
                 if (!subject.alive) break;
                 if ([9, 10].includes(skill.scope) ? target.alive : !target.alive) break;
                 var counterRate = !menu && !counterTarget && skill.hitType === 1 && runtime.canCounter(target) ? runtime.traitRate(target, 22, 6, true) : 0;
@@ -523,7 +558,7 @@
                 }
                 hit.defeated = !target.alive; report.hits.push(hit);
                 if (counter && runtime.canCounter(target)) {
-                    hit.counter = runtime.useAction(target, runtime.database.Skills[1], 0, false, true, null, subject);
+                    hit.counter = runtime.useAction(target, runtime.database.Skills[runtime.attackSkillId(target)], 0, false, true, null, subject);
                 }
             }
         });
