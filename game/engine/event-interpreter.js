@@ -16,7 +16,7 @@
         this.commands = options.commands;
         this.state = options.state;
         this.mapId = options.mapId || this.state.mapId;
-        this.eventId = options.eventId || 1;
+        this.eventId = options.eventId == null ? 1 : options.eventId;
         this.handlers = options.handlers || {};
         this.index = 0;
         this.running = false;
@@ -28,6 +28,7 @@
         this.random = options.random || Math.random;
         this.depth = options.depth || 0;
         this.budget = options.budget || { remaining: options.maxSteps || 100000 };
+        this.signal = options.signal || null;
     }
 
     EventInterpreter.prototype.run = async function () {
@@ -35,14 +36,28 @@
         this.running = true;
         try {
             while (this.index < this.commands.length) {
+                if (this.signal && this.signal.aborted) throw this.signal.reason;
                 if (--this.budget.remaining < 0) throw new Error('Event vượt giới hạn số lệnh thực thi.');
                 var command = this.commands[this.index++];
-                await this.execute(command);
+                await this.awaitCommand(this.execute(command));
             }
             return this.result;
         } finally {
             this.running = false;
         }
+    };
+
+    EventInterpreter.prototype.awaitCommand = async function (result) {
+        var signal = this.signal;
+        if (!signal) return result;
+        if (signal.aborted) throw signal.reason;
+        var abort;
+        var cancelled = new Promise(function (_, reject) {
+            abort = function () { reject(signal.reason); };
+            signal.addEventListener('abort', abort, { once: true });
+        });
+        try { return await Promise.race([Promise.resolve(result), cancelled]); }
+        finally { signal.removeEventListener('abort', abort); }
     };
 
     EventInterpreter.prototype.execute = async function (command) {
@@ -86,6 +101,15 @@
             return this.controlVariables(command.parameters || []);
         case 123:
             return this.controlSelfSwitch(command.parameters || []);
+        case 124:
+            this.state.timer = { active: command.parameters[0] === 0, frames: (command.parameters[1] || 0) * 60 };
+            return;
+        case 132:
+            this.state.battleBgm = Object.assign({}, command.parameters[0]);
+            return;
+        case 134: case 135:
+            this.state[command.code === 134 ? 'saveEnabled' : 'menuEnabled'] = command.parameters[0] !== 0;
+            return;
         case 125:
             return this.controlGold(command.parameters || []);
         case 126:
@@ -169,7 +193,7 @@
         var result = await new EventInterpreter({
             commands: event.list, state: this.state, mapId: this.mapId, eventId: this.eventId,
             handlers: this.handlers, commonEvents: this.commonEvents, random: this.random,
-            depth: this.depth + 1, budget: this.budget
+            depth: this.depth + 1, budget: this.budget, signal: this.signal
         }).run();
         this.result.choices.push.apply(this.result.choices, result.choices);
         if (result.transferred) this.result.transferred = result.transferred;
@@ -383,7 +407,9 @@
             var right = parameters[2] === 0 ? Number(parameters[3]) : this.state.variableValue(parameters[3]);
             return this.compare(left, right, parameters[4]);
         }
-        if (type === 2) return this.state.selfSwitchValue(this.mapId, this.eventId, parameters[1]) === (parameters[2] === 0);
+        if (type === 2) return this.eventId > 0 && this.state.selfSwitchValue(this.mapId, this.eventId, parameters[1]) === (parameters[2] === 0);
+        if (type === 3) return this.state.timer && this.state.timer.active &&
+            (parameters[2] === 0 ? Math.floor(this.state.timer.frames / 60) >= parameters[1] : Math.floor(this.state.timer.frames / 60) <= parameters[1]);
         if (type === 7) {
             var gold = this.state.gold, amount = Number(parameters[1]);
             return [gold >= amount, gold <= amount, gold < amount][parameters[2]];
@@ -402,6 +428,7 @@
         if (type === 8) return this.state.itemCount('items', parameters[1]) > 0;
         if (type === 9) return this.state.itemCount('weapons', parameters[1]) > 0;
         if (type === 10) return this.state.itemCount('armors', parameters[1]) > 0;
+        if (this.handlers.condition) return this.handlers.condition(parameters, this);
         throw new Error('Chưa hỗ trợ điều kiện sự kiện: ' + JSON.stringify(parameters));
     };
 
@@ -448,6 +475,7 @@
     };
 
     EventInterpreter.prototype.controlSelfSwitch = function (parameters) {
+        if (this.eventId <= 0) return;
         this.state.setSelfSwitch(this.mapId, this.eventId, parameters[0], parameters[1] === 0);
     };
 

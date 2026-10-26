@@ -27,7 +27,7 @@
         this.events.forEach(function (event) {
             var page = this.eventPage(event);
             var snapshot = state && state.eventSnapshots && state.eventSnapshots[event.id];
-            if (snapshot && snapshot.mapId === this.id && snapshot.pageIndex === event.pages.indexOf(page)) {
+            if (snapshot && snapshot.mapId === this.id && (snapshot.properties.erased || snapshot.pageIndex === event.pages.indexOf(page))) {
                 Object.assign(event, snapshot.properties);
             } else {
                 var location = state && state.eventLocations && state.eventLocations[this.id + ',' + event.id];
@@ -85,7 +85,7 @@
 
     GameMap.prototype.eventPage = function (event, state) {
         var currentState = state || this.state;
-        if (!event || !Array.isArray(event.pages)) return null;
+        if (!event || event.erased || !Array.isArray(event.pages)) return null;
         for (var i = event.pages.length - 1; i >= 0; i -= 1) {
             if (this.pageConditionsMet(event.pages[i].conditions || {}, currentState, event.id)) {
                 var page = event.pages[i];
@@ -148,7 +148,7 @@
             var page = map.eventPage(event), properties = {};
             ['x', 'y', 'direction', 'pattern', 'characterName', 'characterIndex', 'tileId', 'moveSpeed',
                 'moveFrequency', 'directionFixed', 'through', 'transparent', 'opacity', 'blendMode',
-                'walkAnime', 'stepAnime', 'chaseRange', 'seePlayer', 'alertSound', 'moveFrames', 'animationFrames'].forEach(function (key) {
+                'walkAnime', 'stepAnime', 'chaseRange', 'seePlayer', 'alertSound', 'moveFrames', 'animationFrames', 'erased'].forEach(function (key) {
                 if (event[key] !== undefined) properties[key] = event[key];
             });
             snapshot[event.id] = { mapId: map.id, pageIndex: event.pages.indexOf(page), properties: properties };

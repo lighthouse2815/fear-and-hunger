@@ -46,6 +46,11 @@
         this.routeSnapshots = Array.isArray(source.routeSnapshots) ? source.routeSnapshots : [];
         this.screen = source.screen || null;
         this.mapTileset = source.mapTileset || null;
+        this.timer = source.timer || { active: false, frames: 0 };
+        this.menuEnabled = source.menuEnabled !== false;
+        this.saveEnabled = source.saveEnabled !== false;
+        this.battleBgm = source.battleBgm || null;
+        this.vehicleId = source.vehicleId == null ? -1 : source.vehicleId;
         ['characterName', 'characterIndex', 'transparent', 'opacity', 'blendMode', 'moveSpeed', 'moveFrequency', 'walkAnime', 'stepAnime', 'moveFrames', 'animationFrames'].forEach(function (key) {
             if (source[key] !== undefined) this[key] = source[key];
         }, this);
@@ -248,6 +253,7 @@
             eventSnapshots: this.eventSnapshots,
             routeSnapshots: this.routeSnapshots,
             screen: this.screen, mapTileset: this.mapTileset,
+            timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
             characterName: this.characterName, characterIndex: this.characterIndex,
             transparent: this.transparent, opacity: this.opacity, blendMode: this.blendMode,
             moveSpeed: this.moveSpeed, moveFrequency: this.moveFrequency, walkAnime: this.walkAnime, stepAnime: this.stepAnime,

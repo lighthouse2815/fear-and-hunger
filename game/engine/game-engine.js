@@ -27,6 +27,7 @@
         this.routeErrors = [];
         this.onRouteEffect = options.onRouteEffect || null;
         this.screen = null;
+        this.buttons = new Set();
     }
 
     GameEngine.prototype.boot = async function (initialState) {
@@ -37,7 +38,7 @@
             x: system.startX,
             y: system.startY,
             direction: 2,
-            party: []
+            party: (system.partyMembers || []).slice()
         };
         this.state = new stateApi.GameState(state, this.database);
         this.screen = new screenApi.ScreenRuntime(this.state);
@@ -107,6 +108,7 @@
 
     GameEngine.prototype.advanceRoutes = function (frames) {
         if (this.routeErrors.length) throw this.routeErrors.shift();
+        if (this.state && this.state.timer.active) this.state.timer.frames = Math.max(0, this.state.timer.frames - frames);
         if (this.map && this.state) [this.state].concat(this.map.events).forEach(function (character) {
             if (character.stepAnime || (character.moveFrames > 0 && character.walkAnime !== false)) {
                 character.animationFrames = (character.animationFrames || 0) + frames;
@@ -178,15 +180,36 @@
         return null;
     };
 
-    GameEngine.prototype.runEvent = async function (eventId, handlers) {
+    GameEngine.prototype.interpreterFor = function (eventId, handlers, signal) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
-        if (this.eventRunning) throw new Error('Một sự kiện khác đang chạy.');
         var event = this.map.eventById(eventId);
         if (!event) throw new Error('Không tìm thấy event ' + eventId + ' trên map ' + this.state.mapId);
         var page = this.map.eventPage(event, this.state);
         if (!page) return null;
+        return this.createInterpreter(page.list, event.id, handlers, signal);
+    };
+
+    GameEngine.prototype.commonInterpreterFor = function (commonId, handlers, signal) {
+        var common = this.database.CommonEvents[commonId];
+        if (!common) throw new Error('Không tìm thấy common event ' + commonId);
+        return this.createInterpreter(common.list, 0, handlers, signal);
+    };
+
+    GameEngine.prototype.createInterpreter = function (commands, eventId, handlers, signal) {
         var engine = this;
         var eventHandlers = Object.assign({}, handlers || {});
+        var condition = eventHandlers.condition;
+        eventHandlers.condition = function (parameters, interpreter) {
+            if (parameters[0] === 11) return engine.buttons.has(parameters[1]);
+            if (parameters[0] === 6) {
+                var characterId = parameters[1] === 0 ? interpreter.eventId : parameters[1];
+                var character = characterId === -1 ? engine.state : engine.map.id === interpreter.mapId ? engine.map.eventById(characterId) : null;
+                return !!character && character.direction === parameters[2];
+            }
+            if (parameters[0] === 13) return engine.state.vehicleId === parameters[1];
+            if (condition) return condition(parameters, interpreter);
+            throw new Error('Chưa hỗ trợ điều kiện sự kiện: ' + JSON.stringify(parameters));
+        };
         eventHandlers.script = function (source, interpreter) {
             return scriptApi.executeScript(source, { state: engine.state,
                 character: engine.map.id === interpreter.mapId ? engine.map.eventById(interpreter.eventId) : null,
@@ -202,6 +225,11 @@
             if (code === 203) { engine.setEventLocation(parameters, interpreter); return true; }
             if (code === 205) return engine.applyRoute(parameters, interpreter);
             if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }
+            if (code === 214) {
+                var erased = engine.map.id === interpreter.mapId && engine.map.eventById(interpreter.eventId);
+                if (erased) erased.erased = true;
+                return true;
+            }
             if (code === 282) {
                 var tileset = engine.database.Tilesets[parameters[0]];
                 if (!tileset) throw new Error('Không tìm thấy tileset ' + parameters[0]);
@@ -213,12 +241,19 @@
             if (screenResult !== false) return screenResult;
             return effect ? effect(code, parameters, command, interpreter) : false;
         };
+        return new eventApi.EventInterpreter({
+            commands: commands, state: this.state, mapId: this.state.mapId,
+            eventId: eventId, handlers: eventHandlers, commonEvents: this.database.CommonEvents, random: this.random, signal: signal
+        });
+    };
+
+    GameEngine.prototype.runEvent = async function (eventId, handlers, signal) {
+        if (this.eventRunning) throw new Error('Một sự kiện khác đang chạy.');
+        var interpreter = this.interpreterFor(eventId, handlers, signal);
+        if (!interpreter) return null;
         this.eventRunning = true;
         try {
-            return await new eventApi.EventInterpreter({
-                commands: page.list, state: this.state, mapId: this.state.mapId,
-                eventId: event.id, handlers: eventHandlers, commonEvents: this.database.CommonEvents, random: this.random
-            }).run();
+            return await interpreter.run();
         } finally { this.eventRunning = false; }
     };
 
