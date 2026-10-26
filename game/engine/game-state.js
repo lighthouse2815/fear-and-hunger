@@ -39,6 +39,9 @@
         this.x = Number(source.x) || 0;
         this.y = Number(source.y) || 0;
         this.direction = Number(source.direction) || 2;
+        this.directionFixed = source.directionFixed === true;
+        this.through = source.through === true;
+        this.eventLocations = Object.assign({}, source.eventLocations);
         this.gold = Math.max(0, Number(source.gold) || 0);
         this.party = Array.isArray(source.party) ? source.party.slice() : [];
         this.actors = Object.assign({}, source.actors);
@@ -187,6 +190,9 @@
             x: this.x,
             y: this.y,
             direction: this.direction,
+            directionFixed: this.directionFixed,
+            through: this.through,
+            eventLocations: this.eventLocations,
             gold: this.gold,
             party: this.party,
             actors: this.actors,

@@ -57,5 +57,15 @@ state.setSwitch(1, true);
 assert.equal(directional.eventBlocks(1, 0), true);
 directional.events[0].pages[0].through = true;
 assert.equal(directional.eventBlocks(1, 0), false);
+directional.locateEvent(1, 0, 0, 8);
+assert.equal(directional.eventAt(0, 0)[0].id, 1);
+assert.equal(directional.eventById(1).direction, 8);
+assert.equal(state.eventLocations['1,1'].persist, false);
+directional.discardTemporaryLocations();
+assert.equal(state.eventLocations['1,1'], undefined, 'map không có note không nhớ vị trí khi rời map');
+directional.data.note = '<Save Event Locations>';
+directional.locateEvent(1, 1, 0, 2);
+directional.discardTemporaryLocations();
+assert.equal(state.eventLocations['1,1'].persist, true, 'tôn trọng note lưu vị trí trong nội dung gốc');
 
 console.log('ĐẠT: map model độc lập đọc tile, vùng, event page và passability.');

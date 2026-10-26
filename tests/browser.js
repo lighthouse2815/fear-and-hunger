@@ -953,6 +953,21 @@ async function main() {
         check('save preview khôi phục vị trí, vật phẩm và trạng thái thùng', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.itemCount("items", 15) === 2 && FNHStandalonePreview.engine.state.selfSwitchValue(74, 39, "A")', false, false));
         await evalPage(cdp, 'localStorage.removeItem("FNH_STANDALONE_PREVIEW:1")', false, false);
+        await evalPage(cdp, `FNHStandalonePreview.engine.restore(Object.assign(FNHStandalonePreview.engine.save(), {
+            mapId: 74, x: 15, y: 5, direction: 8
+        }))`, true, false);
+        await clickElement(cdp, '#fnh-controls [data-direction="8"]');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.mapId === 1 && document.querySelector("#fnh-status").textContent.startsWith("Map 1 ·")',
+            15000, 'bước qua cửa thật bằng nút lên của preview');
+        check('engine độc lập chạy common event và chuyển vào ngục', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.x === 27 && FNHStandalonePreview.engine.state.y === 68 && FNHStandalonePreview.engine.state.variableValue(30) === 100', false, false));
+        await clickElement(cdp, '#fnh-controls [data-direction="2"]');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.mapId === 74 && document.querySelector("#fnh-status").textContent.startsWith("Map 74 ·")',
+            15000, 'cửa thật quay lại cổng ngục');
+        check('cửa preview hai chiều giữ vị trí quái sau khi quay lại', await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine, enemy = engine.map.eventById(102);
+            return engine.state.x === 15 && engine.state.y === 5 && enemy.x === 14 && enemy.y === 25;
+        })()`, false, false));
         // Chạy các lệnh audio dữ liệu bằng interpreter mới, không dùng AudioManager MV.
         await evalPage(cdp, `new FNHStandaloneEvents.EventInterpreter({
             state: FNHStandalonePreview.engine.state,

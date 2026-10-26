@@ -20,7 +20,10 @@
         this.id = data.id || 0;
         this.width = data.width;
         this.height = data.height;
-        this.events = (data.events || []).filter(Boolean);
+        this.events = (data.events || []).filter(Boolean).map(function (event) {
+            var location = state && state.eventLocations && state.eventLocations[this.id + ',' + event.id];
+            return Object.assign({}, event, location && { x: location.x, y: location.y, direction: location.direction });
+        }, this);
     }
 
     GameMap.prototype.isValid = function (x, y) {
@@ -43,6 +46,31 @@
 
     GameMap.prototype.eventAt = function (x, y) {
         return this.events.filter(function (event) { return event.x === x && event.y === y; });
+    };
+
+    GameMap.prototype.eventById = function (id) {
+        return this.events.find(function (event) { return event.id === id; }) || null;
+    };
+
+    GameMap.prototype.locateEvent = function (id, x, y, direction) {
+        var event = this.eventById(id);
+        if (!event) return;
+        if (!Number.isInteger(x) || !Number.isInteger(y)) throw new Error('Tọa độ sự kiện không hợp lệ.');
+        event.x = x;
+        event.y = y;
+        if (direction) event.direction = direction;
+        if (this.state) this.state.eventLocations[this.id + ',' + id] = {
+            x: x, y: y, direction: event.direction,
+            persist: /<save\s+event\s+locations?>/i.test(this.data.note || '') ||
+                /<save\s+event\s+location>/i.test(event.note || '')
+        };
+    };
+
+    GameMap.prototype.discardTemporaryLocations = function () {
+        if (!this.state) return;
+        Object.keys(this.state.eventLocations).forEach(function (key) {
+            if (key.startsWith(this.id + ',') && !this.state.eventLocations[key].persist) delete this.state.eventLocations[key];
+        }, this);
     };
 
     GameMap.prototype.eventPage = function (event, state) {

@@ -68,19 +68,24 @@
             if (choicesPanel.firstElementChild) choicesPanel.firstElementChild.focus({ preventScroll: true });
         });
     }
-    async function interact() {
-        await engine.interact({
-            message: showMessage,
-            choice: showChoices,
-            effect: async function (code, parameters) {
-                if (audio.handleEffect(code, parameters)) return;
-                if (code === 230) {
-                    await new Promise(function (resolve) { setTimeout(resolve, parameters[0] * 1000 / 60); });
-                    return;
-                }
-                return false;
+    var eventHandlers = {
+        message: showMessage,
+        choice: showChoices,
+        effect: async function (code, parameters) {
+            if (audio.handleEffect(code, parameters)) return;
+            if (code === 230) {
+                await new Promise(function (resolve) { setTimeout(resolve, parameters[0] * 1000 / 60); });
+                return;
             }
-        });
+            return false;
+        }
+    };
+    async function interact() {
+        await engine.interact(eventHandlers);
+        await draw();
+    }
+    async function step(direction) {
+        await engine.step(direction, eventHandlers);
         await draw();
     }
     document.addEventListener('pointerdown', function () { audio.unlock(); });
@@ -95,7 +100,7 @@
         var direction = { ArrowDown: 2, ArrowLeft: 4, ArrowRight: 6, ArrowUp: 8 }[event.key];
         if (direction) {
             event.preventDefault();
-            perform(async function () { engine.move(direction); await draw(); });
+            perform(function () { return step(direction); });
         } else if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             if (!event.repeat) perform(interact);
@@ -105,7 +110,7 @@
         var button = event.target.closest('button[data-direction]');
         if (!button) return;
         var direction = Number(button.dataset.direction);
-        if (direction) perform(async function () { engine.move(direction); await draw(); });
+        if (direction) perform(function () { return step(direction); });
         else perform(interact);
     });
     document.getElementById('fnh-save').addEventListener('click', function () {
@@ -130,7 +135,7 @@
     (async function () {
         try {
             await engine.boot({ mapId: mapId, x: mapId === 74 ? 8 : 1, y: mapId === 74 ? 8 : 0,
-                direction: mapId === 74 ? 8 : 2, party: [1] });
+                direction: mapId === 74 ? 8 : 2, party: [1], switches: { 246: true }, variables: { 121: 1 } });
             await draw();
             ready = true;
         } catch (error) {

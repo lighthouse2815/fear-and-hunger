@@ -47,7 +47,9 @@
         var actors = map.events.map(function (event) {
             var page = map.eventPage(event, state);
             if (!page) return null;
-            return { x: event.x, y: event.y, image: page.image || {}, priority: page.priorityType, id: event.id };
+            var image = Object.assign({}, page.image);
+            if (event.direction) image.direction = event.direction;
+            return { x: event.x, y: event.y, image: image, priority: page.priorityType, id: event.id };
         }).filter(Boolean);
         var actor = engine.database.Actors[state.party[0] || 1];
         if (actor) actors.push({ x: state.x, y: state.y, priority: 1, id: Infinity, image: {

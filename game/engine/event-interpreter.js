@@ -104,6 +104,11 @@
             return this.controlActorRecover(command.parameters || []);
         case 201:
             return this.transferPlayer(command.parameters || []);
+        case 205:
+            // 505 lặp lại các lệnh route đã nằm trong parameters[1].list.
+            while (this.commands[this.index] && this.commands[this.index].code === 505) this.index++;
+            return this.effect(command);
+        case 203:
         case 211: case 212: case 213: case 214: case 216: case 217:
         case 221: case 222: case 223: case 224: case 225: case 226: case 230:
         case 231: case 232: case 233: case 234: case 235: case 236:
@@ -409,13 +414,20 @@
         this.state.gainItem(kind, parameters[0], parameters[1] === 0 ? amount : -amount);
     };
 
-    EventInterpreter.prototype.transferPlayer = function (parameters) {
-        this.state.mapId = parameters[0] === 0 ? parameters[1] : this.state.variableValue(parameters[1]);
-        this.state.x = parameters[0] === 0 ? parameters[2] : this.state.variableValue(parameters[2]);
-        this.state.y = parameters[0] === 0 ? parameters[3] : this.state.variableValue(parameters[3]);
-        if (parameters[4]) this.state.direction = parameters[4];
+    EventInterpreter.prototype.transferPlayer = async function (parameters) {
+        var destination = {
+            mapId: parameters[0] === 0 ? parameters[1] : this.state.variableValue(parameters[1]),
+            x: parameters[0] === 0 ? parameters[2] : this.state.variableValue(parameters[2]),
+            y: parameters[0] === 0 ? parameters[3] : this.state.variableValue(parameters[3]),
+            direction: parameters[4] || this.state.direction
+        };
+        // Tải và kiểm tra đích trước; lỗi tải không được làm map/state lệch nhau.
+        if (this.handlers.transfer) await this.handlers.transfer(destination, this);
+        this.state.mapId = destination.mapId;
+        this.state.x = destination.x;
+        this.state.y = destination.y;
+        if (!this.state.directionFixed) this.state.direction = destination.direction;
         this.result.transferred = { mapId: this.state.mapId, x: this.state.x, y: this.state.y };
-        if (this.handlers.transfer) return this.handlers.transfer(this.result.transferred, this);
     };
 
     return { EventInterpreter: EventInterpreter };

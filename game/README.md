@@ -31,12 +31,20 @@ Preview mở cạnh thùng đồ trên Map074. Bấm Enter hoặc **Tương tác
 bấm **Tiếp tục** để đọc hội thoại. Dùng mũi tên hoặc các nút hướng để di chuyển;
 khi hội thoại/sự kiện đang chạy, engine khóa di chuyển và các sự kiện khác.
 Các lựa chọn hiển thị bằng nút trong trang, không mở hộp thoại `prompt`.
+Đi qua cửa ở cổng ngục có thể vào Map001 và quay lại bằng sự kiện chạm thật.
+Preview chọn sẵn Mercenary và layout 1 để kiểm tra; chưa thay thế phần tạo nhân vật.
 
 Preview hiện hỗ trợ di chuyển, một phần lệnh sự kiện, lưu/tải riêng và âm thanh.
 Interpreter chạy được common event lồng nhau, vòng lặp có giới hạn thực thi,
 điều kiện, biến ngẫu nhiên và self-switch. Test dùng thùng đồ event 39 trên Map074
 để xác nhận nhận vật phẩm từ common event 52 và không nhận lại sau khi đã mở.
 Lệnh hoặc loại điều kiện chưa triển khai sẽ báo lỗi cụ thể thay vì tự bỏ qua.
+Luồng bước đi xử lý trigger chạm 1/2, chạy common event trước khi chuyển map,
+không tự kích hoạt lại cửa tại ô xuất hiện. Lệnh đặt vị trí event giữ tọa độ riêng
+với JSON nguồn và tôn trọng note `<Save Event Locations>` khi rời map/lưu game.
+Movement route hiện hỗ trợ bật/tắt khóa hướng và đi xuyên của người chơi (35–38);
+các route di chuyển/animation khác vẫn báo chưa hỗ trợ. Tải map/save lỗi giữ
+map và trạng thái hiện tại nhất quán.
 Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, fade, nhớ/phát tiếp
 BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.
 Thanh âm lượng cập nhật các âm đang phát, giữ volume của từng file.
