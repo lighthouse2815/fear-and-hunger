@@ -28,6 +28,14 @@ const { GameDataStore } = require('../game/engine/data-store');
             const count = ['setupActions', 'wholeActions', 'targetActions', 'followActions', 'finishActions']
                 .reduce((sum, key) => sum + item[key].filter(line => line[0].toUpperCase() === 'ACTION EFFECT').length, 0);
             assert.equal(r.actionEffectCount(table[item.id]), count, 'đối chiếu note ' + item.id);
+            const phases = r.actionPhases(table[item.id]);
+            const playbackCommands = new Set(['PERFORM ACTION', 'WAIT', 'ACTION ANIMATION', 'WAIT FOR ANIMATION',
+                'ACTION EFFECT', 'DEATH BREAK', 'MOTION WAIT', 'MOTION SWING', 'MOTION EVADE']);
+            for (const phase of ['setup', 'whole', 'target', 'follow', 'finish']) {
+                const original = Array.from(item[phase + 'Actions']).filter(line => playbackCommands.has(line[0].toUpperCase()))
+                    .map(line => (line[0] + (line[1] && line[1].length ? ': ' + line[1].join(', ') : '')).toLowerCase());
+                assert.deepEqual(phases[phase].map(line => line.toLowerCase()), original, 'thứ tự phase ' + phase + ' của skill/item ' + item.id);
+            }
             compared++;
         }
     }

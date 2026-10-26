@@ -31,7 +31,7 @@
     function setStatus(text) { status.textContent = text; }
     var menuUi;
     var battleTarget = 0, battleActor = 0, battleFriend = 0, battleSkill = 2, battleItem = 0, battleKind = 'skill';
-    var lastBattle = null, lastScene = null, lastBattlePhase = null;
+    var lastBattle = null, lastScene = null, lastBattlePhase = null, lastActionRevision = null;
     function formatResourceChanges(effect) {
         var subject = effect.subject === 'actor' ? engine.state.actor(effect.subjectId) : engine.battle.enemy(effect.subjectId);
         var changes = ['hp', 'mp', 'tp'].filter(function (key) { return effect[key]; }).map(function (key) {
@@ -55,6 +55,7 @@
         if (battle !== lastBattle) { battleKind = 'skill'; battleActor = 0; }
         lastBattle = battle; lastScene = engine.state.scene;
         lastBattlePhase = battle && battle.phase;
+        lastActionRevision = battle && battle.actionRevision;
         if (!battle || engine.state.scene !== 'battle' || battle.result) { panel.hidden = true; return; }
         panel.hidden = false;
         if (!battle.enemies.some(function (enemy) { return enemy.index === battleTarget && enemy.alive && !enemy.hidden; })) {
@@ -413,7 +414,8 @@
                 if (scrollAnimation) scrollAnimation.playbackRate = !scrollNoFast &&
                     (scrollFastHeld || engine.buttons.has('ok') || engine.buttons.has('cancel') || engine.buttons.has('shift')) ? 3 : 1;
                 var sceneChanged = lastBattle !== engine.battle.battle || lastScene !== engine.state.scene ||
-                    lastBattlePhase !== (engine.battle.battle && engine.battle.battle.phase);
+                    lastBattlePhase !== (engine.battle.battle && engine.battle.battle.phase) ||
+                    lastActionRevision !== (engine.battle.battle && engine.battle.battle.actionRevision);
                 if (sceneChanged) { renderBattleUi(); renderEndScreen(); menuUi.render(); }
                 if (scheduler) scheduler.tick();
                 var active = sceneChanged || !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||

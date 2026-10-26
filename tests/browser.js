@@ -1190,6 +1190,24 @@ async function main() {
         check('339 giữ skill 1 khi chủ thể đang cầm War scythe', await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.battle.lastAction.skillId === 1 && FNHStandalonePreview.engine.battle.battle.lastAction.targets.length === 1', false, false));
         await evalPage(cdp, '(async () => { await FNHStandalonePreview.engine.restore(window.weaponUiBefore); delete window.weaponUiBefore; })()', true, false);
+        await evalPage(cdp, `(() => {
+            const e = FNHStandalonePreview.engine, db = e.database;
+            window.sequenceBefore = e.save();
+            const enemyId = db.Enemies.length, troopId = db.Troops.length, skillId = db.Skills.length;
+            db.Enemies.push({ ...db.Enemies[1], id: enemyId, note: '', traits: [], params: [1000,100,1,1,1,1,1,1], actions: [] });
+            db.Troops.push({ id: troopId, pages: [], members: [{ enemyId, x: 408, y: 400 }] });
+            db.Skills.push({ ...db.Skills[3], id: skillId, animationId: 7, note: '', scope: 1, repeats: 1, effects: [], hitType: 0,
+                damage: { type: 1, formula: '10', variance: 0, critical: false, elementId: 0 } });
+            e.battle.setup(troopId, true, true); e.state.scene = 'battle';
+            window.sequenceAction = e.forceBattleAction([1,1,skillId,0]);
+        })()`, false, false);
+        await waitFor(cdp, 'FNHStandalonePreview.engine.animations.entries.some(entry => entry.animationId === 7 && entry.elapsed >= 0)', 5000, 'sequence phát animation trước effect');
+        check('damage chờ animation khi phase mặc định yêu cầu wait', await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.enemy(0).hp === 1000 && FNHStandalonePreview.engine.battle.battle.lastAction.hits.length === 0 && document.querySelector("#fnh-battle-attack").disabled', false, false));
+        await evalPage(cdp, 'window.sequenceAction', true, false);
+        check('effect sau animation áp damage đúng một lần', await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.enemy(0).hp === 990 && FNHStandalonePreview.engine.battle.battle.lastAction.hits.length === 1', false, false));
+        await evalPage(cdp, '(async () => { await FNHStandalonePreview.engine.restore(window.sequenceBefore); delete window.sequenceBefore; delete window.sequenceAction; })()', true, false);
         await evalPage(cdp,`(() => {
             const engine=FNHStandalonePreview.engine;
             window.skillUiBefore=engine.save();
@@ -1565,7 +1583,11 @@ async function main() {
             engine.battle.setup(troopId); engine.state.scene='battle';
             engine.battle.battle.managed=true;
             const hp=engine.state.actor(1).hp;
-            await engine.runEnemyTurn();
+            let finished=false;
+            const turn=engine.runEnemyTurn().then(()=>{finished=true;});
+            for(let frame=0;frame<1000&&!finished;frame++){engine.advanceRoutes(16);await new Promise(resolve=>setTimeout(resolve,0));}
+            if(!finished) throw new Error('AI chưa hoàn tất sau đủ frame');
+            await turn;
             return engine.battle.battle.lastAction.skillId===7 && engine.state.switchValue(16) && engine.state.actor(1).hp===hp;
         })()`,true,false));
         check('event độc lập điều khiển quái và giữ thay đổi qua save', await evalPage(cdp, `(async () => {
@@ -1591,10 +1613,9 @@ async function main() {
             'FNHStandalonePreview.engine.state.y === 8', false, false));
         await clickElement(cdp, '#fnh-battle-attack');
         await clickElement(cdp, '#fnh-battle-start');
-        await waitFor(cdp, 'FNHStandalonePreview.engine.battle.battle.turn === 1', 5000, 'đánh khi event vẫn đang chờ');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.battle.battle.turn === 1 && FNHStandalonePreview.engine.battle.battle.phase === "input"', 10000, 'đánh xong animation và page khi event vẫn đang chờ');
         check('nút đánh hoạt động trong event đang chờ battle', await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.enemy(0).hp < FNHStandalonePreview.engine.battle.enemy(0).mhp', false, false));
-        await waitFor(cdp, 'FNHStandalonePreview.engine.battle.battle.phase === "input"', 10000, 'chờ kỹ năng và page cuối lượt');
         await evalPage(cdp, 'FNHStandalonePreview.engine.battle.random = () => 0', false, false);
         await clickElement(cdp, '#fnh-battle-escape');
         await waitFor(cdp, '!FNHStandalonePreview.engine.eventRunning && document.querySelector("#fnh-battle").hidden',

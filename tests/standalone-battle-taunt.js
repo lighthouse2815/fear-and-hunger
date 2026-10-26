@@ -11,6 +11,13 @@ const watchdog = setTimeout(() => { console.error('Taunt chưa hoàn tất.'); p
         JSON.parse(await fs.readFile(path.join(__dirname, '../game', url), 'utf8')) }) });
     const engine = new GameEngine({ dataStore: store, random: () => 0.5, onRouteEffect: () => true });
     await engine.boot({ mapId: 74, x: 8, y: 8, party: [1, 3] });
+    async function finish(promise) {
+        let done = false, failure;
+        promise.then(() => { done = true; }, error => { done = true; failure = error; });
+        for (let frame = 0; frame < 1000 && !done; frame++) { engine.advanceRoutes(16); await flush(); }
+        assert.ok(done, 'hành động Taunt hoàn tất sau đủ frame');
+        if (failure) throw failure;
+    }
     const enemyId = engine.database.Enemies.length, troopId = engine.database.Troops.length, skillId = engine.database.Skills.length;
     engine.database.Enemies.push({ ...engine.database.Enemies[1], id: enemyId, actions: [] });
     engine.database.Troops.push({ id: troopId, pages: [], members: [0, 1, 2].map((_, index) => ({ enemyId, x: 300 + index * 100, y: 400, hidden: false })) });
@@ -73,7 +80,7 @@ const watchdog = setTimeout(() => { console.error('Taunt chưa hoàn tất.'); p
     assert.equal(targets(runtime.enemy(0), 0)[0].id, 3, 'save giữ Taunt đang chạy');
     engine.state.changeActorState(3, 101, false); runtime.syncActors();
     runtime.handleEffect(334, [-1]); runtime.handleEffect(333, [1, 0, 100]);
-    await engine.forceBattleAction([1, 1, skillId, 0]);
+    await finish(engine.forceBattleAction([1, 1, skillId, 0]));
     assert.equal(runtime.battle.lastAction.target, 1, 'lệnh 339 cũng tôn trọng Taunt');
     runtime.handleEffect(334, [-1]); runtime.handleEffect(333, [1, 0, 100]);
     engine.queueBattleAction(1, 'skill', skillId, 0); engine.queueBattleAction(3, 'skill', 2, 0);

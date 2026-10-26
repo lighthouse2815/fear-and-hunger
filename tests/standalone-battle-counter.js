@@ -126,6 +126,8 @@ const watchdog = setTimeout(() => { console.error('Phản đòn chưa hoàn tấ
     const controller = new AbortController();
     const action = engine.forceBattleAction([1, 1, skillId, 0], {}, controller.signal);
     const canceled = assert.rejects(action, /hủy phản đòn/);
+    for (let frame = 0; frame < 40 && !animations.length; frame++) { engine.advanceRoutes(1); await flush(); }
+    assert.equal(animations.length, 1, 'hủy khi animation đòn gốc đang chạy, trước effect và phản công');
     controller.abort(new Error('hủy phản đòn')); await canceled;
     engine.advanceRoutes(1000); await flush();
     assert.equal(engine.animations.entries.length, 0, 'hủy animation gốc không để phản công chạy muộn');

@@ -533,41 +533,69 @@
     };
 
     GameEngine.prototype.completeBattleAction = async function (report, handlers, signal) {
-        var skill = this.battle.actionData(report), engine = this;
+        var runtime = this.battle, skill = runtime.actionData(report), engine = this;
+        if (report.pendingAction && report.pendingAction.done()) return;
+        var pending = report.pendingAction, subject = pending ? pending.subject :
+            report.subject === 'enemy' ? runtime.enemy(report.subjectId) : runtime.actor(report.subjectId);
         var animationId = skill.animationId;
         if (animationId < 0) {
             var actor = report.subject === 'actor' && this.state.actor(report.subjectId);
             var weapon = actor && this.database.Weapons[actor.equips[0]];
             animationId = weapon && weapon.animationId || 1;
         }
-        var activeAnimations = [], waiter = this.createInterpreter([], 0, handlers, signal);
-        function startAnimation() {
-            if (animationId <= 0) return Promise.resolve();
-            var animations = report.targets.map(function (target) {
-                var animation = engine.animations.startBattle(target.id, animationId, report.subject === 'enemy', target.type);
+        var activeAnimations = [], animationWaits = [], waits = [], counterIndex = 0;
+        var waiter = this.createInterpreter([], 0, handlers, signal);
+        function waitFrames(frames) {
+            var before = engine.screen.screen.nextId;
+            var done = engine.screen.tween([], {}, frames);
+            var track = engine.screen.screen.tweens.find(function (entry) { return entry.id === before; });
+            if (track) waits.push(track);
+            return waiter.awaitCommand(done);
+        }
+        function startAnimation(indices) {
+            if (animationId <= 0) return;
+            indices.forEach(function (index) {
+                var target = report.targets[index];
+                animationWaits.push(engine.animations.startBattle(target.id, animationId, report.subject === 'enemy', target.type));
                 activeAnimations.push(engine.animations.entries[engine.animations.entries.length - 1]);
-                return animation;
             });
-            return Promise.all(animations);
+        }
+        async function counters() {
+            while (counterIndex < report.hits.length) {
+                var hit = report.hits[counterIndex++];
+                if (hit.counter) await engine.completeBattleAction(hit.counter, handlers, signal);
+            }
         }
         try {
-            var sequence = report.sequence, lines = sequence && Object.keys(sequence).reduce(function (all, phase) {
-                return all.concat(sequence[phase].map(function (line) { return line.toLowerCase(); }));
-            }, []);
-            if (!sequence) {
-                await waiter.awaitCommand(startAnimation());
-            } else if (lines.some(function (line) { return line === 'action animation'; })) {
-                for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-                    if (signal && signal.aborted) throw signal.reason;
-                    if (lines[lineIndex] === 'action animation') await waiter.awaitCommand(startAnimation());
-                    if (lines[lineIndex] === 'motion wait: user') await waiter.awaitCommand(new Promise(function (resolve) { setTimeout(resolve, 80); }));
-                    if (lines[lineIndex] === 'death break' && report.defeated) break;
+            var phases = report.counter ? { target: ['action animation', 'wait for animation', 'action effect'] } : runtime.actionPhases(skill);
+            var allTargets = report.targets.map(function (_, index) { return index; });
+            for (var phase of ['setup', 'whole', 'target', 'follow', 'finish']) {
+                var groups = phase === 'target' ? allTargets.map(function (index) { return [index]; }) : [allTargets];
+                var stopTargets = false;
+                for (var indices of groups) {
+                    if (stopTargets) break;
+                    for (var raw of phases[phase] || []) {
+                        if (signal && signal.aborted) throw signal.reason;
+                        var line = raw.trim().toLowerCase();
+                        if (line === 'action animation') startAnimation(indices);
+                        else if (line === 'wait for animation') await waiter.awaitCommand(Promise.all(animationWaits));
+                        else if (line === 'action effect' && pending) {
+                            for (var targetIndex of indices) {
+                                if (!subject.alive) break;
+                                pending.apply([targetIndex]); await counters();
+                            }
+                        } else if (line === 'perform action' && report.subject === 'actor') await waitFrames(20);
+                        else if (line === 'motion wait: user' && report.subject === 'actor' && engine.database.System.optSideView) await waitFrames(12);
+                        else if (/^wait: \d+$/.test(line)) await waitFrames(Number(line.split(':')[1]));
+                        else if (/^motion (swing|evade): user$/.test(line)) {
+                            runtime.battle.motion = { subject: report.subject, subjectId: report.subjectId, type: line.split(' ')[1].replace(':', '') };
+                        } else if (line === 'death break' && subject && !subject.alive) { stopTargets = true; break; }
+                    }
                 }
             }
-            for (var hitIndex = 0; hitIndex < report.hits.length; hitIndex++) {
-                if (signal && signal.aborted) throw signal.reason;
-                if (report.hits[hitIndex].counter) await this.completeBattleAction(report.hits[hitIndex].counter, handlers, signal);
-            }
+            await waiter.awaitCommand(Promise.all(animationWaits));
+            await counters();
+            if (pending) pending.finish();
             for (var index = 0; index < report.commonEvents.length; index++) {
                 if (signal && signal.aborted) throw signal.reason;
                 if (this.state.scene !== 'battle' || this.battle.battle.result) return;
@@ -575,7 +603,10 @@
                 this.syncBattleActors();
             }
         } finally {
+            if (pending) pending.cancel();
+            delete runtime.battle.motion;
             activeAnimations.forEach(function (entry) { engine.animations.finish(entry); });
+            waits.forEach(function (track) { engine.screen.finish(track); });
         }
     };
 
@@ -600,7 +631,7 @@
                 var key = subject.enemyId != null ? 'enemy:' + subject.index : 'actor:' + subject.id;
                 var forced = battle.forcedThisTurn || (battle.forcedThisTurn = []);
                 if (!forced.includes(key)) forced.push(key);
-                var report = runtime.useSkill(subject, parameters[2], parameters[3], true);
+                var report = runtime.useSkill(subject, parameters[2], parameters[3], true, true);
                 await this.completeBattleAction(report, handlers, signal);
             }
             return true;
@@ -826,7 +857,7 @@
             if (this.state.scene !== 'battle') return;
             if ((battle.forcedThisTurn || []).includes('enemy:' + enemy.index) || !runtime.canUseSkill(enemy, skill)) continue;
             battle.phase = 'action';
-            var report = runtime.useSkill(enemy, skillId, -1);
+            var report = runtime.useSkill(enemy, skillId, -1, false, true);
             await this.completeBattleAction(report, handlers, signal);
             await this.runBattlePages(false, handlers, signal);
         }
@@ -941,7 +972,7 @@
                 if (!(action.kind === 'item' ? runtime.canUseItem(subject, data) : runtime.canUseSkill(subject, data))) continue;
                 if (!enemy && action.kind === 'skill' && ![1, 2].includes(action.id) && !runtime.actorSkills(action.actorId).some(function (skill) { return skill.id === action.id; })) continue;
                 battle.phase = 'action';
-                var report = action.kind === 'item' ? runtime.useItem(subject, action.id, action.targetIndex) : runtime.useSkill(subject, action.id, action.targetIndex);
+                var report = action.kind === 'item' ? runtime.useItem(subject, action.id, action.targetIndex, true) : runtime.useSkill(subject, action.id, action.targetIndex, false, true);
                 if (action.autoBattle && !report.confusion) report.autoBattle = true;
                 battle.turnActions.push(report);
                 await this.completeBattleAction(report, handlers || context.handlers, context.signal);

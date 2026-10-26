@@ -11,6 +11,13 @@ const watchdog = setTimeout(() => { console.error('AI chưa kết thúc trong th
         JSON.parse(await fs.readFile(path.join(__dirname, '../game', url), 'utf8')) }) });
     const engine = new GameEngine({ dataStore: store, random: () => 0.75, onRouteEffect: () => true });
     await engine.boot({ mapId: 74, x: 8, y: 8, party: [1, 3] });
+    async function finish(promise) {
+        let done = false, failure;
+        promise.then(() => { done = true; }, error => { done = true; failure = error; });
+        for (let frame = 0; frame < 1000 && !done; frame++) { engine.advanceRoutes(16); await flush(); }
+        assert.ok(done, 'AI hoàn tất hành động sau đủ frame');
+        if (failure) throw failure;
+    }
     const troopId = engine.database.Troops.length;
     engine.database.Troops.push({ ...engine.database.Troops[1], id: troopId, pages: [] });
     engine.battle.setup(troopId, true, true); engine.state.scene = 'battle';
@@ -49,11 +56,11 @@ const watchdog = setTimeout(() => { console.error('AI chưa kết thúc trong th
     r.battle.enemies.slice(1).forEach(target => { target.hidden = true; });
     r.battle.managed = true; r.battle.phase = 'enemy';
     const beforeHp = engine.state.actor(1).hp;
-    await engine.runEnemyTurn();
+    await finish(engine.runEnemyTurn());
     assert.equal(engine.state.actor(1).hp, beforeHp, 'kỹ năng không damage không tự biến thành đòn đánh cố định');
     assert.equal(engine.state.switchValue(16), true, 'AI chạy common event từ skill thật');
     assert.equal(r.battle.lastAction.skillId, 7);
-    await engine.forceBattleAction([0, 0, 7, -1]);
+    await finish(engine.forceBattleAction([0, 0, 7, -1]));
     assert.equal(r.enemyActions().length, 0, 'hành động cưỡng chế tiêu thụ hành động thường cùng lượt');
     r.battle.forcedThisTurn = [];
     // Thay skill bằng skill có animation: khóa trận đến khi animation xong.

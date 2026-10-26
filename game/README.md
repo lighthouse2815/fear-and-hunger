@@ -119,8 +119,13 @@ phương tiện không tăng nhịp này. Save giữ tổng bước, tiến trì
 Flash đỏ và thanh trạng thái báo mất HP khi đi bộ. HP cập nhật trước event chạm;
 nếu cả đội bị hạ theo cấu hình slip death thì mở game over và không chạy event
 ở ô đích. Biến sự kiện đọc được tổng bước qua toán hạng dữ liệu 7/3.
-Engine đã xử lý các note state và số effect của action sequence hiện có;
-thời điểm animation/effect và motion trong sequence còn cần hoàn thiện.
+Engine chạy phase setup/whole/target/follow/finish theo thứ tự dữ liệu. Effect
+được áp tại đúng lệnh, tách khỏi bước trả MP/TP/item; wait animation và wait frame
+giữ hành động đến khi xong. Attack đặt effect trước wait, kỹ năng mặc định đặt
+effect sau animation. Phản công chạy sau từng effect, trước effect tiếp theo;
+death break kiểm tra chủ thể. Common event chạy cuối hành động. Hủy dọn các wait
+và animation còn dở, không áp effect muộn. Thiết lập IMMORTAL và phần hiển thị
+motion vẫn cần đối chiếu tiếp với plugin gốc trước khi chuyển entry chính.
 Danh sách nghiệm thu toàn bộ được theo dõi tại [engine/MIGRATION.md](engine/MIGRATION.md).
 Modifier của Terror/Critical state đọc công thức số học trong note và chạy sau
 damage/Guard/cap, giữ đích ở 1 HP theo `b.hp - 1`. Nhận damage xóa state theo

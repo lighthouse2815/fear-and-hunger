@@ -318,6 +318,19 @@
         match = weapon && /<skill_id\s*:\s*(\d+)>/i.exec(weapon.note || '');
         return match ? Number(match[1]) : 1;
     };
+    BattleRuntime.prototype.actionPhases = function (skill) {
+        this.actionEffectCount(skill); // Kiểm tra toàn bộ note trước khi tiêu tài nguyên.
+        var animation = this.database.Animations[skill.animationId];
+        var whole = animation && (animation.position === 3 || [2, 8, 10].includes(skill.scope));
+        var phases = { setup: ['wait for animation'], whole: [], target: [], follow: [], finish: [] };
+        var lines = ['perform action', 'wait: 10', 'action animation', 'wait for animation'];
+        for (var repeat = 0; repeat < (skill.repeats || 1); repeat++) {
+            if (repeat) lines.push('wait: 8');
+            lines.push('action effect', 'death break');
+        }
+        phases[whole ? 'whole' : 'target'] = lines;
+        return Object.assign(phases, this.actionSequence(skill) || {});
+    };
     BattleRuntime.prototype.skillFor = function (battler, id, forced) {
         return this.database.Skills[id === 1 && !forced ? this.attackSkillId(battler) : id];
     };
@@ -465,20 +478,20 @@
         if (damage.type === 5 || damage.type === 6) value = Math.min(value, this.battlerState(target)[resource]);
         return { damage: value, resource: resource, critical: !!hit.critical };
     };
-    BattleRuntime.prototype.useSkill = function (subject, skillId, index, forced) {
+    BattleRuntime.prototype.useSkill = function (subject, skillId, index, forced, deferred) {
         var skill = this.skillFor(subject, skillId, forced);
         if (!skill) throw new Error('Không tìm thấy skill ' + skillId);
-        return this.useAction(subject, skill, index, false, forced);
+        return this.useAction(subject, skill, index, false, forced, null, null, deferred);
     };
-    BattleRuntime.prototype.useItem = function (subject, itemId, index) {
+    BattleRuntime.prototype.useItem = function (subject, itemId, index, deferred) {
         var item = this.database.Items[itemId];
         if (!item) throw new Error('Không tìm thấy item ' + itemId);
-        return this.useAction(subject, item, index, true, false);
+        return this.useAction(subject, item, index, true, false, null, null, deferred);
     };
     BattleRuntime.prototype.canCounter = function (battler) {
         return battler.alive && !battler.hidden && this.restriction(battler) < 4;
     };
-    BattleRuntime.prototype.useAction = function (subject, skill, index, item, forced, menuTargets, counterTarget) {
+    BattleRuntime.prototype.useAction = function (subject, skill, index, item, forced, menuTargets, counterTarget, deferred) {
         var menu = Array.isArray(menuTargets);
         if (!menu && (!this.battle || this.battle.result)) throw new Error('Trận chiến không hoạt động.');
         if (!subject || !subject.alive || subject.hidden) throw new Error('Chủ thể chiến đấu không hợp lệ.');
@@ -515,64 +528,84 @@
             var subjectData = this.battlerState(subject);
             subjectData.tp = Math.max(0, (subjectData.tp || 0) - cost.tp);
         }
-        targets.forEach(function (target) {
-            if (!subject.alive) return;
-            report.targets.push({ type: target.enemyId != null ? 'enemy' : 'actor', id: target.enemyId != null ? target.index : target.id });
-            if (!menu && !counterTarget) {
-                var key = report.subject + ':' + report.subjectId;
-                var unit = target.enemyId != null ? runtime.battle.enemies : runtime.battle.actors;
-                (runtime.battle.lastTargets || (runtime.battle.lastTargets = {}))[key] = unit.indexOf(target);
-            }
-            for (var repeat = 0; repeat < effectCount; repeat++) {
-                if (!subject.alive) break;
-                if ([9, 10].includes(skill.scope) ? target.alive : !target.alive) break;
-                var counterRate = !menu && !counterTarget && skill.hitType === 1 && runtime.canCounter(target) ? runtime.traitRate(target, 22, 6, true) : 0;
-                var counter = counterRate > 0 && runtime.random() < counterRate;
-                var hit = { target: target.enemyId != null ? target.index : target.id, targetType: target.enemyId != null ? 'enemy' : 'actor', damage: 0 };
-                var success = (skill.successRate == null ? 100 : skill.successRate) / 100;
-                if (skill.hitType === 1) success *= runtime.traitRate(subject, 22, 0, true);
-                hit.missed = runtime.random() >= success;
-                hit.evaded = !hit.missed && skill.hitType !== 0 && runtime.random() < runtime.traitRate(target, 22, skill.hitType === 1 ? 1 : 4, true);
-                if (!hit.missed && !hit.evaded) {
-                    var damage = skill.damage || { type: 0 }, value = 0;
-                    if (damage.type > 0) {
-                        var calculated = runtime.damageValue(subject, target, skill);
-                        value = calculated.damage; hit.critical = calculated.critical;
-                        var resource = calculated.resource;
-                        runtime.changeResource(target, resource, -value);
-                        if (resource === 'hp' && value > 0) runtime.battlerState(target).states.slice().forEach(function (id) {
-                            var state = runtime.database.States[id];
-                            if (state.removeByDamage && runtime.random() * 100 < state.chanceByDamage) runtime.removeState(target, id);
-                        });
-                        if (damage.type === 5 || damage.type === 6) runtime.changeResource(subject, resource, value);
-                        hit.damage = value; hit.resource = resource; report.damage += value;
-                        report.critical = report.critical || hit.critical;
-                    }
-                    (skill.effects || []).forEach(function (effect) {
-                        if (effect.code === 22 && runtime.random() < effect.value1) { runtime.removeState(target, effect.dataId); runtime.syncActors(); }
-                        if (effect.code === 43 && target.enemyId == null) runtime.state.changeActorSkill(target.id, effect.dataId, true);
-                        if (effect.code !== 21) return;
-                        if (effect.dataId === 0) runtime.battlerTraits(subject).filter(function (trait) { return trait.code === 32; }).forEach(function (trait) {
-                            runtime.addState(target, trait.dataId, effect.value1 * trait.value, false);
-                        });
-                        else runtime.addState(target, effect.dataId, effect.value1, skill.hitType === 0);
-                    });
-                }
-                hit.defeated = !target.alive; report.hits.push(hit);
-                if (counter && runtime.canCounter(target)) {
-                    hit.counter = runtime.useAction(target, runtime.database.Skills[runtime.attackSkillId(target)], 0, false, true, null, subject);
-                }
-            }
+        report.targets = targets.map(function (target) {
+            return { type: target.enemyId != null ? 'enemy' : 'actor', id: target.enemyId != null ? target.index : target.id };
         });
-        var data = this.battlerState(subject);
-        data.tp = Math.min(100, (data.tp || 0) + Math.floor((skill.tpGain || 0) * this.traitRate(subject, 23, 5)));
-        var first = report.targets[0];
-        report.target = first && first.id; report.defeated = !!(report.hits.length && report.hits[report.hits.length - 1].defeated);
-        var state = this.battlerState(subject);
-        if (!menu && !counterTarget) state.states.slice().forEach(function (id) {
-            var definition = this.database.States[id];
-            if (definition.autoRemovalTiming === 1 && state.stateTurns && state.stateTurns[id] === 0) this.removeState(subject, id);
-        }, this);
+        report.target = report.targets[0] && report.targets[0].id;
+        function apply(selected, repeats) {
+            selected.forEach(function (target) {
+                if (!subject.alive) return;
+                if (!menu && !counterTarget) {
+                    var key = report.subject + ':' + report.subjectId;
+                    var unit = target.enemyId != null ? runtime.battle.enemies : runtime.battle.actors;
+                    (runtime.battle.lastTargets || (runtime.battle.lastTargets = {}))[key] = unit.indexOf(target);
+                }
+                for (var repeat = 0; repeat < repeats; repeat++) {
+                    if (!subject.alive) break;
+                    if ([9, 10].includes(skill.scope) ? target.alive : !target.alive) break;
+                    var counterRate = !menu && !counterTarget && skill.hitType === 1 && runtime.canCounter(target) ? runtime.traitRate(target, 22, 6, true) : 0;
+                    var counter = counterRate > 0 && runtime.random() < counterRate;
+                    var hit = { target: target.enemyId != null ? target.index : target.id, targetType: target.enemyId != null ? 'enemy' : 'actor', damage: 0 };
+                    var success = (skill.successRate == null ? 100 : skill.successRate) / 100;
+                    if (skill.hitType === 1) success *= runtime.traitRate(subject, 22, 0, true);
+                    hit.missed = runtime.random() >= success;
+                    hit.evaded = !hit.missed && skill.hitType !== 0 && runtime.random() < runtime.traitRate(target, 22, skill.hitType === 1 ? 1 : 4, true);
+                    if (!hit.missed && !hit.evaded) {
+                        var damage = skill.damage || { type: 0 }, value = 0;
+                        if (damage.type > 0) {
+                            var calculated = runtime.damageValue(subject, target, skill);
+                            value = calculated.damage; hit.critical = calculated.critical;
+                            var resource = calculated.resource;
+                            runtime.changeResource(target, resource, -value);
+                            if (resource === 'hp' && value > 0) runtime.battlerState(target).states.slice().forEach(function (id) {
+                                var state = runtime.database.States[id];
+                                if (state.removeByDamage && runtime.random() * 100 < state.chanceByDamage) runtime.removeState(target, id);
+                            });
+                            if (damage.type === 5 || damage.type === 6) runtime.changeResource(subject, resource, value);
+                            hit.damage = value; hit.resource = resource; report.damage += value;
+                            report.critical = report.critical || hit.critical;
+                        }
+                        (skill.effects || []).forEach(function (effect) {
+                            if (effect.code === 22 && runtime.random() < effect.value1) { runtime.removeState(target, effect.dataId); runtime.syncActors(); }
+                            if (effect.code === 43 && target.enemyId == null) runtime.state.changeActorSkill(target.id, effect.dataId, true);
+                            if (effect.code !== 21) return;
+                            if (effect.dataId === 0) runtime.battlerTraits(subject).filter(function (trait) { return trait.code === 32; }).forEach(function (trait) {
+                                runtime.addState(target, trait.dataId, effect.value1 * trait.value, false);
+                            });
+                            else runtime.addState(target, effect.dataId, effect.value1, skill.hitType === 0);
+                        });
+                    }
+                    hit.defeated = !target.alive; report.hits.push(hit);
+                    if (counter && runtime.canCounter(target)) {
+                        hit.counter = runtime.useAction(target, runtime.database.Skills[runtime.attackSkillId(target)], 0, false, true, null, subject, deferred);
+                    }
+                }
+            });
+            report.defeated = !!(report.hits.length && report.hits[report.hits.length - 1].defeated);
+            if (!menu) runtime.battle.actionRevision = (runtime.battle.actionRevision || 0) + 1;
+        }
+        var finished = false;
+        function finish() {
+            if (finished) return;
+            finished = true;
+            var data = runtime.battlerState(subject);
+            data.tp = Math.min(100, (data.tp || 0) + Math.floor((skill.tpGain || 0) * runtime.traitRate(subject, 23, 5)));
+            var state = runtime.battlerState(subject);
+            if (!menu && !counterTarget) state.states.slice().forEach(function (id) {
+                var definition = runtime.database.States[id];
+                if (definition.autoRemovalTiming === 1 && state.stateTurns && state.stateTurns[id] === 0) runtime.removeState(subject, id);
+            });
+            if (!menu && !counterTarget) runtime.battle.lastAction = report;
+        }
+        if (deferred) {
+            Object.defineProperty(report, 'pendingAction', { value: {
+                subject: subject,
+                done: function () { return finished; },
+                apply: function (indices) { if (!finished) apply(indices.map(function (index) { return targets[index]; }), 1); },
+                finish: finish,
+                cancel: function () { finished = true; }
+            } });
+        } else { apply(targets, effectCount); finish(); }
         if (!menu && !counterTarget) this.battle.lastAction = report;
         return report;
     };
