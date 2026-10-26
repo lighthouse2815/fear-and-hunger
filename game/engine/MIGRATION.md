@@ -21,11 +21,10 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    Hiện action effect, số lần lặp, action animation, wait animation, death break,
    motion wait cơ bản và WeaponSkill đã được đối chiếu với 560 skill/item; các
    phase còn lại vẫn cần kiểm tra trực quan theo từng skill có note đặc biệt.
-2. Menu: đội hình, trang bị và các lựa chọn
-   Chế tạo item/weapon/armor theo recipe và ingredient note đã chạy trong menu,
-   kiểm tra bạc/nguyên liệu và save số lần chế tạo; cần đối chiếu thêm recipe
-   dùng tên thay vì ID và custom synthesis effect.
-   menu theo cấu hình gốc; hoàn thiện lưu/tải nhiều ô và tùy chọn người chơi.
+2. Menu: đối chiếu đội hình, trang bị và các lựa chọn theo cấu hình gốc;
+   hoàn thiện tùy chọn người chơi. Chế tạo item/weapon/armor theo recipe và
+   ingredient note đã chạy trong menu, kiểm tra bạc/nguyên liệu và save số lần
+   chế tạo; cần đối chiếu thêm recipe dùng tên thay vì ID và custom synthesis effect.
 3. Bản đồ: di chuyển mượt, fog/overlay, parallax, tiếng
    bước chân và nhạc trận. Chỉ đánh dấu xong sau khi xác minh.
 4. Điều khiển: phím gọi common event, đặt lại phím và thao tác trên điện thoại.
@@ -48,6 +47,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   lệnh 217 chờ tập hợp, chuyển map/nhảy đặt lại vị trí. Không đưa guest vào combat.
 - Audio đọc pan JSON qua StereoPannerNode; giữ volume/pitch/fade và giải phóng
   graph khi dừng. Chrome đo năng lượng trái/phải từ OGG thật, tắt đầu ra loa test.
+- Menu lưu/tải 20 ô, thông tin checkpoint và đọc ô được chọn từ game over/title;
+  save trong common event giữ stack, ô hỏng không ngăn chọn các ô khác.
 - State 23 buộc crit trong Select rồi khôi phục trong Deselect. Engine thực thi
   hiệu ứng theo từng đích, không dùng eval hay cờ crit toàn cục.
 - CriticalControl gốc đứng trước DamageCore nên phần khởi tạo bị bỏ qua.

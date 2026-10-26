@@ -33,6 +33,7 @@
         #fnh-menu-dialog { width: min(720px, 92vw); max-height: 85vh; overflow: auto; }
         #fnh-menu-dialog nav { display: flex; flex-wrap: wrap; gap: 6px; }
         #fnh-menu-content label { display: block; margin: 12px 0; }
+        #fnh-menu-save-slot, #fnh-end-save-slot { max-width: 100%; }
         [aria-pressed="true"] { outline: 2px solid #e7ddca; }
         dialog { color: inherit; background: #17120f; border: 1px solid #8c7759; }
         dialog::backdrop { background: #000b; }
@@ -55,6 +56,7 @@
             <div id="fnh-end-actions">
                 <h2 id="fnh-end-title"></h2>
                 <button id="fnh-new-game" type="button">Chơi mới</button>
+                <label for="fnh-end-save-slot">Ô lưu</label><select id="fnh-end-save-slot"></select>
                 <button id="fnh-end-load" type="button">Tải ô 1</button>
             </div>
         </section>

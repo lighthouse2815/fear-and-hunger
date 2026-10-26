@@ -155,6 +155,9 @@
         if (!visible) { endScene = null; return; }
         if (endScene === scene) return;
         endScene = scene;
+        var slots = document.getElementById('fnh-end-save-slot');
+        FNHStandaloneMenu.fillSaveSlots(slots, saveStore, Number(slots.value) || 1);
+        document.getElementById('fnh-end-load').textContent = 'Tải ô ' + slots.value;
         var system = engine.database.System;
         var background = document.getElementById('fnh-end-background');
         var overlay = document.getElementById('fnh-end-overlay');
@@ -582,10 +585,14 @@
     });
     document.getElementById('fnh-end-load').addEventListener('click', function () {
         perform(async function () {
-            if (!await engine.loadFrom(saveStore, 1, eventHandlers)) { setStatus('Ô 1 chưa có dữ liệu lưu.'); return; }
+            var slot = Number(document.getElementById('fnh-end-save-slot').value);
+            if (!await engine.loadFrom(saveStore, slot, eventHandlers)) { setStatus('Ô ' + slot + ' chưa có dữ liệu lưu.'); return; }
             audioMap = null;
             await draw();
         });
+    });
+    document.getElementById('fnh-end-save-slot').addEventListener('change', function (event) {
+        document.getElementById('fnh-end-load').textContent = 'Tải ô ' + event.target.value;
     });
     window.addEventListener('pagehide', function () {
         if (scheduler) scheduler.stop();

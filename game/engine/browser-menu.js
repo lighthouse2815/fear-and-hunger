@@ -6,13 +6,25 @@
         if (text != null) element.textContent = text;
         return element;
     }
+    function fillSaveSlots(select, saveStore, selected) {
+        select.replaceChildren();
+        for (var slot = 1; slot <= 20; slot++) {
+            var description = 'Trống';
+            try {
+                var info = saveStore.info(slot);
+                if (info) description = new Date(info.savedAt).toLocaleString('vi-VN') + ' · Map ' + info.mapId + ' · ' + info.party.join(', ');
+            } catch (error) { description = error.message; }
+            var option = node('option', 'Ô ' + slot + ' — ' + description); option.value = slot; select.appendChild(option);
+        }
+        select.value = selected || 1;
+    }
     function MenuUi(engine, saveStore, handlers, changed) {
         this.engine = engine; this.saveStore = saveStore; this.handlers = handlers; this.changed = changed;
         this.dialog = document.getElementById('fnh-menu-dialog');
         this.content = document.getElementById('fnh-menu-content');
         this.message = document.getElementById('fnh-menu-message');
         this.actorSelect = document.getElementById('fnh-menu-actor');
-        this.tab = 'status'; this.busy = false; this.skillTarget = null;
+        this.tab = 'status'; this.busy = false; this.skillTarget = null; this.saveSlot = 1;
         var ui = this;
         document.getElementById('fnh-menu').onclick = function () { if (engine.openMenu()) ui.render(); };
         document.getElementById('fnh-menu-close').onclick = function () { ui.close(); };
@@ -139,21 +151,26 @@
                 label.appendChild(select); content.appendChild(label);
             });
         } else if (this.tab === 'system') {
-            var save = node('button', 'Lưu ô 1'); save.type = 'button'; save.id = 'fnh-menu-save';
+            var slotLabel = node('label', 'Ô lưu: '), slots = node('select'); slots.id = 'fnh-menu-save-slot';
+            fillSaveSlots(slots, ui.saveStore, this.saveSlot);
+            slots.disabled = ui.busy && !(engine.menuWaiters && engine.menuWaiters.size);
+            slots.onchange = function () { ui.saveSlot = Number(slots.value); ui.render(); };
+            slotLabel.appendChild(slots); content.appendChild(slotLabel);
+            var save = node('button', 'Lưu ô ' + this.saveSlot); save.type = 'button'; save.id = 'fnh-menu-save';
             save.disabled = (ui.busy && !(engine.menuWaiters && engine.menuWaiters.size)) || !state.saveEnabled;
             save.onclick = function () {
-                try { engine.saveMenuTo(ui.saveStore, 1); ui.message.textContent = 'Đã lưu ô 1.'; }
+                try { engine.saveMenuTo(ui.saveStore, ui.saveSlot); ui.render(); ui.message.textContent = 'Đã lưu ô ' + ui.saveSlot + '.'; }
                 catch (error) { ui.message.textContent = error.message; }
             };
-            var load = node('button', 'Tải ô 1'); load.type = 'button'; load.id = 'fnh-menu-load';
+            var load = node('button', 'Tải ô ' + this.saveSlot); load.type = 'button'; load.id = 'fnh-menu-load';
             load.disabled = ui.busy || engine.eventRunning;
             load.onclick = function () { ui.act(async function () {
-                if (!ui.saveStore.exists(1)) throw new Error('Ô 1 chưa có dữ liệu lưu.');
+                if (!ui.saveStore.exists(ui.saveSlot)) throw new Error('Ô ' + ui.saveSlot + ' chưa có dữ liệu lưu.');
                 ui.dialog.close();
-                await engine.loadFrom(ui.saveStore, 1, ui.handlers);
+                await engine.loadFrom(ui.saveStore, ui.saveSlot, ui.handlers);
             }); };
             content.append(save, load);
         }
     };
-    root.FNHStandaloneMenu = { MenuUi: MenuUi };
+    root.FNHStandaloneMenu = { MenuUi: MenuUi, fillSaveSlots: fillSaveSlots };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

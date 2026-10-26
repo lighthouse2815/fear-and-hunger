@@ -1039,6 +1039,30 @@ async function main() {
         await clickElement(cdp,'#fnh-menu-save');
         check('lưu từ menu tạo checkpoint trở về bản đồ',await evalPage(cdp,
             'JSON.parse(localStorage.getItem("FNH_STANDALONE_PREVIEW:1")).state.scene==="map"',false,false));
+        await evalPage(cdp, `(() => {
+            window.__firstSlot = localStorage.getItem('FNH_STANDALONE_PREVIEW:1');
+            const slots = document.querySelector('#fnh-menu-save-slot');
+            slots.value = 20; slots.dispatchEvent(new Event('change'));
+            FNHStandalonePreview.engine.state.setVariable(8234, 42);
+        })()`, false, false);
+        await clickElement(cdp, '#fnh-menu-save');
+        check('menu lưu riêng hai mươi ô và hiện thông tin checkpoint', await evalPage(cdp, `(() => {
+            const slots = document.querySelector('#fnh-menu-save-slot');
+            const saved = JSON.parse(localStorage.getItem('FNH_STANDALONE_PREVIEW:20')).state;
+            const bounds = slots.getBoundingClientRect(), dialog = document.querySelector('#fnh-menu-dialog').getBoundingClientRect();
+            return slots.options.length === 20 && slots.selectedOptions[0].textContent.includes('Map 74') &&
+                bounds.left >= dialog.left && bounds.right <= dialog.right &&
+                saved.variables[8234] === 42 && saved.scene === 'map' && localStorage.getItem('FNH_STANDALONE_PREVIEW:1') === window.__firstSlot;
+        })()`, false, false));
+        await evalPage(cdp, 'FNHStandalonePreview.engine.state.setVariable(8234, 0)', false, false);
+        await clickElement(cdp, '#fnh-menu-load');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.scene === "map" && FNHStandalonePreview.engine.state.variableValue(8234) === 42 && !document.querySelector("#fnh-menu-dialog").open', 5000, 'tải ô 20 từ menu');
+        check('menu tải đúng ô được chọn', await evalPage(cdp, 'FNHStandalonePreview.engine.state.variableValue(8234) === 42', false, false));
+        await clickElement(cdp, '#fnh-menu'); await clickElement(cdp, '[data-menu-tab="system"]');
+        await evalPage(cdp, `(() => {
+            const slots = document.querySelector('#fnh-menu-save-slot'); slots.value = 1; slots.dispatchEvent(new Event('change'));
+            localStorage.removeItem('FNH_STANDALONE_PREVIEW:20'); delete window.__firstSlot;
+        })()`, false, false);
         await clickElement(cdp,'#fnh-menu-close');
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.menuBefore).then(()=>true)',true,false);
         await evalPage(cdp,`(async()=>{
@@ -1957,6 +1981,7 @@ async function main() {
             const engine = FNHStandalonePreview.engine;
             const store = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
             engine.saveTo(store, 1);
+            const extra = engine.save(); extra.variables[8235] = 20; store.save(20, extra);
             await engine.createInterpreter([{ code: 353 }, { code: 121, parameters: [996, 996, 0] }], 0).run();
         })()`, true, false);
         await waitFor(cdp, `!document.querySelector('#fnh-end-screen').hidden &&
@@ -1966,12 +1991,16 @@ async function main() {
         await clickElement(cdp, '#fnh-save');
         check('game over không ghi đè save bằng trạng thái đã chết', await evalPage(cdp,
             'new FNHStandaloneSave.SaveStore({ prefix: "FNH_STANDALONE_PREVIEW:" }).load(1).scene === "map" && FNHStandalonePreview.engine.state.scene === "gameover"', false, false));
+        await evalPage(cdp, `(() => {
+            const slots = document.querySelector('#fnh-end-save-slot'); slots.value = 20; slots.dispatchEvent(new Event('change'));
+        })()`, false, false);
         await clickElement(cdp, '#fnh-end-load');
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.scene === "map" && document.querySelector("#fnh-end-screen").hidden',
             5000, 'tải save từ màn game over');
-        check('tải save game over trở lại map', await evalPage(cdp,
-            '!FNHStandalonePreview.engine.eventRunning && document.querySelector("#fnh-status").textContent.startsWith("Map ")', false, false));
-        await evalPage(cdp, `localStorage.removeItem('FNH_STANDALONE_PREVIEW:1');
+        check('tải ô 20 từ game over trở lại map', await evalPage(cdp,
+            '!FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.variableValue(8235) === 20 && document.querySelector("#fnh-end-save-slot").options.length === 20 && document.querySelector("#fnh-status").textContent.startsWith("Map ")', false, false));
+        await evalPage(cdp, `document.querySelector('#fnh-end-save-slot').value = 1;
+            localStorage.removeItem('FNH_STANDALONE_PREVIEW:20'); localStorage.removeItem('FNH_STANDALONE_PREVIEW:1');
             FNHStandalonePreview.engine.createInterpreter([{ code: 353 }], 0).run()`, true, false);
         await waitFor(cdp, '!document.querySelector("#fnh-end-screen").hidden', 5000, 'game over lần hai');
         await clickElement(cdp, '#fnh-end-load');

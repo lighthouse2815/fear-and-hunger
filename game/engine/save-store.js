@@ -23,14 +23,27 @@
         return payload;
     };
 
-    SaveStore.prototype.load = function (slot) {
+    SaveStore.prototype.read = function (slot) {
         var value = this.storage.getItem(this.key(slot));
         if (!value) return null;
         var payload;
         try { payload = JSON.parse(value); }
         catch (error) { throw new Error('Ô lưu bị hỏng: ' + slot); }
         if (!payload || payload.version !== 1 || !payload.state) throw new Error('Ô lưu không tương thích: ' + slot);
-        return payload.state;
+        return payload;
+    };
+
+    SaveStore.prototype.load = function (slot) {
+        var payload = this.read(slot);
+        return payload ? payload.state : null;
+    };
+
+    SaveStore.prototype.info = function (slot) {
+        var payload = this.read(slot);
+        if (!payload) return null;
+        var state = payload.state;
+        return { savedAt: payload.savedAt, mapId: state.mapId,
+            party: (state.party || []).map(function (id) { return state.actors && state.actors[id] && state.actors[id].name || String(id); }) };
     };
 
     SaveStore.prototype.exists = function (slot) {

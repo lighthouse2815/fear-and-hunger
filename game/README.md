@@ -210,7 +210,9 @@ sách công thức phải có trong túi để mở công thức. Engine kiểm 
 liệu, bạc, trừ đúng một lần, cộng vật phẩm tạo ra và lưu số lần chế tạo. Công thức
 và nguyên liệu bằng ID được giữ nguyên; dòng tên chưa có trong dữ liệu sẽ báo lỗi.
 Lệnh game over/về tiêu đề dừng cả chuỗi common event đang gọi và hủy các sự kiện
-nền đang chờ. Hai màn này dùng ảnh/nhạc có sẵn, cho tải ô lưu 1 hoặc chơi mới.
+nền đang chờ. Hai màn này dùng ảnh/nhạc có sẵn, cho chọn tải một trong 20 ô lưu
+hoặc chơi mới. Tab **Hệ thống** của menu cũng lưu/tải 20 ô, hiển thị thời điểm,
+map và tên đội hình; ô hỏng được báo riêng, không cản dùng các ô khác.
 Party giữ guest actor riêng với đội chiến đấu; script `addGuestActor`/
 `removeGuestActor` và điều kiện `hasGuestActor` cập nhật/đọc save. Follower và guest
 đi theo vị trí người phía trước qua góc rẽ, không dời theo hướng nhìn. Lệnh 217
