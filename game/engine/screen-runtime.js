@@ -36,14 +36,16 @@
         if (frames === 0) { Object.assign(target, goal); return Promise.resolve(); }
         var start = {};
         Object.keys(goal).forEach(function (key) { start[key] = target[key]; });
-        var track = { id: this.screen.nextId++, path: path, start: start, goal: goal, frames: frames, elapsed: 0 };
+        var track = { id: this.screen.nextId++, path: path, start: start, goal: goal, frames: frames, elapsed: 0,
+            scene: this.state.scene === 'battle' ? 'battle' : 'map' };
         this.screen.tweens.push(track);
         return new Promise(function (resolve) { runtime.waiters.set(track.id, resolve); });
     };
-    ScreenRuntime.prototype.advance = function (frames) {
+    ScreenRuntime.prototype.advance = function (frames, scene) {
         if (!Number.isFinite(frames) || frames < 0) throw new RangeError('Số frame không hợp lệ.');
         var runtime = this;
         this.screen.tweens.slice().forEach(function (track) {
+            if (scene && (track.scene || 'map') !== scene) return;
             var target = runtime.target(track.path);
             if (!target) { runtime.finish(track); return; }
             track.elapsed = Math.min(track.frames, track.elapsed + frames);

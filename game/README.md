@@ -75,13 +75,19 @@ Trận đấu vẽ nền battleback và sprite quái từ PNG, đặt từng b�
 và xếp lớp theo tọa độ. Bộ phận ẩn hoặc đã chết không được vẽ. Khi không có nền
 chỉ định, renderer làm mờ ảnh bản đồ hiện tại. Giao diện hiển thị HP/MP trong đội.
 Luồng 301 chờ kết quả rồi chỉ chạy nhánh 601/602/603 tương ứng; trận thua bắt buộc
-dừng event và mở màn game over. Combat còn thiếu troop event, hiệu ứng kỹ năng
-và AI đầy đủ để thay entry chính.
+dừng event và mở màn game over. Combat còn thiếu hiệu ứng kỹ năng, hành động
+cưỡng chế/animation của quái và AI đầy đủ để thay entry chính.
 Các lệnh sự kiện 331–336, 340 và 342 đã đổi được HP/MP/TP, state, hồi phục, hiện
 quái, biến hình và kết thúc trận. Thao tác giữ index thành viên trong troop,
 tôn trọng miễn nhiễm state, đồng bộ trạng thái chết và lưu được qua save.
-Điều kiện và biến sự kiện đọc được chỉ số/state của quái. Việc tự chọn và chạy
-page sự kiện trong troop vẫn cần triển khai.
+Điều kiện và biến sự kiện đọc được chỉ số/state của quái. Engine tự chọn page
+trong Troops.json theo lượt, cuối lượt, HP nhân vật/quái và công tắc; các điều
+kiện kết hợp bằng AND. Page chạy một lần, mỗi lượt hoặc theo điều kiện liên tục;
+cờ đã chạy được giữ qua save. Interpreter hiện có xử lý nội dung page và common
+event, khóa nút đánh/chạy trong lúc chờ. Hiệu ứng, Gab và picture tiếp tục chạy
+trong trận; wait bản đồ được tạm dừng. Guard thật có thể thắng bằng page hạ đầu
+và nhớ chân đã bị chặt. Lệnh chưa hỗ trợ trong page báo lỗi và dừng trận; không
+tự bỏ qua. Sự kiện lặp liên tục có giới hạn để tránh treo trình duyệt.
 Lệnh game over/về tiêu đề dừng cả chuỗi common event đang gọi và hủy các sự kiện
 nền đang chờ. Hai màn này dùng ảnh/nhạc có sẵn, cho tải ô lưu 1 hoặc chơi mới.
 Chơi mới mở luồng chọn nhân vật độc lập từ Map010. Tải save trở lại map và tiếp

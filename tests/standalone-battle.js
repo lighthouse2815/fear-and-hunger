@@ -18,9 +18,11 @@ function branches(troopId, canLose = true) {
         JSON.parse(await fs.readFile(path.join(__dirname, '../game', url), 'utf8')) }) });
     const engine = new GameEngine({ dataStore: store, random: () => 0 });
     await engine.boot({ mapId: 74, x: 15, y: 22, direction: 8, party: [1] });
+    const handlers = { effect: code => code === 250, message: () => {}, choice: () => 0 };
+    const interpret = (commands, signal) => engine.createInterpreter(commands, 1, handlers, signal);
     const troop = engine.database.Troops.find(item => item && item.members && item.members.length > 0);
     let completed = false;
-    let running = engine.createInterpreter(branches(troop.id), 1).run().then(() => { completed = true; });
+    let running = interpret(branches(troop.id)).run().then(() => { completed = true; });
     await flush();
     assert.equal(engine.state.scene, 'battle');
     assert.equal(engine.battle.battle.troopId, troop.id);
@@ -32,10 +34,10 @@ function branches(troopId, canLose = true) {
     assert.equal(await engine.interact(), null);
     assert.throws(() => engine.battle.setup(troop.id), /đang chạy/);
     const target = engine.battle.enemy(0), before = target.hp;
-    engine.battle.attack(1, 0);
-    assert.ok(target.hp < before);
+    const attacking = engine.battleAttack(1, 0);
     assert.throws(() => engine.battle.attack(1, 0), /Chưa đến lượt/);
-    engine.battle.enemyTurn();
+    await attacking;
+    assert.ok(target.hp < before);
     assert.equal(engine.battle.battle.turn, 1);
     engine.battle.enemyTurn();
     assert.equal(engine.battle.battle.turn, 1, 'không chạy lượt địch hai lần');
@@ -52,18 +54,18 @@ function branches(troopId, canLose = true) {
         { ...troop.members[0], hidden: true }, { ...troop.members[1], hidden: false }
     ], pages: [] });
     engine.state.recoverActor(1);
-    running = engine.createInterpreter(branches(testTroop), 1).run();
+    running = interpret(branches(testTroop)).run();
     await flush();
     assert.equal(engine.battle.enemy(0).hidden, true);
     assert.equal(engine.battle.aliveEnemies()[0].index, 1, 'giữ index thành viên trong JSON');
     assert.throws(() => engine.battle.attack(1, 0), /không hợp lệ/);
-    engine.battle.attack(1, 1);
+    await engine.battleAttack(1, 1);
     await running;
     assert.equal(engine.battle.battle.result, 'victory');
     assert.equal(engine.state.variableValue(50), 10);
     assert.equal(engine.state.scene, 'map');
 
-    running = engine.createInterpreter(branches(troop.id), 1).run();
+    running = interpret(branches(troop.id)).run();
     await flush();
     engine.state.changeActorHp(1, -99999, true);
     engine.battle.actor(1).hp = 0;
@@ -75,7 +77,7 @@ function branches(troopId, canLose = true) {
     assert.ok(!engine.state.actor(1).states.includes(1));
     assert.equal(engine.state.scene, 'map');
 
-    running = engine.createInterpreter(branches(troop.id, false), 1).run();
+    running = interpret(branches(troop.id, false)).run();
     await flush();
     engine.state.setVariable(50, 0); engine.state.setSwitch(51, false);
     engine.state.changeActorHp(1, -99999, true);
@@ -88,7 +90,7 @@ function branches(troopId, canLose = true) {
 
     engine.state.scene = 'map'; engine.state.recoverActor(1);
     const controller = new AbortController();
-    running = engine.createInterpreter(branches(troop.id), 1, {}, controller.signal).run();
+    running = interpret(branches(troop.id), controller.signal).run();
     const cancelled = assert.rejects(running, { name: 'AbortError' });
     await flush(); controller.abort(); await cancelled; await flush();
     assert.equal(engine.state.scene, 'map');
@@ -96,22 +98,22 @@ function branches(troopId, canLose = true) {
     assert.equal(engine.battle.battle.result, 'abort');
 
     engine.state.setVariable(60, troop.id);
-    running = engine.createInterpreter([command(301, [1, 60, false, false])], 1).run();
+    running = interpret([command(301, [1, 60, false, false])]).run();
     await flush();
     assert.equal(engine.battle.battle.troopId, troop.id);
     assert.equal(engine.battle.escape(), false, 'khóa chạy thoát theo dữ liệu');
     engine.battle.finish('victory'); await running;
     engine.battle.random = () => 0.99;
-    running = engine.createInterpreter(branches(troop.id), 1).run();
+    running = interpret(branches(troop.id)).run();
     await flush();
-    assert.equal(engine.battle.escape(), false);
+    assert.equal(await engine.battleEscape(), false);
     assert.equal(engine.battle.battle.turn, 1, 'thoát thất bại chỉ tốn một lượt');
     engine.battle.finish('escape'); await running;
     const consecutive = [command(301, [0, troop.id, false, false]),
-        command(121, [52, 52, 0]), ...branches(troop.id)];
-    running = engine.createInterpreter(consecutive, 1).run();
+        command(121, [6000, 6000, 0]), ...branches(troop.id)];
+    running = interpret(consecutive).run();
     await flush(); engine.battle.finish('victory'); await flush();
-    assert.equal(engine.state.switchValue(52), true, 'trận không có nhánh không nhảy qua lệnh kế tiếp');
+    assert.equal(engine.state.switchValue(6000), true, 'trận không có nhánh không nhảy qua lệnh kế tiếp');
     assert.equal(engine.battle.battle.result, null, 'trận tiếp theo vẫn mở');
     engine.battle.finish('escape'); await running;
     const snapshot = engine.save(); await engine.restore(snapshot);

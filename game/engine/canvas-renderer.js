@@ -36,6 +36,14 @@
         return this.images.get(relative);
     };
 
+    CanvasRenderer.prototype.pictureImages = function (screen) {
+        var renderer = this;
+        return Promise.all(screen ? Object.keys(screen.pictures).sort(function (a, b) { return a - b; }).map(async function (id) {
+            var picture = screen.pictures[id];
+            return { picture: picture, bitmap: picture.name ? await renderer.loadImage('img/pictures/' + picture.name + '.png') : null };
+        }) : []);
+    };
+
     CanvasRenderer.prototype.draw = async function (engine) {
         var frame = ++this.frame;
         if (engine.state && engine.state.scene === 'battle' && engine.battle && engine.battle.battle) {
@@ -47,6 +55,7 @@
     CanvasRenderer.prototype.drawBattle = async function (engine, frame) {
         var battle = engine.battle.battle, renderer = this;
         var screen = engine.screen && engine.screen.screen;
+        var pictures = await this.pictureImages(screen);
         var names = screen && screen.battlebacks || (engine.map.data.specifyBattleback ?
             [engine.map.data.battleback1Name, engine.map.data.battleback2Name] : ['', '']);
         var backgrounds = await Promise.all(names.map(function (name, index) {
@@ -93,6 +102,9 @@
                 context.drawImage(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height);
             });
         } finally { context.restore(); }
+        if (screen) this.applyTone(context, width, height, screen.tone);
+        pictures.forEach(function (entry) { renderer.drawPicture(entry); });
+        this.drawScreenEffects(screen, engine.state);
         return { battle: battle.troopId, enemies: enemies.length };
     };
 
@@ -103,10 +115,7 @@
         var lightSources = engine.lighting ? engine.lighting.sources(map) : [];
         var parallaxName = screen && screen.parallax ? screen.parallax.name : map.data.parallaxName;
         var parallax = parallaxName ? await this.loadImage('img/parallaxes/' + parallaxName + '.png') : null;
-        var pictures = screen ? await Promise.all(Object.keys(screen.pictures).sort(function (a, b) { return a - b; }).map(async function (id) {
-            var picture = screen.pictures[id];
-            return { picture: picture, bitmap: picture.name ? await this.loadImage('img/pictures/' + picture.name + '.png') : null };
-        }, this)) : [];
+        var pictures = await this.pictureImages(screen);
         var animationEntries = engine.animations ? engine.animations.entries.slice() : [];
         var animationBitmaps = await Promise.all(animationEntries.map(async function (entry) {
             var data = engine.database.Animations[entry.animationId];
@@ -198,6 +207,12 @@
             this.drawWeather(screen && screen.weather);
             pictures.forEach(function (entry) { renderer.drawPicture(entry); });
         } finally { this.context = context; context.restore(); }
+        this.drawScreenEffects(screen, state);
+        return { startX: startX, startY: startY };
+    };
+
+    CanvasRenderer.prototype.drawScreenEffects = function (screen, state) {
+        var context = this.context;
         if (screen) {
             if (screen.brightness < 255) {
                 context.fillStyle = 'rgba(0,0,0,' + (1 - screen.brightness / 255) + ')';
@@ -210,7 +225,6 @@
             }
             this.drawGab(screen.gab, state);
         }
-        return { startX: startX, startY: startY };
     };
 
     CanvasRenderer.prototype.drawLighting = function (runtime, sources, player, viewport) {

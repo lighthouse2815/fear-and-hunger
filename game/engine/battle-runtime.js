@@ -32,6 +32,7 @@
         if (this.battle && !this.battle.result) throw new Error('Một trận chiến khác đang chạy.');
         var troop = this.database.Troops[troopId];
         if (!troop) throw new Error('Không tìm thấy troop ' + troopId);
+        this.pendingResult = null;
         this.battle = { troopId: troopId, turn: 0, phase: 'input', canEscape: canEscape !== false,
             canLose: canLose === true, result: null, actors: this.state.party.map(function (id) {
                 var actor = this.state.actor(id); return { id: id, name: actor.name, hp: actor.hp, mp: actor.mp, alive: actor.hp > 0 };
@@ -48,6 +49,33 @@
             enemy.hp = this.enemyParam(enemy, 0); enemy.mp = this.enemyParam(enemy, 1); this.refreshEnemy(enemy);
         }, this);
         return this.battle;
+    };
+    BattleRuntime.prototype.pageMatches = function (page, turnEnding) {
+        var c = page.conditions || {}, battle = this.battle;
+        if (!battle || ![c.turnEnding, c.turnValid, c.enemyValid, c.actorValid, c.switchValid].some(Boolean)) return false;
+        if (c.turnEnding && !turnEnding) return false;
+        if (c.turnValid && (c.turnB === 0 ? battle.turn !== c.turnA :
+            battle.turn < c.turnA || (battle.turn - c.turnA) % c.turnB !== 0)) return false;
+        var enemy = this.enemy(c.enemyIndex), actor = c.actorValid && this.state.actor(c.actorId);
+        if (c.enemyValid && (!enemy || enemy.hp * 100 > enemy.mhp * c.enemyHp)) return false;
+        if (c.actorValid && (!actor || actor.hp * 100 > this.state.actorParam(c.actorId, 0) * c.actorHp)) return false;
+        return !c.switchValid || this.state.switchValue(c.switchId);
+    };
+    BattleRuntime.prototype.nextEventPage = function (turnEnding) {
+        var battle = this.battle;
+        var flags = battle.eventFlags || (battle.eventFlags = { once: {}, turns: {} });
+        var pages = this.database.Troops[battle.troopId].pages || [];
+        for (var index = 0; index < pages.length; index++) {
+            var page = pages[index];
+            if (page.span === 0 && flags.once[index] || page.span === 1 && flags.turns[index] === battle.turn) continue;
+            if (this.pageMatches(page, turnEnding)) return { index: index, page: page };
+        }
+        return null;
+    };
+    BattleRuntime.prototype.markEventPage = function (entry) {
+        var flags = this.battle.eventFlags;
+        if (entry.page.span === 0) flags.once[entry.index] = true;
+        if (entry.page.span === 1) flags.turns[entry.index] = this.battle.turn;
     };
     BattleRuntime.prototype.wait = function (signal) {
         var runtime = this;
@@ -112,7 +140,11 @@
     BattleRuntime.prototype.handleEffect = function (code, p) {
         if (![331, 332, 333, 334, 335, 336, 340, 342].includes(code)) return false;
         if (!this.battle || this.battle.result) throw new Error('Trận chiến không hoạt động.');
-        if (code === 340) { this.finish('escape'); return true; }
+        if (code === 340) {
+            if (this.eventRunning) this.pendingResult = 'escape';
+            else this.finish('escape');
+            return true;
+        }
         if (code === 336 && !this.database.Enemies[p[1]]) throw new Error('Không tìm thấy enemy ' + p[1]);
         if (code === 333 && !this.database.States[p[2]]) throw new Error('Không tìm thấy state ' + p[2]);
         var targets = p[0] === -1 ? this.battle.enemies : this.enemy(p[0]) ? [this.enemy(p[0])] : [];
@@ -165,7 +197,7 @@
         enemy.hp = Math.max(0, enemy.hp - damage); enemy.alive = enemy.hp > 0;
         this.refreshEnemy(enemy);
         this.battle.phase = 'enemy';
-        this.checkResult();
+        if (!this.battle.managed) this.checkResult();
         return { damage: damage, critical: false, target: enemyIndex, defeated: !enemy.alive };
     };
     BattleRuntime.prototype.enemyTurn = function () {
@@ -180,8 +212,10 @@
             runtime.state.changeActorHp(target.id, -damage, true);
             actions.push({ enemy: enemy.index, target: target.id, damage: damage, defeated: !target.alive });
         });
-        this.battle.turn++; this.battle.phase = 'input';
-        this.checkResult(); return actions;
+        if (!this.battle.managed) this.battle.turn++;
+        this.battle.phase = this.battle.managed ? 'events' : 'input';
+        if (!this.battle.managed) this.checkResult();
+        return actions;
     };
     BattleRuntime.prototype.checkResult = function () {
         if (!this.aliveEnemies().length) this.finish('victory');
@@ -191,7 +225,9 @@
     BattleRuntime.prototype.escape = function () {
         if (!this.battle || this.battle.result || this.battle.phase !== 'input' || !this.battle.canEscape) return false;
         if (this.random() < 0.5) { this.finish('escape'); return true; }
-        this.battle.phase = 'enemy'; this.enemyTurn(); return false;
+        this.battle.phase = 'enemy';
+        if (!this.battle.managed) this.enemyTurn();
+        return false;
     };
     BattleRuntime.prototype.save = function () { return clone(this.battle); };
     return { BattleRuntime: BattleRuntime };

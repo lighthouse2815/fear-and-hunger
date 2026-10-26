@@ -30,10 +30,11 @@
 
     function setStatus(text) { status.textContent = text; }
     var battleTarget = 0;
-    var lastBattle = null, lastScene = null;
+    var lastBattle = null, lastScene = null, lastBattlePhase = null;
     function renderBattleUi() {
         var panel = document.getElementById('fnh-battle'), battle = engine.battle && engine.battle.battle;
         lastBattle = battle; lastScene = engine.state.scene;
+        lastBattlePhase = battle && battle.phase;
         if (!battle || engine.state.scene !== 'battle' || battle.result) { panel.hidden = true; return; }
         panel.hidden = false;
         if (!battle.enemies.some(function (enemy) { return enemy.index === battleTarget && enemy.alive && !enemy.hidden; })) {
@@ -53,7 +54,8 @@
         document.getElementById('fnh-battle-party').textContent = battle.actors.map(function (actor) {
             return actor.name + ' · HP ' + actor.hp + ' · MP ' + actor.mp;
         }).join(' | ');
-        document.getElementById('fnh-battle-escape').disabled = !battle.canEscape;
+        document.getElementById('fnh-battle-attack').disabled = battle.phase !== 'input';
+        document.getElementById('fnh-battle-escape').disabled = !battle.canEscape || battle.phase !== 'input';
     }
     var endScene = null;
     function renderEndScreen() {
@@ -313,7 +315,8 @@
             try {
                 if (scrollAnimation) scrollAnimation.playbackRate = !scrollNoFast &&
                     (scrollFastHeld || engine.buttons.has('ok') || engine.buttons.has('cancel') || engine.buttons.has('shift')) ? 3 : 1;
-                var sceneChanged = lastBattle !== engine.battle.battle || lastScene !== engine.state.scene;
+                var sceneChanged = lastBattle !== engine.battle.battle || lastScene !== engine.state.scene ||
+                    lastBattlePhase !== (engine.battle.battle && engine.battle.battle.phase);
                 if (sceneChanged) { renderBattleUi(); renderEndScreen(); }
                 if (scheduler) scheduler.tick();
                 var active = sceneChanged || !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
@@ -429,22 +432,21 @@
     async function battleAction(action) {
         if (!ready || engine.state.scene !== 'battle') return;
         try {
-            action();
+            await action();
             // Cho event đang chờ nhận kết quả và trở về map trước khi vẽ UI.
             await Promise.resolve();
             await draw();
         } catch (error) { setStatus(error.message); }
     }
     document.getElementById('fnh-battle-attack').addEventListener('click', function () {
-        battleAction(function () {
-            var battle = engine.battle.battle, actor = engine.battle.aliveActors()[0];
+        battleAction(async function () {
+            var actor = engine.battle.aliveActors()[0];
             if (!actor) return;
-            engine.battle.attack(actor.id, battleTarget);
-            if (!battle.result) engine.battle.enemyTurn();
+            await engine.battleAttack(actor.id, battleTarget, eventHandlers);
         });
     });
     document.getElementById('fnh-battle-escape').addEventListener('click', function () {
-        battleAction(function () { engine.battle.escape(); });
+        battleAction(function () { return engine.battleEscape(eventHandlers); });
     });
     document.getElementById('fnh-new-game').addEventListener('click', function () {
         location.assign('./standalone.html?map=10&events=1');

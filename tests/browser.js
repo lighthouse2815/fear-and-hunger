@@ -991,7 +991,15 @@ async function main() {
             engine.battle.random = () => 0;
         })()`, false, false);
         await clickElement(cdp, '#fnh-controls [data-direction="0"]');
-        await waitFor(cdp, '!document.querySelector("#fnh-battle").hidden', 5000, 'event mở giao diện battle');
+        await waitFor(cdp, '!document.querySelector("#fnh-battle").hidden && FNHStandalonePreview.engine.battle.battle.phase === "input"',
+            5000, 'event mở giao diện battle và chạy xong page đầu trận');
+        check('troop Guard chạy page đầu trận và common event thật', await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine;
+            const valid = engine.battle.enemy(0).states.includes(91) && engine.battle.battle.eventFlags.once[5] &&
+                /guard/i.test(engine.state.screen.gab.text);
+            engine.screen.clearGabs();
+            return !!valid;
+        })()`, false, false));
         check('renderer battle ghép đủ bộ phận Guard từ PNG thật', await evalPage(cdp, `(async () => {
             const engine = FNHStandalonePreview.engine;
             const canvas = document.createElement('canvas');
@@ -1059,6 +1067,29 @@ async function main() {
             5000, 'thoát battle và tiếp tục event');
         check('chạy đúng nhánh thoát và trở lại map', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.scene === "map" && FNHStandalonePreview.engine.state.variableValue(999) === 20', false, false));
+        await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine;
+            engine.state.recoverActor(1); engine.state.setVariable(999, 0);
+            const page = engine.database.Troops[1].pages[5];
+            window.originalTroopStart = page.list;
+            page.list = [{ code: 230, parameters: [60] }, ...page.list];
+        })()`, false, false);
+        await clickElement(cdp, '#fnh-controls [data-direction="0"]');
+        await waitFor(cdp, '!document.querySelector("#fnh-battle").hidden && FNHStandalonePreview.engine.battle.battle.phase === "events"',
+            5000, 'page đầu trận chờ theo frame');
+        check('page đang chờ khóa cả đánh và chạy thoát', await evalPage(cdp,
+            'document.querySelector("#fnh-battle-attack").disabled && document.querySelector("#fnh-battle-escape").disabled', false, false));
+        await waitFor(cdp, 'FNHStandalonePreview.engine.battle.battle.phase === "input" && !document.querySelector("#fnh-battle-attack").disabled',
+            5000, 'page đầu trận chạy xong mới nhận lệnh');
+        await evalPage(cdp, `FNHStandalonePreview.engine.database.Troops[1].pages[5].list = originalTroopStart;
+            delete window.originalTroopStart;`, false, false);
+        await clickElement(cdp, '#fnh-battle-targets [data-index="1"]');
+        await clickElement(cdp, '#fnh-battle-attack');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.scene === "map" && !FNHStandalonePreview.engine.eventRunning && document.querySelector("#fnh-battle").hidden',
+            5000, 'page hạ đầu Guard kết thúc trận thật');
+        check('hạ đầu Guard chạy troop event và nhánh thắng của map', await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.result === "victory" && FNHStandalonePreview.engine.state.switchValue(23) && FNHStandalonePreview.engine.state.variableValue(999) === 10 && FNHStandalonePreview.engine.battle.battle.enemies.every(enemy => !enemy.alive)', false, false));
+        await evalPage(cdp, 'FNHStandalonePreview.engine.screen.clearGabs()', false, false);
         await evalPage(cdp, `battleOriginalPage.page.list = battleOriginalPage.list;
             FNHStandalonePreview.engine.state.recoverActor(1); delete window.battleOriginalPage;`, false, false);
         await evalPage(cdp, `(() => {

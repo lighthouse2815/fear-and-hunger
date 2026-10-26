@@ -192,7 +192,13 @@
     };
 
     GameEngine.prototype.advanceRoutes = function (frames) {
-        if (this.state && ['battle', 'gameover', 'title'].includes(this.state.scene)) return;
+        if (this.state && ['gameover', 'title'].includes(this.state.scene)) return;
+        if (this.state && this.state.scene === 'battle') {
+            if (this.routeErrors.length) throw this.routeErrors.shift();
+            this.screen.advance(frames, 'battle');
+            this.filters.advance(frames);
+            return;
+        }
         if (this.routeErrors.length) throw this.routeErrors.shift();
         if (this.state && this.state.timer.active) this.state.timer.frames = Math.max(0, this.state.timer.frames - frames);
         if (this.map && this.state) [this.state].concat(this.map.events).forEach(function (character) {
@@ -365,7 +371,7 @@
             if (code === 205) return engine.applyRoute(parameters, interpreter);
             if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }
             if (code === 204) return engine.scrollMap(parameters, interpreter);
-            if (code === 301) return engine.startBattle(parameters, interpreter);
+            if (code === 301) return engine.startBattle(parameters, interpreter, handlers);
             if (code === 216) { engine.state.followersVisible = parameters[0] !== 0; return true; }
             if (code === 217) { engine.state.followersGathering = true; return true; }
             if (code === 212) {
@@ -402,7 +408,96 @@
         });
     };
 
-    GameEngine.prototype.startBattle = async function (parameters, interpreter) {
+    GameEngine.prototype.runBattlePages = async function (turnEnding, handlers, signal) {
+        var runtime = this.battle, battle = runtime.battle;
+        battle.phase = 'events';
+        var remaining = 1000, entry;
+        while (!battle.result && (entry = runtime.nextEventPage(turnEnding))) {
+            if (--remaining < 0) throw new Error('Sự kiện troop lặp vô hạn (troop ' + battle.troopId + ').');
+            runtime.markEventPage(entry);
+            runtime.eventRunning = true;
+            try { await this.createInterpreter(entry.page.list, 0, handlers, signal).run(); }
+            finally { runtime.eventRunning = false; }
+            this.syncBattleActors();
+            if (this.state.scene !== 'battle') { runtime.finish('abort'); return; }
+            if (runtime.pendingResult) {
+                var ending = runtime.pendingResult; runtime.pendingResult = null;
+                runtime.finish(ending); return;
+            }
+            runtime.checkResult();
+        }
+        if (!battle.result) runtime.checkResult();
+    };
+
+    GameEngine.prototype.syncBattleActors = function () {
+        var state = this.state;
+        this.battle.battle.actors = state.party.map(function (id) {
+            var actor = state.actor(id);
+            return { id: id, name: actor.name, hp: actor.hp, mp: actor.mp, alive: actor.hp > 0 };
+        });
+    };
+
+    GameEngine.prototype.battleAttack = async function (actorId, enemyIndex, handlers) {
+        var runtime = this.battle, battle = runtime.battle, context = this.battleContext || {};
+        if (this.state.scene !== 'battle' || !battle || battle.result || battle.phase !== 'input') throw new Error('Chưa đến lượt nhân vật.');
+        var subject = runtime.actor(actorId), chosen = runtime.enemy(enemyIndex);
+        if (!subject || !subject.alive || !chosen || !chosen.alive || chosen.hidden) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
+        battle.managed = true;
+        battle.turn++;
+        try {
+            await this.runBattlePages(false, handlers || context.handlers, context.signal);
+            if (battle.result) return;
+            var result;
+            subject = runtime.actor(actorId);
+            if (subject && subject.alive) {
+                chosen = runtime.enemy(enemyIndex);
+                if (!chosen || !chosen.alive || chosen.hidden) chosen = runtime.aliveEnemies()[0];
+                battle.phase = 'input';
+                result = runtime.attack(actorId, chosen.index);
+                await this.runBattlePages(false, handlers || context.handlers, context.signal);
+            }
+            if (!battle.result) {
+                battle.phase = 'enemy'; runtime.enemyTurn();
+                await this.runBattlePages(true, handlers || context.handlers, context.signal);
+            }
+            return result;
+        } catch (error) { battle.error = error.message; runtime.finish('abort'); throw error; }
+        finally {
+            if (!battle.result) battle.phase = 'input';
+            else if (!this.battleContext) this.leaveBattle(battle.result);
+        }
+    };
+
+    GameEngine.prototype.battleEscape = async function (handlers) {
+        var runtime = this.battle, battle = runtime.battle, context = this.battleContext || {};
+        if (this.state.scene !== 'battle' || !battle || battle.result || battle.phase !== 'input' || !battle.canEscape) return false;
+        battle.managed = true;
+        if (runtime.escape()) {
+            if (!this.battleContext) this.leaveBattle(battle.result);
+            return true;
+        }
+        battle.turn++;
+        try {
+            await this.runBattlePages(false, handlers || context.handlers, context.signal);
+            if (!battle.result) {
+                battle.phase = 'enemy'; runtime.enemyTurn();
+                await this.runBattlePages(true, handlers || context.handlers, context.signal);
+            }
+            return false;
+        } catch (error) { battle.error = error.message; runtime.finish('abort'); throw error; }
+        finally {
+            if (!battle.result) battle.phase = 'input';
+            else if (!this.battleContext) this.leaveBattle(battle.result);
+        }
+    };
+
+    GameEngine.prototype.leaveBattle = function (result, interpreter) {
+        if (this.state.scene === 'battle') this.state.scene = result === 'defeat' ? 'gameover' : 'map';
+        if (result === 'defeat' && interpreter) interpreter.index = interpreter.commands.length;
+        return result === 'victory' ? 0 : result === 'escape' ? 1 : 2;
+    };
+
+    GameEngine.prototype.startBattle = async function (parameters, interpreter, handlers) {
         var troopId;
         if (parameters[0] === 0) troopId = parameters[1];
         else if (parameters[0] === 1) troopId = this.state.variableValue(parameters[1]);
@@ -417,16 +512,19 @@
             troopId = encounters.find(function (entry) { selected -= entry.weight; return selected < 0; }).troopId;
         } else throw new Error('Kiểu chọn troop không hợp lệ.');
         this.battle.setup(troopId, parameters[2] === true, parameters[3] === true);
+        var runtime = this.battle;
+        runtime.battle.managed = true;
+        var context = this.battleContext = { handlers: handlers, signal: interpreter && interpreter.signal };
         this.state.scene = 'battle';
         try {
-            var result = await this.battle.wait(interpreter && interpreter.signal);
-            if (result === 'defeat') {
-                this.state.scene = 'gameover';
-                if (interpreter) interpreter.index = interpreter.commands.length;
-                return 2;
-            }
-            return result === 'victory' ? 0 : result === 'escape' ? 1 : 2;
-        } finally {
+            await this.runBattlePages(false, handlers, context.signal);
+            if (!runtime.battle.result) runtime.battle.phase = 'input';
+            var result = await runtime.wait(context.signal);
+            if (runtime.battle.error) throw new Error(runtime.battle.error);
+            return this.leaveBattle(result, interpreter);
+        } catch (error) { runtime.finish('abort'); throw error; }
+        finally {
+            if (this.battleContext === context) this.battleContext = null;
             if (this.state.scene === 'battle') this.state.scene = 'map';
         }
     };
