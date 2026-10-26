@@ -25,8 +25,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    hoàn thiện tùy chọn người chơi. Chế tạo item/weapon/armor theo recipe và
    ingredient note đã chạy trong menu, kiểm tra bạc/nguyên liệu và save số lần
    chế tạo; cần đối chiếu thêm recipe dùng tên thay vì ID và custom synthesis effect.
-3. Bản đồ: di chuyển mượt, fog/overlay, parallax, tiếng
-   bước chân và nhạc trận. Chỉ đánh dấu xong sau khi xác minh.
+3. Bản đồ: di chuyển mượt, fog/overlay, parallax và nhạc trận.
+   Chỉ đánh dấu xong sau khi xác minh.
 4. Điều khiển: phím gọi common event, đặt lại phím và thao tác trên điện thoại.
 5. Luồng chính: Map072 trước tiêu đề, chơi mới/tiếp tục, nội dung kết thúc,
    cheat theo tên và cập nhật server/build/check khi chuyển entry chính.
@@ -49,6 +49,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   sự kiện qua scheduler, không xếp trùng và không kích hoạt khi follower ẩn.
 - Audio đọc pan JSON qua StereoPannerNode; giữ volume/pitch/fade và giải phóng
   graph khi dừng. Chrome đo năng lượng trái/phải từ OGG thật, tắt đầu ra loa test.
+- Tiếng bước chân đọc 122 note terrain, ưu tiên region/terrain/mặc định; quái,
+  follower/guest giảm âm theo khoảng cách, tôn trọng ẩn/No Footsteps/phương tiện,
+  lệnh bật tắt giữ qua save. Volume vẫn nhân mức tổng 5%.
 - Menu lưu/tải 20 ô, thông tin checkpoint và đọc ô được chọn từ game over/title;
   save trong common event giữ stack, ô hỏng không ngăn chọn các ô khác.
 - State 23 buộc crit trong Select rồi khôi phục trong Deselect. Engine thực thi

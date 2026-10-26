@@ -407,6 +407,10 @@
 
     EventInterpreter.prototype.pluginCommand = function (command) {
         var text = String(command.parameters[0] || ''), match;
+        if (/^(Enable|Disable)Footsteps$/.test(text)) {
+            this.state.footstepsEnabled = text === 'EnableFootsteps';
+            return;
+        }
         if (/^(Enable|Disable|Toggle)Dashing$/.test(text)) {
             this.state.dashEnabled = text === 'ToggleDashing' ? !this.state.dashEnabled : text === 'EnableDashing';
             return;

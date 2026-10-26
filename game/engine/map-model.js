@@ -54,6 +54,14 @@
         return this.tileId(x, y, 5);
     };
 
+    GameMap.prototype.terrainTag = function (x, y) {
+        for (var layer = 3; layer >= 0; layer--) {
+            var tag = (this.tileset.flags[this.tileId(x, y, layer)] || 0) >> 12;
+            if (tag) return tag;
+        }
+        return 0;
+    };
+
     GameMap.prototype.viewport = function (player, width, height) {
         var cols = Math.ceil(width / 48), rows = Math.ceil(height / 48);
         var camera = this.state && this.state.screen && this.state.screen.mapCamera;

@@ -57,7 +57,7 @@ async function fixture(pages, walls = [], options = {}) {
 
     const sounds = [];
     const chase = await fixture([page(3, [{ code: 45, parameters: ['this._chaseRange = 6;\nthis._seePlayer = false;'] }, { code: 0 }])], [[3, 2]],
-        { onRouteEffect: (code, parameters) => sounds.push(parameters[0].name) });
+        { onRouteEffect: (code, parameters) => { if (parameters[0].name !== 'footstep_tile') sounds.push(parameters[0].name); } });
     chase.advanceRoutes(1); chase.advanceRoutes(1); npc = chase.map.eventById(1);
     assert.equal(npc.autonomous.chasing, true);
     assert.deepEqual([npc.x, npc.y], [2, 3], 'tìm đường vòng qua tường');

@@ -52,6 +52,7 @@
         this.regionCover = source.regionCover || { enabled: false, open: [0] };
         this.achievements = Object.assign({}, source.achievements);
         this.followersVisible = source.followersVisible !== false;
+        this.footstepsEnabled = source.footstepsEnabled !== false;
         this.followersGathering = source.followersGathering === true;
         this.followerPositions = source.followerPositions || [];
         this.followerFrames = Math.max(0, Number(source.followerFrames) || 0);
@@ -322,6 +323,7 @@
             regionCover: this.regionCover,
             achievements: this.achievements,
             followersVisible: this.followersVisible, followersGathering: this.followersGathering,
+            footstepsEnabled: this.footstepsEnabled,
             followerPositions: this.followerPositions, followerFrames: this.followerFrames, vehicleBgm: this.vehicleBgm,
             scene: this.scene, pendingEventStack: this.pendingEventStack,
             mapNameDisplay: this.mapNameDisplay,

@@ -1973,6 +1973,21 @@ async function main() {
         })()`, false, false);
         check('volume preview giữ âm lượng riêng của BGM', await evalPage(cdp,
             'FNHStandalonePreview.audio.buffers.bgm.volume === 0.4', false, false));
+        check('bước đi phát SE OGG thật theo terrain và volume tổng', await evalPage(cdp, `(async () => {
+            const engine = FNHStandalonePreview.engine, manager = FNHStandalonePreview.audio, snapshot = engine.save();
+            try {
+                engine.state.through = true;
+                if (!engine.move(engine.state.x + 1 < engine.map.width ? 6 : 4)) return false;
+                const sound = engine.footstepSound(engine.state), audio = manager.seBuffers.at(-1);
+                const track = manager.tracks.get(audio);
+                if (!audio || track.sound.name !== sound.name || Math.abs(audio.volume - sound.volume / 100 * manager.masterVolume) > 0.000001) return false;
+                await new Promise((resolve, reject) => {
+                    if (audio.readyState >= 3) resolve();
+                    else { audio.addEventListener('canplay', resolve, { once: true }); audio.addEventListener('error', reject, { once: true }); }
+                });
+                return audio.duration > 0 && audio.src.endsWith('/audio/se/' + encodeURIComponent(sound.name) + '.ogg');
+            } finally { await engine.restore(snapshot); }
+        })()`, true, true));
         await evalPage(cdp, 'FNHStandalonePreview.audio.handleEffect(242, [0.05])', false, false);
         await waitFor(cdp, 'FNHStandalonePreview.audio.buffers.bgm === null', 3000, 'BGM fade và dừng');
         await screenshot('standalone-preview');

@@ -226,6 +226,11 @@ Tải map/save lỗi giữ map và trạng thái hiện tại nhất quán.
 Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, stereo pan, fade, nhớ/phát tiếp
 BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.
 Thanh âm lượng cập nhật các âm đang phát, giữ volume của từng file.
+Mỗi bước thành công phát SE theo region, terrain rồi mặc định; 122 note trong
+Tilesets.json được giữ nguyên tên, volume và pitch. Quái/follower/guest giảm âm
+theo khoảng cách và có pan; follower ẩn, event `<No Footsteps>` và người chơi
+trên phương tiện không phát bước chân. Lệnh EnableFootsteps/DisableFootsteps
+được lưu cùng trạng thái. Mẫu terrain lấy tại ô vừa bước tới.
 Save preview dùng prefix `FNH_STANDALONE_PREVIEW:`, tách biệt save bản chính.
 
 Đây chưa phải bản thay thế đầy đủ: combat, menu và một số hành vi sự kiện vẫn

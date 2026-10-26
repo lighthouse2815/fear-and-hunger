@@ -297,7 +297,34 @@
         if (character === this.state) this.followPlayer();
         character.x = x; character.y = y;
         if (character === this.state) this.followCamera(dx, dy);
+        this.playFootstep(character);
         return true;
+    };
+
+    GameEngine.prototype.footstepSound = function (character) {
+        var player = character === this.state;
+        if (!this.state.footstepsEnabled || player && this.state.vehicleId !== -1 || /<No Footsteps>/i.test(character.note || '')) return null;
+        var distance = Math.abs(character.x - this.state.x) + Math.abs(character.y - this.state.y);
+        // Thiết lập nội dung gốc: SE mặc định 20/70, player 1.20, event 1.50
+        // và giảm volume 0.10 mỗi ô. Pan giữ quy tắc khoảng cách của game.
+        var volume = player ? 1.2 : 1.5 - distance * 0.1;
+        if (volume <= 0) return null;
+        var map = this.map, region = map.regionId(character.x, character.y), terrain = map.terrainTag(character.x, character.y);
+        function find(note, kind, id) {
+            var expression = new RegExp('<' + kind + '\\s+' + id + '\\s+Footstep Sound:\\s*([^>]+)>', 'ig'), match, sound;
+            while ((match = expression.exec(note || ''))) sound = match[1].split(',').map(function (part) { return part.trim(); });
+            return sound;
+        }
+        var sound = region && find(map.data.note, 'Region', region) ||
+            terrain && find(map.tileset.note, 'Terrain Tag', terrain) || find(map.data.note, 'Region', 0) || ['footstep_tile', 20, 70];
+        return { name: sound[0], volume: Number(sound[1] || 20) * volume,
+            pitch: Number(sound[2] || 70), pan: player ? 0 : Math.max(-100, Math.min(100, this.state.x - character.x)) };
+    };
+
+    GameEngine.prototype.playFootstep = function (character) {
+        if (!this.onRouteEffect) return;
+        var sound = this.footstepSound(character), engine = this;
+        if (sound && sound.name) Promise.resolve(this.onRouteEffect(250, [sound])).catch(function (error) { engine.routeErrors.push(error); });
     };
 
     GameEngine.prototype.followPlayer = function () {
@@ -306,6 +333,7 @@
             var follower = followers[i], ahead = i ? followers[i - 1] : this.state;
             var dx = Math.sign(ahead.x - follower.x), dy = Math.sign(ahead.y - follower.y);
             follower.x += dx; follower.y += dy;
+            if ((dx || dy) && this.state.followersVisible) this.playFootstep(follower);
             if (!this.state.directionFixed) {
                 if (dy) follower.direction = dy > 0 ? 2 : 8;
                 else if (dx) follower.direction = dx > 0 ? 6 : 4;
