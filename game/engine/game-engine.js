@@ -923,6 +923,7 @@
         this.validateBattleAction(action);
         var actions = (battle.inputActions || []).filter(function (entry) { return entry.actorId !== actorId; }).concat([action]);
         this.validateBattleActions(actions, false);
+        battle.escapeFailed = false;
         battle.inputActions = actions;
         return action;
     };

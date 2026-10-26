@@ -53,6 +53,7 @@
         this.battle.actors.concat(this.battle.enemies).forEach(function (battler) {
             if (!this.preserveTp(battler)) this.battlerState(battler).tp = Math.floor(this.random() * 25);
         }, this);
+        this.battle.escapeRatio = this.initialEscapeRatio();
         return this.battle;
     };
     BattleRuntime.prototype.pageMatches = function (page, turnEnding) {
@@ -765,9 +766,19 @@
         else if (!this.aliveActors().length) this.finish(this.battle.canLose ? 'defeat-continue' : 'defeat');
         return this.battle.result;
     };
+    BattleRuntime.prototype.initialEscapeRatio = function () {
+        var runtime = this;
+        function average(members) {
+            return members.length ? members.reduce(function (sum, member) { return sum + runtime.battlerParam(member, 6); }, 0) / members.length : 1;
+        }
+        return 0.5 * average(this.battle.actors) / average(this.battle.enemies);
+    };
     BattleRuntime.prototype.escape = function () {
         if (!this.battle || this.battle.result || this.battle.phase !== 'input' || !this.battle.canEscape) return false;
-        if (this.random() < 0.5) { this.finish('escape'); return true; }
+        if (this.battle.escapeRatio == null) this.battle.escapeRatio = this.initialEscapeRatio();
+        if (this.random() < this.battle.escapeRatio) { this.battle.escapeFailed = false; this.finish('escape'); return true; }
+        this.battle.escapeRatio += 0.1;
+        this.battle.escapeFailed = true;
         this.battle.phase = 'enemy';
         if (!this.battle.managed) this.enemyTurn();
         return false;

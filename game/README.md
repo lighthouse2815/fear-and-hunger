@@ -186,6 +186,9 @@ Mỗi effect trúng cấp TP cho người dùng; nhận sát thương HP dương
 lệ HP tối đa và TCR, làm tròn từng hit. Trượt/né, mất MP và hồi HP không cấp TP
 nhận damage. TP bị chặn ở 0–100, lưu/tải giữ đúng giá trị; rời trận xóa TP trừ
 các thành viên có trait giữ TP.
+Chạy thoát dùng tỷ lệ `0.5 × AGI trung bình đội / AGI trung bình troop` lúc mở
+trận; thất bại tăng thêm 10 điểm phần trăm, hủy lệnh đã chọn và nhường một lượt
+cho địch. UI báo thất bại; save giữ tỷ lệ đã tăng và trận khóa thoát không mất lượt.
 Đồng đội có trait auto-battle (62/0) tự chọn Attack hoặc kỹ năng đang dùng được;
 Moonless, Ghoul, Skeleton, Blood golem, Baby Demon và Buckman đọc flag từ dữ liệu
 actor/class. Các nguồn trang bị/state cũng dùng chung cách đọc trait. AI chấm

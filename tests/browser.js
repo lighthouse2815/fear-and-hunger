@@ -1245,6 +1245,26 @@ async function main() {
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.bookBefore).then(()=>true)',true,false);
         await evalPage(cdp,'delete window.bookBefore',false,false);
         await evalPage(cdp, `(() => {
+            const e=FNHStandalonePreview.engine,db=e.database;window.escapeBefore=e.save();
+            const enemyId=db.Enemies.length,troopId=db.Troops.length,id=db.Skills.length;
+            db.Skills.push({...db.Skills[3],id,note:'',animationId:0,repeats:1,hitType:0,effects:[],mpCost:0,tpCost:0,
+                damage:{type:1,formula:'1',variance:0,critical:false,elementId:0}});
+            db.Enemies.push({...db.Enemies[1],id:enemyId,params:[1000,100,1,1,1,1,20,1],traits:[],actions:[{skillId:id,conditionType:0,rating:5}]});
+            db.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400}]});
+            e.state.party=[1];e.state.recoverActor(1);e.state.changeActorParam(1,6,10-e.state.actorParam(1,6));
+            window.escapeHp=e.state.actor(1).hp;e.battle.setup(troopId,true,true);e.state.scene='battle';e.battle.random=()=>0.3;
+        })()`,false,false);
+        await waitFor(cdp,'!document.querySelector("#fnh-battle").hidden && !document.querySelector("#fnh-battle-escape").disabled',5000,'mở trận kiểm tra thoát theo AGI');
+        await clickElement(cdp,'#fnh-battle-escape');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'thoát thất bại nhường lượt');
+        check('UI báo thoát thất bại và tăng tỷ lệ theo AGI',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.escapeRatio===0.35 && FNHStandalonePreview.engine.state.actor(1).hp===window.escapeHp-1 && document.querySelector("#fnh-battle-log").textContent.includes("Không thể chạy thoát")',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(FNHStandalonePreview.engine.save()).then(()=>{FNHStandalonePreview.engine.battle.random=()=>0.3;})',true,false);
+        await clickElement(cdp,'#fnh-battle-escape');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="map" && document.querySelector("#fnh-battle").hidden',5000,'lần thoát tiếp dùng tỷ lệ tăng sau save');
+        check('thoát lần hai giữ xác suất đã tăng qua save',await evalPage(cdp,'FNHStandalonePreview.engine.battle.battle.result==="escape"',false,false));
+        await evalPage(cdp,'(async()=>{await FNHStandalonePreview.engine.restore(window.escapeBefore);delete window.escapeBefore;delete window.escapeHp;})()',true,false);
+        await evalPage(cdp, `(() => {
             const e = FNHStandalonePreview.engine, db = e.database;
             window.weaponUiBefore = e.save();
             const enemyId = db.Enemies.length, troopId = db.Troops.length;

@@ -144,6 +144,7 @@
                 }).join(', ');
                 return text;
             }).join(', ') : '';
+        if (battle.escapeFailed) document.getElementById('fnh-battle-log').textContent = 'Không thể chạy thoát. ' + document.getElementById('fnh-battle-log').textContent;
         var turnEffects = (battle.turnEffects || []).map(formatResourceChanges);
         if (turnEffects.length) document.getElementById('fnh-battle-log').textContent += ' · Cuối lượt: ' + turnEffects.join(' | ');
         document.getElementById('fnh-battle-attack').disabled = battle.phase !== 'input' || !battleActor || !engine.battle.canUseSkill(engine.battle.actor(battleActor), engine.battle.skillFor(engine.battle.actor(battleActor), 1));
