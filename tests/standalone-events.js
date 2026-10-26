@@ -13,7 +13,7 @@ const { EventInterpreter } = require('../game/engine/event-interpreter');
         { code: 121, indent: 0, parameters: [10, 10, 0] },
         { code: 122, indent: 0, parameters: [4, 4, 0, 0, 7] },
         { code: 123, indent: 0, parameters: ['A', 0] },
-        { code: 125, indent: 0, parameters: [0, 5, 0] },
+        { code: 125, indent: 0, parameters: [0, 0, 5] },
         { code: 126, indent: 0, parameters: [7, 0, 0, 2] },
         { code: 201, indent: 0, parameters: [0, 88, 4, 5, 2, 0] }
     ];
@@ -98,6 +98,58 @@ const { EventInterpreter } = require('../game/engine/event-interpreter');
     }).run();
     assert.equal(actorState.actor(1).hp, hpBefore);
     assert.deepEqual(actorState.actor(1).states, []);
+
+    // Hai điều kiện cùng indent: Else của điều kiện sau không thuộc điều kiện trước.
+    const branchState = new GameState({ mapId: 74, gold: 20 });
+    await new EventInterpreter({ state: branchState, commands: [
+        { code: 111, indent: 0, parameters: [0, 1, 0] },
+        { code: 121, indent: 1, parameters: [9, 9, 0] },
+        { code: 412, indent: 0, parameters: [] },
+        { code: 121, indent: 0, parameters: [2, 2, 0] },
+        { code: 111, indent: 0, parameters: [0, 2, 0] },
+        { code: 121, indent: 1, parameters: [3, 3, 0] },
+        { code: 411, indent: 0, parameters: [] },
+        { code: 121, indent: 1, parameters: [4, 4, 0] },
+        { code: 412, indent: 0, parameters: [] }
+    ] }).run();
+    assert.equal(branchState.switchValue(9), false);
+    assert.equal(branchState.switchValue(2), true);
+    assert.equal(branchState.switchValue(3), true);
+    assert.equal(branchState.switchValue(4), false);
+
+    const operands = new EventInterpreter({ state: branchState, random: () => 0.999, commands: [
+        { code: 122, parameters: [7, 7, 0, 2, 1, 14] },
+        { code: 125, parameters: [1, 1, 7] }
+    ] });
+    await operands.run();
+    assert.equal(branchState.variableValue(7), 14);
+    assert.equal(branchState.gold, 6, 'trừ vàng bằng toán hạng biến');
+    assert.equal(operands.evaluateCondition([7, 5, 0]), true);
+    assert.equal(operands.evaluateCondition([2, 'A', 1]), true, 'kiểm tra self-switch OFF');
+
+    const loopState = new GameState();
+    await new EventInterpreter({ state: loopState, commands: [
+        { code: 112, indent: 0 },
+        { code: 122, indent: 1, parameters: [1, 1, 1, 0, 1] },
+        { code: 111, indent: 1, parameters: [1, 1, 0, 3, 1] },
+        { code: 113, indent: 2 },
+        { code: 412, indent: 1 },
+        { code: 413, indent: 0 }
+    ] }).run();
+    assert.equal(loopState.variableValue(1), 3);
+    await assert.rejects(new EventInterpreter({ state: new GameState(), maxSteps: 10, commands: [
+        { code: 112, indent: 0 }, { code: 413, indent: 0 }
+    ] }).run(), /giới hạn số lệnh/);
+
+    await assert.rejects(new EventInterpreter({ state: new GameState(), commands: [
+        { code: 999 }, { code: 121, parameters: [1, 1, 0] }
+    ] }).run(), /Chưa hỗ trợ lệnh 999/);
+    await assert.rejects(new EventInterpreter({ state: new GameState(), commands: [
+        { code: 301, parameters: [0, 1, false, false] }
+    ], handlers: { effect: () => false } }).run(), /Chưa hỗ trợ lệnh 301/);
+    await assert.rejects(new EventInterpreter({ state: new GameState(), commands: [
+        { code: 111, indent: 0, parameters: [12, 'return true'] }, { code: 412, indent: 0 }
+    ] }).run(), /Chưa hỗ trợ điều kiện/);
 
     console.log('ĐẠT: event interpreter độc lập chạy hội thoại, điều kiện, state và chuyển map.');
 })().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });

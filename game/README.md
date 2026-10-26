@@ -28,6 +28,10 @@ Các module mới nằm trong `engine/`; mở `http://127.0.0.1:8140/standalone.
 `__fnh/compat.js`. Trang preview cũng được đưa vào bản build.
 
 Preview hiện hỗ trợ di chuyển, một phần lệnh sự kiện, lưu/tải riêng và âm thanh.
+Interpreter chạy được common event lồng nhau, vòng lặp có giới hạn thực thi,
+điều kiện, biến ngẫu nhiên và self-switch. Test dùng thùng đồ event 39 trên Map074
+để xác nhận nhận vật phẩm từ common event 52 và không nhận lại sau khi đã mở.
+Lệnh hoặc loại điều kiện chưa triển khai sẽ báo lỗi cụ thể thay vì tự bỏ qua.
 Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, fade, nhớ/phát tiếp
 BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.
 Thanh âm lượng cập nhật các âm đang phát, giữ volume của từng file.

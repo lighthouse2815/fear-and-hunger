@@ -18,7 +18,7 @@ async function fetchFromGame(relativeUrl) {
 }
 
 (async () => {
-    const engine = new GameEngine({ dataStore: new (require('../game/engine/data-store').GameDataStore)({ fetchImpl: fetchFromGame }) });
+    const engine = new GameEngine({ dataStore: new (require('../game/engine/data-store').GameDataStore)({ fetchImpl: fetchFromGame }), random: () => 0 });
     await engine.boot({ mapId: 74, x: 1, y: 0, direction: 2, party: [] });
     assert.equal(engine.map.id, 74);
     assert.equal(engine.state.mapId, 74);
@@ -32,7 +32,13 @@ async function fetchFromGame(relativeUrl) {
 
     const messages = [];
     await engine.runEvent(39, { message: text => messages.push(text) });
-    assert.ok(messages.length > 0, 'event map phải chạy được bằng interpreter riêng');
+    assert.equal(messages.length, 2, 'cả event map và common event phải hiển thị hội thoại');
+    assert.match(messages[1], /Eggs/);
+    assert.equal(engine.state.itemCount('items', 15), 2, 'thùng phải cấp vật phẩm từ common event 52');
+    assert.equal(engine.state.selfSwitchValue(74, 39, 'A'), true);
+    await engine.runEvent(39, { message: text => messages.push(text) });
+    assert.equal(messages.at(-1), 'Nothing left here.');
+    assert.equal(engine.state.itemCount('items', 15), 2, 'thùng đã mở không được cấp lại vật phẩm');
     assert.equal(engine.state.mapId, 74);
     console.log('ĐẠT: game engine độc lập boot, di chuyển, chạy event và save/restore.');
 })().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });

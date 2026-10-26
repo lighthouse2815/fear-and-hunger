@@ -924,6 +924,16 @@ async function main() {
             const expected = reference.getContext('2d').getImageData(0, 0, 400, 300).data;
             return actual.every((value, index) => value === expected[index]);
         })()`, true, false));
+        check('engine mới mở thùng đồ thật và không cấp vật phẩm lặp', await evalPage(cdp, `(async () => {
+            const engine = FNHStandalonePreview.engine;
+            engine.random = () => 0;
+            const messages = [];
+            await engine.runEvent(39, { message: text => messages.push(text) });
+            const eggs = engine.state.itemCount('items', 15);
+            await engine.runEvent(39, { message: text => messages.push(text) });
+            return eggs === 2 && engine.state.itemCount('items', 15) === 2 &&
+                engine.state.selfSwitchValue(74, 39, 'A') && messages.at(-1) === 'Nothing left here.';
+        })()`, true, false));
         // Chạy các lệnh audio dữ liệu bằng interpreter mới, không dùng AudioManager MV.
         await evalPage(cdp, `new FNHStandaloneEvents.EventInterpreter({
             state: FNHStandalonePreview.engine.state,

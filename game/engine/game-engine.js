@@ -17,6 +17,7 @@
     function GameEngine(options) {
         options = options || {};
         this.dataStore = options.dataStore || new dataApi.GameDataStore({ baseUrl: options.baseUrl || '' });
+        this.random = options.random || Math.random;
         this.database = null;
         this.state = null;
         this.map = null;
@@ -72,7 +73,7 @@
         };
         return new eventApi.EventInterpreter({
             commands: page.list, state: this.state, mapId: this.state.mapId,
-            eventId: event.id, handlers: eventHandlers
+            eventId: event.id, handlers: eventHandlers, commonEvents: this.database.CommonEvents, random: this.random
         }).run();
     };
 
