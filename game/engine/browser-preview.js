@@ -8,6 +8,7 @@
     var message = document.getElementById('fnh-message');
     var engine = new FNHStandaloneEngine.GameEngine({ baseUrl: '.' });
     var renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { baseUrl: '.' });
+    var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
 
     function setStatus(text) { status.textContent = text; }
     async function draw() {
@@ -39,6 +40,17 @@
         }
     });
     document.getElementById('fnh-clear').addEventListener('click', function () { message.textContent = ''; });
+    document.getElementById('fnh-save').addEventListener('click', function () {
+        engine.saveTo(saveStore, 1);
+        setStatus('Đã lưu ô 1 · Map ' + engine.state.mapId + ' · ô ' + engine.state.x + ',' + engine.state.y);
+    });
+    document.getElementById('fnh-load').addEventListener('click', async function () {
+        if (!await engine.loadFrom(saveStore, 1)) {
+            setStatus('Ô 1 chưa có dữ liệu lưu.');
+            return;
+        }
+        await draw();
+    });
     (async function () {
         try {
             await engine.boot({ mapId: mapId, x: 1, y: 0, direction: 2, party: [1] });

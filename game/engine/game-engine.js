@@ -81,6 +81,19 @@
         return this.state.toJSON();
     };
 
+    GameEngine.prototype.saveTo = function (saveStore, slot) {
+        if (!saveStore || typeof saveStore.save !== 'function') throw new TypeError('SaveStore không hợp lệ.');
+        return saveStore.save(slot, this.save());
+    };
+
+    GameEngine.prototype.loadFrom = async function (saveStore, slot) {
+        if (!saveStore || typeof saveStore.load !== 'function') throw new TypeError('SaveStore không hợp lệ.');
+        var snapshot = saveStore.load(slot);
+        if (!snapshot) return false;
+        await this.restore(snapshot);
+        return true;
+    };
+
     GameEngine.prototype.restore = async function (snapshot) {
         if (!this.database) throw new Error('Engine chưa boot database.');
         this.state = new stateApi.GameState(snapshot, this.database);
