@@ -28,8 +28,24 @@
     window.FNHStandalonePreview = { engine: engine, audio: audio, errors: errors };
 
     function setStatus(text) { status.textContent = text; }
+    var battleTarget = 0;
+    function renderBattleUi() {
+        var panel = document.getElementById('fnh-battle'), battle = engine.battle && engine.battle.battle;
+        if (!battle || engine.state.scene !== 'battle' || battle.result) { panel.hidden = true; return; }
+        panel.hidden = false;
+        var targets = document.getElementById('fnh-battle-targets'); targets.replaceChildren();
+        battle.enemies.forEach(function (enemy) {
+            var button = document.createElement('button'); button.type = 'button'; button.textContent = enemy.name + ' · ' + enemy.hp + '/' + enemy.mhp;
+            button.disabled = !enemy.alive; button.dataset.index = enemy.index;
+            if (enemy.index === battleTarget) button.setAttribute('aria-pressed', 'true');
+            button.onclick = function () { battleTarget = enemy.index; renderBattleUi(); };
+            targets.appendChild(button);
+        });
+        document.getElementById('fnh-battle-title').textContent = battle.result || ('Lượt ' + (battle.turn + 1));
+    }
     async function draw() {
         await renderer.draw(engine);
+        renderBattleUi();
         document.getElementById('fnh-always-dash').checked = engine.state.alwaysDash;
         if (audioMap !== engine.map) {
             audioMap = engine.map;
@@ -325,6 +341,18 @@
     });
     document.getElementById('fnh-always-dash').addEventListener('change', function (event) {
         if (engine.state) engine.state.alwaysDash = event.target.checked;
+    });
+    document.getElementById('fnh-battle-attack').addEventListener('click', function () {
+        perform(async function () {
+            var battle = engine.battle.battle, actor = engine.state.party[0];
+            engine.battle.attack(actor, battleTarget);
+            if (!battle.result) engine.battle.enemyTurn();
+            await draw();
+            if (battle.result) setStatus('Kết quả: ' + battle.result);
+        });
+    });
+    document.getElementById('fnh-battle-escape').addEventListener('click', function () {
+        perform(async function () { engine.battle.escape(); await draw(); });
     });
     window.addEventListener('pagehide', function () {
         if (scheduler) scheduler.stop();
