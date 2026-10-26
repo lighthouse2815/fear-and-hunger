@@ -158,6 +158,12 @@ mục tiêu khiêu khích chọn ngẫu nhiên, đòn AI ngẫu nhiên vẫn dù
 39/62/99/304 có `<Bypass Taunt>` giữ cách chọn đích bình thường; các tag Ignore/Null
 cũng được đọc trực tiếp. Taunt được kiểm tra lại khi thực thi lệnh, kể cả 339,
 và hiện nhãn **Khiêu khích** trong UI. Save giữ state; rời trận dọn Taunt tạm.
+Thế thân đọc trait 62/2 của Girl và các nguồn trait khác. Khi mục tiêu còn sống
+có HP dưới 25% tối đa, người đỡ đầu tiên trong phe còn sống/đang hiện/cử động
+được nhận đòn vật lý hoặc phép thay mục tiêu; certain hit bỏ qua thế thân.
+Mỗi effect chọn lại người đỡ, damage/state/TP áp lên người thực sự nhận đòn.
+Taunt chọn đích trước thế thân; phản công vẫn thuộc đích gốc theo plugin đang
+dùng. Người dự bị không đỡ; 339 cùng luồng, save giữ báo cáo và log ghi tên người đỡ.
 Phản đòn đọc trait CNT (22/6), gồm state 26/37: chỉ đòn vật lý kích hoạt,
 mục tiêu nhận đòn gốc rồi phản công nếu còn sống và cử động được. Trượt/né đòn
 gốc vẫn có thể phản công; chết hoặc bất động sau đòn sẽ hủy phản công. Mỗi lần

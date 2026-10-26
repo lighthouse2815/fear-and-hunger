@@ -1342,6 +1342,36 @@ async function main() {
             'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.state.actor(1).hp===window.extraHp && FNHStandalonePreview.engine.battle.battle.turnActions.length===1 && FNHStandalonePreview.engine.battle.battle.turnEffects.length===0',false,false));
         await evalPage(cdp,'(async()=>{await FNHStandalonePreview.engine.restore(window.extraBefore);delete window.extraBefore;delete window.extraHp;})()',true,false);
         await evalPage(cdp, `(() => {
+            const e=FNHStandalonePreview.engine,db=e.database;window.substituteBefore=e.save();
+            const enemyId=db.Enemies.length,troopId=db.Troops.length,id=db.Skills.length;
+            db.Skills.push({...db.Skills[3],id,note:'',animationId:1,repeats:1,hitType:1,successRate:100,effects:[],mpCost:5,tpCost:0,
+                damage:{type:1,formula:'10',variance:0,critical:false,elementId:0}});
+            db.Enemies.push({...db.Enemies[1],id:enemyId,params:[1000,100,1,1,1,1,10,1],traits:[{code:22,dataId:0,value:1}],actions:[]});
+            db.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400}]});
+            e.state.party=[1,2];e.state.party.forEach(actor=>e.state.recoverActor(actor));
+            e.state.changeActorHp(1,20-e.state.actor(1).hp,true);
+            e.battle.setup(troopId,true,true);e.state.scene='battle';e.battle.random=()=>0.5;
+            window.substituteGirlHp=e.state.actor(2).hp;window.substituteSkill=id;
+            window.substituteAction=e.forceBattleAction([0,0,id,0]);
+        })()`,false,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.animations.entries.some(entry=>entry.animationId===1)',5000,'animation đòn có Girl thế thân');
+        check('thế thân chưa áp sát thương trước animation và giữ khóa hành động',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.actor(1).hp===20 && FNHStandalonePreview.engine.state.actor(2).hp===window.substituteGirlHp && document.querySelector("#fnh-battle-start").disabled',false,false));
+        await evalPage(cdp,'window.substituteAction',true,false);
+        await waitFor(cdp,'document.querySelector("#fnh-battle-log").textContent.includes("Thế thân")',5000,'log hiển thị người đỡ đòn');
+        check('Girl dùng trait thật đỡ đòn 339 và UI ghi người nhận damage',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.actor(1).hp===20 && FNHStandalonePreview.engine.state.actor(2).hp===window.substituteGirlHp-10 && FNHStandalonePreview.engine.battle.battle.lastAction.hits[0].target===2 && document.querySelector("#fnh-battle-log").textContent.includes("Girl")',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(FNHStandalonePreview.engine.save()).then(()=>true)',true,false);
+        check('save giữ báo cáo thế thân mà không gây sát thương lần nữa',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.actor(2).hp===window.substituteGirlHp-10 && FNHStandalonePreview.engine.battle.battle.lastAction.hits[0].substituteFor.id===1',false,false));
+        await evalPage(cdp, `(async()=>{
+            const e=FNHStandalonePreview.engine;e.battle.random=()=>0.5;e.state.changeActorState(2,10,true);e.battle.syncActors();
+            await e.forceBattleAction([0,0,window.substituteSkill,0]);
+        })()`,true,false);
+        check('Girl bị Sleep không đỡ đòn và trả damage về mục tiêu gốc',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.actor(1).hp===10 && FNHStandalonePreview.engine.state.actor(2).hp===window.substituteGirlHp-10 && !FNHStandalonePreview.engine.battle.battle.lastAction.hits[0].substituteFor',false,false));
+        await evalPage(cdp,'(async()=>{await FNHStandalonePreview.engine.restore(window.substituteBefore);delete window.substituteBefore;delete window.substituteGirlHp;delete window.substituteSkill;delete window.substituteAction;})()',true,false);
+        await evalPage(cdp, `(() => {
             const e = FNHStandalonePreview.engine, db = e.database;
             window.weaponUiBefore = e.save();
             const enemyId = db.Enemies.length, troopId = db.Troops.length;

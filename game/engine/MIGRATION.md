@@ -16,7 +16,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
 1. Combat: hiển thị motion/animation vũ khí,
-   phản phép/thế thân và
+   phản phép và
    trigger cuối trận. Đối chiếu phần thưởng.
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
@@ -62,6 +62,10 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   xen kẽ lượt thường/lượt bổ sung; lượt thêm không tăng turn, hồi tài nguyên hay
   tick trạng thái. UI khóa thành viên không đủ điều kiện, AI chạy lượt chỉ có địch;
   Moonless tự chọn kỹ năng và save giữ lệnh/quyền hành động, 339 vẫn cưỡng chế được.
+- Girl dùng trait thế thân 62/2 thật: mục tiêu dưới 25% HP, đòn không phải certain
+  hit, người đỡ đầu tiên còn sống/hiện/cử động được trong đội tham chiến. Mỗi effect
+  chọn lại người đỡ; damage/state/TP đi theo người nhận, phản công theo đích gốc;
+  kiểm tra Taunt, phe địch, dự bị, 339/animation/hủy, UI và save không đánh lại.
 - State 15/22 có modifier `b.hp - 1`; state 22 có animation thêm 22.
 - Follower/guest lưu vị trí, đuổi người phía trước, chặn event khi đang hiện;
   lệnh 217 chờ tập hợp, chuyển map/nhảy đặt lại vị trí. Không đưa guest vào combat.

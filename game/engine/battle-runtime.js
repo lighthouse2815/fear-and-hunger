@@ -542,6 +542,13 @@
     BattleRuntime.prototype.canCounter = function (battler) {
         return battler.alive && !battler.hidden && this.restriction(battler) < 4;
     };
+    BattleRuntime.prototype.substituteTarget = function (target, skill) {
+        if (skill.hitType === 0 || !target.alive || this.battlerState(target).hp >= this.battlerParam(target, 0) / 4) return target;
+        var members = target.enemyId != null ? this.battle.enemies : this.battle.actors;
+        return members.find(function (member) {
+            return this.canCounter(member) && this.battlerTraits(member).some(function (trait) { return trait.code === 62 && trait.dataId === 2; });
+        }, this) || target;
+    };
     BattleRuntime.prototype.useAction = function (subject, skill, index, item, forced, menuTargets, counterTarget, deferred) {
         var menu = Array.isArray(menuTargets);
         if (!menu && (!this.battle || this.battle.result)) throw new Error('Trận chiến không hoạt động.');
@@ -584,19 +591,21 @@
         });
         report.target = report.targets[0] && report.targets[0].id;
         function apply(selected, repeats) {
-            selected.forEach(function (target) {
+            selected.forEach(function (intendedTarget) {
                 if (!subject.alive) return;
                 if (!menu && !counterTarget) {
                     var key = report.subject + ':' + report.subjectId;
-                    var unit = target.enemyId != null ? runtime.battle.enemies : runtime.battle.actors;
-                    (runtime.battle.lastTargets || (runtime.battle.lastTargets = {}))[key] = unit.indexOf(target);
+                    var unit = intendedTarget.enemyId != null ? runtime.battle.enemies : runtime.battle.actors;
+                    (runtime.battle.lastTargets || (runtime.battle.lastTargets = {}))[key] = unit.indexOf(intendedTarget);
                 }
                 for (var repeat = 0; repeat < repeats; repeat++) {
                     if (!subject.alive) break;
-                    if ([9, 10].includes(skill.scope) ? target.alive : !target.alive) break;
-                    var counterRate = !menu && !counterTarget && skill.hitType === 1 && runtime.canCounter(target) ? runtime.traitRate(target, 22, 6, true) : 0;
+                    if ([9, 10].includes(skill.scope) ? intendedTarget.alive : !intendedTarget.alive) break;
+                    var counterRate = !menu && !counterTarget && skill.hitType === 1 && runtime.canCounter(intendedTarget) ? runtime.traitRate(intendedTarget, 22, 6, true) : 0;
                     var counter = counterRate > 0 && runtime.random() < counterRate;
+                    var target = !menu && !counterTarget ? runtime.substituteTarget(intendedTarget, skill) : intendedTarget;
                     var hit = { target: target.enemyId != null ? target.index : target.id, targetType: target.enemyId != null ? 'enemy' : 'actor', damage: 0 };
+                    if (target !== intendedTarget) hit.substituteFor = { type: intendedTarget.enemyId != null ? 'enemy' : 'actor', id: intendedTarget.enemyId != null ? intendedTarget.index : intendedTarget.id };
                     var success = (skill.successRate == null ? 100 : skill.successRate) / 100;
                     if (skill.hitType === 1) success *= runtime.traitRate(subject, 22, 0, true);
                     hit.missed = runtime.random() >= success;
@@ -630,8 +639,8 @@
                         runtime.gainTp(subject, Math.floor((skill.tpGain || 0) * runtime.traitRate(subject, 23, 5)));
                     }
                     hit.defeated = !target.alive; report.hits.push(hit);
-                    if (counter && runtime.canCounter(target)) {
-                        hit.counter = runtime.useAction(target, runtime.database.Skills[runtime.attackSkillId(target)], 0, false, true, null, subject, deferred);
+                    if (counter && runtime.canCounter(intendedTarget)) {
+                        hit.counter = runtime.useAction(intendedTarget, runtime.database.Skills[runtime.attackSkillId(intendedTarget)], 0, false, true, null, subject, deferred);
                     }
                 }
             });
