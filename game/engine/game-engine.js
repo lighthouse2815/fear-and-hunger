@@ -5,15 +5,15 @@
     if (typeof module === 'object' && module.exports) {
         module.exports = factory(
             require('./data-store'), require('./game-state'),
-            require('./map-model'), require('./event-interpreter'), require('./script-runtime'), require('./movement-runtime'), require('./screen-runtime'), require('./autonomous-movement'), require('./lighting-runtime'), require('./filter-runtime'), require('./animation-runtime')
+            require('./map-model'), require('./event-interpreter'), require('./script-runtime'), require('./movement-runtime'), require('./screen-runtime'), require('./autonomous-movement'), require('./lighting-runtime'), require('./filter-runtime'), require('./animation-runtime'), require('./battle-runtime')
         );
     } else {
         root.FNHStandaloneEngine = factory(
             root.FNHStandaloneData, root.FNHStandaloneState,
-            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts, root.FNHStandaloneMovement, root.FNHStandaloneScreen, root.FNHStandaloneAutonomous, root.FNHStandaloneLighting, root.FNHStandaloneFilters, root.FNHStandaloneAnimations
+            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts, root.FNHStandaloneMovement, root.FNHStandaloneScreen, root.FNHStandaloneAutonomous, root.FNHStandaloneLighting, root.FNHStandaloneFilters, root.FNHStandaloneAnimations, root.FNHStandaloneBattle
         );
     }
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi, screenApi, autonomousApi, lightingApi, filterApi, animationApi) {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi, screenApi, autonomousApi, lightingApi, filterApi, animationApi, battleApi) {
     function GameEngine(options) {
         options = options || {};
         this.dataStore = options.dataStore || new dataApi.GameDataStore({ baseUrl: options.baseUrl || '' });
@@ -50,6 +50,7 @@
         this.lighting = new lightingApi.LightingRuntime(this.state);
         this.filters = new filterApi.FilterRuntime(this.state);
         this.animations = new animationApi.AnimationRuntime(this);
+        this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random);
         this.state.party.slice().forEach(function (actorId) {
             if (!this.state.actor(actorId) && this.database.Actors[actorId]) this.state.addActor(actorId);
         }, this);
@@ -76,6 +77,7 @@
         }
         if (this.movement) this.movement.clear();
         if (this.animations) this.animations.dispose();
+        if (this.battle) this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random);
         this.state.mapId = mapId;
         this.map = map;
         this.lighting.sources(map);
@@ -296,6 +298,10 @@
             if (code === 205) return engine.applyRoute(parameters, interpreter);
             if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }
             if (code === 204) { engine.state.vehicleBgm = parameters[0] ? Object.assign({}, parameters[1]) : null; return true; }
+            if (code === 301) {
+                engine.battle.setup(parameters[1], parameters[2] !== false, parameters[3] === true);
+                engine.state.scene = 'battle'; return true;
+            }
             if (code === 216) { engine.state.followersVisible = parameters[0] !== 0; return true; }
             if (code === 217) { engine.state.followersGathering = true; return true; }
             if (code === 212) {
@@ -418,6 +424,7 @@
         this.filters = new filterApi.FilterRuntime(state);
         if (this.animations) this.animations.dispose();
         this.animations = new animationApi.AnimationRuntime(this);
+        this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random);
         if (this.movement) this.movement.clear();
         this.map = map;
         this.lighting.sources(map);

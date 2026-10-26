@@ -55,6 +55,7 @@
         this.vehicleBgm = source.vehicleBgm || null;
         this.scene = source.scene || 'map';
         this.mapNameDisplay = source.mapNameDisplay !== false;
+        this.battle = source.battle || null;
         if (!Array.isArray(this.regionCover.open)) this.regionCover.open = [0];
         this.mapTileset = source.mapTileset || null;
         this.timer = source.timer || { active: false, frames: 0 };
@@ -274,6 +275,7 @@
             followersVisible: this.followersVisible, followersGathering: this.followersGathering, vehicleBgm: this.vehicleBgm,
             scene: this.scene,
             mapNameDisplay: this.mapNameDisplay,
+            battle: this.battle,
             timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
             wordWrap: this.wordWrap, pendingChoices: this.pendingChoices,
             dashEnabled: this.dashEnabled,
