@@ -74,6 +74,9 @@ Sương đọc 138 khối `<fog effect>` từ note map, dùng PNG trong `img/fog
 zoom, opacity, blend, hue, chiều sâu và chuyển động. Tiền tố `$` hiện cả trong
 trận, `%` chỉ trong trận, `!` bám tọa độ map. Save giữ offset sương; chuyển map
 nạp cấu hình của map đích. Picture giao diện nằm phía trên sương.
+Parallax thường đứng yên theo màn hình và lặp kín vùng nhìn; nền tiền tố `!`
+bám map. Trục bật loop cuộn theo nửa tốc độ camera cộng tốc độ trong JSON;
+lệnh 284 đổi nền/cờ/tốc độ. Save giữ offset và chuyển map đặt lại nền đúng map.
 Credits dùng lệnh 105/405, đọc đủ dòng và tốc độ trong JSON. Preview dùng Web
 Animations API để cuộn chữ trên màn hình; event chờ cuộn hết. Giữ Shift, Enter,
 Escape hoặc nút chạy nhanh để tăng tốc khi JSON cho phép. Hủy event đóng credits

@@ -90,6 +90,7 @@
         this.state.mapId = mapId;
         this.map = map;
         this.screen.setupFogs(map.data.note);
+        this.screen.setupParallax(map.data);
         delete this.screen.screen.battlebacks;
         this.lighting.sources(map);
         this.pendingTouchEvents = [];

@@ -1016,6 +1016,27 @@ async function main() {
             const expected = context.getImageData(0, 0, 96, 48).data;
             return actual.every((value, index) => value === expected[index]);
         })()`, true, false));
+        check('parallax tĩnh đứng yên, loop cuộn nửa tốc độ camera và nền ! bám map', await evalPage(cdp, `(async () => {
+            const canvas = document.createElement('canvas'), renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas,{width:96,height:96});
+            const bitmap = await renderer.loadImage('img/parallaxes/fortress1.png');
+            const reference = document.createElement('canvas');reference.width=reference.height=96;
+            const context=reference.getContext('2d');context.imageSmoothingEnabled=false;
+            for (const [settings,x,y] of [
+                [{name:'fortress1',loopX:false,loopY:false},0,0],
+                [{name:'fortress1',loopX:true,loopY:true,x:3,y:-2},51,22],
+                [{name:'!fortress1',loopX:false,loopY:false},96,48]
+            ]) {
+                renderer.context.clearRect(0,0,96,96);context.clearRect(0,0,96,96);
+                renderer.drawParallax(bitmap,settings,2,1);context.drawImage(bitmap,-x,-y);
+                const actual=renderer.context.getImageData(0,0,96,96).data,expected=context.getImageData(0,0,96,96).data;
+                if(!actual.every((value,index)=>value===expected[index])) return false;
+            }
+            const tile=document.createElement('canvas');tile.width=tile.height=16;
+            const tileContext=tile.getContext('2d');tileContext.fillStyle='#a2314b';tileContext.fillRect(0,0,16,16);
+            renderer.context.clearRect(0,0,96,96);renderer.drawParallax(tile,{name:'small',loopX:false,loopY:false},20,20);
+            const pixels=renderer.context.getImageData(0,0,96,96).data;
+            return pixels.every((value,index)=>value===[162,49,75,255][index%4]);
+        })()`,true,false));
         check('camera giữa hai ô vẽ đủ tile và đúng pixel', await evalPage(cdp, `(async () => {
             const source = FNHStandalonePreview.engine;
             const state = new FNHStandaloneState.GameState({ mapId: 74, x: 15, y: 15 }, source.database);

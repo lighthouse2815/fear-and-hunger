@@ -75,6 +75,17 @@
         });
     };
 
+    CanvasRenderer.prototype.drawParallax = function (bitmap, parallax, startX, startY) {
+        if (!bitmap) return;
+        var fixed = (parallax.name || '').startsWith('!');
+        var x = fixed ? startX * TILE_SIZE + (parallax.x || 0) * 2 : parallax.loopX ? startX * TILE_SIZE / 2 + (parallax.x || 0) : 0;
+        var y = fixed ? startY * TILE_SIZE + (parallax.y || 0) * 2 : parallax.loopY ? startY * TILE_SIZE / 2 + (parallax.y || 0) : 0;
+        x = -((Math.floor(x) % bitmap.width + bitmap.width) % bitmap.width);
+        y = -((Math.floor(y) % bitmap.height + bitmap.height) % bitmap.height);
+        for (var drawY = y; drawY < this.canvas.height; drawY += bitmap.height) {
+            for (var drawX = x; drawX < this.canvas.width; drawX += bitmap.width) this.context.drawImage(bitmap, drawX, drawY);
+        }
+    };
 
     CanvasRenderer.prototype.draw = async function (engine) {
         var frame = ++this.frame;
@@ -229,7 +240,8 @@
         try {
             var shake = screen && screen.shake;
             if (shake && shake.remaining > 0) context.translate(Math.sin(shake.phase * shake.speed / 10) * shake.power * 2, 0);
-            if (parallax) context.drawImage(parallax, -startX * TILE_SIZE, -startY * TILE_SIZE);
+            this.drawParallax(parallax, screen && screen.parallax || { name: map.data.parallaxName, loopX: map.data.parallaxLoopX,
+                loopY: map.data.parallaxLoopY }, startX, startY);
             this.drawFogs(fogs, 7, startX, startY);
             var mapFilters = engine.filters ? engine.filters.forTarget(2) : [];
             if (mapFilters.length) {

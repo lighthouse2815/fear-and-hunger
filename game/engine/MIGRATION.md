@@ -24,7 +24,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    hoàn thiện tùy chọn người chơi. Chế tạo item/weapon/armor theo recipe và
    ingredient note đã chạy trong menu, kiểm tra bạc/nguyên liệu và save số lần
    chế tạo; cần đối chiếu thêm recipe dùng tên thay vì ID và custom synthesis effect.
-3. Bản đồ: di chuyển mượt, parallax và nhạc trận.
+3. Bản đồ: di chuyển mượt và nhạc trận.
    Chỉ đánh dấu xong sau khi xác minh.
 4. Điều khiển: đặt lại phím và đối chiếu thêm thao tác trên điện thoại.
 5. Luồng chính: Map072 trước tiêu đề, chơi mới/tiếp tục, nội dung kết thúc,
@@ -59,6 +59,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 - 138 khối fog đọc PNG, zoom/opacity/blend/hue/depth; tiền tố map/battle/fixed,
   chuyển động và offset qua save/map. Chrome đối chiếu pixel, lớp picture và
   ghép sương cùng các bộ phận Guard.
+- 23 map dùng parallax: nền thường đứng yên, nền ! bám map, loop/tốc độ/284,
+  lặp kín vùng nhìn, tạm dừng trong trận và giữ offset qua save/chuyển map.
 - Tiếng bước chân đọc 122 note terrain, ưu tiên region/terrain/mặc định; quái,
   follower/guest giảm âm theo khoảng cách, tôn trọng ẩn/No Footsteps/phương tiện,
   lệnh bật tắt giữ qua save. Volume vẫn nhân mức tổng 5%.

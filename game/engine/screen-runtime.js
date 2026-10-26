@@ -57,6 +57,11 @@
         Object.values(this.screen.pictures).forEach(function (picture) { picture.angle += (picture.rotationSpeed || 0) * frames / 2; });
         this.screen.weather.time += frames;
         this.screen.fogs.forEach(function (fog) { fog.x += fog.moveX * frames / 4; fog.y += fog.moveY * frames / 4; });
+        var parallax = this.screen.parallax;
+        if ((!scene || scene === 'map') && parallax) {
+            if (parallax.loopX) parallax.x = (parallax.x || 0) + parallax.speedX * frames / 4;
+            if (parallax.loopY) parallax.y = (parallax.y || 0) + parallax.speedY * frames / 4;
+        }
         if (this.screen.shake) {
             this.screen.shake.remaining = Math.max(0, this.screen.shake.remaining - frames);
             this.screen.shake.phase += frames;
@@ -77,6 +82,7 @@
     ScreenRuntime.prototype.active = function () {
         return !!this.screen.gab || this.screen.tweens.length > 0 || this.screen.weather.power > 0 ||
             this.screen.fogs.some(function (fog) { return fog.moveX || fog.moveY; }) ||
+            (this.screen.parallax && ((this.screen.parallax.loopX && this.screen.parallax.speedX) || (this.screen.parallax.loopY && this.screen.parallax.speedY))) ||
             (this.screen.shake && this.screen.shake.remaining > 0) ||
             Object.values(this.screen.pictures).some(function (picture) { return picture.rotationSpeed; });
     };
@@ -91,6 +97,11 @@
         this.screen.gab = null; this.screen.gabQueue = []; this.revision++;
     };
     ScreenRuntime.prototype.position = function (type, value) { return type === 0 ? value : this.state.variableValue(value); };
+    ScreenRuntime.prototype.setupParallax = function (map) {
+        this.screen.parallax = { name: map.parallaxName || '', loopX: !!map.parallaxLoopX, loopY: !!map.parallaxLoopY,
+            speedX: map.parallaxSx || 0, speedY: map.parallaxSy || 0, x: 0, y: 0 };
+        this.revision++;
+    };
     ScreenRuntime.prototype.setupFogs = function (note) {
         var fogs = [], expression = /<fog effect>([\s\S]*?)<\/fog effect>/ig, block;
         while ((block = expression.exec(note || ''))) {
@@ -159,7 +170,8 @@
             if (p[0] !== 'none') screen.weather.type = p[0];
             promise = this.tween(['weather'], { power: p[0] === 'none' ? 0 : p[1] }, p[2]); wait = p[3];
         } else if (code === 283) screen.battlebacks = p.slice(0, 2);
-        else if (code === 284) screen.parallax = { name: p[0], loopX: p[1], loopY: p[2], speedX: p[3], speedY: p[4] };
+        else if (code === 284) screen.parallax = { name: p[0], loopX: p[1], loopY: p[2], speedX: p[3], speedY: p[4],
+            x: p[1] && screen.parallax && screen.parallax.x || 0, y: p[2] && screen.parallax && screen.parallax.y || 0 };
         else return false;
         this.revision++;
         return wait && promise ? promise : true;
