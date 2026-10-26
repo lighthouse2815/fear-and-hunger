@@ -108,6 +108,12 @@
                 actor.hp = stateActor.hp; actor.alive = actor.hp > 0;
             }, this);
         }
+        this.battle.actors.forEach(function (actor) {
+            this.state.actor(actor.id).states.slice().forEach(function (id) {
+                if ((this.database.States[id] || {}).removeAtBattleEnd) this.removeState(actor, id);
+            }, this);
+        }, this);
+        this.syncActors();
         this.waiters.forEach(function (done) { done(result); });
         return result;
     };
@@ -271,12 +277,24 @@
         else this.state.changeActorMp(battler.id, amount);
         this.syncActors();
     };
+    BattleRuntime.prototype.resetStateTurns = function (battler, id) {
+        var state = this.database.States[id], data = this.battlerState(battler);
+        var turns = data.stateTurns || (data.stateTurns = {});
+        turns[id] = (state.minTurns || 0) + Math.floor(this.random() * ((state.maxTurns || 0) - (state.minTurns || 0) + 1));
+    };
+    BattleRuntime.prototype.removeState = function (battler, id) {
+        if (battler.enemyId != null) this.handleEffect(333, [battler.index, 1, id]);
+        else this.state.changeActorState(battler.id, id, false);
+        var data = this.battlerState(battler);
+        if (data.stateTurns) delete data.stateTurns[id];
+    };
     BattleRuntime.prototype.addState = function (target, id, chance, certain) {
         if (!this.database.States[id]) throw new Error('Không tìm thấy state ' + id);
         if (!target.alive || this.battlerTraits(target).some(function (trait) { return trait.code === 14 && trait.dataId === id; })) return;
         if (this.random() >= chance * (certain ? 1 : this.traitRate(target, 13, id))) return;
         if (target.enemyId != null) this.handleEffect(333, [target.index, 0, id]);
         else this.state.changeActorState(target.id, id, true);
+        this.resetStateTurns(target, id);
         this.syncActors();
     };
     BattleRuntime.prototype.useSkill = function (subject, skillId, index, forced) {
@@ -350,6 +368,11 @@
         data.tp = Math.min(100, (data.tp || 0) + Math.floor((skill.tpGain || 0) * this.traitRate(subject, 23, 5)));
         var first = report.targets[0];
         report.target = first && first.id; report.defeated = !!(report.hits.length && report.hits[report.hits.length - 1].defeated);
+        var state = this.battlerState(subject);
+        state.states.slice().forEach(function (id) {
+            var definition = this.database.States[id];
+            if (definition.autoRemovalTiming === 1 && state.stateTurns && state.stateTurns[id] === 0) this.removeState(subject, id);
+        }, this);
         this.battle.lastAction = report;
         return report;
     };
@@ -363,22 +386,69 @@
         if (!this.battle.managed) this.checkResult();
         return report;
     };
+    BattleRuntime.prototype.enemyActionMatches = function (enemy, action) {
+        var a = action.conditionParam1, b = action.conditionParam2, turn = this.battle.turn;
+        switch (action.conditionType) {
+        case 0: return true;
+        case 1: return b === 0 ? turn === a : turn > 0 && turn >= a && (turn - a) % b === 0;
+        case 2: return enemy.hp / enemy.mhp >= a && enemy.hp / enemy.mhp <= b;
+        case 3: return enemy.mp / Math.max(1, enemy.mmp) >= a && enemy.mp / Math.max(1, enemy.mmp) <= b;
+        case 4: return enemy.states.includes(a);
+        case 5: return this.battle.actors.some(function (actor) { return this.state.actor(actor.id).level >= a; }, this);
+        case 6: return this.state.switchValue(a);
+        default: throw new Error('Điều kiện AI chưa hỗ trợ: ' + action.conditionType);
+        }
+    };
+    BattleRuntime.prototype.chooseEnemyAction = function (enemy) {
+        var actions = (this.database.Enemies[enemy.enemyId].actions || []).filter(function (action) {
+            return this.enemyActionMatches(enemy, action) && this.canUseSkill(enemy, this.database.Skills[action.skillId]);
+        }, this);
+        if (!actions.length) return null;
+        var threshold = Math.max.apply(null, actions.map(function (action) { return action.rating; })) - 3;
+        actions = actions.filter(function (action) { return action.rating > threshold; });
+        var total = actions.reduce(function (sum, action) { return sum + action.rating - threshold; }, 0);
+        var draw = this.random() * total;
+        return actions.find(function (action) { draw -= action.rating - threshold; return draw < 0; }) || actions[actions.length - 1];
+    };
+    BattleRuntime.prototype.enemyActions = function () {
+        var actions = [];
+        this.aliveEnemies().forEach(function (enemy) {
+            if ((this.battle.forcedThisTurn || []).includes('enemy:' + enemy.index)) return;
+            var count = 1;
+            this.enemyTraits(enemy).forEach(function (trait) { if (trait.code === 61 && this.random() < trait.value) count++; }, this);
+            for (var index = 0; index < count; index++) {
+                var action = this.chooseEnemyAction(enemy);
+                if (action) actions.push({ enemy: enemy.index, skillId: action.skillId });
+            }
+        }, this);
+        return actions;
+    };
+    BattleRuntime.prototype.endTurn = function () {
+        this.battle.actors.concat(this.battle.enemies).forEach(function (battler) {
+            var data = this.battlerState(battler), turns = data.stateTurns || (data.stateTurns = {});
+            data.states.slice().forEach(function (id) {
+                var state = this.database.States[id];
+                if (!state || !state.autoRemovalTiming) return;
+                if (state.autoRemovalTiming === 1 && turns[id] === 0) { this.removeState(battler, id); return; }
+                if (turns[id] == null) this.resetStateTurns(battler, id);
+                turns[id] = Math.max(0, turns[id] - 1);
+                if (!turns[id] && state.autoRemovalTiming === 2) this.removeState(battler, id);
+            }, this);
+        }, this);
+        this.syncActors();
+    };
     BattleRuntime.prototype.enemyTurn = function () {
         if (!this.battle || this.battle.result || this.battle.phase !== 'enemy') return [];
-        var actions = [], runtime = this;
-        this.aliveEnemies().forEach(function (enemy) {
-            var data = runtime.database.Enemies[enemy.enemyId], target = runtime.aliveActors()[0];
-            if (!target) return;
-            var attack = Number(data.params[2]) || 1, defense = runtime.state.actorParam(target.id, 3) || 0;
-            var damage = Math.max(1, Math.round(attack - defense / 4));
-            target.hp = Math.max(0, target.hp - damage); target.alive = target.hp > 0;
-            runtime.state.changeActorHp(target.id, -damage, true);
-            actions.push({ enemy: enemy.index, target: target.id, damage: damage, defeated: !target.alive });
-        });
+        var reports = [];
+        this.enemyActions().forEach(function (action) {
+            var enemy = this.enemy(action.enemy), skill = this.database.Skills[action.skillId];
+            if (this.canUseSkill(enemy, skill)) reports.push(this.useSkill(enemy, action.skillId, -1));
+        }, this);
+        this.endTurn();
         if (!this.battle.managed) this.battle.turn++;
         this.battle.phase = this.battle.managed ? 'events' : 'input';
         if (!this.battle.managed) this.checkResult();
-        return actions;
+        return reports;
     };
     BattleRuntime.prototype.checkResult = function () {
         if (!this.aliveEnemies().length) this.finish('victory');

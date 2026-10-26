@@ -463,6 +463,9 @@
                 if (signal && signal.aborted) throw signal.reason;
                 var subject = subjects[index];
                 if (!subject.alive || subject.hidden || battle.result || this.state.scene !== 'battle') continue;
+                var key = subject.enemyId != null ? 'enemy:' + subject.index : 'actor:' + subject.id;
+                var forced = battle.forcedThisTurn || (battle.forcedThisTurn = []);
+                if (!forced.includes(key)) forced.push(key);
                 var report = runtime.useSkill(subject, parameters[2], parameters[3], true);
                 await this.completeBattleSkill(report, handlers, signal);
             }
@@ -502,6 +505,24 @@
         });
     };
 
+    GameEngine.prototype.runEnemyTurn = async function (handlers, signal) {
+        var runtime = this.battle, battle = runtime.battle;
+        var actions = runtime.enemyActions();
+        for (var index = 0; index < actions.length && !battle.result; index++) {
+            var action = actions[index], enemy = runtime.enemy(action.enemy), skill = this.database.Skills[action.skillId];
+            if (this.state.scene !== 'battle') return;
+            if ((battle.forcedThisTurn || []).includes('enemy:' + enemy.index) || !runtime.canUseSkill(enemy, skill)) continue;
+            battle.phase = 'action';
+            var report = runtime.useSkill(enemy, action.skillId, -1);
+            await this.completeBattleSkill(report, handlers, signal);
+            await this.runBattlePages(false, handlers, signal);
+        }
+        if (!battle.result) {
+            runtime.endTurn();
+            await this.runBattlePages(true, handlers, signal);
+        }
+    };
+
     GameEngine.prototype.battleAttack = async function (actorId, enemyIndex, handlers) {
         var runtime = this.battle, battle = runtime.battle, context = this.battleContext || {};
         if (this.state.scene !== 'battle' || !battle || battle.result || battle.phase !== 'input') throw new Error('Chưa đến lượt nhân vật.');
@@ -509,12 +530,13 @@
         if (!subject || !subject.alive || !chosen || !chosen.alive || chosen.hidden) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
         battle.managed = true;
         battle.turn++;
+        battle.forcedThisTurn = [];
         try {
             await this.runBattlePages(false, handlers || context.handlers, context.signal);
             if (battle.result) return;
             var result;
             subject = runtime.actor(actorId);
-            if (subject && subject.alive) {
+            if (subject && subject.alive && !(battle.forcedThisTurn || []).includes('actor:' + actorId)) {
                 chosen = runtime.enemy(enemyIndex);
                 if (!chosen || !chosen.alive || chosen.hidden) chosen = runtime.aliveEnemies()[0];
                 battle.phase = 'input';
@@ -524,8 +546,8 @@
                 await this.runBattlePages(false, handlers || context.handlers, context.signal);
             }
             if (!battle.result) {
-                battle.phase = 'enemy'; runtime.enemyTurn();
-                await this.runBattlePages(true, handlers || context.handlers, context.signal);
+                battle.phase = 'enemy';
+                await this.runEnemyTurn(handlers || context.handlers, context.signal);
             }
             return result;
         } catch (error) { battle.error = error.message; runtime.finish('abort'); throw error; }
@@ -544,11 +566,12 @@
             return true;
         }
         battle.turn++;
+        battle.forcedThisTurn = [];
         try {
             await this.runBattlePages(false, handlers || context.handlers, context.signal);
             if (!battle.result) {
-                battle.phase = 'enemy'; runtime.enemyTurn();
-                await this.runBattlePages(true, handlers || context.handlers, context.signal);
+                battle.phase = 'enemy';
+                await this.runEnemyTurn(handlers || context.handlers, context.signal);
             }
             return false;
         } catch (error) { battle.error = error.message; runtime.finish('abort'); throw error; }

@@ -988,6 +988,7 @@ async function main() {
                 { code: 122, indent: 1, parameters: [999, 999, 0, 0, 30] },
                 { code: 604, indent: 0, parameters: [] }
             ];
+            window.battleOriginalActor = JSON.parse(JSON.stringify(engine.state.actor(1)));
             window.battleActorParams = engine.state.actor(1).paramPlus.slice();
             engine.state.changeActorParam(1, 2, -40); // Giữ trận đủ dài để kiểm tra nhánh chạy thoát.
             engine.battle.random = () => 0.75;
@@ -1083,6 +1084,20 @@ async function main() {
             engine.animations.dispose();
             return done && engine.state.switchValue(6220) && engine.battle.battle.phase==='input';
         })()`,true,false));
+        check('AI dùng kỹ năng JSON và common event thay đòn đánh cố định', await evalPage(cdp, `(async () => {
+            const source = FNHStandalonePreview.engine;
+            const engine = new FNHStandaloneEngine.GameEngine({dataStore:source.dataStore,random:()=>0.75,onRouteEffect:()=>true});
+            await engine.boot({mapId:74,x:8,y:8,party:[1]});
+            const enemyId=engine.database.Enemies.length, troopId=engine.database.Troops.length;
+            engine.database.Enemies.push({...engine.database.Enemies[1],id:enemyId,
+                actions:[{conditionType:0,rating:5,skillId:7}]});
+            engine.database.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400,hidden:false}]});
+            engine.battle.setup(troopId); engine.state.scene='battle';
+            engine.battle.battle.managed=true;
+            const hp=engine.state.actor(1).hp;
+            await engine.runEnemyTurn();
+            return engine.battle.battle.lastAction.skillId===7 && engine.state.switchValue(16) && engine.state.actor(1).hp===hp;
+        })()`,true,false));
         check('event độc lập điều khiển quái và giữ thay đổi qua save', await evalPage(cdp, `(async () => {
             const source = FNHStandalonePreview.engine;
             const engine = new FNHStandaloneEngine.GameEngine({ dataStore: source.dataStore });
@@ -1141,6 +1156,7 @@ async function main() {
             'FNHStandalonePreview.engine.battle.battle.result === "victory" && FNHStandalonePreview.engine.state.switchValue(23) && FNHStandalonePreview.engine.state.variableValue(999) === 10 && FNHStandalonePreview.engine.battle.battle.enemies.every(enemy => !enemy.alive)', false, false));
         await evalPage(cdp, 'FNHStandalonePreview.engine.screen.clearGabs()', false, false);
         await evalPage(cdp, `battleOriginalPage.page.list = battleOriginalPage.list;
+            FNHStandalonePreview.engine.state.actors[1] = window.battleOriginalActor; delete window.battleOriginalActor;
             FNHStandalonePreview.engine.state.recoverActor(1); delete window.battleOriginalPage;`, false, false);
         await evalPage(cdp, `(() => {
             const engine = FNHStandalonePreview.engine;
