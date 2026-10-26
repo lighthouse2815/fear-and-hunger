@@ -20,7 +20,7 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
     e.queueBattleAction(1,'skill',2,0);const hp=e.state.actor(1).hp;
     assert.equal(await finish(e.battleEscape()),false);
     assert.equal(e.battle.battle.escapeRatio,0.35);assert.equal(e.battle.battle.turn,1);assert.equal(e.battle.battle.phase,'input');
-    assert.equal(e.state.actor(1).hp,hp-1,'thoát thất bại nhường đúng một lượt cho địch');
+    assert.equal(e.state.actor(1).hp,hp-2,'thoát thất bại nhường lượt thường và lượt bổ sung cho địch có AGI gấp đôi');
     assert.equal(e.battle.battle.inputActions.length,0);assert.equal(e.battle.battle.escapeFailed,true);
     await e.restore(e.save());assert.equal(e.battle.battle.escapeRatio,0.35);
     assert.equal(await finish(e.battleEscape()),true,'lần tiếp theo dùng tỷ lệ đã tăng');assert.equal(e.state.scene,'map');

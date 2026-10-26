@@ -63,6 +63,8 @@
         lastActionRevision = battle && battle.actionRevision;
         if (!battle || engine.state.scene !== 'battle' || battle.result) { panel.hidden = true; return; }
         panel.hidden = false;
+        document.getElementById('fnh-battle-round').textContent = 'Lượt ' + battle.turn + (battle.extraTurn ? ' · Lượt bổ sung' : '');
+        document.getElementById('fnh-extra-turn').hidden = !battle.extraTurn;
         if (!battle.enemies.some(function (enemy) { return enemy.index === battleTarget && enemy.alive && !enemy.hidden; })) {
             var target = engine.battle.aliveEnemies()[0];
             battleTarget = target ? target.index : -1;
@@ -137,6 +139,7 @@
             row.appendChild(remove); queuePanel.appendChild(row);
         });
         var start = document.getElementById('fnh-battle-start');
+        start.textContent = battle.extraTurn ? 'Bắt đầu lượt bổ sung' : 'Bắt đầu lượt';
         try { engine.validateBattleActions(queued, true); start.disabled = false; }
         catch (_) { start.disabled = true; }
         var lastAction = battle.lastAction;

@@ -199,7 +199,7 @@
     BattleRuntime.prototype.aliveActors = function () { return this.battle.actors.filter(function (actor) { return actor.alive; }); };
     BattleRuntime.prototype.inputActors = function () {
         return this.aliveActors().filter(function (actor) {
-            return this.restriction(actor) === 0 && !this.isAutoBattle(actor);
+            return this.takesTurn(actor) && this.restriction(actor) === 0 && !this.isAutoBattle(actor);
         }, this);
     };
     BattleRuntime.prototype.isAutoBattle = function (battler) {
@@ -273,14 +273,14 @@
     BattleRuntime.prototype.syncActors = function () {
         if (this.battle) this.battle.actors.forEach(this.refreshActor, this);
     };
-    BattleRuntime.prototype.immortalKey = function (battler) {
+    BattleRuntime.prototype.battlerKey = function (battler) {
         return battler.enemyId != null ? 'enemy:' + battler.index : 'actor:' + battler.id;
     };
-    BattleRuntime.prototype.isImmortal = function (battler) { return this.immortal.has(this.immortalKey(battler)); };
+    BattleRuntime.prototype.isImmortal = function (battler) { return this.immortal.has(this.battlerKey(battler)); };
     BattleRuntime.prototype.protectActionTargets = function (targets) {
         var runtime = this, keys = new Set(), protectedTargets = [];
         targets.forEach(function (target) {
-            var key = runtime.immortalKey(target);
+            var key = runtime.battlerKey(target);
             if (keys.has(key) || !target.alive) return;
             keys.add(key); protectedTargets.push(target);
             runtime.immortal.set(key, (runtime.immortal.get(key) || 0) + 1);
@@ -290,7 +290,7 @@
             if (released) return;
             released = true;
             protectedTargets.forEach(function (target) {
-                var key = runtime.immortalKey(target), count = runtime.immortal.get(key) - 1;
+                var key = runtime.battlerKey(target), count = runtime.immortal.get(key) - 1;
                 if (count > 0) runtime.immortal.set(key, count);
                 else {
                     runtime.immortal.delete(key);
@@ -699,6 +699,7 @@
     BattleRuntime.prototype.enemyActions = function () {
         var actions = [];
         this.aliveEnemies().forEach(function (enemy) {
+            if (!this.takesTurn(enemy)) return;
             if ((this.battle.forcedThisTurn || []).includes('enemy:' + enemy.index)) return;
             var count = 1;
             this.enemyTraits(enemy).forEach(function (trait) { if (trait.code === 61 && this.random() < trait.value) count++; }, this);
@@ -739,6 +740,7 @@
         return effect;
     };
     BattleRuntime.prototype.endTurn = function () {
+        if (this.battle.extraTurn) return this.battle.turnEffects = [];
         this.syncActors();
         var effects = this.battle.turnEffects = [];
         this.battle.actors.concat(this.battle.enemies).forEach(function (battler) {
@@ -756,9 +758,9 @@
             if (this.canUseSkill(enemy, skill)) reports.push(this.useSkill(enemy, skillId, -1));
         }, this);
         this.endTurn();
-        if (!this.battle.managed) this.battle.turn++;
+        if (!this.battle.managed && !this.battle.extraTurn) this.battle.turn++;
         this.battle.phase = this.battle.managed ? 'events' : 'input';
-        if (!this.battle.managed) this.checkResult();
+        if (!this.battle.managed) { this.checkResult(); if (!this.battle.result) this.prepareNextInput(); }
         return reports;
     };
     BattleRuntime.prototype.checkResult = function () {
@@ -766,12 +768,23 @@
         else if (!this.aliveActors().length) this.finish(this.battle.canLose ? 'defeat-continue' : 'defeat');
         return this.battle.result;
     };
+    BattleRuntime.prototype.unitAgility = function (members) {
+        return members.length ? members.reduce(function (sum, member) { return sum + this.battlerParam(member, 6); }.bind(this), 0) / members.length : 1;
+    };
+    BattleRuntime.prototype.takesTurn = function (battler) {
+        return !this.battle || !this.battle.extraTurn || (this.battle.extraMembers || []).includes(this.battlerKey(battler));
+    };
+    BattleRuntime.prototype.prepareNextInput = function () {
+        var battle = this.battle;
+        if (battle.extraTurn) { battle.extraTurn = false; battle.extraMembers = []; return; }
+        var actorAverage = this.unitAgility(battle.actors), enemyAverage = this.unitAgility(battle.enemies);
+        battle.extraMembers = battle.actors.concat(battle.enemies).filter(function (battler) {
+            return this.canCounter(battler) && this.battlerParam(battler, 6) > 1.5 * (battler.enemyId != null ? actorAverage : enemyAverage);
+        }, this).map(this.battlerKey.bind(this));
+        battle.extraTurn = battle.extraMembers.length > 0;
+    };
     BattleRuntime.prototype.initialEscapeRatio = function () {
-        var runtime = this;
-        function average(members) {
-            return members.length ? members.reduce(function (sum, member) { return sum + runtime.battlerParam(member, 6); }, 0) / members.length : 1;
-        }
-        return 0.5 * average(this.battle.actors) / average(this.battle.enemies);
+        return 0.5 * this.unitAgility(this.battle.actors) / this.unitAgility(this.battle.enemies);
     };
     BattleRuntime.prototype.escape = function () {
         if (!this.battle || this.battle.result || this.battle.phase !== 'input' || !this.battle.canEscape) return false;

@@ -896,6 +896,7 @@
         var item = action.kind === 'item', subject = runtime.actor(action.actorId);
         var data = item ? this.database.Items[action.id] : runtime.skillFor(subject, action.id);
         if (!subject || !subject.alive || !data || !Number.isInteger(action.targetIndex)) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
+        if (!runtime.takesTurn(subject)) throw new Error('Nhân vật không có lượt bổ sung.');
         if (!item && ![1, 2].includes(action.id) && !runtime.actorSkills(subject.id).some(function (entry) { return entry.id === data.id; })) throw new Error('Nhân vật chưa học kỹ năng này.');
         if (runtime.restriction(subject) > 0 || runtime.isAutoBattle(subject) || !(item ? runtime.canUseItem(subject, data) : runtime.canUseSkill(subject, data))) throw new Error(item ? 'Chưa thể dùng vật phẩm ' + data.name : 'Chưa thể dùng kỹ năng ' + data.name);
         var chosen = data.scope === 1 ? runtime.enemy(action.targetIndex) : [7, 9].includes(data.scope) ? battle.actors[action.targetIndex] : null;
@@ -950,7 +951,7 @@
     GameEngine.prototype.runBattleTurn = async function (actions, handlers) {
         var runtime = this.battle, battle = runtime.battle, context = this.battleContext || {}, engine = this;
         this.validateBattleActions(actions, false);
-        battle.managed = true; battle.turn++; battle.forcedThisTurn = [];
+        battle.managed = true; if (!battle.extraTurn) battle.turn++; battle.forcedThisTurn = [];
         battle.inputActions = []; battle.turnActions = []; battle.turnEffects = [];
         try {
             if (context.signal && context.signal.aborted) throw context.signal.reason;
@@ -958,6 +959,7 @@
             if (battle.result) return battle.turnActions;
             var queue = actions.map(function (action) { return Object.assign({}, action); });
             runtime.aliveActors().forEach(function (actor) {
+                if (!runtime.takesTurn(actor)) return;
                 if (queue.some(function (action) { return action.actorId === actor.id; })) return;
                 if (runtime.confusionLevel(actor)) {
                     queue.push({ actorId: actor.id, kind: 'skill', id: 1, targetIndex: -1 });
@@ -979,7 +981,7 @@
                 var action = queue[index], enemy = action.enemy != null;
                 var subject = enemy ? runtime.enemy(action.enemy) : runtime.actor(action.actorId);
                 if (this.state.scene !== 'battle') { runtime.finish('abort'); break; }
-                if (!subject || (battle.forcedThisTurn || []).includes(enemy ? 'enemy:' + action.enemy : 'actor:' + action.actorId)) continue;
+                if (!subject || !runtime.takesTurn(subject) || (battle.forcedThisTurn || []).includes(enemy ? 'enemy:' + action.enemy : 'actor:' + action.actorId)) continue;
                 if (runtime.confusionLevel(subject)) { action.kind = 'skill'; action.id = 1; action.targetIndex = -1; }
                 var data = action.kind === 'item' ? this.database.Items[action.id] : runtime.skillFor(subject, action.id);
                 if (!(action.kind === 'item' ? runtime.canUseItem(subject, data) : runtime.canUseSkill(subject, data))) continue;
@@ -998,7 +1000,7 @@
             return battle.turnActions;
         } catch (error) { battle.error = error.message; runtime.finish('abort'); throw error; }
         finally {
-            if (!battle.result) battle.phase = 'input';
+            if (!battle.result) await this.nextBattleInput(handlers || context.handlers);
             else if (!this.battleContext) this.leaveBattle(battle.result);
         }
     };
@@ -1012,7 +1014,7 @@
             if (!this.battleContext) this.leaveBattle(battle.result);
             return true;
         }
-        battle.turn++;
+        if (!battle.extraTurn) battle.turn++;
         battle.forcedThisTurn = [];
         try {
             await this.runBattlePages(false, handlers || context.handlers, context.signal);
@@ -1023,8 +1025,20 @@
             return false;
         } catch (error) { battle.error = error.message; runtime.finish('abort'); throw error; }
         finally {
-            if (!battle.result) battle.phase = 'input';
+            if (!battle.result) await this.nextBattleInput(handlers || context.handlers);
             else if (!this.battleContext) this.leaveBattle(battle.result);
+        }
+    };
+
+    GameEngine.prototype.nextBattleInput = async function (handlers) {
+        var runtime = this.battle, battle = runtime.battle;
+        runtime.prepareNextInput(); battle.phase = 'input';
+        // Khi chỉ địch có lượt bổ sung, tiếp tục AI để người chơi không phải
+        // xác nhận một lượt mà cả đội không có quyền hành động.
+        if (battle.extraTurn && !runtime.aliveActors().some(function (actor) { return runtime.takesTurn(actor); })) {
+            var escapeFailed = battle.escapeFailed;
+            await this.startBattleTurn(handlers);
+            battle.escapeFailed = escapeFailed;
         }
     };
 

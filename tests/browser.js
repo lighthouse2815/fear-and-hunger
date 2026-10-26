@@ -1311,12 +1311,38 @@ async function main() {
         await clickElement(cdp,'#fnh-battle-escape');
         await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'thoát thất bại nhường lượt');
         check('UI báo thoát thất bại và tăng tỷ lệ theo AGI',await evalPage(cdp,
-            'FNHStandalonePreview.engine.battle.battle.escapeRatio===0.35 && FNHStandalonePreview.engine.state.actor(1).hp===window.escapeHp-1 && document.querySelector("#fnh-battle-log").textContent.includes("Không thể chạy thoát")',false,false));
+            'FNHStandalonePreview.engine.battle.battle.escapeRatio===0.35 && FNHStandalonePreview.engine.state.actor(1).hp===window.escapeHp-2 && document.querySelector("#fnh-battle-log").textContent.includes("Không thể chạy thoát")',false,false));
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(FNHStandalonePreview.engine.save()).then(()=>{FNHStandalonePreview.engine.battle.random=()=>0.3;})',true,false);
         await clickElement(cdp,'#fnh-battle-escape');
         await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="map" && document.querySelector("#fnh-battle").hidden',5000,'lần thoát tiếp dùng tỷ lệ tăng sau save');
         check('thoát lần hai giữ xác suất đã tăng qua save',await evalPage(cdp,'FNHStandalonePreview.engine.battle.battle.result==="escape"',false,false));
         await evalPage(cdp,'(async()=>{await FNHStandalonePreview.engine.restore(window.escapeBefore);delete window.escapeBefore;delete window.escapeHp;})()',true,false);
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,db=e.database;window.extraBefore=e.save();
+            const enemyId=db.Enemies.length,troopId=db.Troops.length,id=db.Skills.length;
+            db.Skills.push({...db.Skills[3],id,note:'',animationId:0,repeats:1,hitType:0,effects:[],mpCost:0,tpCost:0,
+                damage:{type:1,formula:'1',variance:0,critical:false,elementId:0}});
+            db.Enemies.push({...db.Enemies[1],id:enemyId,params:[1000,100,1,1,1,1,20,1],traits:[],actions:[{skillId:id,conditionType:0,rating:5}]});
+            db.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400}]});
+            e.state.party=[1,3];e.state.party.forEach((actor,index)=>{e.state.recoverActor(actor);e.state.changeActorParam(actor,6,(index?10:40)-e.state.actorParam(actor,6));});
+            e.state.changeActorState(1,5,true);e.battle.setup(troopId,true,true);e.state.scene='battle';e.battle.random=()=>0.5;
+        })()`,false,false);
+        await waitFor(cdp,'!document.querySelector("#fnh-battle").hidden && !document.querySelector("#fnh-battle-use-skill").disabled',5000,'mở trận có AGI khác nhau');
+        await clickElement(cdp,'#fnh-battle-use-skill');await clickElement(cdp,'#fnh-battle-use-skill');await clickElement(cdp,'#fnh-battle-start');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.extraTurn && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'actor nhanh được lượt bổ sung');
+        check('UI chỉ cho nhân vật đủ AGI chọn lệnh trong lượt bổ sung',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;window.extraHp=e.state.actor(1).hp;
+            return e.battle.battle.turn===1 && !document.querySelector('#fnh-extra-turn').hidden &&
+                document.querySelector('#fnh-extra-turn').naturalWidth>0 && document.querySelector('#fnh-battle-round').textContent.includes('Lượt bổ sung') &&
+                !document.querySelector('#fnh-battle-actor option[value="1"]').disabled && document.querySelector('#fnh-battle-actor option[value="3"]').disabled;
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-battle-use-skill');
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(FNHStandalonePreview.engine.save()).then(()=>true)',true,false);
+        await clickElement(cdp,'#fnh-battle-start');
+        await waitFor(cdp,'!FNHStandalonePreview.engine.battle.battle.extraTurn && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'kết thúc lượt bổ sung sau tải save');
+        check('lượt bổ sung giữ turn và không tick Bleeding lần nữa',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.state.actor(1).hp===window.extraHp && FNHStandalonePreview.engine.battle.battle.turnActions.length===1 && FNHStandalonePreview.engine.battle.battle.turnEffects.length===0',false,false));
+        await evalPage(cdp,'(async()=>{await FNHStandalonePreview.engine.restore(window.extraBefore);delete window.extraBefore;delete window.extraHp;})()',true,false);
         await evalPage(cdp, `(() => {
             const e = FNHStandalonePreview.engine, db = e.database;
             window.weaponUiBefore = e.save();
@@ -1592,12 +1618,14 @@ async function main() {
                 r.hits.every(hit=>hit.targetType==='enemy') && e.battle.enemy(0).hp<10000 &&
                 document.querySelector('#fnh-battle-log').textContent.includes('Tự chiến đấu');
         })()`,false,false));
+        check('Moonless đủ AGI nhận lượt bổ sung tự chiến đấu',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.extraTurn && !document.querySelector("#fnh-extra-turn").hidden',false,false));
         await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine;e.state.changeActorSkill(7,238,true);e.state.changeActorHp(7,-90,true);e.battle.syncActors();
             window.autoBefore={hp:e.state.actor(7).hp,mp:e.state.actor(7).mp,cost:e.battle.skillCost(e.battle.actor(7),e.database.Skills[238]).mp};
         })()`,false,false);
         await clickElement(cdp,'#fnh-battle-start');
-        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===2 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'AI chọn Loving whispers khi thiếu HP');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && !FNHStandalonePreview.engine.battle.battle.extraTurn && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'AI chọn Loving whispers trong lượt bổ sung khi thiếu HP');
         check('AI chọn hồi HP thật và chỉ trả MP một lần khi thực thi',await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine,r=e.battle.battle.lastAction;
             return r.autoBattle && r.skillId===238 && r.target===7 && r.damage<0 &&
@@ -1607,7 +1635,7 @@ async function main() {
             const e=FNHStandalonePreview.engine,hp=e.state.actor(7).hp,mp=e.state.actor(7).mp;
             await e.restore(e.save());delete window.autoBefore;
             return e.battle.isAutoBattle(e.battle.actor(7)) && e.battle.inputActors().length===0 &&
-                e.state.actor(7).hp===hp && e.state.actor(7).mp===mp && e.battle.battle.lastAction.autoBattle && e.battle.battle.turn===2;
+                e.state.actor(7).hp===hp && e.state.actor(7).mp===mp && e.battle.battle.lastAction.autoBattle && e.battle.battle.turn===1;
         })()`,true,false));
         await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine;e.battle.enemy(0).hp=500;e.battle.handleEffect(333,[0,0,22]);

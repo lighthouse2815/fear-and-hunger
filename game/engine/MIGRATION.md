@@ -16,7 +16,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
 1. Combat: hiển thị motion/animation vũ khí,
-   phản phép/thế thân, lượt thêm theo AGI và
+   phản phép/thế thân và
    trigger cuối trận. Đối chiếu phần thưởng.
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
@@ -58,6 +58,10 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   khởi tạo lại. Trượt/né, mất MP và hồi phục không cấp TP nhận damage.
 - Chạy thoát theo AGI trung bình hai phe lúc mở trận, cộng 0.1 sau thất bại,
   hủy lệnh và nhường lượt; UI báo kết quả, save giữ xác suất đã tăng.
+- Galv_ExAgiTurn chọn thành viên cử động được có AGI >150% trung bình đối phương,
+  xen kẽ lượt thường/lượt bổ sung; lượt thêm không tăng turn, hồi tài nguyên hay
+  tick trạng thái. UI khóa thành viên không đủ điều kiện, AI chạy lượt chỉ có địch;
+  Moonless tự chọn kỹ năng và save giữ lệnh/quyền hành động, 339 vẫn cưỡng chế được.
 - State 15/22 có modifier `b.hp - 1`; state 22 có animation thêm 22.
 - Follower/guest lưu vị trí, đuổi người phía trước, chặn event khi đang hiện;
   lệnh 217 chờ tập hợp, chuyển map/nhảy đặt lại vị trí. Không đưa guest vào combat.

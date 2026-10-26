@@ -186,6 +186,12 @@ bị khóa hoặc đã hành động cưỡng chế sẽ bỏ lệnh thường; 
 lại trong cùng phe. Kết quả thắng/thua dừng phần hàng đợi còn lại. Chọn/sửa/bỏ
 lệnh không trừ MP/TP/item; số item giữ chỗ được kiểm tra chung cả đội, lựa chọn
 được giữ qua save.
+Sau lượt thường, thành viên có AGI lớn hơn 150% AGI trung bình phe đối diện
+được một lượt bổ sung. Chỉ thành viên đủ điều kiện được nhập lệnh hoặc chạy AI;
+nếu chỉ địch đủ điều kiện, engine tự chạy lượt đó. Lượt bổ sung không tăng số
+lượt, hồi tài nguyên hay tick thời lượng trạng thái; sau đó trở lại lượt thường.
+UI dùng ảnh `exturn.png` có sẵn và ghi rõ lượt bổ sung. Save giữ quyền hành động
+và lệnh đã chọn; lệnh cưỡng chế 339 vẫn chạy được ngoài danh sách đủ điều kiện.
 TP đầu trận ngẫu nhiên 0–24 nếu không có trait giữ TP; Baby Demon giữ theo class.
 Mỗi effect trúng cấp TP cho người dùng; nhận sát thương HP dương cấp TP theo tỷ
 lệ HP tối đa và TCR, làm tròn từng hit. Trượt/né, mất MP và hồi HP không cấp TP
