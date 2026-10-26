@@ -90,8 +90,15 @@
         this.selfSwitches[this.selfSwitchKey(mapId, eventId, letter)] = Boolean(value);
     };
 
-    GameState.prototype.actor = function (id) {
+    GameState.prototype.actor = function (id, data) {
         positiveId(id, 'ID actor');
+        if (!this.actors[id]) {
+            data = data || (this.database && this.database.Actors && this.database.Actors[id]);
+            if (data) {
+                var classData = this.database && this.database.Classes && this.database.Classes[data.classId];
+                this.actors[id] = new actorApi.ActorState(data, classData).toJSON();
+            }
+        }
         return this.actors[id] || null;
     };
 
@@ -101,10 +108,7 @@
 
     GameState.prototype.addActor = function (id, data) {
         positiveId(id, 'ID actor');
-        if (!data && this.database && this.database.Actors) data = this.database.Actors[id];
-        if (!data) throw new Error('Thiếu dữ liệu actor ' + id);
-        var classData = this.database && this.database.Classes && this.database.Classes[data.classId];
-        if (!this.actors[id]) this.actors[id] = new actorApi.ActorState(data, classData).toJSON();
+        if (!this.actor(id, data)) throw new Error('Thiếu dữ liệu actor ' + id);
         if (!this.hasActor(id)) this.party.push(id);
     };
 

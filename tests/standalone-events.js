@@ -98,6 +98,23 @@ const { EventInterpreter } = require('../game/engine/event-interpreter');
     }).run();
     assert.equal(actorState.actor(1).hp, hpBefore);
     assert.deepEqual(actorState.actor(1).states, []);
+    actorState.changeActorMp(1, -63);
+    actorState.changeActorState(1, 56, true);
+    const actorReader = new EventInterpreter({ state: actorState, commands: [
+        { code: 122, parameters: [30, 30, 0, 3, 3, 1, 3] }
+    ] });
+    await actorReader.run();
+    assert.equal(actorState.variableValue(30), 37, 'common event đọc MP hiện tại của nhân vật');
+    assert.equal(actorReader.evaluateCondition([4, 1, 6, 56]), true);
+    assert.equal(actorReader.evaluateCondition([4, 1, 4, 44]), true);
+    assert.equal(actorReader.evaluateCondition([4, 1, 5, 1]), true);
+    assert.equal(actorReader.evaluateCondition([4, 1, 5, 54]), false);
+    actorState.setVariable(7, 3);
+    await new EventInterpreter({ state: actorState, commands: [
+        { code: 122, parameters: [7, 8, 1, 1, 7] }
+    ] }).run();
+    assert.equal(actorState.variableValue(7), 6);
+    assert.equal(actorState.variableValue(8), 3, 'toán hạng biến phải được đọc trước khi ghi cả dải');
 
     // Hai điều kiện cùng indent: Else của điều kiện sau không thuộc điều kiện trước.
     const branchState = new GameState({ mapId: 74, gold: 20 });

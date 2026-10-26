@@ -338,7 +338,17 @@
             var gold = this.state.gold, amount = Number(parameters[1]);
             return [gold >= amount, gold <= amount, gold < amount][parameters[2]];
         }
-        if (type === 4 && parameters[2] === 0) return this.state.hasActor(parameters[1]);
+        if (type === 4) {
+            if (parameters[2] === 0) return this.state.hasActor(parameters[1]);
+            var actor = this.state.actor(parameters[1]);
+            if (!actor) return false;
+            if (parameters[2] === 1) return actor.name === parameters[3];
+            if (parameters[2] === 2) return actor.classId === parameters[3];
+            if (parameters[2] === 3) return actor.skills.includes(parameters[3]);
+            if (parameters[2] === 4) return actor.equips[0] === parameters[3];
+            if (parameters[2] === 5) return actor.equips.slice(1).includes(parameters[3]);
+            if (parameters[2] === 6) return actor.states.includes(parameters[3]);
+        }
         if (type === 8) return this.state.itemCount('items', parameters[1]) > 0;
         if (type === 9) return this.state.itemCount('weapons', parameters[1]) > 0;
         if (type === 10) return this.state.itemCount('armors', parameters[1]) > 0;
@@ -355,17 +365,34 @@
     };
 
     EventInterpreter.prototype.controlVariables = function (parameters) {
-        if (parameters[3] < 0 || parameters[3] > 2) throw new Error('Chưa hỗ trợ toán hạng biến loại ' + parameters[3]);
+        if (parameters[3] < 0 || parameters[3] > 3) throw new Error('Chưa hỗ trợ toán hạng biến loại ' + parameters[3]);
+        var base;
+        if (parameters[3] === 0) base = Number(parameters[4]);
+        if (parameters[3] === 1) base = this.state.variableValue(parameters[4]);
+        if (parameters[3] === 3) base = this.gameDataOperand(parameters[4], parameters[5], parameters[6]);
         for (var id = parameters[0]; id <= parameters[1]; id += 1) {
-            var operand;
-            if (parameters[3] === 0) operand = Number(parameters[4]);
-            else if (parameters[3] === 1) operand = this.state.variableValue(parameters[4]);
-            else operand = parameters[4] + Math.floor(this.random() * (parameters[5] - parameters[4] + 1));
+            var operand = parameters[3] === 2 ? parameters[4] + Math.floor(this.random() * (parameters[5] - parameters[4] + 1)) : base;
             var current = this.state.variableValue(id);
             var next = [operand, current + operand, current - operand, current * operand,
                 operand === 0 ? 0 : current / operand, operand === 0 ? 0 : current % operand][parameters[2]];
             this.state.setVariable(id, next);
         }
+    };
+
+    EventInterpreter.prototype.gameDataOperand = function (type, id, field) {
+        if (type >= 0 && type <= 2) return this.state.itemCount(['items', 'weapons', 'armors'][type], id);
+        if (type === 3) {
+            var actor = this.state.actor(id);
+            if (!actor) return 0;
+            if (field === 0) return actor.level;
+            if (field === 2) return actor.hp;
+            if (field === 3) return actor.mp;
+        }
+        if (type === 6) return this.state.party[id] || 0;
+        if (type === 7 && id === 0) return this.state.mapId;
+        if (type === 7 && id === 1) return this.state.party.length;
+        if (type === 7 && id === 2) return this.state.gold;
+        throw new Error('Chưa hỗ trợ dữ liệu sự kiện: ' + [type, id, field].join(','));
     };
 
     EventInterpreter.prototype.controlSelfSwitch = function (parameters) {
