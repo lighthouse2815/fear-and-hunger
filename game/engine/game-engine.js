@@ -311,6 +311,10 @@
         };
         var gameData = eventHandlers.gameData;
         eventHandlers.gameData = function (type, id, field, interpreter) {
+            if (type === 4 && field >= 0 && field <= 9) {
+                var enemy = engine.battle.enemy(id);
+                return !enemy ? 0 : field === 0 ? enemy.hp : field === 1 ? enemy.mp : engine.battle.enemyParam(enemy, field - 2);
+            }
             if (type === 5 && field >= 0 && field <= 4) {
                 var character = engine.characterFor(id, interpreter);
                 if (!character) return 0;
@@ -329,6 +333,10 @@
         };
         var condition = eventHandlers.condition;
         eventHandlers.condition = function (parameters, interpreter) {
+            if (parameters[0] === 5) {
+                var enemy = engine.battle.enemy(parameters[1]);
+                return !!enemy && (parameters[2] === 0 ? enemy.alive && !enemy.hidden : enemy.states.includes(parameters[3]));
+            }
             if (parameters[0] === 11) return engine.buttons.has(parameters[1]);
             if (parameters[0] === 6) {
                 var character = engine.characterFor(parameters[1], interpreter);
@@ -352,6 +360,7 @@
         eventHandlers.effect = function (code, parameters, command, interpreter) {
             if (code === 356 && engine.lighting.handleCommand(parameters[0], engine.map)) return true;
             if (code === 356 && engine.filters.handleCommand(parameters[0])) return true;
+            if (engine.battle.handleEffect(code, parameters)) return true;
             if (code === 203) { engine.setEventLocation(parameters, interpreter); return true; }
             if (code === 205) return engine.applyRoute(parameters, interpreter);
             if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }

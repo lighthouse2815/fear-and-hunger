@@ -40,10 +40,14 @@
                 if (!data) throw new Error('Không tìm thấy enemy ' + member.enemyId);
                 var hp = Number(data && data.params && data.params[0]) || 1;
                 return { index: index, enemyId: member.enemyId, name: data ? data.name : '', x: member.x, y: member.y,
-                    hp: hp, mhp: hp, mp: Number(data && data.params && data.params[1]) || 0, alive: true,
+                    hp: hp, mhp: hp, mp: Number(data.params[1]) || 0, mmp: Number(data.params[1]) || 0, tp: 0, alive: true,
                     battlerName: data.battlerName, hidden: !!member.hidden, states: [] };
             }, this) };
-        this.state.battle = this.battle; return this.battle;
+        this.state.battle = this.battle;
+        this.battle.enemies.forEach(function (enemy) {
+            enemy.hp = this.enemyParam(enemy, 0); enemy.mp = this.enemyParam(enemy, 1); this.refreshEnemy(enemy);
+        }, this);
+        return this.battle;
     };
     BattleRuntime.prototype.wait = function (signal) {
         var runtime = this;
@@ -85,6 +89,64 @@
     BattleRuntime.prototype.enemy = function (index) {
         return this.battle && this.battle.enemies[index];
     };
+    BattleRuntime.prototype.enemyTraits = function (enemy) {
+        var data = this.database.Enemies[enemy.enemyId], traits = (data.traits || []).slice(), database = this.database;
+        enemy.states.forEach(function (id) { if (database.States[id]) traits = traits.concat(database.States[id].traits || []); });
+        return traits;
+    };
+    BattleRuntime.prototype.enemyParam = function (enemy, id) {
+        var base = this.database.Enemies[enemy.enemyId].params[id] || 0;
+        var rate = this.enemyTraits(enemy).reduce(function (value, trait) {
+            return trait.code === 21 && trait.dataId === id ? value * trait.value : value;
+        }, 1);
+        return Math.max(id === 1 ? 0 : 1, Math.round(base * rate));
+    };
+    BattleRuntime.prototype.refreshEnemy = function (enemy) {
+        enemy.mhp = this.enemyParam(enemy, 0); enemy.mmp = this.enemyParam(enemy, 1);
+        enemy.hp = Math.max(0, Math.min(enemy.mhp, enemy.hp));
+        enemy.mp = Math.max(0, Math.min(enemy.mmp, enemy.mp));
+        enemy.alive = enemy.hp > 0;
+        if (!enemy.alive && !enemy.states.includes(1)) enemy.states.push(1);
+        if (enemy.alive) enemy.states = enemy.states.filter(function (id) { return id !== 1; });
+    };
+    BattleRuntime.prototype.handleEffect = function (code, p) {
+        if (![331, 332, 333, 334, 335, 336, 340, 342].includes(code)) return false;
+        if (!this.battle || this.battle.result) throw new Error('Trận chiến không hoạt động.');
+        if (code === 340) { this.finish('escape'); return true; }
+        if (code === 336 && !this.database.Enemies[p[1]]) throw new Error('Không tìm thấy enemy ' + p[1]);
+        if (code === 333 && !this.database.States[p[2]]) throw new Error('Không tìm thấy state ' + p[2]);
+        var targets = p[0] === -1 ? this.battle.enemies : this.enemy(p[0]) ? [this.enemy(p[0])] : [];
+        var amount = 0;
+        if (code === 331 || code === 332 || code === 342) {
+            amount = p[2] === 0 ? Number(p[3]) : this.state.variableValue(p[3]);
+            if (p[1] === 1) amount = -amount;
+        }
+        targets.forEach(function (enemy) {
+            if (code === 331 && enemy.alive) enemy.hp = Math.max(p[4] ? 0 : 1, enemy.hp + amount);
+            if (code === 332) enemy.mp += amount;
+            if (code === 342) enemy.tp = Math.max(0, Math.min(100, (enemy.tp || 0) + amount));
+            if (code === 333) {
+                var stateId = p[2];
+                var immune = this.enemyTraits(enemy).some(function (trait) { return trait.code === 14 && trait.dataId === stateId; });
+                if (p[1] === 0 && enemy.alive && !immune) {
+                    if (!enemy.states.includes(stateId)) enemy.states.push(stateId);
+                    if (stateId === 1) enemy.hp = 0;
+                } else if (p[1] === 1) {
+                    enemy.states = enemy.states.filter(function (id) { return id !== stateId; });
+                    if (stateId === 1 && enemy.hp === 0) enemy.hp = 1;
+                }
+            }
+            if (code === 334) { enemy.states = []; enemy.hp = this.enemyParam(enemy, 0); enemy.mp = this.enemyParam(enemy, 1); }
+            if (code === 335) enemy.hidden = false;
+            if (code === 336) {
+                enemy.enemyId = p[1];
+                var data = this.database.Enemies[p[1]];
+                enemy.name = data.name; enemy.battlerName = data.battlerName;
+            }
+            this.refreshEnemy(enemy);
+        }, this);
+        return true;
+    };
     BattleRuntime.prototype.aliveEnemies = function () { return this.battle.enemies.filter(function (enemy) { return enemy.alive && !enemy.hidden; }); };
     BattleRuntime.prototype.aliveActors = function () { return this.battle.actors.filter(function (actor) { return actor.alive; }); };
     BattleRuntime.prototype.attack = function (actorId, enemyIndex, skillId) {
@@ -95,11 +157,13 @@
         var skill = skillId ? this.database.Skills[skillId] : this.database.Skills[1];
         if (!skill) throw new Error('Không tìm thấy skill ' + skillId);
         var attack = this.state.actorParam(actorId, 2), actorValues = { atk: attack, def: this.state.actorParam(actorId, 3), mat: this.state.actorParam(actorId, 4), mdf: this.state.actorParam(actorId, 5), agi: this.state.actorParam(actorId, 6), luk: this.state.actorParam(actorId, 7), level: actorState.level, hp: actorState.hp, mp: actorState.mp };
-        var enemyData = this.database.Enemies[enemy.enemyId], enemyValues = { atk: enemyData.params[2] || 0, def: enemyData.params[3] || 0, mat: enemyData.params[4] || 0, mdf: enemyData.params[5] || 0, agi: enemyData.params[6] || 0, luk: enemyData.params[7] || 0, level: 1, hp: enemy.hp, mp: enemy.mp };
+        var enemyValues = { atk: this.enemyParam(enemy, 2), def: this.enemyParam(enemy, 3), mat: this.enemyParam(enemy, 4),
+            mdf: this.enemyParam(enemy, 5), agi: this.enemyParam(enemy, 6), luk: this.enemyParam(enemy, 7), level: 1, hp: enemy.hp, mp: enemy.mp };
         var power = formulaValue(skill && skill.damage ? skill.damage.formula : 'a.atk', { a: actorValues, b: enemyValues });
         // Phòng thủ đã nằm trong công thức JSON; không trừ thêm lần nữa.
         var damage = skill.damage.type === 0 ? 0 : Math.max(0, Math.round(power));
         enemy.hp = Math.max(0, enemy.hp - damage); enemy.alive = enemy.hp > 0;
+        this.refreshEnemy(enemy);
         this.battle.phase = 'enemy';
         this.checkResult();
         return { damage: damage, critical: false, target: enemyIndex, defeated: !enemy.alive };

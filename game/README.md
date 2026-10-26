@@ -32,7 +32,8 @@ bấm **Tiếp tục** để đọc hội thoại. Dùng mũi tên hoặc các n
 khi hội thoại/sự kiện đang chạy, engine khóa di chuyển và các sự kiện khác.
 Các lựa chọn hiển thị bằng nút trong trang, không mở hộp thoại `prompt`.
 Đi qua cửa ở cổng ngục có thể vào Map001 và quay lại bằng sự kiện chạm thật.
-Preview chọn sẵn Mercenary và layout 1 để kiểm tra; chưa thay thế phần tạo nhân vật.
+Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
+`/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro.
 
 Preview hiện hỗ trợ di chuyển, một phần lệnh sự kiện, lưu/tải riêng và âm thanh.
 Interpreter chạy được common event lồng nhau, vòng lặp có giới hạn thực thi,
@@ -43,7 +44,9 @@ Lệnh hoặc loại điều kiện chưa triển khai sẽ báo lỗi cụ th�
 thao tác dữ liệu: đổi hình character/face/battler, đặt giới hạn HP, cấu hình chase
 và vô hiệu hóa click trên bản đồ. Không dùng `eval`, không nạp runtime gốc.
 Test quét và thực thi từng biến thể; hình và giới hạn HP được giữ khi sửa chỉ số
-và qua save. Cấu hình chase là dữ liệu cho hệ di chuyển, chưa tự tạo hành vi đuổi.
+và qua save. Hệ di chuyển tự động dùng cấu hình chase để đuổi, tìm đường và quay
+về vị trí ban đầu; chế độ `events=1` bật cả scheduler autorun/parallel của map
+và common event.
 Interpreter cũng chạy các lệnh EXP/level, chỉ số, học/quên kỹ năng, đổi trang bị,
 tên/biệt danh/hồ sơ, hình và TP. Chỉ số lấy từ class, trang bị và trait trạng thái;
 đổi trang bị trao đổi với túi đồ. EXP được nhớ riêng theo class. Lệnh nhảy nhãn
@@ -74,14 +77,19 @@ chỉ định, renderer làm mờ ảnh bản đồ hiện tại. Giao diện hi
 Luồng 301 chờ kết quả rồi chỉ chạy nhánh 601/602/603 tương ứng; trận thua bắt buộc
 dừng event và chuyển sang trạng thái game over. Combat còn thiếu troop event,
 hiệu ứng kỹ năng, AI đầy đủ và giao diện game over để thay entry chính.
+Các lệnh sự kiện 331–336, 340 và 342 đã đổi được HP/MP/TP, state, hồi phục, hiện
+quái, biến hình và kết thúc trận. Thao tác giữ index thành viên trong troop,
+tôn trọng miễn nhiễm state, đồng bộ trạng thái chết và lưu được qua save.
+Điều kiện và biến sự kiện đọc được chỉ số/state của quái. Việc tự chọn và chạy
+page sự kiện trong troop vẫn cần triển khai.
 Tải map/save lỗi giữ map và trạng thái hiện tại nhất quán.
 Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, fade, nhớ/phát tiếp
 BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.
 Thanh âm lượng cập nhật các âm đang phát, giữ volume của từng file.
 Save preview dùng prefix `FNH_STANDALONE_PREVIEW:`, tách biệt save bản chính.
 
-Đây chưa phải bản thay thế đầy đủ: combat, auto-event, plugin command và hiệu ứng
-màn hình còn cần chuyển đổi. Các map hiện có không chứa autotile A1–A4.
+Đây chưa phải bản thay thế đầy đủ: combat, menu và một số hành vi sự kiện vẫn
+cần hoàn thiện. Entry chính vẫn dùng runtime cũ. Các map hiện có không chứa autotile A1–A4.
 Callback effect chỉ là đường truyền lệnh;
 có callback không có nghĩa lệnh đã được triển khai. Audio chưa xử lý pan stereo.
 Kiểm tra Chrome chạy cả entry chính và preview, xác nhận preview không nạp mã

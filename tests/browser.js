@@ -1029,6 +1029,22 @@ async function main() {
             return result.enemies === 5 && !renderer.images.has('img/enemies/khong-ton-tai.png');
         })()`, true, false));
         await evalPage(cdp, 'delete window.battleExpectedPixels', false, false);
+        check('event độc lập điều khiển quái và giữ thay đổi qua save', await evalPage(cdp, `(async () => {
+            const source = FNHStandalonePreview.engine;
+            const engine = new FNHStandaloneEngine.GameEngine({ dataStore: source.dataStore });
+            await engine.boot({ mapId: 74, x: 8, y: 8, direction: 8, party: [1] });
+            engine.battle.setup(1, true, true);
+            await engine.createInterpreter([
+                { code: 331, parameters: [0, 1, 0, 50, true] },
+                { code: 333, parameters: [1, 0, 1] },
+                { code: 336, parameters: [2, 484] },
+                { code: 122, parameters: [500, 500, 0, 3, 4, 0, 0] }
+            ], 0).run();
+            const snapshot = engine.save(); await engine.restore(snapshot);
+            return engine.battle.enemy(0).hp === 1250 && !engine.battle.enemy(1).alive &&
+                engine.battle.enemy(1).states.includes(1) && engine.battle.enemy(2).enemyId === 484 &&
+                engine.state.variableValue(500) === 1250;
+        })()`, true, false));
         check('event chờ battle và chưa chạy nhánh kết quả', await evalPage(cdp,
             'FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.variableValue(999) === 0', false, false));
         await clickElement(cdp, '#fnh-controls [data-direction="2"]');
