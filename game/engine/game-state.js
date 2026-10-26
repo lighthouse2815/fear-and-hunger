@@ -51,6 +51,8 @@
         this.saveEnabled = source.saveEnabled !== false;
         this.battleBgm = source.battleBgm || null;
         this.vehicleId = source.vehicleId == null ? -1 : source.vehicleId;
+        this.wordWrap = source.wordWrap === true;
+        this.pendingChoices = source.pendingChoices || { text: {}, disabled: [] };
         ['characterName', 'characterIndex', 'transparent', 'opacity', 'blendMode', 'moveSpeed', 'moveFrequency', 'walkAnime', 'stepAnime', 'moveFrames', 'animationFrames'].forEach(function (key) {
             if (source[key] !== undefined) this[key] = source[key];
         }, this);
@@ -254,6 +256,7 @@
             routeSnapshots: this.routeSnapshots,
             screen: this.screen, mapTileset: this.mapTileset,
             timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
+            wordWrap: this.wordWrap, pendingChoices: this.pendingChoices,
             characterName: this.characterName, characterIndex: this.characterIndex,
             transparent: this.transparent, opacity: this.opacity, blendMode: this.blendMode,
             moveSpeed: this.moveSpeed, moveFrequency: this.moveFrequency, walkAnime: this.walkAnime, stepAnime: this.stepAnime,

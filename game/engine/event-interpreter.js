@@ -70,6 +70,8 @@
             return this.showMessage(command);
         case 102:
             return this.showChoices(command);
+        case 356:
+            return this.pluginCommand(command);
         case 402: case 403:
             return this.choiceBranchMarker(command);
         case 404:
@@ -150,7 +152,7 @@
         case 323:
         case 331: case 332: case 333: case 334: case 335: case 336: case 337: case 338:
         case 339: case 340: case 342: case 343: case 344: case 345: case 346:
-        case 351: case 352: case 353: case 354: case 356:
+        case 351: case 352: case 353: case 354:
             return this.effect(command);
         case 355:
             if (!this.handlers.script) return this.unsupported(command);
@@ -175,7 +177,9 @@
             lines.push(this.commands[this.index++].parameters[0] || '');
         }
         if (!this.handlers.message) return this.unsupported(command);
-        await this.handlers.message(lines.join('\n'), command.parameters || [], this);
+        await this.handlers.message(lines.join('\n'), command.parameters || [], this, {
+            choicesFollow: !!(this.commands[this.index] && this.commands[this.index].code === 102)
+        });
     };
 
     EventInterpreter.prototype.effect = async function (command) {
@@ -301,13 +305,27 @@
         var choices = Array.isArray(parameters[0]) ? parameters[0].slice() : [];
         var cancelType = parameters[1];
         if (!this.handlers.choice) return this.unsupported(command);
-        var choice = await this.handlers.choice(choices, cancelType, this);
+        var overrides = this.state.pendingChoices;
+        this.state.pendingChoices = { text: {}, disabled: [] };
+        choices = choices.map(function (text, index) { return index in overrides.text ? overrides.text[index] : text; });
+        var details = { disabled: overrides.disabled.slice(), help: [], message: [], defaultIndex: parameters[2], position: parameters[3], background: parameters[4] };
+        var indent = command.indent || 0, branch = -1;
+        for (var i = this.index; i < this.commands.length; i++) {
+            var item = this.commands[i];
+            if ((item.indent || 0) === indent && item.code === 404) break;
+            if ((item.indent || 0) === indent && item.code === 402) branch = item.parameters[0];
+            if ((item.indent || 0) === indent + 1 && (item.code === 108 || item.code === 408) && branch >= 0) {
+                var comment = /^(ChoiceHelp|ChoiceMessage)\s+(.*)$/.exec(item.parameters[0]);
+                if (comment) details[comment[1] === 'ChoiceHelp' ? 'help' : 'message'][branch] = comment[2];
+            }
+        }
+        var choice = await this.handlers.choice(choices, cancelType, this, details);
         if (choice === -1 && cancelType !== -1) choice = cancelType;
         if (!Number.isInteger(choice) || (choice < 0 ? choice !== -2 || cancelType !== -2 : choice >= choices.length)) {
             throw new Error('Lựa chọn sự kiện không hợp lệ: ' + choice);
         }
+        if (details.disabled.includes(choice)) throw new Error('Lựa chọn đang bị khóa: ' + choice);
         this.result.choices.push({ choices: choices, selected: choice });
-        var indent = command.indent || 0;
         var marker = this.findChoiceMarker(indent, choice, this.index);
         if (marker < 0) {
             var missingEnd = this.findCommand(404, indent, this.index);
@@ -316,6 +334,31 @@
         }
         this.index = marker + 1;
         this.choiceFrames.push({ indent: indent, startIndex: marker + 1, endIndex: this.findCommand(404, indent, marker + 1) });
+    };
+
+    EventInterpreter.prototype.pluginCommand = function (command) {
+        var text = String(command.parameters[0] || ''), match;
+        if ((match = /^choice_text\s+(\d+)\s+(.*)$/i.exec(text))) {
+            this.state.pendingChoices.text[Number(match[1]) - 1] = match[2];
+            return;
+        }
+        if ((match = /^disable_choice\s+(\d+)$/i.exec(text))) {
+            var index = Number(match[1]) - 1;
+            if (!this.state.pendingChoices.disabled.includes(index)) this.state.pendingChoices.disabled.push(index);
+            return;
+        }
+        if (/^(Enable|Disable)WordWrap$/i.test(text)) {
+            this.state.wordWrap = /^Enable/i.test(text);
+            return;
+        }
+        if ((match = /^GabText(?:\s+(.*))?$/.exec(text))) { this.gabText = match[1] || ''; return; }
+        if (text === 'ShowGab' && this.handlers.gab) {
+            var gab = this.gabText; this.gabText = '';
+            if (gab) return this.handlers.gab(gab, this);
+            return;
+        }
+        if (text === 'ClearGab' && this.handlers.gab) return this.handlers.gab(null, this);
+        return this.effect(command);
     };
 
     EventInterpreter.prototype.findChoiceMarker = function (indent, choice, start) {

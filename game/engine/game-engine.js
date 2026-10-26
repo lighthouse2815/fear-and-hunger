@@ -198,6 +198,10 @@
     GameEngine.prototype.createInterpreter = function (commands, eventId, handlers, signal) {
         var engine = this;
         var eventHandlers = Object.assign({}, handlers || {});
+        eventHandlers.gab = function (text) {
+            if (text == null) engine.screen.clearGabs();
+            else engine.screen.showGab(text);
+        };
         var condition = eventHandlers.condition;
         eventHandlers.condition = function (parameters, interpreter) {
             if (parameters[0] === 11) return engine.buttons.has(parameters[1]);

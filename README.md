@@ -48,7 +48,9 @@ chạy trước khi mở bản còn lại để giữ nguyên địa chỉ lưu 
 
 Engine viết lại có bản xem thử tại `/standalone.html`. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro
-từ các sự kiện JSON bằng engine mới. Trang này chỉ nạp mã trong `game/engine/`.
+từ các sự kiện JSON bằng engine mới. Lựa chọn độ khó, khóa chế độ ẩn, mô tả lựa
+chọn và thông báo Gab ở cổng ngục đã có implementation độc lập.
+Trang này chỉ nạp mã trong `game/engine/`.
 Việc thay runtime ở trang chính vẫn đang tiếp tục; combat và các hiệu ứng plugin
 chưa được chuyển hết.
 

@@ -1084,6 +1084,31 @@ async function main() {
         await waitFor(cdp, 'document.querySelector("#fnh-video").hidden', 5000, 'hủy sự kiện dọn video');
         check('dừng sự kiện intro không áp dụng lệnh tiếp theo', await evalPage(cdp,
             '!FNHStandalonePreview.engine.state.switchValue(295) && FNHStandalonePreview.errors.length === 0', false, false));
+        await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine;
+            engine.state.setSwitch(295, true);
+            engine.state.setSwitch(2839, false);
+            window.__openingDone = false;
+            engine.runEvent(1, FNHStandalonePreview.scheduler.handlers).then(() => { window.__openingDone = true; });
+        })()`, false, false);
+        await waitFor(cdp, 'document.querySelectorAll("#fnh-choices button").length === 4', 5000, 'chọn độ khó bằng engine độc lập');
+        check('chế độ ẩn bị khóa và lựa chọn hiện mô tả từ JSON', await evalPage(cdp, `(() => {
+            const choices = document.querySelectorAll('#fnh-choices button');
+            return choices[3].disabled && choices[3].textContent === '????' && document.querySelector('#fnh-next').hidden &&
+                document.querySelector('#fnh-choice-help').textContent.includes('game mode') &&
+                document.querySelector('#fnh-message-text').textContent.includes('easier mode');
+        })()`, false, false));
+        await clickElement(cdp, '#fnh-choices button:first-child');
+        await waitFor(cdp, 'document.querySelectorAll("#fnh-choices button").length === 2 && document.querySelector("#fnh-message-text").textContent.includes("Play intro?")',
+            5000, 'lựa chọn xem truyện mở đầu');
+        await clickElement(cdp, '#fnh-choices button:nth-child(2)');
+        await waitFor(cdp, 'window.__openingDone && FNHStandalonePreview.engine.state.mapId === 74', 5000, 'chọn chế độ và đi tới cổng ngục');
+        await evalPage(cdp, 'FNHStandalonePreview.engine.runEvent(11, FNHStandalonePreview.scheduler.handlers)', true, false);
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.screen.gab && FNHStandalonePreview.engine.state.screen.gab.text.includes("stand in front")',
+            5000, 'Gab mở đầu ngục chạy bằng engine mới');
+        check('luồng chọn độ khó tới cổng ngục và thông báo Gab độc lập', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.menuEnabled && FNHStandalonePreview.engine.state.switchValue(79) && !window.SceneManager', false, false));
+        await screenshot('standalone-dungeon');
 
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;

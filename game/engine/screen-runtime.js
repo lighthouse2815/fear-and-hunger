@@ -12,6 +12,8 @@
         this.screen = state.screen || { pictures: {}, brightness: 255, tone: tone([]), flash: { red: 0, green: 0, blue: 0, opacity: 0 },
             weather: { type: 'none', power: 0, time: 0 }, tweens: [], nextId: 1 };
         state.screen = this.screen;
+        this.screen.gabQueue = this.screen.gabQueue || [];
+        this.screen.gab = this.screen.gab || null;
         this.waiters = new Map();
         this.revision = 0;
     }
@@ -55,15 +57,33 @@
             this.screen.shake.remaining = Math.max(0, this.screen.shake.remaining - frames);
             this.screen.shake.phase += frames;
         }
+        var remaining = frames;
+        while (this.screen.gab && remaining > 0) {
+            var gab = this.screen.gab;
+            var elapsed = Math.min(remaining, gab.remaining);
+            gab.remaining -= elapsed; remaining -= elapsed;
+            gab.opacity = Math.min(255, gab.remaining * 16);
+            if (gab.remaining <= 0) { this.screen.gab = this.screen.gabQueue.shift() || null; this.revision++; }
+        }
     };
     ScreenRuntime.prototype.dispose = function () {
         Array.from(this.waiters.values()).forEach(function (resolve) { resolve(); });
         this.waiters.clear();
     };
     ScreenRuntime.prototype.active = function () {
-        return this.screen.tweens.length > 0 || this.screen.weather.power > 0 ||
+        return !!this.screen.gab || this.screen.tweens.length > 0 || this.screen.weather.power > 0 ||
             (this.screen.shake && this.screen.shake.remaining > 0) ||
             Object.values(this.screen.pictures).some(function (picture) { return picture.rotationSpeed; });
+    };
+    ScreenRuntime.prototype.showGab = function (text) {
+        if ((this.screen.gab && this.screen.gab.text === text) || this.screen.gabQueue.some(function (gab) { return gab.text === text; })) return;
+        var gab = { text: text, remaining: 106 + Array.from(text).length * 4, opacity: 255 };
+        if (this.screen.gab) this.screen.gabQueue.push(gab);
+        else this.screen.gab = gab;
+        this.revision++;
+    };
+    ScreenRuntime.prototype.clearGabs = function () {
+        this.screen.gab = null; this.screen.gabQueue = []; this.revision++;
     };
     ScreenRuntime.prototype.position = function (type, value) { return type === 0 ? value : this.state.variableValue(value); };
     ScreenRuntime.prototype.handleEffect = function (code, p) {

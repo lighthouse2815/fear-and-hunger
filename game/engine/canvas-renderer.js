@@ -2,9 +2,9 @@
 
 // Renderer Canvas của engine độc lập, đọc trực tiếp bố cục ảnh và tile JSON.
 (function (root, factory) {
-    if (typeof module === 'object' && module.exports) module.exports = factory();
-    else root.FNHStandaloneCanvas = factory();
-}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+    if (typeof module === 'object' && module.exports) module.exports = factory(require('./text-format'));
+    else root.FNHStandaloneCanvas = factory(root.FNHStandaloneText);
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (textApi) {
     var TILE_SIZE = 48;
 
     function CanvasRenderer(canvas, options) {
@@ -115,8 +115,32 @@
                 context.fillStyle = 'rgba(' + [flash.red, flash.green, flash.blue, flash.opacity / 255].join(',') + ')';
                 context.fillRect(0, 0, this.canvas.width, this.canvas.height);
             }
+            this.drawGab(screen.gab, state);
         }
         return { startX: startX, startY: startY };
+    };
+
+    CanvasRenderer.prototype.drawGab = function (gab, state) {
+        if (!gab) return;
+        var context = this.context, width = this.canvas.width;
+        context.save();
+        context.globalAlpha = gab.opacity / 255;
+        context.font = '28px GameFont, serif';
+        context.textBaseline = 'top';
+        var lines = [''];
+        textApi.formatText(gab.text, state).split(/\s+/).forEach(function (word) {
+            var index = lines.length - 1, candidate = lines[index] ? lines[index] + ' ' + word : word;
+            if (lines[index] && context.measureText(candidate).width > width - 48) lines.push(word);
+            else lines[index] = candidate;
+        });
+        var height = lines.length * 34 + 20, top = this.canvas.height - height - 8;
+        var gradient = context.createLinearGradient(0, 0, width, 0);
+        gradient.addColorStop(0, 'rgba(0,0,0,0.85)'); gradient.addColorStop(1, 'rgba(0,0,0,0.3)');
+        context.fillStyle = gradient;
+        context.fillRect(0, top, width, height);
+        context.fillStyle = '#fff'; context.shadowColor = '#000'; context.shadowBlur = 3;
+        lines.forEach(function (line, index) { context.fillText(line, 24, top + 10 + index * 34); });
+        context.restore();
     };
 
     CanvasRenderer.prototype.drawTile = function (sheets, tileId, x, y) {

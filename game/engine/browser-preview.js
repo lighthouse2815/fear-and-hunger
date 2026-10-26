@@ -52,11 +52,15 @@
         uiTail = result.catch(function () {});
         return result;
     }
-    function showMessage(text, parameters, interpreter) {
-        return queueUi(function () { return messageDialog(text, interpreter); }, interpreter);
+    function showMessage(text, parameters, interpreter, options) {
+        return queueUi(function () {
+            message.textContent = FNHStandaloneText.formatText(engine.state.wordWrap ? text.replace(/\n/g, ' ') : text, engine.state);
+            if (options && options.choicesFollow) { next.hidden = true; return; }
+            return messageDialog(text, interpreter);
+        }, interpreter);
     }
     function messageDialog(text, interpreter) {
-        message.textContent = text.replace(/\\c\[\d+\]/gi, '');
+        message.textContent = FNHStandaloneText.formatText(engine.state.wordWrap ? text.replace(/\n/g, ' ') : text, engine.state);
         next.hidden = false;
         next.focus({ preventScroll: true });
         return new Promise(function (resolve, reject) {
@@ -72,15 +76,18 @@
             if (signal) signal.addEventListener('abort', abort, { once: true });
         });
     }
-    function showChoices(choices, cancelType, interpreter) {
-        return queueUi(function () { return choiceDialog(choices, cancelType, interpreter); }, interpreter);
+    function showChoices(choices, cancelType, interpreter, details) {
+        return queueUi(function () { return choiceDialog(choices, cancelType, interpreter, details); }, interpreter);
     }
-    function choiceDialog(choices, cancelType, interpreter) {
+    function choiceDialog(choices, cancelType, interpreter, details) {
         return new Promise(function (resolve, reject) {
             var signal = interpreter && interpreter.signal;
+            details = details || { disabled: [], help: [], message: [], defaultIndex: 0 };
+            var help = document.getElementById('fnh-choice-help');
             choicesPanel.replaceChildren();
             function close() {
                 choicesPanel.replaceChildren();
+                help.textContent = '';
                 if (signal) signal.removeEventListener('abort', abort);
                 canvas.focus({ preventScroll: true });
             }
@@ -88,7 +95,12 @@
             function addChoice(label, index) {
                 var button = document.createElement('button');
                 button.type = 'button';
-                button.textContent = label;
+                button.textContent = FNHStandaloneText.formatText(label, engine.state);
+                button.disabled = details.disabled.includes(index);
+                button.onfocus = button.onmouseenter = function () {
+                    help.textContent = FNHStandaloneText.formatText(details.help[index] || '', engine.state);
+                    if (details.message[index]) message.textContent = FNHStandaloneText.formatText(details.message[index], engine.state);
+                };
                 button.onclick = function () {
                     close();
                     resolve(index);
@@ -97,7 +109,9 @@
             }
             choices.forEach(addChoice);
             if (cancelType !== -1) addChoice('Quay lại', cancelType >= 0 ? cancelType : -1);
-            if (choicesPanel.firstElementChild) choicesPanel.firstElementChild.focus({ preventScroll: true });
+            var focused = choicesPanel.children[details.defaultIndex];
+            if (!focused || focused.disabled) focused = choicesPanel.querySelector('button:enabled');
+            if (focused) focused.focus({ preventScroll: true });
             if (signal) signal.addEventListener('abort', abort, { once: true });
         });
     }
