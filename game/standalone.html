@@ -104,9 +104,16 @@
         <div id="fnh-battle-party"></div>
         <div id="fnh-battle-targets"></div>
         <label for="fnh-battle-actor">Nhân vật</label><select id="fnh-battle-actor"></select>
+        <label for="fnh-battle-kind">Hành động</label><select id="fnh-battle-kind"><option value="skill">Kỹ năng</option><option value="item">Vật phẩm</option></select>
+        <div id="fnh-battle-skill-controls">
         <label for="fnh-battle-skill">Kỹ năng</label><select id="fnh-battle-skill"></select>
-        <div id="fnh-battle-friends" aria-label="Mục tiêu trong đội"></div>
         <button id="fnh-battle-use-skill" type="button">Dùng kỹ năng</button>
+        </div>
+        <div id="fnh-battle-item-controls" hidden>
+            <label for="fnh-battle-item">Vật phẩm</label><select id="fnh-battle-item"></select>
+            <button id="fnh-battle-use-item" type="button">Dùng vật phẩm</button>
+        </div>
+        <div id="fnh-battle-friends" aria-label="Mục tiêu trong đội"></div>
         <p id="fnh-battle-log" aria-live="polite"></p>
         <button id="fnh-battle-attack" type="button">Đánh</button>
         <button id="fnh-battle-escape" type="button">Chạy</button>

@@ -1062,6 +1062,33 @@ async function main() {
         await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'dùng Guard từ danh sách kỹ năng');
         check('giao diện chọn kỹ năng thực thi Guard và hết state cuối lượt',await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.battle.lastAction.skillId===2 && !FNHStandalonePreview.engine.state.actor(1).states.includes(2)',false,false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;e.state.changeActorHp(1,-50,true);e.battle.syncActors();
+            window.beforeBattleItemHp=e.state.actor(1).hp;window.beforeBattleBottles=e.state.itemCount('items',9);
+            e.state.gainItem('items',28,1);
+            const kind=document.querySelector('#fnh-battle-kind');kind.value='item';kind.dispatchEvent(new Event('change',{bubbles:true}));
+            const items=document.querySelector('#fnh-battle-item');items.value='28';items.dispatchEvent(new Event('change',{bubbles:true}));
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-battle-friends button[data-index="0"]');
+        await clickElement(cdp,'#fnh-battle-use-item');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===2 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'dùng Blue vial trong trận');
+        check('UI vật phẩm chiến đấu hồi HP, trả chai và dùng hết một item',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;
+            return e.state.actor(1).hp===window.beforeBattleItemHp+20 && e.state.itemCount('items',9)===window.beforeBattleBottles+1 && e.battle.battle.lastAction.itemId===28;
+        })()`,false,false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;e.state.gainItem('items',10,1);
+            document.querySelector('#fnh-battle-kind').dispatchEvent(new Event('change',{bubbles:true}));
+            const items=document.querySelector('#fnh-battle-item');items.value='10';items.dispatchEvent(new Event('change',{bubbles:true}));
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-battle-use-item');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===3 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'vial gây cháy chờ animation xong');
+        check('UI item tấn công dùng JSON và hiện tên trong log',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;
+            return e.battle.battle.lastAction.itemId===10 && e.state.itemCount('items',10)===0 &&
+                e.battle.enemy(0).hp<e.battle.enemy(0).mhp && document.querySelector('#fnh-battle-log').textContent.includes('Murky vial');
+        })()`,false,false));
+        await evalPage(cdp,'delete window.beforeBattleItemHp;delete window.beforeBattleBottles',false,false);
         await evalPage(cdp,`(async()=>{
             const engine=FNHStandalonePreview.engine;engine.battle.finish('escape');engine.leaveBattle('escape');
             await engine.restore(window.skillUiBefore);delete window.skillUiBefore;

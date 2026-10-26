@@ -422,8 +422,8 @@
         });
     };
 
-    GameEngine.prototype.completeBattleSkill = async function (report, handlers, signal) {
-        var skill = this.database.Skills[report.skillId], engine = this;
+    GameEngine.prototype.completeBattleAction = async function (report, handlers, signal) {
+        var skill = this.battle.actionData(report), engine = this;
         var animationId = skill.animationId;
         if (animationId < 0) {
             var actor = report.subject === 'actor' && this.state.actor(report.subjectId);
@@ -448,6 +448,8 @@
         }
     };
 
+    GameEngine.prototype.completeBattleSkill = GameEngine.prototype.completeBattleAction;
+
     GameEngine.prototype.forceBattleAction = async function (parameters, handlers, signal) {
         var runtime = this.battle, battle = runtime.battle;
         if (!battle || battle.result || this.state.scene !== 'battle') throw new Error('Trận chiến không hoạt động.');
@@ -468,7 +470,7 @@
                 var forced = battle.forcedThisTurn || (battle.forcedThisTurn = []);
                 if (!forced.includes(key)) forced.push(key);
                 var report = runtime.useSkill(subject, parameters[2], parameters[3], true);
-                await this.completeBattleSkill(report, handlers, signal);
+                await this.completeBattleAction(report, handlers, signal);
             }
             return true;
         } finally {
@@ -604,7 +606,7 @@
             if ((battle.forcedThisTurn || []).includes('enemy:' + enemy.index) || !runtime.canUseSkill(enemy, skill)) continue;
             battle.phase = 'action';
             var report = runtime.useSkill(enemy, action.skillId, -1);
-            await this.completeBattleSkill(report, handlers, signal);
+            await this.completeBattleAction(report, handlers, signal);
             await this.runBattlePages(false, handlers, signal);
         }
         if (!battle.result) {
@@ -617,15 +619,21 @@
         return this.battleSkill(actorId, 1, enemyIndex, handlers);
     };
 
-    GameEngine.prototype.battleSkill = async function (actorId, skillId, targetIndex, handlers) {
+    GameEngine.prototype.battleSkill = function (actorId, skillId, targetIndex, handlers) {
+        return this.battleAction(actorId, 'skill', skillId, targetIndex, handlers);
+    };
+    GameEngine.prototype.battleItem = function (actorId, itemId, targetIndex, handlers) {
+        return this.battleAction(actorId, 'item', itemId, targetIndex, handlers);
+    };
+    GameEngine.prototype.battleAction = async function (actorId, kind, id, targetIndex, handlers) {
         var runtime = this.battle, battle = runtime.battle, context = this.battleContext || {};
         if (this.state.scene !== 'battle' || !battle || battle.result || battle.phase !== 'input') throw new Error('Chưa đến lượt nhân vật.');
-        var subject = runtime.actor(actorId), skill = this.database.Skills[skillId];
+        var item = kind === 'item', subject = runtime.actor(actorId), skill = (item ? this.database.Items : this.database.Skills)[id];
         if (!subject || !subject.alive || !skill) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
-        if (![1, 2].includes(skillId) && !runtime.actorSkills(actorId).some(function (entry) { return entry.id === skillId; })) throw new Error('Nhân vật chưa học kỹ năng này.');
-        if (!runtime.canUseSkill(subject, skill)) throw new Error('Chưa thể dùng kỹ năng ' + skill.name);
-        var chosen = skill.scope === 1 ? runtime.enemy(targetIndex) : skill.scope === 7 ? battle.actors[targetIndex] : null;
-        if ([1, 7].includes(skill.scope) && (!chosen || !chosen.alive || chosen.hidden)) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
+        if (!item && ![1, 2].includes(id) && !runtime.actorSkills(actorId).some(function (entry) { return entry.id === id; })) throw new Error('Nhân vật chưa học kỹ năng này.');
+        if (!(item ? runtime.canUseItem(subject, skill) : runtime.canUseSkill(subject, skill))) throw new Error(item ? 'Chưa thể dùng vật phẩm ' + skill.name : 'Chưa thể dùng kỹ năng ' + skill.name);
+        var chosen = skill.scope === 1 ? runtime.enemy(targetIndex) : [7, 9].includes(skill.scope) ? battle.actors[targetIndex] : null;
+        if ([1, 7, 9].includes(skill.scope) && (!chosen || (skill.scope === 9 ? chosen.alive : !chosen.alive) || chosen.hidden)) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
         battle.managed = true;
         battle.turn++;
         battle.forcedThisTurn = [];
@@ -634,10 +642,10 @@
             if (battle.result) return;
             var result;
             subject = runtime.actor(actorId);
-            if (subject && runtime.canUseSkill(subject, skill) && !(battle.forcedThisTurn || []).includes('actor:' + actorId)) {
-                result = runtime.useSkill(subject, skillId, targetIndex);
+            if (subject && (item ? runtime.canUseItem(subject, skill) : runtime.canUseSkill(subject, skill)) && !(battle.forcedThisTurn || []).includes('actor:' + actorId)) {
+                result = item ? runtime.useItem(subject, id, targetIndex) : runtime.useSkill(subject, id, targetIndex);
                 battle.phase = 'action';
-                await this.completeBattleSkill(result, handlers || context.handlers, context.signal);
+                await this.completeBattleAction(result, handlers || context.handlers, context.signal);
                 await this.runBattlePages(false, handlers || context.handlers, context.signal);
             }
             if (!battle.result) {

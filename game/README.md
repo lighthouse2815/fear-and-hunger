@@ -114,8 +114,12 @@ state, học skill và common event từ JSON; Blue vial trả vỏ chai và scr
 Trong trận có thể chọn nhân vật, kỹ năng đã học hoặc Guard, mục tiêu quái/đồng đội.
 Kỹ năng chưa học hoặc thiếu MP/TP bị từ chối trước khi tiêu lượt; log hiện trượt,
 né và sát thương. Hiện mỗi lượt điều khiển một hành động của đội; chưa có hàng đợi
-chọn hành động riêng cho toàn bộ thành viên, dùng item trong trận hay menu dùng
-kỹ năng ngoài trận. Lệnh 351/352 chờ đóng menu/lưu rồi mới tiếp tục event.
+chọn hành động riêng cho toàn bộ thành viên hay menu dùng kỹ năng ngoài trận.
+Trong trận, chọn loại hành động **Vật phẩm**, vật phẩm trong túi và mục tiêu rồi
+bấm **Dùng vật phẩm**. Item dùng chung luồng sát thương/animation/common event
+với kỹ năng, trừ số lượng đúng một lần, không trừ MP/TP. Bộ lọc occasion giữ các
+vật phẩm chỉ dùng trên bản đồ khỏi trận. Blue vial trả chai qua common event,
+White vial giải độc; Murky/Purple vial áp damage/state lên mục tiêu trong JSON. Lệnh 351/352 chờ đóng menu/lưu rồi mới tiếp tục event.
 Lưu từ menu trở về scene bản đồ, giữ stack common event, vị trí lệnh, nhánh và
 vòng lặp của event đang gọi menu. Tải save tiếp tục từ sau lệnh menu, giữ khóa
 điều khiển đến khi event xong. Book of enlightenment có thể lưu giữa common

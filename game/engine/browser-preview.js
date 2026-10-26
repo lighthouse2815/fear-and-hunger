@@ -30,7 +30,7 @@
 
     function setStatus(text) { status.textContent = text; }
     var menuUi;
-    var battleTarget = 0, battleActor = 0, battleFriend = 0, battleSkill = 2;
+    var battleTarget = 0, battleActor = 0, battleFriend = 0, battleSkill = 2, battleItem = 0, battleKind = 'skill';
     var lastBattle = null, lastScene = null, lastBattlePhase = null;
     function renderBattleUi() {
         var panel = document.getElementById('fnh-battle'), battle = engine.battle && engine.battle.battle;
@@ -75,7 +75,20 @@
             option.disabled = !engine.battle.canUseSkill(engine.battle.actor(battleActor), skill); skills.appendChild(option);
         });
         skills.value = battleSkill; skills.disabled = battle.phase !== 'input';
-        var selected = engine.database.Skills[battleSkill], friends = document.getElementById('fnh-battle-friends');
+        var kind = document.getElementById('fnh-battle-kind'); kind.value = battleKind; kind.disabled = battle.phase !== 'input';
+        document.getElementById('fnh-battle-skill-controls').hidden = battleKind !== 'skill';
+        document.getElementById('fnh-battle-item-controls').hidden = battleKind !== 'item';
+        var items = engine.database.Items.filter(function (item) { return item && [0, 1].includes(item.occasion) && engine.state.itemCount('items', item.id) > 0; });
+        if (!items.some(function (item) { return item.id === battleItem; })) battleItem = items.length ? items[0].id : 0;
+        var itemSelect = document.getElementById('fnh-battle-item'); itemSelect.replaceChildren();
+        items.forEach(function (item) {
+            var option = document.createElement('option'); option.value = item.id;
+            option.textContent = item.name + ' × ' + engine.state.itemCount('items', item.id);
+            option.disabled = !engine.battle.canUseItem(engine.battle.actor(battleActor), item); itemSelect.appendChild(option);
+        });
+        itemSelect.value = battleItem; itemSelect.disabled = battle.phase !== 'input';
+        document.getElementById('fnh-battle-use-item').disabled = battle.phase !== 'input' || !engine.battle.canUseItem(engine.battle.actor(battleActor), engine.database.Items[battleItem]);
+        var selected = battleKind === 'item' ? engine.database.Items[battleItem] : engine.database.Skills[battleSkill], friends = document.getElementById('fnh-battle-friends');
         friends.replaceChildren(); friends.hidden = !selected || ![7, 9].includes(selected.scope);
         battle.actors.forEach(function (actor, index) {
             var button = document.createElement('button'); button.type = 'button'; button.textContent = actor.name + ' · HP ' + actor.hp;
@@ -83,9 +96,9 @@
             button.disabled = selected && selected.scope === 9 ? actor.alive : !actor.alive;
             button.onclick = function () { battleFriend = index; renderBattleUi(); }; friends.appendChild(button);
         });
-        document.getElementById('fnh-battle-use-skill').disabled = battle.phase !== 'input' || !battleActor || !engine.battle.canUseSkill(engine.battle.actor(battleActor), selected);
+        document.getElementById('fnh-battle-use-skill').disabled = battle.phase !== 'input' || !battleActor || !engine.battle.canUseSkill(engine.battle.actor(battleActor), engine.database.Skills[battleSkill]);
         var lastAction = battle.lastAction;
-        document.getElementById('fnh-battle-log').textContent = lastAction ? engine.database.Skills[lastAction.skillId].name +
+        document.getElementById('fnh-battle-log').textContent = lastAction ? engine.battle.actionData(lastAction).name +
             ' · ' + lastAction.hits.map(function (hit) { return hit.missed ? 'Trượt' : hit.evaded ? 'Né' : String(hit.damage); }).join(', ') : '';
         document.getElementById('fnh-battle-attack').disabled = battle.phase !== 'input';
         document.getElementById('fnh-battle-escape').disabled = !battle.canEscape || battle.phase !== 'input';
@@ -487,6 +500,12 @@
     });
     document.getElementById('fnh-battle-actor').addEventListener('change', function (event) { battleActor = Number(event.target.value); renderBattleUi(); });
     document.getElementById('fnh-battle-skill').addEventListener('change', function (event) { battleSkill = Number(event.target.value); renderBattleUi(); });
+    document.getElementById('fnh-battle-kind').addEventListener('change', function (event) { battleKind = event.target.value; renderBattleUi(); });
+    document.getElementById('fnh-battle-item').addEventListener('change', function (event) { battleItem = Number(event.target.value); renderBattleUi(); });
+    document.getElementById('fnh-battle-use-item').addEventListener('click', function () {
+        var item = engine.database.Items[battleItem];
+        battleAction(function () { return engine.battleItem(battleActor, battleItem, item && [7, 9].includes(item.scope) ? battleFriend : battleTarget, eventHandlers); });
+    });
     document.getElementById('fnh-battle-use-skill').addEventListener('click', function () {
         var skill = engine.database.Skills[battleSkill];
         battleAction(function () { return engine.battleSkill(battleActor, battleSkill, [7, 9].includes(skill.scope) ? battleFriend : battleTarget, eventHandlers); });
