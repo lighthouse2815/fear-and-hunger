@@ -427,9 +427,15 @@
                     !(engine.state.moveFrames > 0) && !engine.movement.jobs.has(engine.state)) {
                     perform(function () { return step(heldDirection); });
                 }
-                inputPulses.forEach(function (remaining, button) {
-                    if (remaining <= frames) { inputPulses.delete(button); engine.buttons.delete(button); }
-                    else inputPulses.set(button, remaining - frames);
+                inputPulses.forEach(function (pulse, button) {
+                    pulse.remaining -= frames;
+                    if (pulse.remaining <= 0) setTimeout(function () {
+                        // Interpreter đọc điều kiện qua microtask sau scheduler.tick().
+                        // Giữ xung đến hết task để frame dài không làm mất lần bấm.
+                        if (inputPulses.get(button) === pulse) {
+                            inputPulses.delete(button); engine.buttons.delete(button);
+                        }
+                    }, 0);
                 });
                 if (active && !drawing) {
                     drawing = true;
@@ -496,7 +502,7 @@
         var direction = Number(button.dataset.direction);
         if (pictureInput()) {
             var name = { 0: 'ok', 2: 'down', 4: 'left', 6: 'right', 8: 'up' }[direction];
-            engine.buttons.add(name); inputPulses.set(name, 3);
+            engine.buttons.add(name); inputPulses.set(name, { remaining: 3 });
             return;
         }
         if (direction) perform(function () { return step(direction); });
