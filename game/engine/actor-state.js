@@ -26,6 +26,7 @@
     }
 
     ActorState.prototype.maxParam = function (data, classData, paramId) {
+        if (paramId === 0 && this.maxHpOverride != null) return this.maxHpOverride;
         var table = data.params || (classData && classData.params);
         var values = table && table[paramId];
         if (!Array.isArray(values) || !values.length) return 0;
@@ -33,7 +34,7 @@
     };
 
     ActorState.prototype.maxHp = function (data, classData) {
-        return Math.min(this.maxParam(data, classData, 0), this.maxHpOverride == null ? Infinity : this.maxHpOverride);
+        return this.maxParam(data, classData, 0);
     };
     ActorState.prototype.maxMp = function (data, classData) { return this.maxParam(data, classData, 1); };
     ActorState.prototype.isAlive = function () { return this.hp > 0; };

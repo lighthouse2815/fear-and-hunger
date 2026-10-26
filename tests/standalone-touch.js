@@ -47,14 +47,14 @@ async function fixture(maps) {
     assert.equal(bump.state.switchValue(5), true);
     assert.equal(bump.stepRunning, false);
     bump.state.direction = 8;
-    bump.applyPlayerRoute([-1, { list: [{ code: 35 }, { code: 37 }, { code: 0 }], repeat: false }]);
+    bump.applyRoute([-1, { list: [{ code: 35 }, { code: 37 }, { code: 0 }], repeat: false }], { mapId: 1 });
     await bump.step(6);
     assert.equal(bump.state.x, 1, 'route Through cho phép đi xuyên vật thể');
     assert.equal(bump.state.direction, 8, 'route Direction Fix giữ hướng khi di chuyển');
-    bump.applyPlayerRoute([-1, { list: [{ code: 36 }, { code: 38 }, { code: 0 }], repeat: false }]);
+    bump.applyRoute([-1, { list: [{ code: 36 }, { code: 38 }, { code: 0 }], repeat: false }], { mapId: 1 });
     assert.equal(bump.state.directionFixed, false);
     assert.equal(bump.state.through, false);
-    assert.throws(() => bump.applyPlayerRoute([-1, { list: [{ code: 35 }, { code: 45 }], repeat: false }]), /movement route 45/);
+    assert.throws(() => bump.applyRoute([-1, { list: [{ code: 35 }, { code: 45 }], repeat: false }], { mapId: 1 }), /Thiếu tham số movement route 45/);
     assert.equal(bump.state.directionFixed, false, 'route chưa hỗ trợ không được áp dụng dở dang');
 
     const destination = event(1, 1, 0, [

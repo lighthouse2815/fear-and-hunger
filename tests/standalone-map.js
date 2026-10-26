@@ -56,6 +56,7 @@ assert.equal(directional.eventBlocks(1, 0), false);
 state.setSwitch(1, true);
 assert.equal(directional.eventBlocks(1, 0), true);
 directional.events[0].pages[0].through = true;
+directional.events[0].through = true;
 assert.equal(directional.eventBlocks(1, 0), false);
 directional.locateEvent(1, 0, 0, 8);
 assert.equal(directional.eventAt(0, 0)[0].id, 1);

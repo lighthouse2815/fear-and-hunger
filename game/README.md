@@ -47,16 +47,20 @@ và qua save. Cấu hình chase là dữ liệu cho hệ di chuyển, chưa tự
 Luồng bước đi xử lý trigger chạm 1/2, chạy common event trước khi chuyển map,
 không tự kích hoạt lại cửa tại ô xuất hiện. Lệnh đặt vị trí event giữ tọa độ riêng
 với JSON nguồn và tôn trọng note `<Save Event Locations>` khi rời map/lưu game.
-Movement route hiện hỗ trợ bật/tắt khóa hướng và đi xuyên của người chơi (35–38);
-các route di chuyển/animation khác vẫn báo chưa hỗ trợ. Tải map/save lỗi giữ
-map và trạng thái hiện tại nhất quán.
+Movement route hỗ trợ lệnh 0–45: đi/quay/nhảy/chờ, công tắc, tốc độ, cờ animation,
+đổi hình, opacity/blend, SE và script. Route chạy theo frame, chờ va chạm hoặc bỏ
+qua theo `skippable`, có thể lặp/thay/hủy; save giữ vị trí, hình và tiến trình route.
+Test kiểm tra từng nhóm lệnh và quét hơn 100.000 route hiện có trong JSON.
+Hiện bước đi đổi tọa độ theo ô, chưa nội suy chuyển động/sprite giữa hai ô.
+Tải map/save lỗi giữ map và trạng thái hiện tại nhất quán.
 Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, fade, nhớ/phát tiếp
 BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.
 Thanh âm lượng cập nhật các âm đang phát, giữ volume của từng file.
 Save preview dùng prefix `FNH_STANDALONE_PREVIEW:`, tách biệt save bản chính.
 
-Đây chưa phải bản thay thế đầy đủ: combat, auto-event, movement route, script/plugin
-command và autotile còn cần chuyển đổi. Callback effect chỉ là đường truyền lệnh;
+Đây chưa phải bản thay thế đầy đủ: combat, auto-event, plugin command và hiệu ứng
+màn hình còn cần chuyển đổi. Các map hiện có không chứa autotile A1–A4.
+Callback effect chỉ là đường truyền lệnh;
 có callback không có nghĩa lệnh đã được triển khai. Audio chưa xử lý pan stereo.
 Kiểm tra Chrome chạy cả entry chính và preview, xác nhận preview không nạp mã
 runtime cũ và phát được OGG thật.

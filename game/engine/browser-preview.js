@@ -80,6 +80,27 @@
             return false;
         }
     };
+    engine.onRouteEffect = eventHandlers.effect;
+    var previousFrame = performance.now(), drawing = false;
+    function animate(now) {
+        var frames = Math.min(6, Math.max(0, (now - previousFrame) * 60 / 1000));
+        previousFrame = now;
+        if (ready) {
+            try {
+                var active = engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
+                    return character.stepAnime || character.moveFrames > 0;
+                });
+                engine.advanceRoutes(frames);
+                if (active && !drawing) {
+                    drawing = true;
+                    renderer.draw(engine).catch(function (error) { setStatus(error.message); })
+                        .finally(function () { drawing = false; });
+                }
+            } catch (error) { setStatus(error.message); }
+        }
+        requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
     async function interact() {
         await engine.interact(eventHandlers);
         await draw();

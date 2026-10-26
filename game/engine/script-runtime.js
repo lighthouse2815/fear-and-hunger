@@ -48,7 +48,7 @@
                 context.character[operation.type] = operation.value;
             }
         });
-        if (context.refresh) context.refresh();
+        if (context.refresh && operations.some(function (operation) { return operation.type === 'refresh'; })) context.refresh();
         return operations;
     }
 

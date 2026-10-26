@@ -24,6 +24,16 @@
             var location = state && state.eventLocations && state.eventLocations[this.id + ',' + event.id];
             return Object.assign({}, event, location && { x: location.x, y: location.y, direction: location.direction });
         }, this);
+        this.events.forEach(function (event) {
+            var page = this.eventPage(event);
+            var snapshot = state && state.eventSnapshots && state.eventSnapshots[event.id];
+            if (snapshot && snapshot.mapId === this.id && snapshot.pageIndex === event.pages.indexOf(page)) {
+                Object.assign(event, snapshot.properties);
+            } else {
+                var location = state && state.eventLocations && state.eventLocations[this.id + ',' + event.id];
+                if (location && location.direction) event.direction = location.direction;
+            }
+        }, this);
     }
 
     GameMap.prototype.isValid = function (x, y) {
@@ -77,7 +87,18 @@
         var currentState = state || this.state;
         if (!event || !Array.isArray(event.pages)) return null;
         for (var i = event.pages.length - 1; i >= 0; i -= 1) {
-            if (this.pageConditionsMet(event.pages[i].conditions || {}, currentState, event.id)) return event.pages[i];
+            if (this.pageConditionsMet(event.pages[i].conditions || {}, currentState, event.id)) {
+                var page = event.pages[i];
+                if (event.activePage !== page) {
+                    event.activePage = page;
+                    Object.assign(event, page.image, { directionFixed: !!page.directionFix,
+                        through: !!page.through, priorityType: page.priorityType,
+                        walkAnime: page.walkAnime, stepAnime: page.stepAnime,
+                        moveSpeed: page.moveSpeed, moveFrequency: page.moveFrequency,
+                        opacity: 255, blendMode: 0, transparent: false });
+                }
+                return page;
+            }
         }
         return null;
     };
@@ -114,11 +135,25 @@
         return false;
     };
 
-    GameMap.prototype.eventBlocks = function (x, y) {
+    GameMap.prototype.eventBlocks = function (x, y, exceptId) {
         return this.eventAt(x, y).some(function (event) {
             var page = this.eventPage(event);
-            return page && page.priorityType === 1 && !page.through;
+            return event.id !== exceptId && page && page.priorityType === 1 && !event.through;
         }, this);
+    };
+
+    GameMap.prototype.snapshotEvents = function () {
+        var snapshot = {}, map = this;
+        this.events.forEach(function (event) {
+            var page = map.eventPage(event), properties = {};
+            ['x', 'y', 'direction', 'pattern', 'characterName', 'characterIndex', 'tileId', 'moveSpeed',
+                'moveFrequency', 'directionFixed', 'through', 'transparent', 'opacity', 'blendMode',
+                'walkAnime', 'stepAnime', 'chaseRange', 'seePlayer', 'alertSound', 'moveFrames', 'animationFrames'].forEach(function (key) {
+                if (event[key] !== undefined) properties[key] = event[key];
+            });
+            snapshot[event.id] = { mapId: map.id, pageIndex: event.pages.indexOf(page), properties: properties };
+        });
+        return snapshot;
     };
 
     return { GameMap: GameMap, DIRECTION_BITS: Object.assign({}, DIRECTION_BITS) };

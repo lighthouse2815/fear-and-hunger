@@ -42,6 +42,11 @@
         this.directionFixed = source.directionFixed === true;
         this.through = source.through === true;
         this.touchEnabled = source.touchEnabled !== false;
+        this.eventSnapshots = Object.assign({}, source.eventSnapshots);
+        this.routeSnapshots = Array.isArray(source.routeSnapshots) ? source.routeSnapshots : [];
+        ['characterName', 'characterIndex', 'transparent', 'opacity', 'blendMode', 'moveSpeed', 'moveFrequency', 'walkAnime', 'stepAnime', 'moveFrames', 'animationFrames'].forEach(function (key) {
+            if (source[key] !== undefined) this[key] = source[key];
+        }, this);
         this.eventLocations = Object.assign({}, source.eventLocations);
         this.gold = Math.max(0, Number(source.gold) || 0);
         this.party = Array.isArray(source.party) ? source.party.slice() : [];
@@ -194,6 +199,12 @@
             directionFixed: this.directionFixed,
             through: this.through,
             touchEnabled: this.touchEnabled,
+            eventSnapshots: this.eventSnapshots,
+            routeSnapshots: this.routeSnapshots,
+            characterName: this.characterName, characterIndex: this.characterIndex,
+            transparent: this.transparent, opacity: this.opacity, blendMode: this.blendMode,
+            moveSpeed: this.moveSpeed, moveFrequency: this.moveFrequency, walkAnime: this.walkAnime, stepAnime: this.stepAnime,
+            moveFrames: this.moveFrames, animationFrames: this.animationFrames,
             eventLocations: this.eventLocations,
             gold: this.gold,
             party: this.party,

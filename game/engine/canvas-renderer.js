@@ -47,15 +47,17 @@
         var actors = map.events.map(function (event) {
             var page = map.eventPage(event, state);
             if (!page) return null;
-            var image = Object.assign({}, page.image);
-            if (event.direction) image.direction = event.direction;
-            return { x: event.x, y: event.y, image: image, priority: page.priorityType, id: event.id };
+            var image = { characterName: event.characterName, characterIndex: event.characterIndex,
+                direction: event.direction, pattern: animationPattern(event, event.pattern), tileId: event.tileId };
+            return { x: event.x, y: event.y, image: image, priority: page.priorityType, id: event.id,
+                transparent: event.transparent, opacity: event.opacity, blendMode: event.blendMode };
         }).filter(Boolean);
         var actor = state.actor(state.party[0] || 1);
         if (actor) actors.push({ x: state.x, y: state.y, priority: 1, id: Infinity, image: {
-            characterName: actor.characterName, characterIndex: actor.characterIndex,
-            direction: state.direction, pattern: 1
-        } });
+            characterName: state.characterName == null ? actor.characterName : state.characterName,
+            characterIndex: state.characterIndex == null ? actor.characterIndex : state.characterIndex,
+            direction: state.direction, pattern: animationPattern(state, 1)
+        }, transparent: state.transparent, opacity: state.opacity, blendMode: state.blendMode });
         await Promise.all(actors.map(async function (entry) {
             var name = entry.image.characterName;
             if (name) entry.bitmap = await this.loadImage('img/characters/' + name + '.png');
@@ -110,7 +112,22 @@
             x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     };
 
+    function animationPattern(character, restingPattern) {
+        if (!character.animationFrames) return restingPattern;
+        var interval = Math.max(1, (9 - (character.moveSpeed == null ? 4 : character.moveSpeed)) * 3);
+        return [0, 1, 2, 1][Math.floor(character.animationFrames / interval) % 4];
+    }
+
     CanvasRenderer.prototype.drawActor = function (sheets, actor, startX, startY) {
+        if (actor.transparent) return;
+        this.context.save();
+        this.context.globalAlpha = actor.opacity == null ? 1 : actor.opacity / 255;
+        this.context.globalCompositeOperation = ['source-over', 'lighter', 'multiply', 'screen'][actor.blendMode || 0] || 'source-over';
+        try { this.drawActorImage(sheets, actor, startX, startY); }
+        finally { this.context.restore(); }
+    };
+
+    CanvasRenderer.prototype.drawActorImage = function (sheets, actor, startX, startY) {
         var image = actor.image;
         if (image.tileId) return this.drawTile(sheets, image.tileId, actor.x - startX, actor.y - startY);
         if (!actor.bitmap) return;

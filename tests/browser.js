@@ -976,6 +976,20 @@ async function main() {
             const actor = engine.state.actor(1);
             return actor.characterName === 'mercenary3' && actor.characterIndex === 7 && actor.hp === 30;
         })()`, true, false));
+        await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine;
+            engine.applyRoute([-1, { wait: false, list: [
+                { code: 37 }, { code: 3 }, { code: 15, parameters: [3] },
+                { code: 41, parameters: ['$guard1', 0] }, { code: 42, parameters: [128] },
+                { code: 38 }, { code: 27, parameters: [12] }, { code: 0 }
+            ] }], { mapId: 74 });
+        })()`, false, false);
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.switchValue(12) && FNHStandalonePreview.engine.movement.jobs.size === 0',
+            5000, 'route chạy qua animation frame và hoàn tất');
+        check('movement route chạy theo frame và đổi hình thật trên preview', await evalPage(cdp, `(() => {
+            const state = FNHStandalonePreview.engine.state;
+            return state.x === 16 && state.y === 5 && state.characterName === '$guard1' && state.opacity === 128 && !state.through;
+        })()`, false, false));
         // Chạy các lệnh audio dữ liệu bằng interpreter mới, không dùng AudioManager MV.
         await evalPage(cdp, `new FNHStandaloneEvents.EventInterpreter({
             state: FNHStandalonePreview.engine.state,
