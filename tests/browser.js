@@ -1867,14 +1867,14 @@ async function main() {
         await waitFor(cdp, 'FNHStandalonePreview.audio.buffers.bgm && !FNHStandalonePreview.audio.buffers.bgm.paused && FNHStandalonePreview.audio.buffers.bgm.currentTime > 0',
             20000, 'OGG phát trong audio manager độc lập');
         check('interpreter mới phát được BGM OGG thật', await evalPage(cdp,
-            'FNHStandalonePreview.audio.buffers.bgm.src.endsWith("/audio/bgm/fear_and_hunger.ogg") && FNHStandalonePreview.audio.buffers.bgm.volume === 0.8', false, false));
+            'FNHStandalonePreview.audio.buffers.bgm.src.endsWith("/audio/bgm/fear_and_hunger.ogg") && FNHStandalonePreview.audio.buffers.bgm.volume === 0.2', false, false));
         await evalPage(cdp, `(() => {
             const volume = document.querySelector('#fnh-volume');
             volume.value = 50;
             volume.dispatchEvent(new Event('input', { bubbles: true }));
         })()`, false, false);
         check('volume preview giữ âm lượng riêng của BGM', await evalPage(cdp,
-            'FNHStandalonePreview.audio.buffers.bgm.volume === 0.4', false, false));
+            'FNHStandalonePreview.audio.buffers.bgm.volume === 0.1', false, false));
         await evalPage(cdp, 'FNHStandalonePreview.audio.handleEffect(242, [0.05])', false, false);
         await waitFor(cdp, 'FNHStandalonePreview.audio.buffers.bgm === null', 3000, 'BGM fade và dừng');
         await screenshot('standalone-preview');

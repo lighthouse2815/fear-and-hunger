@@ -12,7 +12,7 @@
         this.audioFactory = options.audioFactory || (typeof Audio !== 'undefined' ? function () { return new Audio(); } : null);
         if (!this.audioFactory) throw new Error('AudioManager cần Audio hoặc audioFactory.');
         this.onError = options.onError || function (error) { console.error(error); };
-        this.masterVolume = 1;
+        this.masterVolume = volumeValue(options.masterVolume == null ? 1 : options.masterVolume);
         this.volumes = { bgm: 1, bgs: 1, me: 1, se: 1 };
         this.buffers = { bgm: null, bgs: null, me: null };
         this.seBuffers = [];
