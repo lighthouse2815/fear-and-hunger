@@ -111,7 +111,13 @@ làm tròn xuống và chặn giới hạn. `System.optSlipDeath=false` hiện c
 1 HP; quái ẩn/chết và nhân vật chết không được tick. Trạng thái hết hạn sau khi
 hiệu ứng cuối lượt đã chạy; giải độc trước đó ngăn tick ngay lượt đó. Log trận
 hiện thay đổi tài nguyên cuối lượt; HP thay đổi được troop page đọc ngay và save
-không tick lại. Chưa triển khai sát thương trạng thái theo bước đi ngoài trận.
+không tick lại. Ngoài bản đồ, cứ 20 bước đi bộ thành công sẽ chạy cùng hiệu ứng
+và cập nhật thời lượng state như một lượt. Va tường, menu, route cưỡng chế và
+phương tiện không tăng nhịp này. Save giữ tổng bước, tiến trình xóa state theo
+`removeByWalking`/`stepsToRemove` và kết quả tick; dữ liệu save cũ bắt đầu ở 0 bước.
+Flash đỏ và thanh trạng thái báo mất HP khi đi bộ. HP cập nhật trước event chạm;
+nếu cả đội bị hạ theo cấu hình slip death thì mở game over và không chạy event
+ở ô đích. Biến sự kiện đọc được tổng bước qua toán hạng dữ liệu 7/3.
 Hiện mới chuyển hiệu ứng kỹ năng cơ bản trong JSON, chưa thay toàn bộ cơ chế
 combat mở rộng trong note/plugin (counter, taunt, action sequence và state script).
 Preview có nút **Menu** (hoặc Escape trên bản đồ): chọn nhân vật để xem chỉ số,

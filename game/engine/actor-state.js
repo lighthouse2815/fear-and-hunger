@@ -21,6 +21,7 @@
         this.tp = snapshot && snapshot.tp || 0;
         this.states = snapshot && Array.isArray(snapshot.states) ? snapshot.states.slice() : [];
         this.stateTurns = Object.assign({}, snapshot && snapshot.stateTurns);
+        this.stateSteps = Object.assign({}, snapshot && snapshot.stateSteps);
         this.skills = snapshot && Array.isArray(snapshot.skills) ? snapshot.skills.slice() :
             (classData.learnings || []).filter(function (entry) { return entry.level <= this.level; }, this)
                 .map(function (entry) { return entry.skillId; });
@@ -99,7 +100,7 @@
             characterName: this.characterName, characterIndex: this.characterIndex,
             faceName: this.faceName, faceIndex: this.faceIndex, battlerName: this.battlerName,
             maxHpOverride: this.maxHpOverride,
-            tp: this.tp, states: this.states.slice(), stateTurns: Object.assign({}, this.stateTurns), skills: this.skills.slice(), equips: this.equips.slice() };
+            tp: this.tp, states: this.states.slice(), stateTurns: Object.assign({}, this.stateTurns), stateSteps: Object.assign({}, this.stateSteps), skills: this.skills.slice(), equips: this.equips.slice() };
     };
 
     return { ActorState: ActorState, expForLevel: expForLevel };

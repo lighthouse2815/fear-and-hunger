@@ -149,8 +149,33 @@
         if (this.state.scene !== 'map') return false;
         if (this.eventRunning || this.messageRunning || (this.movement && this.movement.jobs.has(this.state))) return false;
         var moved = this.moveCharacter(this.state, direction);
-        if (moved) this.state.moveFrames = this.playerStepFrames();
+        if (moved) { this.state.moveFrames = this.playerStepFrames(); this.onPlayerWalk(); }
         return moved;
+    };
+
+    GameEngine.prototype.onPlayerWalk = function () {
+        if (this.state.vehicleId !== -1) return;
+        var state = this.state, runtime = this.battle;
+        state.walkSteps++;
+        state.walkEffects = [];
+        state.party.forEach(function (id) {
+            var actor = state.actor(id), beforeStates = actor.states.slice();
+            var battler = { id: id, hp: actor.hp, mp: actor.mp, alive: actor.hp > 0 };
+            var effect = state.walkSteps % 20 === 0 ? runtime.endBattlerTurn(battler) : null;
+            actor = state.actor(id);
+            if (!actor.stateSteps) actor.stateSteps = {};
+            actor.states.slice().forEach(function (stateId) {
+                var definition = this.database.States[stateId];
+                if (!definition || !definition.removeByWalking) return;
+                if (actor.stateSteps[stateId] == null) actor.stateSteps[stateId] = definition.stepsToRemove || 0;
+                if (actor.stateSteps[stateId] > 0 && --actor.stateSteps[stateId] === 0) state.changeActorState(id, stateId, false);
+            }, this);
+            var removed = beforeStates.filter(function (stateId) { return !state.actor(id).states.includes(stateId); });
+            if (removed.length && !effect) effect = { subject: 'actor', subjectId: id, hp: 0, mp: 0, tp: 0 };
+            if (effect) { effect.removedStates = removed; state.walkEffects.push(effect); }
+        }, this);
+        if (state.walkEffects.some(function (effect) { return effect.hp < 0; })) this.screen.handleEffect(224, [[255, 0, 0, 128], 8, false]);
+        if (state.party.length && state.party.every(function (id) { return state.actor(id).hp <= 0; })) state.scene = 'gameover';
     };
 
     GameEngine.prototype.canDash = function () {
@@ -252,6 +277,7 @@
         try {
             var sourceMap = this.map;
             var moved = this.move(direction);
+            if (this.state.scene !== 'map') return moved;
             var x = this.state.x + (!moved ? direction === 4 ? -1 : direction === 6 ? 1 : 0 : 0);
             var y = this.state.y + (!moved ? direction === 8 ? -1 : direction === 2 ? 1 : 0 : 0);
             var candidates = sourceMap.eventAt(x, y);

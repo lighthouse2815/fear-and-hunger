@@ -253,12 +253,17 @@ async function sendAudioGesture(cdp, type) {
 }
 
 async function clickElement(cdp, selector) {
-    const point = await evalPage(cdp, `(() => {
-        const element = document.querySelector(${JSON.stringify(selector)});
-        element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    const point = await evalPage(cdp, `(async () => {
+        const selector = ${JSON.stringify(selector)};
+        document.querySelector(selector).scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+        // Hai frame để layout/scroll của dialog và màn hình điện thoại ổn định.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const element = document.querySelector(selector);
         const rect = element.getBoundingClientRect();
-        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
-    })()`, false, false);
+        const point = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        if (!element.contains(document.elementFromPoint(point.x, point.y))) throw new Error('Nút bị che hoặc chưa hiển thị: ' + selector);
+        return point;
+    })()`, true, false);
     await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button: 'left', clickCount: 1 });
     await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...point, button: 'left', clickCount: 1 });
 }
@@ -1633,6 +1638,27 @@ async function main() {
                 return !engine.buttons.has('shift') && walking === running * 2 && engine.playerStepFrames() === running;
             } finally { Object.assign(state,before); option.checked = before.alwaysDash; }
         })()`, false, false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;window.beforeWalkState=e.save();
+            e.state.x=4;e.state.y=20;e.state.through=true;e.state.walkSteps=19;e.state.moveFrames=0;
+            e.state.party.forEach(id=>e.state.recoverActor(id));e.state.changeActorState(1,5,true);e.state.changeActorState(1,17,true);
+            window.walkExpectedLoss=Math.min(e.state.actor(1).hp-1,-Math.floor(e.state.actorParam(1,0)*e.battle.traitRate({id:1},22,7,true)));
+            window.walkExpectedHp=e.state.actor(1).hp-window.walkExpectedLoss;
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-controls [data-direction="6"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.walkSteps===20 && FNHStandalonePreview.engine.state.actor(1).hp===window.walkExpectedHp',5000,'trạng thái tick theo bước đi thật');
+        check('bước đi tick trạng thái và hiển thị thay đổi HP ngoài bản đồ',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.walkEffects.length===1 && document.querySelector("#fnh-status").textContent.includes("HP -"+window.walkExpectedLoss)',false,false));
+        await clickElement(cdp,'#fnh-save');
+        await waitFor(cdp,'document.querySelector("#fnh-status").textContent.startsWith("Đã lưu")',5000,'lưu nhịp trạng thái bước đi');
+        await clickElement(cdp,'#fnh-controls [data-direction="4"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.walkSteps===21',5000,'bước không tick lại trạng thái');
+        await clickElement(cdp,'#fnh-load');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.walkSteps===20',5000,'tải save giữ nhịp bước');
+        check('save bước đi giữ HP và không tick trạng thái lần hai',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.actor(1).hp===window.walkExpectedHp && FNHStandalonePreview.engine.state.x===5',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.beforeWalkState).then(()=>true)',true,false);
+        await evalPage(cdp,'delete window.beforeWalkState;delete window.walkExpectedHp;delete window.walkExpectedLoss',false,false);
         await evalPage(cdp, 'FNHStandalonePreview.engine.createInterpreter([{code:213,parameters:[-1,1,true]},{code:121,parameters:[501,501,0]}],39).run()', true, false);
         check('lệnh balloon chờ kết thúc trước khi chạy lệnh tiếp', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.balloon.remaining === 0 && FNHStandalonePreview.engine.state.switchValue(501)', false, false));

@@ -57,6 +57,8 @@
         this.pendingEventStack = source.pendingEventStack || [];
         this.mapNameDisplay = source.mapNameDisplay !== false;
         this.battle = source.battle || null;
+        this.walkSteps = Math.max(0, Math.floor(Number(source.walkSteps) || 0));
+        this.walkEffects = source.walkEffects || [];
         if (!Array.isArray(this.regionCover.open)) this.regionCover.open = [0];
         this.mapTileset = source.mapTileset || null;
         this.timer = source.timer || { active: false, frames: 0 };
@@ -230,6 +232,10 @@
         if (!add) states = states.filter(function (value) { return value !== stateId; });
         actor.states = states;
         if (actor.stateTurns) delete actor.stateTurns[stateId];
+        if (!actor.stateSteps) actor.stateSteps = {};
+        var definition = this.database && this.database.States && this.database.States[stateId];
+        if (add && definition) actor.stateSteps[stateId] = definition.stepsToRemove || 0;
+        else delete actor.stateSteps[stateId];
         if (stateId === 1) actor.hp = add ? 0 : Math.max(1, actor.hp);
         return true;
     };
@@ -243,7 +249,7 @@
         state.states = [];
         actor.hp = state.maxHp(data, classData);
         actor.mp = state.maxMp(data, classData);
-        actor.states = []; actor.stateTurns = {};
+        actor.states = []; actor.stateTurns = {}; actor.stateSteps = {};
         return true;
     };
 
@@ -286,7 +292,7 @@
             followersVisible: this.followersVisible, followersGathering: this.followersGathering, vehicleBgm: this.vehicleBgm,
             scene: this.scene, pendingEventStack: this.pendingEventStack,
             mapNameDisplay: this.mapNameDisplay,
-            battle: this.battle,
+            battle: this.battle, walkSteps: this.walkSteps, walkEffects: this.walkEffects,
             timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
             wordWrap: this.wordWrap, pendingChoices: this.pendingChoices,
             dashEnabled: this.dashEnabled,

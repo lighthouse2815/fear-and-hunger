@@ -503,21 +503,25 @@
             subjectId: battler.enemyId != null ? battler.index : battler.id, hp: data.hp - hp, mp: data.mp - mp, tp: data.tp - tp };
         return effect.hp || effect.mp || effect.tp ? effect : null;
     };
+    BattleRuntime.prototype.endBattlerTurn = function (battler) {
+        var effect = this.regenerate(battler);
+        var data = this.battlerState(battler), turns = data.stateTurns || (data.stateTurns = {});
+        data.states.slice().forEach(function (id) {
+            var state = this.database.States[id];
+            if (!state || !state.autoRemovalTiming) return;
+            if (state.autoRemovalTiming === 1 && turns[id] === 0) { this.removeState(battler, id); return; }
+            if (turns[id] == null) this.resetStateTurns(battler, id);
+            turns[id] = Math.max(0, turns[id] - 1);
+            if (!turns[id] && state.autoRemovalTiming === 2) this.removeState(battler, id);
+        }, this);
+        return effect;
+    };
     BattleRuntime.prototype.endTurn = function () {
         this.syncActors();
         var effects = this.battle.turnEffects = [];
         this.battle.actors.concat(this.battle.enemies).forEach(function (battler) {
-            var effect = this.regenerate(battler);
+            var effect = this.endBattlerTurn(battler);
             if (effect) effects.push(effect);
-            var data = this.battlerState(battler), turns = data.stateTurns || (data.stateTurns = {});
-            data.states.slice().forEach(function (id) {
-                var state = this.database.States[id];
-                if (!state || !state.autoRemovalTiming) return;
-                if (state.autoRemovalTiming === 1 && turns[id] === 0) { this.removeState(battler, id); return; }
-                if (turns[id] == null) this.resetStateTurns(battler, id);
-                turns[id] = Math.max(0, turns[id] - 1);
-                if (!turns[id] && state.autoRemovalTiming === 2) this.removeState(battler, id);
-            }, this);
         }, this);
         this.syncActors();
         return effects;

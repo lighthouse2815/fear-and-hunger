@@ -602,6 +602,7 @@
         if (type === 7 && id === 0) return this.state.mapId;
         if (type === 7 && id === 1) return this.state.party.length;
         if (type === 7 && id === 2) return this.state.gold;
+        if (type === 7 && id === 3) return this.state.walkSteps;
         if (this.handlers.gameData) return this.handlers.gameData(type, id, field, this);
         throw new Error('Chưa hỗ trợ dữ liệu sự kiện: ' + [type, id, field].join(','));
     };

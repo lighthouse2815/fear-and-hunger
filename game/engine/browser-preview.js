@@ -32,6 +32,14 @@
     var menuUi;
     var battleTarget = 0, battleActor = 0, battleFriend = 0, battleSkill = 2, battleItem = 0, battleKind = 'skill';
     var lastBattle = null, lastScene = null, lastBattlePhase = null;
+    function formatResourceChanges(effect) {
+        var subject = effect.subject === 'actor' ? engine.state.actor(effect.subjectId) : engine.battle.enemy(effect.subjectId);
+        var changes = ['hp', 'mp', 'tp'].filter(function (key) { return effect[key]; }).map(function (key) {
+            return key.toUpperCase() + ' ' + (effect[key] > 0 ? '+' : '') + effect[key];
+        });
+        (effect.removedStates || []).forEach(function (id) { changes.push(engine.database.States[id].name + ' đã hết'); });
+        return subject.name + ': ' + changes.join(', ');
+    }
     function renderBattleUi() {
         var panel = document.getElementById('fnh-battle'), battle = engine.battle && engine.battle.battle;
         if (battle !== lastBattle) { battleKind = 'skill'; battleActor = 0; }
@@ -118,12 +126,7 @@
         var lastAction = battle.lastAction;
         document.getElementById('fnh-battle-log').textContent = lastAction ? engine.battle.actionData(lastAction).name +
             ' · ' + lastAction.hits.map(function (hit) { return hit.missed ? 'Trượt' : hit.evaded ? 'Né' : String(hit.damage); }).join(', ') : '';
-        var turnEffects = (battle.turnEffects || []).map(function (effect) {
-            var subject = effect.subject === 'actor' ? engine.state.actor(effect.subjectId) : engine.battle.enemy(effect.subjectId);
-            return subject.name + ': ' + ['hp', 'mp', 'tp'].filter(function (key) { return effect[key]; }).map(function (key) {
-                return key.toUpperCase() + ' ' + (effect[key] > 0 ? '+' : '') + effect[key];
-            }).join(', ');
-        });
+        var turnEffects = (battle.turnEffects || []).map(formatResourceChanges);
         if (turnEffects.length) document.getElementById('fnh-battle-log').textContent += ' · Cuối lượt: ' + turnEffects.join(' | ');
         document.getElementById('fnh-battle-attack').disabled = battle.phase !== 'input' || !battleActor || !engine.battle.canUseSkill(engine.battle.actor(battleActor), engine.database.Skills[1]);
         document.getElementById('fnh-battle-escape').disabled = !battle.canEscape || battle.phase !== 'input';
@@ -164,7 +167,9 @@
             if (audioMap.data.autoplayBgm) audio.play('bgm', audioMap.data.bgm);
             if (audioMap.data.autoplayBgs) audio.play('bgs', audioMap.data.bgs);
         }
-        setStatus('Map ' + engine.state.mapId + ' · ô ' + engine.state.x + ',' + engine.state.y + ' · Mũi tên: di chuyển · Enter: tương tác');
+        var walkEffects = engine.state.scene === 'map' ? engine.state.walkEffects.map(formatResourceChanges) : [];
+        setStatus('Map ' + engine.state.mapId + ' · ô ' + engine.state.x + ',' + engine.state.y + ' · Mũi tên: di chuyển · Enter: tương tác' +
+            (walkEffects.length ? ' · ' + walkEffects.join(' | ') : ''));
     }
     async function perform(action) {
         if (!ready || busy) return;
