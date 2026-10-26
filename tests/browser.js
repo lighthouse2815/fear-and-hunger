@@ -1123,6 +1123,46 @@ async function main() {
             engine.filters.handleCommand('eraseFilter GOD');
             return valid;
         })()`, true, false));
+        await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine;
+            window.__beforeHeldInput = engine.save();
+            engine.state.x = 4; engine.state.y = 20; engine.state.through = true; engine.state.moveFrames = 0;
+            document.querySelector('#fnh-canvas').focus();
+        })()`, false, false);
+        await cdp.send('Input.dispatchKeyEvent', {type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.x >= 6', 5000, 'giữ phím tự bước qua nhiều ô');
+        await cdp.send('Input.dispatchKeyEvent', {type:'keyUp',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+        await sleep(400);
+        const stoppedAt = await evalPage(cdp, 'FNHStandalonePreview.engine.state.x', false, false);
+        await sleep(400);
+        check('giữ phím di chuyển theo frame và thả phím dừng lại', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.x === ' + stoppedAt + ' && !FNHStandalonePreview.engine.buttons.has("right")', false, false));
+        check('lệnh chạy nhanh thay đổi thời gian bước đi và giữ sau lưu/tải', await evalPage(cdp, `(async () => {
+            const engine = FNHStandalonePreview.engine;
+            await engine.createInterpreter([{code:356,parameters:['EnableDashing']}],39).run();
+            engine.buttons.add('shift');
+            const fast = engine.playerStepFrames();
+            await engine.createInterpreter([{code:356,parameters:['DisableDashing']}],39).run();
+            const slow = engine.playerStepFrames();
+            await engine.restore(engine.save());
+            const saved = !engine.state.dashEnabled;
+            engine.buttons.clear();
+            await engine.restore(window.__beforeHeldInput); delete window.__beforeHeldInput;
+            return fast * 2 === slow && saved;
+        })()`, true, false));
+        check('tùy chọn đi bộ giữ Shift và lệnh sự kiện quyết định chạy nhanh', await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine, state = engine.state;
+            const before = { alwaysDash: state.alwaysDash, dashEnabled: state.dashEnabled };
+            const option = document.querySelector('#fnh-always-dash');
+            try {
+                state.dashEnabled = true;
+                option.checked = false; option.dispatchEvent(new Event('change', {bubbles:true}));
+                const walking = engine.playerStepFrames();
+                engine.buttons.add('shift'); const running = engine.playerStepFrames(); engine.buttons.delete('shift');
+                option.checked = true; option.dispatchEvent(new Event('change', {bubbles:true}));
+                return !engine.buttons.has('shift') && walking === running * 2 && engine.playerStepFrames() === running;
+            } finally { Object.assign(state,before); option.checked = before.alwaysDash; }
+        })()`, false, false));
         await evalPage(cdp, 'FNHStandalonePreview.engine.createInterpreter([{code:213,parameters:[-1,1,true]},{code:121,parameters:[501,501,0]}],39).run()', true, false);
         check('lệnh balloon chờ kết thúc trước khi chạy lệnh tiếp', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.balloon.remaining === 0 && FNHStandalonePreview.engine.state.switchValue(501)', false, false));

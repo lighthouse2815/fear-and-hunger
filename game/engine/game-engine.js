@@ -91,7 +91,25 @@
     GameEngine.prototype.move = function (direction) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
         if (this.eventRunning || this.messageRunning || (this.movement && this.movement.jobs.has(this.state))) return false;
-        return this.moveCharacter(this.state, direction);
+        var moved = this.moveCharacter(this.state, direction);
+        if (moved) this.state.moveFrames = this.playerStepFrames();
+        return moved;
+    };
+
+    GameEngine.prototype.canDash = function () {
+        if (!this.state.dashEnabled || this.map.data.disableDashing || this.state.vehicleId !== -1) return false;
+        var state = this.state, database = this.database, actor = state.party.length ? state.actor(state.party[0]) : null;
+        if (!actor) return true;
+        var sources = [database.Actors[actor.id], database.Classes[actor.classId]];
+        actor.equips.forEach(function (id, slot) { sources.push((slot === 0 ? database.Weapons : database.Armors)[id]); });
+        actor.states.forEach(function (id) { sources.push(database.States[id]); });
+        return !sources.some(function (source) { return source && /<disable dash(?:ing)?>/i.test(source.note || ''); });
+    };
+
+    GameEngine.prototype.playerStepFrames = function () {
+        var speed = this.state.moveSpeed == null ? 4 : this.state.moveSpeed;
+        if ((this.state.alwaysDash || this.buttons.has('shift')) && this.canDash()) speed++;
+        return Math.pow(2, 8 - speed);
     };
 
     GameEngine.prototype.resetMovement = function (progress) {

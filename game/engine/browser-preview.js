@@ -30,6 +30,7 @@
     function setStatus(text) { status.textContent = text; }
     async function draw() {
         await renderer.draw(engine);
+        document.getElementById('fnh-always-dash').checked = engine.state.alwaysDash;
         if (audioMap !== engine.map) {
             audioMap = engine.map;
             if (audioMap.data.autoplayBgm) audio.play('bgm', audioMap.data.bgm);
@@ -222,6 +223,12 @@
                 });
                 active = active || filterRevision !== engine.filters.revision || engine.filters.active();
                 engine.advanceRoutes(frames);
+                var heldDirection = engine.buttons.has('down') ? 2 : engine.buttons.has('left') ? 4 :
+                    engine.buttons.has('right') ? 6 : engine.buttons.has('up') ? 8 : 0;
+                if (heldDirection && !pictureInput() && !engine.messageRunning && !engine.eventRunning &&
+                    !(engine.state.moveFrames > 0) && !engine.movement.jobs.has(engine.state)) {
+                    perform(function () { return step(heldDirection); });
+                }
                 inputPulses.forEach(function (remaining, button) {
                     if (remaining <= frames) { inputPulses.delete(button); engine.buttons.delete(button); }
                     else inputPulses.set(button, remaining - frames);
@@ -244,6 +251,7 @@
         await draw();
     }
     async function step(direction) {
+        if (engine.state.moveFrames > 0) await engine.screen.tween([], {}, engine.state.moveFrames);
         await engine.step(direction, eventHandlers);
         await draw();
     }
@@ -311,6 +319,9 @@
     document.getElementById('fnh-volume').addEventListener('input', function (event) {
         audio.setVolume('master', Number(event.target.value) / 100);
         video.volume = audio.masterVolume;
+    });
+    document.getElementById('fnh-always-dash').addEventListener('change', function (event) {
+        if (engine.state) engine.state.alwaysDash = event.target.checked;
     });
     window.addEventListener('pagehide', function () {
         if (scheduler) scheduler.stop();

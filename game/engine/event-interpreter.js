@@ -338,6 +338,10 @@
 
     EventInterpreter.prototype.pluginCommand = function (command) {
         var text = String(command.parameters[0] || ''), match;
+        if (/^(Enable|Disable|Toggle)Dashing$/.test(text)) {
+            this.state.dashEnabled = text === 'ToggleDashing' ? !this.state.dashEnabled : text === 'EnableDashing';
+            return;
+        }
         if ((match = /^choice_text\s+(\d+)\s+(.*)$/i.exec(text))) {
             this.state.pendingChoices.text[Number(match[1]) - 1] = match[2];
             return;

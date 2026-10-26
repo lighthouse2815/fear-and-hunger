@@ -54,6 +54,8 @@
         this.battleBgm = source.battleBgm || null;
         this.vehicleId = source.vehicleId == null ? -1 : source.vehicleId;
         this.wordWrap = source.wordWrap === true;
+        this.dashEnabled = source.dashEnabled !== false;
+        this.alwaysDash = source.alwaysDash !== false;
         this.pendingChoices = source.pendingChoices || { text: {}, disabled: [] };
         ['characterName', 'characterIndex', 'transparent', 'opacity', 'blendMode', 'moveSpeed', 'moveFrequency', 'walkAnime', 'stepAnime', 'moveFrames', 'animationFrames', 'balloon'].forEach(function (key) {
             if (source[key] !== undefined) this[key] = source[key];
@@ -259,6 +261,8 @@
             screen: this.screen, lighting: this.lighting, filters: this.filters, mapTileset: this.mapTileset,
             timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
             wordWrap: this.wordWrap, pendingChoices: this.pendingChoices,
+            dashEnabled: this.dashEnabled,
+            alwaysDash: this.alwaysDash,
             characterName: this.characterName, characterIndex: this.characterIndex,
             transparent: this.transparent, opacity: this.opacity, blendMode: this.blendMode,
             moveSpeed: this.moveSpeed, moveFrequency: this.moveFrequency, walkAnime: this.walkAnime, stepAnime: this.stepAnime,
