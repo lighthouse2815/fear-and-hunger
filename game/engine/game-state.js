@@ -144,6 +144,18 @@
         return true;
     };
 
+    GameState.prototype.recoverActor = function (id) {
+        var actor = this.actor(id);
+        if (!actor || !this.database || !this.database.Actors[id]) return false;
+        var data = this.database.Actors[id];
+        var classData = this.database.Classes && this.database.Classes[data.classId];
+        var state = new actorApi.ActorState(data, classData, actor);
+        actor.hp = state.maxHp(data, classData);
+        actor.mp = state.maxMp(data, classData);
+        actor.states = [];
+        return true;
+    };
+
     GameState.prototype.gainItem = function (kind, id, amount) {
         positiveId(id, 'ID vật phẩm');
         if (!Object.prototype.hasOwnProperty.call(this.inventory, kind)) {

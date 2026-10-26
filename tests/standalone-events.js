@@ -85,5 +85,19 @@ const { EventInterpreter } = require('../game/engine/event-interpreter');
     }).run();
     assert.deepEqual(effects.map(entry => entry[0]), [230, 250, 356]);
 
+    const actorDatabase = { Actors: require('../game/data/Actors.json'), Classes: require('../game/data/Classes.json') };
+    const actorState = new GameState({ party: [] }, actorDatabase);
+    actorState.addActor(1);
+    const hpBefore = actorState.actor(1).hp;
+    await new EventInterpreter({
+        commands: [
+            { code: 311, indent: 0, parameters: [0, 1, 1, 0, 10, true] },
+            { code: 313, indent: 0, parameters: [0, 1, 0, 5] },
+            { code: 314, indent: 0, parameters: [0, 1] }
+        ], state: actorState
+    }).run();
+    assert.equal(actorState.actor(1).hp, hpBefore);
+    assert.deepEqual(actorState.actor(1).states, []);
+
     console.log('ĐẠT: event interpreter độc lập chạy hội thoại, điều kiện, state và chuyển map.');
 })().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });

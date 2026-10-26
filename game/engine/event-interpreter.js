@@ -73,6 +73,14 @@
             return this.controlItem('weapons', command.parameters || []);
         case 128:
             return this.controlItem('armors', command.parameters || []);
+        case 311:
+            return this.controlActorHp(command.parameters || []);
+        case 312:
+            return this.controlActorMp(command.parameters || []);
+        case 313:
+            return this.controlActorState(command.parameters || []);
+        case 314:
+            return this.controlActorRecover(command.parameters || []);
         case 201:
             return this.transferPlayer(command.parameters || []);
         case 211: case 212: case 213: case 214: case 216: case 217:
@@ -82,7 +90,7 @@
         case 249: case 250: case 251: case 261:
         case 281: case 282: case 283: case 284: case 285:
         case 301: case 302: case 303:
-        case 311: case 312: case 313: case 314: case 315: case 316:
+        case 315: case 316:
         case 317: case 318: case 319: case 320: case 321: case 322: case 323: case 324:
         case 331: case 332: case 333: case 334: case 335: case 336: case 337: case 338:
         case 339: case 340: case 342: case 343: case 344: case 345: case 346:
@@ -106,6 +114,39 @@
 
     EventInterpreter.prototype.effect = async function (command) {
         if (this.handlers.effect) return this.handlers.effect(command.code, command.parameters || [], command, this);
+    };
+
+    EventInterpreter.prototype.operateSigned = function (operation, operandType, operand) {
+        var value = operandType === 0 ? Number(operand) : this.state.variableValue(operand);
+        return operation === 0 ? value : -value;
+    };
+
+    EventInterpreter.prototype.actorTargets = function (parameters) {
+        var selector = parameters[0] === 0 ? parameters[1] : this.state.variableValue(parameters[1]);
+        return selector === 0 ? this.state.party.slice() : [selector];
+    };
+
+    EventInterpreter.prototype.controlActorHp = function (parameters) {
+        var amount = this.operateSigned(parameters[2], parameters[3], parameters[4]);
+        this.actorTargets(parameters).forEach(function (id) {
+            this.state.changeActorHp(id, amount, parameters[5] === true);
+        }, this);
+    };
+
+    EventInterpreter.prototype.controlActorMp = function (parameters) {
+        var amount = this.operateSigned(parameters[2], parameters[3], parameters[4]);
+        this.actorTargets(parameters).forEach(function (id) { this.state.changeActorMp(id, amount); }, this);
+    };
+
+    EventInterpreter.prototype.controlActorState = function (parameters) {
+        var add = parameters[2] === 0;
+        this.actorTargets(parameters).forEach(function (id) {
+            this.state.changeActorState(id, parameters[3], add);
+        }, this);
+    };
+
+    EventInterpreter.prototype.controlActorRecover = function (parameters) {
+        this.actorTargets(parameters).forEach(function (id) { this.state.recoverActor(id); }, this);
     };
 
     EventInterpreter.prototype.showChoices = async function (command) {
