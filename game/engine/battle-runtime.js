@@ -35,7 +35,7 @@
         if (!troop) throw new Error('Không tìm thấy troop ' + troopId);
         this.pendingResult = null;
         this.battle = { troopId: troopId, turn: 0, phase: 'input', canEscape: canEscape !== false,
-            canLose: canLose === true, result: null, actors: this.state.party.map(function (id) {
+            canLose: canLose === true, result: null, actors: this.state.battleActorIds().map(function (id) {
                 var actor = this.state.actor(id); return { id: id, name: actor.name, hp: actor.hp, mp: actor.mp, alive: actor.hp > 0 };
             }, this), enemies: troop.members.map(function (member, index) {
                 var data = this.database.Enemies[member.enemyId];

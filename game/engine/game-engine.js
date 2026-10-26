@@ -602,7 +602,7 @@
 
     GameEngine.prototype.syncBattleActors = function () {
         var state = this.state;
-        this.battle.battle.actors = state.party.map(function (id) {
+        this.battle.battle.actors = state.battleActorIds().map(function (id) {
             var actor = state.actor(id);
             return { id: id, name: actor.name, hp: actor.hp, mp: actor.mp, alive: actor.hp > 0 };
         });

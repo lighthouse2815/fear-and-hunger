@@ -148,6 +148,8 @@ trọng loại trang bị/ô bị khóa. Vật phẩm dùng ngoài trận đọc
 state, học skill và common event từ JSON; Blue vial trả vỏ chai và scroll dạy
 đúng nhân vật được chọn. Khi menu mở, map/di chuyển/timer được tạm dừng.
 Trong trận có thể chọn nhân vật, kỹ năng đã học hoặc Guard, mục tiêu quái/đồng đội.
+Bốn người đầu trong party tham chiến; người dự bị và guest không vào hàng đợi
+hay danh sách mục tiêu. Thay đổi party trong troop page cập nhật lại bốn vị trí.
 Kỹ năng chưa học hoặc thiếu MP/TP bị từ chối trước khi tiêu lượt; log hiện trượt,
 né và sát thương. Chọn lệnh cho từng nhân vật bằng **Chọn đánh**, **Chọn kỹ năng**
 hoặc **Chọn vật phẩm**, xem/sửa/bỏ lệnh trong danh sách rồi bấm **Bắt đầu lượt**.

@@ -17,7 +17,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 1. Combat: action sequence trong sáu nhóm note, WeaponSkill, animation vũ khí,
    phản phép/thế thân, TP khi nhận damage, thoát trận, lượt thêm theo AGI và
-   trigger cuối trận. Đối chiếu phần thưởng và số thành viên tham chiến.
+   trigger cuối trận. Đối chiếu phần thưởng.
    Hiện action effect, số lần lặp, action animation, wait animation, death break,
    motion wait cơ bản và WeaponSkill đã được đối chiếu với 560 skill/item; các
    phase còn lại vẫn cần kiểm tra trực quan theo từng skill có note đặc biệt.
@@ -41,6 +41,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 - Hiệu ứng skill/item thực tế dùng 21/22/43/44; engine đã có luồng tương ứng.
 - 169 map không có encounter ngẫu nhiên. Enemies.json không cấp EXP, gold hoặc
   drop tự động; vật phẩm và tiến trình chiến thắng được xử lý qua sự kiện.
+- Party chỉ đưa bốn người đầu vào trận, đồng bộ sau troop page; người dự bị
+  còn sống không ngăn thất bại khi cả đội tham chiến bị hạ.
 - State 15/22 có modifier `b.hp - 1`; state 22 có animation thêm 22.
 - Follower/guest lưu vị trí, đuổi người phía trước, chặn event khi đang hiện;
   lệnh 217 chờ tập hợp, chuyển map/nhảy đặt lại vị trí. Không đưa guest vào combat.

@@ -170,9 +170,11 @@
     };
     GameState.prototype.hasGuestActor = function (id) { return this.guests.includes(id); };
 
+    GameState.prototype.battleActorIds = function () { return this.party.slice(0, 4); };
+
     GameState.prototype.followers = function (reset) {
         var state = this, positions = this.followerPositions;
-        this.followerPositions = this.party.slice(1, 4).concat(this.guests).map(function (id) {
+        this.followerPositions = this.battleActorIds().slice(1).concat(this.guests).map(function (id) {
             var position = !reset && positions.find(function (entry) { return entry.id === id; });
             return position || { id: id, x: state.x, y: state.y, direction: state.direction };
         });
