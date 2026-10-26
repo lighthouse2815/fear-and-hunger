@@ -73,8 +73,8 @@
         if (frame !== this.frame) return;
         var cols = Math.ceil(this.canvas.width / TILE_SIZE);
         var rows = Math.ceil(this.canvas.height / TILE_SIZE);
-        var startX = Math.max(0, Math.min(map.width - cols, state.x - Math.floor(cols / 2)));
-        var startY = Math.max(0, Math.min(map.height - rows, state.y - Math.floor(rows / 2)));
+        var viewport = map.viewport(state, this.canvas.width, this.canvas.height);
+        var startX = viewport.startX, startY = viewport.startY;
         var context = this.context;
         context.fillStyle = '#080706';
         context.fillRect(0, 0, this.canvas.width, this.canvas.height);

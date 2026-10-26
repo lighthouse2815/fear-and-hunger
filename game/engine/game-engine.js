@@ -28,6 +28,8 @@
         this.onRouteEffect = options.onRouteEffect || null;
         this.screen = null;
         this.buttons = new Set();
+        this.width = options.width || 816;
+        this.height = options.height || 624;
     }
 
     GameEngine.prototype.boot = async function (initialState) {
@@ -195,6 +197,12 @@
         return this.createInterpreter(common.list, 0, handlers, signal);
     };
 
+    GameEngine.prototype.characterFor = function (id, interpreter) {
+        if (id < 0) return this.state;
+        if (this.map.id !== interpreter.mapId) return null;
+        return this.map.eventById(id === 0 ? interpreter.eventId : id);
+    };
+
     GameEngine.prototype.createInterpreter = function (commands, eventId, handlers, signal) {
         var engine = this;
         var eventHandlers = Object.assign({}, handlers || {});
@@ -202,12 +210,29 @@
             if (text == null) engine.screen.clearGabs();
             else engine.screen.showGab(text);
         };
+        var gameData = eventHandlers.gameData;
+        eventHandlers.gameData = function (type, id, field, interpreter) {
+            if (type === 5 && field >= 0 && field <= 4) {
+                var character = engine.characterFor(id, interpreter);
+                if (!character) return 0;
+                if (field === 0) return character.x;
+                if (field === 1) return character.y;
+                if (field === 2) return character.direction;
+                var viewport = engine.map.viewport(engine.state, engine.width, engine.height);
+                if (field === 3) return Math.round((character.x - viewport.startX + 0.5) * 48);
+                var actor = character === engine.state && engine.state.actor(engine.state.party[0] || 1);
+                var name = character.characterName == null && actor ? actor.characterName : character.characterName;
+                var prefix = /^[!$]+/.exec(name || '');
+                return Math.round((character.y - viewport.startY + 1) * 48) - (prefix && prefix[0].includes('!') ? 0 : 6);
+            }
+            if (gameData) return gameData(type, id, field, interpreter);
+            throw new Error('Chưa hỗ trợ dữ liệu sự kiện: ' + [type, id, field].join(','));
+        };
         var condition = eventHandlers.condition;
         eventHandlers.condition = function (parameters, interpreter) {
             if (parameters[0] === 11) return engine.buttons.has(parameters[1]);
             if (parameters[0] === 6) {
-                var characterId = parameters[1] === 0 ? interpreter.eventId : parameters[1];
-                var character = characterId === -1 ? engine.state : engine.map.id === interpreter.mapId ? engine.map.eventById(characterId) : null;
+                var character = engine.characterFor(parameters[1], interpreter);
                 return !!character && character.direction === parameters[2];
             }
             if (parameters[0] === 13) return engine.state.vehicleId === parameters[1];
@@ -216,7 +241,7 @@
         };
         eventHandlers.script = function (source, interpreter) {
             return scriptApi.executeScript(source, { state: engine.state,
-                character: engine.map.id === interpreter.mapId ? engine.map.eventById(interpreter.eventId) : null,
+                character: engine.characterFor(0, interpreter),
                 refresh: function () { delete engine.state.characterName; delete engine.state.characterIndex; } });
         };
         var transfer = eventHandlers.transfer;
@@ -264,7 +289,7 @@
     GameEngine.prototype.setEventLocation = function (parameters, interpreter) {
         var id = parameters[0] === 0 ? interpreter.eventId : parameters[0];
         if (id >= 0 && this.map.id !== interpreter.mapId) return;
-        var character = id < 0 ? this.state : this.map.eventById(id);
+        var character = this.characterFor(parameters[0], interpreter);
         if (!character) return;
         var engine = this;
         function locate(targetId, x, y, direction) {
@@ -287,8 +312,7 @@
     };
 
     GameEngine.prototype.applyRoute = function (parameters, interpreter) {
-        var id = parameters[0] === 0 ? interpreter.eventId : parameters[0];
-        var character = id === -1 ? this.state : this.map.id === interpreter.mapId ? this.map.eventById(id) : null;
+        var character = this.characterFor(parameters[0], interpreter);
         var job = this.movement.start(character, parameters[1]);
         if (parameters[1].wait) return job.done;
         var engine = this;

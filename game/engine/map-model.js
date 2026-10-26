@@ -22,7 +22,7 @@
         this.height = data.height;
         this.events = (data.events || []).filter(Boolean).map(function (event) {
             var location = state && state.eventLocations && state.eventLocations[this.id + ',' + event.id];
-            return Object.assign({}, event, location && { x: location.x, y: location.y, direction: location.direction });
+            return Object.assign({ direction: 2 }, event, location && { x: location.x, y: location.y, direction: location.direction });
         }, this);
         this.events.forEach(function (event) {
             var page = this.eventPage(event);
@@ -52,6 +52,14 @@
 
     GameMap.prototype.regionId = function (x, y) {
         return this.tileId(x, y, 5);
+    };
+
+    GameMap.prototype.viewport = function (player, width, height) {
+        var cols = Math.ceil(width / 48), rows = Math.ceil(height / 48);
+        return {
+            startX: Math.max(0, Math.min(this.width - cols, player.x - Math.floor(cols / 2))),
+            startY: Math.max(0, Math.min(this.height - rows, player.y - Math.floor(rows / 2)))
+        };
     };
 
     GameMap.prototype.eventAt = function (x, y) {

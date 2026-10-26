@@ -990,6 +990,14 @@ async function main() {
             const state = FNHStandalonePreview.engine.state;
             return state.x === 16 && state.y === 5 && state.characterName === '$guard1' && state.opacity === 128 && !state.through;
         })()`, false, false));
+        check('lệnh tọa độ đọc vị trí thật của người chơi và sự kiện', await evalPage(cdp, `(async () => {
+            const engine = FNHStandalonePreview.engine;
+            await engine.createInterpreter([
+                { code: 122, parameters: [5005,5005,0,3,5,-1,0] },
+                { code: 122, parameters: [5006,5006,0,3,5,102,1] }
+            ], 39).run();
+            return engine.state.variableValue(5005) === engine.state.x && engine.state.variableValue(5006) === engine.map.eventById(102).y;
+        })()`, true, false));
         check('lệnh nhân vật chạy bằng interpreter mới trên Chrome', await evalPage(cdp, `(async () => {
             const state = FNHStandalonePreview.engine.state;
             await new FNHStandaloneEvents.EventInterpreter({ state, commands: [
