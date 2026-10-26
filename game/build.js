@@ -4,7 +4,7 @@ const path = require('node:path');
 const { buildIndexHtml, findGameRoot } = require('./server');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
-const CONTENT = ['index.html', 'audio', 'data', 'engine', 'fonts', 'icon', 'img', 'js', 'movies', 'NOTICE.md'];
+const CONTENT = ['index.html', 'audio', 'data', 'engine', 'fonts', 'icon', 'img', 'js', 'movies', 'NOTICE.md', 'standalone.html'];
 const MARKER = 'web-build.json';
 const FORMAT = 'fear-and-hunger-web';
 
@@ -39,7 +39,7 @@ async function buildWeb(options = {}) {
             if (options.onProgress) options.onProgress(entry);
             const sourcePath = path.join(source, entry);
             try { await fs.access(sourcePath); } catch (error) {
-                if (entry === 'engine' || entry === 'icon' || entry === 'movies' || entry === 'NOTICE.md') continue;
+                if (entry === 'engine' || entry === 'icon' || entry === 'movies' || entry === 'NOTICE.md' || entry === 'standalone.html') continue;
                 throw new Error('Thiếu tài nguyên nguồn: ' + entry);
             }
             await fs.cp(sourcePath, path.join(staging, entry), {
