@@ -391,7 +391,7 @@ async function main() {
         await sleep(800);
 
         // Menu phải xuất hiện trước bất kỳ tương tác nào; không dựa vào query bỏ intro.
-        await waitFor(cdp, 'window.SceneManager && SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()', 60000, 'menu tự xuất hiện');
+        await waitFor(cdp, 'window.SceneManager && typeof Scene_Title === "function" && SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()', 60000, 'menu tự xuất hiện');
         await waitFor(cdp, 'DataManager.isDatabaseLoaded()', 10000, 'nạp database');
         await waitFor(cdp, 'SceneManager._scene._commandWindow.isOpen() && SceneManager._scene._commandWindow.active',
             10000, 'menu mở xong trước tương tác');
@@ -834,7 +834,7 @@ async function main() {
         // ---------------------------------------------------------
         await cdp.send('Page.navigate', { url: url });
         await sleep(800);
-        await waitFor(cdp, 'window.SceneManager && SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()', 60000, 'menu tự xuất hiện sau tải lại');
+        await waitFor(cdp, 'window.SceneManager && typeof Scene_Title === "function" && SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()', 60000, 'menu tự xuất hiện sau tải lại');
         check('âm lượng được giữ sau khi tải lại trang', await evalPage(cdp,
             'Object.entries(' + JSON.stringify(audioSettings) + ').every(([key, value]) => ConfigManager[key] === value)', false, false));
         check('tải lại vào thẳng menu mà không hiện nút bắt đầu', await evalPage(
@@ -886,7 +886,7 @@ async function main() {
         });
         await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
         await cdp.send('Page.navigate', { url: url });
-        await waitFor(cdp, 'window.SceneManager && SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()', 60000, 'menu trên điện thoại');
+        await waitFor(cdp, 'window.SceneManager && typeof Scene_Title === "function" && SceneManager._scene instanceof Scene_Title && SceneManager.isCurrentSceneStarted()', 60000, 'menu trên điện thoại');
         await sendAudioGesture(cdp, 'pointer');
         await waitFor(cdp, 'FNHBrowser.audioState() === "running" && AudioManager._bgmBuffer && AudioManager._bgmBuffer.isPlaying()', 20000, 'nhạc trên điện thoại');
         check('điện thoại tải và phát OGG có trong dự án', await evalPage(cdp,
