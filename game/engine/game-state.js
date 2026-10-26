@@ -50,6 +50,9 @@
         this.animations = source.animations || [];
         this.regionCover = source.regionCover || { enabled: false, open: [0] };
         this.achievements = Object.assign({}, source.achievements);
+        this.followersVisible = source.followersVisible !== false;
+        this.followersGathering = source.followersGathering === true;
+        this.vehicleBgm = source.vehicleBgm || null;
         if (!Array.isArray(this.regionCover.open)) this.regionCover.open = [0];
         this.mapTileset = source.mapTileset || null;
         this.timer = source.timer || { active: false, frames: 0 };
@@ -266,6 +269,7 @@
             animations: this.animations,
             regionCover: this.regionCover,
             achievements: this.achievements,
+            followersVisible: this.followersVisible, followersGathering: this.followersGathering, vehicleBgm: this.vehicleBgm,
             timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
             wordWrap: this.wordWrap, pendingChoices: this.pendingChoices,
             dashEnabled: this.dashEnabled,

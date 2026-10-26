@@ -109,6 +109,15 @@
         case 132:
             this.state.battleBgm = Object.assign({}, command.parameters[0]);
             return;
+        case 204:
+            this.state.vehicleBgm = command.parameters[0] ? Object.assign({}, command.parameters[1]) : null;
+            return;
+        case 216:
+            this.state.followersVisible = command.parameters[0] !== 0;
+            return;
+        case 217:
+            this.state.followersGathering = true;
+            return;
         case 134: case 135:
             this.state[command.code === 134 ? 'saveEnabled' : 'menuEnabled'] = command.parameters[0] !== 0;
             return;
@@ -152,7 +161,7 @@
         case 323:
         case 331: case 332: case 333: case 334: case 335: case 336: case 337: case 338:
         case 339: case 340: case 342: case 343: case 344: case 345: case 346:
-        case 351: case 352: case 353: case 354:
+        case 204: case 216: case 217: case 351: case 352: case 353: case 354:
             return this.effect(command);
         case 355:
             if (!this.handlers.script) return this.unsupported(command);

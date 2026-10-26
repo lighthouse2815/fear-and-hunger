@@ -295,6 +295,9 @@
             if (code === 203) { engine.setEventLocation(parameters, interpreter); return true; }
             if (code === 205) return engine.applyRoute(parameters, interpreter);
             if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }
+            if (code === 204) { engine.state.vehicleBgm = parameters[0] ? Object.assign({}, parameters[1]) : null; return true; }
+            if (code === 216) { engine.state.followersVisible = parameters[0] !== 0; return true; }
+            if (code === 217) { engine.state.followersGathering = true; return true; }
             if (code === 212) {
                 var animated = engine.characterFor(parameters[0], interpreter);
                 if (!animated) return true;
