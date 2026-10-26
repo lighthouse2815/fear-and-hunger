@@ -75,6 +75,19 @@
             return this.controlItem('armors', command.parameters || []);
         case 201:
             return this.transferPlayer(command.parameters || []);
+        case 211: case 212: case 213: case 214: case 216: case 217:
+        case 221: case 222: case 223: case 224: case 225: case 226: case 230:
+        case 231: case 232: case 233: case 234: case 235: case 236:
+        case 241: case 242: case 243: case 244: case 245: case 246:
+        case 249: case 250: case 251: case 261:
+        case 281: case 282: case 283: case 284: case 285:
+        case 301: case 302: case 303:
+        case 311: case 312: case 313: case 314: case 315: case 316:
+        case 317: case 318: case 319: case 320: case 321: case 322: case 323: case 324:
+        case 331: case 332: case 333: case 334: case 335: case 336: case 337: case 338:
+        case 339: case 340: case 342: case 343: case 344: case 345: case 346:
+        case 351: case 352: case 353: case 354: case 356:
+            return this.effect(command);
         case 355: case 655:
             if (this.handlers.script) return this.handlers.script(command.parameters && command.parameters[0], this);
             return;
@@ -89,6 +102,10 @@
             lines.push(this.commands[this.index++].parameters[0] || '');
         }
         if (this.handlers.message) await this.handlers.message(lines.join('\n'), command.parameters || [], this);
+    };
+
+    EventInterpreter.prototype.effect = async function (command) {
+        if (this.handlers.effect) return this.handlers.effect(command.code, command.parameters || [], command, this);
     };
 
     EventInterpreter.prototype.showChoices = async function (command) {

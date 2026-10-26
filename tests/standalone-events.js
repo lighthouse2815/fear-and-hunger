@@ -74,5 +74,16 @@ const { EventInterpreter } = require('../game/engine/event-interpreter');
     await choices.run();
     assert.deepEqual(choiceMessages, ['đã chọn B']);
 
+    const effects = [];
+    await new EventInterpreter({
+        commands: [
+            { code: 230, indent: 0, parameters: [12] },
+            { code: 250, indent: 0, parameters: [{ name: 'door', volume: 90, pitch: 100, pan: 0 }] },
+            { code: 356, indent: 0, parameters: ['Custom command'] }
+        ], state: new GameState(),
+        handlers: { effect: (code, parameters) => effects.push([code, parameters]) }
+    }).run();
+    assert.deepEqual(effects.map(entry => entry[0]), [230, 250, 356]);
+
     console.log('ĐẠT: event interpreter độc lập chạy hội thoại, điều kiện, state và chuyển map.');
 })().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });
