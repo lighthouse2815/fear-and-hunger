@@ -45,6 +45,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 - State 15/22 có modifier `b.hp - 1`; state 22 có animation thêm 22.
 - Follower/guest lưu vị trí, đuổi người phía trước, chặn event khi đang hiện;
   lệnh 217 chờ tập hợp, chuyển map/nhảy đặt lại vị trí. Không đưa guest vào combat.
+- 1.533 page có comment `<follower touch>`: quái chạm follower đang hiện chạy
+  sự kiện qua scheduler, không xếp trùng và không kích hoạt khi follower ẩn.
 - Audio đọc pan JSON qua StereoPannerNode; giữ volume/pitch/fade và giải phóng
   graph khi dừng. Chrome đo năng lượng trái/phải từ OGG thật, tắt đầu ra loa test.
 - Menu lưu/tải 20 ô, thông tin checkpoint và đọc ô được chọn từ game over/title;

@@ -218,6 +218,8 @@ Party giữ guest actor riêng với đội chiến đấu; script `addGuestActo
 đi theo vị trí người phía trước qua góc rẽ, không dời theo hướng nhìn. Lệnh 217
 chờ cả nhóm tập hợp; ẩn follower bỏ va chạm với event. Save giữ vị trí và tiến
 trình tập hợp; chuyển map đặt cả nhóm ở ô đích. Guest không vào menu hay hàng đợi chiến đấu.
+Quái trigger 2 có comment `<follower touch>` cũng chạy sự kiện khi chạm đồng đội
+đang hiện, dùng cùng scheduler và khóa sự kiện như khi chạm nhân vật dẫn đầu.
 Chơi mới mở luồng chọn nhân vật độc lập từ Map010. Tải save trở lại map và tiếp
 tục scheduler; ô lưu trống được báo ngay trên giao diện.
 Tải map/save lỗi giữ map và trạng thái hiện tại nhất quán.

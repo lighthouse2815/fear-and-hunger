@@ -279,16 +279,19 @@
                 (this.map.isPassable(character.x, character.y, direction) && this.map.isPassable(x, character.y, vertical)) ||
                 (this.map.isPassable(character.x, character.y, vertical) && this.map.isPassable(character.x, y, direction)) :
                 this.map.isPassable(character.x, character.y, direction);
-            if (!passable || this.map.eventBlocks(x, y, character.id)) return false;
             var playerHit = this.state.x === x && this.state.y === y;
             var followerHit = this.state.followersVisible && this.state.followers().some(function (entry) { return entry.x === x && entry.y === y; });
             if (character !== this.state && character.priorityType === 1 && (playerHit || followerHit)) {
                 var page = this.map.eventPage(character);
-                if (playerHit && !this.eventRunning && page && page.trigger === 2 && !this.pendingTouchEvents.some(function (entry) { return entry.event === character; })) {
+                var touch = playerHit || page && page.list.some(function (command) {
+                    return command.code === 108 && String(command.parameters[0]).indexOf('<follower touch>') !== -1;
+                });
+                if (touch && !this.eventRunning && page && page.trigger === 2 && !this.pendingTouchEvents.some(function (entry) { return entry.event === character; })) {
                     this.pendingTouchEvents.push({ map: this.map, event: character, page: page });
                 }
                 return false;
             }
+            if (!passable || this.map.eventBlocks(x, y, character.id)) return false;
         }
         var dx = x - character.x, dy = y - character.y;
         if (character === this.state) this.followPlayer();
