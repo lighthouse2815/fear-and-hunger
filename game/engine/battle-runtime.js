@@ -5,6 +5,23 @@
     else root.FNHStandaloneBattle = factory();
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     function clone(value) { return JSON.parse(JSON.stringify(value)); }
+    function formulaValue(formula, values) {
+        var source = String(formula || '0').replace(/\b(a|b)\.(atk|def|mat|mdf|agi|luk|level|hp|mp)\b/g, function (_, who, key) {
+            return String(values[who][key] || 0);
+        });
+        if (!/^[0-9+*/().\s-]+$/.test(source)) throw new Error('Công thức damage chưa hỗ trợ: ' + formula);
+        var tokens = source.match(/\d+(?:\.\d+)?|[()+*/-]/g) || [], output = [], operators = [], precedence = {'+':1,'-':1,'*':2,'/':2};
+        tokens.forEach(function (token) {
+            if (/^\d/.test(token)) output.push(Number(token));
+            else if (token === '(') operators.push(token);
+            else if (token === ')') { while (operators.length && operators[operators.length - 1] !== '(') output.push(operators.pop()); operators.pop(); }
+            else { while (operators.length && operators[operators.length - 1] !== '(' && precedence[operators[operators.length - 1]] >= precedence[token]) output.push(operators.pop()); operators.push(token); }
+        });
+        while (operators.length) output.push(operators.pop());
+        var stack = [];
+        output.forEach(function (token) { if (typeof token === 'number') stack.push(token); else { var right = stack.pop(), left = stack.pop(); stack.push(token === '+' ? left + right : token === '-' ? left - right : token === '*' ? left * right : right === 0 ? 0 : left / right); } });
+        return Number(stack[0]) || 0;
+    }
     function BattleRuntime(state, database, random) {
         this.state = state; this.database = database; this.random = random || Math.random;
         this.battle = state.battle || null;
@@ -37,8 +54,11 @@
         if (!this.battle || this.battle.result) throw new Error('Trận chiến không hoạt động.');
         var actorState = this.state.actor(actorId), actor = this.actor(actorId), enemy = this.enemy(enemyIndex);
         if (!actor || !actorState || !enemy || !enemy.alive) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
-        var skill = skillId ? this.database.Skills[skillId] : null;
-        var attack = this.state.actorParam(actorId, 2), power = skill && skill.damage ? Number(skill.damage.formula) || 0 : attack;
+        var skill = skillId ? this.database.Skills[skillId] : this.database.Skills[1];
+        if (!skill) throw new Error('Không tìm thấy skill ' + skillId);
+        var attack = this.state.actorParam(actorId, 2), actorValues = { atk: attack, def: this.state.actorParam(actorId, 3), mat: this.state.actorParam(actorId, 4), mdf: this.state.actorParam(actorId, 5), agi: this.state.actorParam(actorId, 6), luk: this.state.actorParam(actorId, 7), level: actorState.level, hp: actorState.hp, mp: actorState.mp };
+        var enemyData = this.database.Enemies[enemy.enemyId], enemyValues = { atk: enemyData.params[2] || 0, def: enemyData.params[3] || 0, mat: enemyData.params[4] || 0, mdf: enemyData.params[5] || 0, agi: enemyData.params[6] || 0, luk: enemyData.params[7] || 0, level: 1, hp: enemy.hp, mp: enemy.mp };
+        var power = formulaValue(skill && skill.damage ? skill.damage.formula : 'a.atk', { a: actorValues, b: enemyValues });
         var defense = this.database.Enemies[enemy.enemyId].params[3] || 0;
         var damage = Math.max(1, Math.round(power - defense / 2));
         enemy.hp = Math.max(0, enemy.hp - damage); enemy.alive = enemy.hp > 0;
