@@ -955,7 +955,7 @@ async function main() {
         await evalPage(cdp, 'localStorage.removeItem("FNH_STANDALONE_PREVIEW:1")', false, false);
         await evalPage(cdp, `FNHStandalonePreview.engine.restore(Object.assign(FNHStandalonePreview.engine.save(), {
             mapId: 74, x: 15, y: 5, direction: 8
-        }))`, true, false);
+        })).then(() => true)`, true, false);
         await clickElement(cdp, '#fnh-controls [data-direction="8"]');
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.mapId === 1 && document.querySelector("#fnh-status").textContent.startsWith("Map 1 ·")',
             15000, 'bước qua cửa thật bằng nút lên của preview');
@@ -1002,6 +1002,29 @@ async function main() {
             return actor.skills.includes(40) && actor.name === 'Người sống sót' &&
                 actor.characterName === 'mercenary' && state.actorParam(1, 2) === 62;
         })()`, true, false));
+        check('picture engine mới vẽ đúng asset và gốc tọa độ', await evalPage(cdp, `(async () => {
+            const canvas = document.createElement('canvas');
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas);
+            const bitmap = await renderer.loadImage('img/pictures/Actor1_1.png');
+            renderer.drawPicture({ bitmap, picture: { x: 200, y: 180, scaleX: 50, scaleY: 50,
+                origin: 1, opacity: 128, angle: 0, blendMode: 0, tone: { red: 0, green: 0, blue: 0, gray: 0 } } });
+            const reference = document.createElement('canvas'); reference.width = 816; reference.height = 624;
+            const context = reference.getContext('2d'); context.imageSmoothingEnabled = false;
+            context.globalAlpha = 128 / 255;
+            context.drawImage(bitmap, 200 - bitmap.width / 4, 180 - bitmap.height / 4, bitmap.width / 2, bitmap.height / 2);
+            const actual = canvas.getContext('2d').getImageData(0, 0, 816, 624).data;
+            const expected = context.getImageData(0, 0, 816, 624).data;
+            return actual.every((value, index) => value === expected[index]);
+        })()`, true, false));
+        await evalPage(cdp, 'FNHStandalonePreview.engine.screen.handleEffect(223, [[-255,-255,-255,0], 3, true])', true, false);
+        await waitFor(cdp, `(() => {
+            const canvas = document.querySelector('#fnh-canvas');
+            const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+            return pixels.every((value, index) => index % 4 === 3 ? value === 255 : value === 0);
+        })()`, 5000, 'tint màn hình chạy theo frame và vẽ màu đen');
+        check('hiệu ứng màn hình mới chạy trên Canvas thật', await evalPage(cdp,
+            'FNHStandalonePreview.engine.screen.screen.tone.red === -255', false, false));
+        await evalPage(cdp, 'FNHStandalonePreview.engine.screen.handleEffect(223, [[0,0,0,0], 0, false])', false, false);
         // Chạy các lệnh audio dữ liệu bằng interpreter mới, không dùng AudioManager MV.
         await evalPage(cdp, `new FNHStandaloneEvents.EventInterpreter({
             state: FNHStandalonePreview.engine.state,

@@ -81,18 +81,19 @@
         }
     };
     engine.onRouteEffect = eventHandlers.effect;
-    var previousFrame = performance.now(), drawing = false;
+    var previousFrame = performance.now(), drawing = false, screenRevision = -1;
     function animate(now) {
         var frames = Math.min(6, Math.max(0, (now - previousFrame) * 60 / 1000));
         previousFrame = now;
         if (ready) {
             try {
-                var active = engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
+                var active = screenRevision !== engine.screen.revision || engine.screen.active() || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
                     return character.stepAnime || character.moveFrames > 0;
                 });
                 engine.advanceRoutes(frames);
                 if (active && !drawing) {
                     drawing = true;
+                    screenRevision = engine.screen.revision;
                     renderer.draw(engine).catch(function (error) { setStatus(error.message); })
                         .finally(function () { drawing = false; });
                 }

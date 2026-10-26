@@ -5,15 +5,15 @@
     if (typeof module === 'object' && module.exports) {
         module.exports = factory(
             require('./data-store'), require('./game-state'),
-            require('./map-model'), require('./event-interpreter'), require('./script-runtime'), require('./movement-runtime')
+            require('./map-model'), require('./event-interpreter'), require('./script-runtime'), require('./movement-runtime'), require('./screen-runtime')
         );
     } else {
         root.FNHStandaloneEngine = factory(
             root.FNHStandaloneData, root.FNHStandaloneState,
-            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts, root.FNHStandaloneMovement
+            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts, root.FNHStandaloneMovement, root.FNHStandaloneScreen
         );
     }
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi) {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi, screenApi) {
     function GameEngine(options) {
         options = options || {};
         this.dataStore = options.dataStore || new dataApi.GameDataStore({ baseUrl: options.baseUrl || '' });
@@ -26,6 +26,7 @@
         this.movement = null;
         this.routeErrors = [];
         this.onRouteEffect = options.onRouteEffect || null;
+        this.screen = null;
     }
 
     GameEngine.prototype.boot = async function (initialState) {
@@ -39,6 +40,7 @@
             party: []
         };
         this.state = new stateApi.GameState(state, this.database);
+        this.screen = new screenApi.ScreenRuntime(this.state);
         this.state.party.slice().forEach(function (actorId) {
             if (!this.state.actor(actorId) && this.database.Actors[actorId]) this.state.addActor(actorId);
         }, this);
@@ -48,7 +50,8 @@
 
     GameEngine.prototype.prepareMap = async function (mapId, state) {
         var data = await this.dataStore.loadMap(mapId);
-        return new mapApi.GameMap(Object.assign({}, data, { id: mapId }), this.database.Tilesets[data.tilesetId], state);
+        var tilesetId = state.mapTileset && state.mapTileset.mapId === mapId ? state.mapTileset.tilesetId : data.tilesetId;
+        return new mapApi.GameMap(Object.assign({}, data, { id: mapId }), this.database.Tilesets[tilesetId], state);
     };
 
     GameEngine.prototype.loadMap = async function (mapId, destination) {
@@ -111,6 +114,7 @@
             character.moveFrames = Math.max(0, (character.moveFrames || 0) - frames);
         });
         if (this.movement) this.movement.advance(frames);
+        if (this.screen) this.screen.advance(frames);
     };
 
     GameEngine.prototype.moveCharacter = function (character, direction, vertical, backward) {
@@ -197,6 +201,16 @@
         eventHandlers.effect = function (code, parameters, command, interpreter) {
             if (code === 203) { engine.setEventLocation(parameters, interpreter); return true; }
             if (code === 205) return engine.applyRoute(parameters, interpreter);
+            if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }
+            if (code === 282) {
+                var tileset = engine.database.Tilesets[parameters[0]];
+                if (!tileset) throw new Error('Không tìm thấy tileset ' + parameters[0]);
+                engine.map.tileset = tileset;
+                engine.state.mapTileset = { mapId: engine.map.id, tilesetId: parameters[0] };
+                return true;
+            }
+            var screenResult = engine.screen.handleEffect(code, parameters);
+            if (screenResult !== false) return screenResult;
             return effect ? effect(code, parameters, command, interpreter) : false;
         };
         this.eventRunning = true;
@@ -270,6 +284,8 @@
         var map = await this.prepareMap(state.mapId, state);
         if (!map.isValid(state.x, state.y) || !mapApi.DIRECTION_BITS[state.direction]) throw new Error('Vị trí trong save không hợp lệ.');
         this.state = state;
+        if (this.screen) this.screen.dispose();
+        this.screen = new screenApi.ScreenRuntime(state);
         if (this.movement) this.movement.clear();
         this.map = map;
         this.resetMovement(state.routeSnapshots);

@@ -40,6 +40,13 @@
         var map = engine.map, state = engine.state;
         if (!map || !state) return;
         var frame = ++this.frame;
+        var screen = engine.screen && engine.screen.screen;
+        var parallaxName = screen && screen.parallax ? screen.parallax.name : map.data.parallaxName;
+        var parallax = parallaxName ? await this.loadImage('img/parallaxes/' + parallaxName + '.png') : null;
+        var pictures = screen ? await Promise.all(Object.keys(screen.pictures).sort(function (a, b) { return a - b; }).map(async function (id) {
+            var picture = screen.pictures[id];
+            return { picture: picture, bitmap: picture.name ? await this.loadImage('img/pictures/' + picture.name + '.png') : null };
+        }, this)) : [];
         var names = map.tileset.tilesetNames || [];
         var sheets = await Promise.all(names.map(function (name) {
             return name ? this.loadImage('img/tilesets/' + name + '.png') : null;
@@ -71,6 +78,10 @@
         var context = this.context;
         context.fillStyle = '#080706';
         context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        context.save();
+        var shake = screen && screen.shake;
+        if (shake && shake.remaining > 0) context.translate(Math.sin(shake.phase * shake.speed / 10) * shake.power * 2, 0);
+        if (parallax) context.drawImage(parallax, -startX * TILE_SIZE, -startY * TILE_SIZE);
         var upper = [], renderer = this;
         for (var y = startY; y < Math.min(map.height, startY + rows); y += 1) {
             for (var x = startX; x < Math.min(map.width, startX + cols); x += 1) {
@@ -89,6 +100,21 @@
         actors.forEach(function (entry) {
             if (entry.priority === 2) renderer.drawActor(sheets, entry, startX, startY);
         });
+        this.drawWeather(screen && screen.weather);
+        pictures.forEach(function (entry) { renderer.drawPicture(entry); });
+        context.restore();
+        if (screen) {
+            this.applyTone(context, this.canvas.width, this.canvas.height, screen.tone);
+            if (screen.brightness < 255) {
+                context.fillStyle = 'rgba(0,0,0,' + (1 - screen.brightness / 255) + ')';
+                context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+            var flash = screen.flash;
+            if (flash.opacity > 0) {
+                context.fillStyle = 'rgba(' + [flash.red, flash.green, flash.blue, flash.opacity / 255].join(',') + ')';
+                context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
         return { startX: startX, startY: startY };
     };
 
@@ -117,6 +143,56 @@
         var interval = Math.max(1, (9 - (character.moveSpeed == null ? 4 : character.moveSpeed)) * 3);
         return [0, 1, 2, 1][Math.floor(character.animationFrames / interval) % 4];
     }
+
+    CanvasRenderer.prototype.applyTone = function (context, width, height, tone) {
+        if (!tone || !(tone.red || tone.green || tone.blue || tone.gray)) return;
+        var image = context.getImageData(0, 0, width, height), pixels = image.data;
+        var gray = tone.gray / 255;
+        for (var i = 0; i < pixels.length; i += 4) {
+            var luminance = (pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114) * gray;
+            pixels[i] = pixels[i] * (1 - gray) + luminance + tone.red;
+            pixels[i + 1] = pixels[i + 1] * (1 - gray) + luminance + tone.green;
+            pixels[i + 2] = pixels[i + 2] * (1 - gray) + luminance + tone.blue;
+        }
+        context.putImageData(image, 0, 0);
+    };
+
+    CanvasRenderer.prototype.drawPicture = function (entry) {
+        var picture = entry.picture, bitmap = entry.bitmap;
+        if (!bitmap || picture.opacity <= 0) return;
+        if (picture.tone && Object.values(picture.tone).some(function (value) { return value !== 0; })) {
+            if (!this.pictureCanvas) this.pictureCanvas = document.createElement('canvas');
+            this.pictureCanvas.width = bitmap.width; this.pictureCanvas.height = bitmap.height;
+            var tintContext = this.pictureCanvas.getContext('2d', { willReadFrequently: true });
+            tintContext.drawImage(bitmap, 0, 0);
+            this.applyTone(tintContext, bitmap.width, bitmap.height, picture.tone);
+            bitmap = this.pictureCanvas;
+        }
+        var context = this.context;
+        context.save();
+        context.globalAlpha = Math.max(0, Math.min(1, picture.opacity / 255));
+        context.globalCompositeOperation = ['source-over', 'lighter', 'multiply', 'screen'][picture.blendMode] || 'source-over';
+        context.translate(picture.x, picture.y);
+        context.rotate(picture.angle * Math.PI / 180);
+        context.scale(picture.scaleX / 100, picture.scaleY / 100);
+        context.drawImage(bitmap, picture.origin === 1 ? -bitmap.width / 2 : 0, picture.origin === 1 ? -bitmap.height / 2 : 0);
+        context.restore();
+    };
+
+    CanvasRenderer.prototype.drawWeather = function (weather) {
+        if (!weather || weather.power <= 0) return;
+        var context = this.context, width = this.canvas.width, height = this.canvas.height;
+        context.save();
+        context.strokeStyle = '#b7c5d2'; context.fillStyle = '#fff'; context.globalAlpha = 0.55;
+        var count = Math.ceil(weather.power * 10), time = weather.time;
+        for (var i = 0; i < count; i++) {
+            var x = ((i * 149 + (weather.type === 'snow' ? Math.sin(time / 80 + i) * 20 : -time * 2)) % (width + 40) + width + 40) % (width + 40) - 20;
+            var y = ((i * 83 + time * (weather.type === 'snow' ? 2 : 12)) % (height + 40)) - 20;
+            if (weather.type === 'snow') { context.beginPath(); context.arc(x, y, 3, 0, Math.PI * 2); context.fill(); }
+            else { context.lineWidth = weather.type === 'storm' ? 2 : 1; context.beginPath(); context.moveTo(x, y); context.lineTo(x - 5, y + 18); context.stroke(); }
+        }
+        context.restore();
+    };
 
     CanvasRenderer.prototype.drawActor = function (sheets, actor, startX, startY) {
         if (actor.transparent) return;

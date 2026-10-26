@@ -44,6 +44,8 @@
         this.touchEnabled = source.touchEnabled !== false;
         this.eventSnapshots = Object.assign({}, source.eventSnapshots);
         this.routeSnapshots = Array.isArray(source.routeSnapshots) ? source.routeSnapshots : [];
+        this.screen = source.screen || null;
+        this.mapTileset = source.mapTileset || null;
         ['characterName', 'characterIndex', 'transparent', 'opacity', 'blendMode', 'moveSpeed', 'moveFrequency', 'walkAnime', 'stepAnime', 'moveFrames', 'animationFrames'].forEach(function (key) {
             if (source[key] !== undefined) this[key] = source[key];
         }, this);
@@ -245,6 +247,7 @@
             touchEnabled: this.touchEnabled,
             eventSnapshots: this.eventSnapshots,
             routeSnapshots: this.routeSnapshots,
+            screen: this.screen, mapTileset: this.mapTileset,
             characterName: this.characterName, characterIndex: this.characterIndex,
             transparent: this.transparent, opacity: this.opacity, blendMode: this.blendMode,
             moveSpeed: this.moveSpeed, moveFrequency: this.moveFrequency, walkAnime: this.walkAnime, stepAnime: this.stepAnime,

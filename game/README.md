@@ -48,6 +48,10 @@ Interpreter cũng chạy các lệnh EXP/level, chỉ số, học/quên kỹ nă
 tên/biệt danh/hồ sơ, hình và TP. Chỉ số lấy từ class, trang bị và trait trạng thái;
 đổi trang bị trao đổi với túi đồ. EXP được nhớ riêng theo class. Lệnh nhảy nhãn
 dọn ngữ cảnh nhánh cũ; trạng thái chết và lệnh hồi phục đồng bộ HP.
+`screen-runtime.js` xử lý picture và chuyển động/rotation/tint/opacity, fade màn hình,
+flash, rung và mưa/tuyết. Renderer vẽ trực tiếp ảnh PNG, giữ scale/origin/blend;
+thời lượng và cờ chờ chạy bằng frame, save tiếp tục được hiệu ứng đang dở.
+Test dùng tham số picture thật từ Map010 và so sánh pixel asset trong Chrome.
 Luồng bước đi xử lý trigger chạm 1/2, chạy common event trước khi chuyển map,
 không tự kích hoạt lại cửa tại ô xuất hiện. Lệnh đặt vị trí event giữ tọa độ riêng
 với JSON nguồn và tôn trọng note `<Save Event Locations>` khi rời map/lưu game.
