@@ -70,6 +70,10 @@ Lệnh cuộn bản đồ 204 điều khiển camera theo hướng, khoảng cá
 Camera cuộn theo frame, giữ tiến trình qua save, dừng ở mép map và tiếp tục theo
 nhân vật khi di chuyển. Hai lệnh cuộn nối tiếp chạy lần lượt; cờ chờ giữ event
 đến khi cuộn xong. Chuyển map đặt lại camera. Renderer vẽ được vị trí giữa hai ô.
+Sương đọc 138 khối `<fog effect>` từ note map, dùng PNG trong `img/fogs/` với
+zoom, opacity, blend, hue, chiều sâu và chuyển động. Tiền tố `$` hiện cả trong
+trận, `%` chỉ trong trận, `!` bám tọa độ map. Save giữ offset sương; chuyển map
+nạp cấu hình của map đích. Picture giao diện nằm phía trên sương.
 Credits dùng lệnh 105/405, đọc đủ dòng và tốc độ trong JSON. Preview dùng Web
 Animations API để cuộn chữ trên màn hình; event chờ cuộn hết. Giữ Shift, Enter,
 Escape hoặc nút chạy nhanh để tăng tốc khi JSON cho phép. Hủy event đóng credits

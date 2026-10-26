@@ -89,6 +89,7 @@
         if (this.battle) this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange);
         this.state.mapId = mapId;
         this.map = map;
+        this.screen.setupFogs(map.data.note);
         delete this.screen.screen.battlebacks;
         this.lighting.sources(map);
         this.pendingTouchEvents = [];

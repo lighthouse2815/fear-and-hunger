@@ -14,6 +14,7 @@
         state.screen = this.screen;
         this.screen.gabQueue = this.screen.gabQueue || [];
         this.screen.gab = this.screen.gab || null;
+        this.screen.fogs = this.screen.fogs || [];
         this.waiters = new Map();
         this.revision = 0;
     }
@@ -55,6 +56,7 @@
         });
         Object.values(this.screen.pictures).forEach(function (picture) { picture.angle += (picture.rotationSpeed || 0) * frames / 2; });
         this.screen.weather.time += frames;
+        this.screen.fogs.forEach(function (fog) { fog.x += fog.moveX * frames / 4; fog.y += fog.moveY * frames / 4; });
         if (this.screen.shake) {
             this.screen.shake.remaining = Math.max(0, this.screen.shake.remaining - frames);
             this.screen.shake.phase += frames;
@@ -74,6 +76,7 @@
     };
     ScreenRuntime.prototype.active = function () {
         return !!this.screen.gab || this.screen.tweens.length > 0 || this.screen.weather.power > 0 ||
+            this.screen.fogs.some(function (fog) { return fog.moveX || fog.moveY; }) ||
             (this.screen.shake && this.screen.shake.remaining > 0) ||
             Object.values(this.screen.pictures).some(function (picture) { return picture.rotationSpeed; });
     };
@@ -88,6 +91,31 @@
         this.screen.gab = null; this.screen.gabQueue = []; this.revision++;
     };
     ScreenRuntime.prototype.position = function (type, value) { return type === 0 ? value : this.state.variableValue(value); };
+    ScreenRuntime.prototype.setupFogs = function (note) {
+        var fogs = [], expression = /<fog effect>([\s\S]*?)<\/fog effect>/ig, block;
+        while ((block = expression.exec(note || ''))) {
+            var fields = {};
+            block[1].split(/\r?\n/).forEach(function (line) {
+                var match = /^\s*([\w ]+):\s*(.*?)\s*$/.exec(line);
+                if (match) fields[match[1].trim().toLowerCase()] = match[2];
+            });
+            var id = Number(fields.id), name = /^(['"])(.+)\1$/.exec(fields.name || '');
+            if (!Number.isInteger(id) || id < 1 || !name) throw new Error('Cấu hình fog thiếu ID hoặc tên ảnh.');
+            var number = function (key, fallback) {
+                var value = fields[key] == null ? fallback : Number(fields[key].replace(/%$/, ''));
+                if (!Number.isFinite(value)) throw new Error('Tham số fog không hợp lệ: ' + key);
+                return value;
+            };
+            var fog = { id: id, name: name[2], opacity: number('opacity', 192), zoom: number('zoom', 100) / 100,
+                hue: number('hue', 0), blend: number('blend', 0), depth: number('depth', 1),
+                moveX: number('move x', 0), moveY: number('move y', 0),
+                panX: Math.max(1, (10 + number('pan x', 0)) / 10), panY: Math.max(1, (10 + number('pan y', 0)) / 10), x: 0, y: 0 };
+            if (fog.zoom <= 0 || fog.depth < 0 || fog.depth > 7 || !Number.isInteger(fog.depth)) throw new Error('Zoom/depth fog không hợp lệ.');
+            fogs = fogs.filter(function (entry) { return entry.id !== id; }); fogs.push(fog);
+        }
+        this.screen.fogs = fogs.sort(function (a, b) { return a.id - b.id; });
+        this.revision++;
+    };
     ScreenRuntime.prototype.handleEffect = function (code, p) {
         var screen = this.screen, promise, wait = false;
         var picture = screen.pictures[p[0]];

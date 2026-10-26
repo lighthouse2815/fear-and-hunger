@@ -44,6 +44,38 @@
         }) : []);
     };
 
+    CanvasRenderer.prototype.fogImages = function (screen, battle) {
+        var renderer = this;
+        return Promise.all((screen && screen.fogs || []).filter(function (fog) {
+            var prefix = /^[!$%]+/.exec(fog.name), signs = prefix ? prefix[0] : '';
+            return battle ? signs.includes('$') || signs.includes('%') : !signs.includes('%');
+        }).map(async function (fog) { return { fog: fog, bitmap: await renderer.loadImage('img/fogs/' + fog.name + '.png') }; }));
+    };
+
+    CanvasRenderer.prototype.drawFogs = function (fogs, depth, startX, startY) {
+        var context = this.context, canvas = this.canvas;
+        fogs.forEach(function (entry) {
+            var fog = entry.fog, bitmap = entry.bitmap;
+            if (fog.depth !== depth) return;
+            var fixed = /^[!$%]*!/.test(fog.name), factor = fixed ? 1 : 0.5;
+            var x = (startX || 0) * TILE_SIZE * factor * (fixed ? 1 : fog.panX) + fog.x * (fixed ? 2 : 1);
+            var y = (startY || 0) * TILE_SIZE * factor * (fixed ? 1 : fog.panY) + fog.y * (fixed ? 2 : 1);
+            x = Math.floor(x) * fog.zoom; y = Math.floor(y) * fog.zoom;
+            var width = bitmap.width * fog.zoom, height = bitmap.height * fog.zoom;
+            context.save();
+            try {
+                context.globalAlpha = Math.max(0, Math.min(1, fog.opacity / 255));
+                context.globalCompositeOperation = ['source-over', 'lighter', 'multiply', 'screen'][fog.blend] || 'source-over';
+                if (fog.hue) context.filter = 'hue-rotate(' + fog.hue + 'deg)';
+                var firstX = -((x % width + width) % width), firstY = -((y % height + height) % height);
+                for (var drawY = firstY; drawY < canvas.height; drawY += height) {
+                    for (var drawX = firstX; drawX < canvas.width; drawX += width) context.drawImage(bitmap, drawX, drawY, width, height);
+                }
+            } finally { context.restore(); }
+        });
+    };
+
+
     CanvasRenderer.prototype.draw = async function (engine) {
         var frame = ++this.frame;
         if (engine.state && engine.state.scene === 'battle' && engine.battle && engine.battle.battle) {
@@ -69,6 +101,8 @@
         var screen = engine.screen && engine.screen.screen;
         var pictures = await this.pictureImages(screen);
         var animations = await this.animationImages(engine, true);
+        var fogs = await this.fogImages(screen, true);
+        var fogView = engine.map.viewport(engine.state, this.canvas.width, this.canvas.height);
         var names = screen && screen.battlebacks || (engine.map.data.specifyBattleback ?
             [engine.map.data.battleback1Name, engine.map.data.battleback2Name] : ['', '']);
         var backgrounds = await Promise.all(names.map(function (name, index) {
@@ -102,11 +136,14 @@
                 context.filter = 'blur(8px)';
                 context.drawImage(backdrop, 0, 0); context.filter = 'none';
             }
-            backgrounds.forEach(function (bitmap) {
-                if (!bitmap) return;
-                var scale = Math.max(1, width / bitmap.width, height / bitmap.height);
-                var drawWidth = bitmap.width * scale, drawHeight = bitmap.height * scale;
-                context.drawImage(bitmap, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+            this.drawFogs(fogs, 7, fogView.startX, fogView.startY);
+            backgrounds.forEach(function (bitmap, index) {
+                if (bitmap) {
+                    var scale = Math.max(1, width / bitmap.width, height / bitmap.height);
+                    var drawWidth = bitmap.width * scale, drawHeight = bitmap.height * scale;
+                    context.drawImage(bitmap, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+                }
+                renderer.drawFogs(fogs, index === 0 ? 6 : 5, fogView.startX, fogView.startY);
             });
             context.scale(width / 816, height / 624);
             enemies.sort(function (a, b) { return a.enemy.y - b.enemy.y || a.enemy.index - b.enemy.index; });
@@ -127,6 +164,7 @@
                 else if (target) renderer.drawAnimationCells(animation, target.enemy.x, target.enemy.y -
                     (data.position === 0 ? target.bitmap.height : data.position === 1 ? target.bitmap.height / 2 : 0));
             });
+            [4, 3, 2, 1, 0].forEach(function (depth) { renderer.drawFogs(fogs, depth, fogView.startX, fogView.startY); });
         } finally { context.restore(); }
         if (screen) this.applyTone(context, width, height, screen.tone);
         pictures.forEach(function (entry) { renderer.drawPicture(entry); });
@@ -142,6 +180,7 @@
         var parallaxName = screen && screen.parallax ? screen.parallax.name : map.data.parallaxName;
         var parallax = parallaxName ? await this.loadImage('img/parallaxes/' + parallaxName + '.png') : null;
         var pictures = await this.pictureImages(screen);
+        var fogs = await this.fogImages(screen, false);
         var animationBitmaps = await this.animationImages(engine, false);
         var names = map.tileset.tilesetNames || [];
         var sheets = await Promise.all(names.map(function (name) {
@@ -191,6 +230,7 @@
             var shake = screen && screen.shake;
             if (shake && shake.remaining > 0) context.translate(Math.sin(shake.phase * shake.speed / 10) * shake.power * 2, 0);
             if (parallax) context.drawImage(parallax, -startX * TILE_SIZE, -startY * TILE_SIZE);
+            this.drawFogs(fogs, 7, startX, startY);
             var mapFilters = engine.filters ? engine.filters.forTarget(2) : [];
             if (mapFilters.length) {
                 if (!this.mapCanvas) this.mapCanvas = document.createElement('canvas');
@@ -211,14 +251,22 @@
                         }
                     }
                 }
+                this.drawFogs(fogs, 6, startX, startY);
                 actors.sort(function (a, b) { return a.priority - b.priority || a.y - b.y || a.id - b.id; });
                 actors.forEach(function (entry) {
-                    if (entry.priority < 2) renderer.drawActor(sheets, entry, startX, startY);
+                    if (entry.priority === 0) renderer.drawActor(sheets, entry, startX, startY);
                 });
+                this.drawFogs(fogs, 5, startX, startY);
+                actors.forEach(function (entry) {
+                    if (entry.priority === 1) renderer.drawActor(sheets, entry, startX, startY);
+                });
+                this.drawFogs(fogs, 4, startX, startY);
                 upper.forEach(function (tile) { renderer.drawTile(sheets, tile[0], tile[1], tile[2]); });
+                this.drawFogs(fogs, 3, startX, startY);
                 actors.forEach(function (entry) {
                     if (entry.priority === 2) renderer.drawActor(sheets, entry, startX, startY);
                 });
+                this.drawFogs(fogs, 2, startX, startY);
                 if (balloonBitmap) actors.forEach(function (entry) { renderer.drawBalloon(balloonBitmap, entry, startX, startY); });
             } finally { this.context = context; }
             if (mapFilters.length) context.drawImage(engine.filters.apply(this.mapCanvas, mapFilters), 0, 0);
@@ -230,8 +278,9 @@
                 context.drawImage(filtered,0,0); context.restore();
             }
             if (engine.lighting) this.drawLighting(engine.lighting, lightSources, state, viewport);
-        animationBitmaps.forEach(function (animation) { renderer.drawAnimation(animation, state, map, startX, startY); });
-        if (state.regionCover && state.regionCover.enabled) this.drawRegionCover(map, state.regionCover, startX, startY, cols, rows);
+            animationBitmaps.forEach(function (animation) { renderer.drawAnimation(animation, state, map, startX, startY); });
+            this.drawFogs(fogs, 1, startX, startY); this.drawFogs(fogs, 0, startX, startY);
+            if (state.regionCover && state.regionCover.enabled) this.drawRegionCover(map, state.regionCover, startX, startY, cols, rows);
             // Tint thuộc lớp bản đồ; picture giao diện giữ màu riêng.
             if (screen) this.applyTone(context, this.canvas.width, this.canvas.height, screen.tone);
             this.drawWeather(screen && screen.weather);

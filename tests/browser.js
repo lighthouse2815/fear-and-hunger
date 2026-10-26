@@ -964,6 +964,42 @@ async function main() {
             const hidden = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
             return positionsCorrect && drawn.length === 1 && withFollowers.some((value, index) => value !== hidden[index]);
         })()`, true, false));
+        check('fog PNG lặp kín Canvas, đúng opacity/zoom và nằm dưới picture', await evalPage(cdp, `(async () => {
+            const original = FNHStandalonePreview.engine;
+            const state = new FNHStandaloneState.GameState({ mapId: 74, x: 8, y: 8, party: [1] }, original.database);
+            const screen = new FNHStandaloneScreen.ScreenRuntime(state); screen.setupFogs(original.map.data.note);
+            const map = new FNHStandaloneMap.GameMap({ ...original.map.data, id: 74, events: [] }, original.map.tileset, state);
+            const canvas = document.createElement('canvas'), renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { width: 96, height: 96 });
+            const fogs = await renderer.fogImages(screen.screen, false);
+            const fog = { ...fogs[0].fog, x: 500, y: 500, opacity: 128, zoom: 1.5, blend: 0 };
+            renderer.drawFogs([{ fog, bitmap: fogs[0].bitmap }], 1, 0, 0);
+            const reference = document.createElement('canvas'); reference.width = reference.height = 96;
+            const context = reference.getContext('2d'); context.imageSmoothingEnabled = false; context.globalAlpha = 128 / 255;
+            for (const y of [-750,18]) for (const x of [-750,18]) context.drawImage(fogs[0].bitmap, x, y, 768, 768);
+            const expected = context.getImageData(0,0,96,96).data;
+            const actual = canvas.getContext('2d').getImageData(0,0,96,96).data;
+            if (!actual.every((value,index)=>value===expected[index]) || !actual.some(value=>value>0)) return false;
+            await renderer.draw({ state, screen, map });
+            const withFog = canvas.getContext('2d').getImageData(0,0,96,96).data;
+            screen.screen.fogs = []; await renderer.draw({ state, screen, map });
+            const without = canvas.getContext('2d').getImageData(0,0,96,96).data;
+            if (!withFog.some((value,index)=>value!==without[index])) return false;
+            screen.setupFogs(original.map.data.note);
+            screen.handleEffect(231, [1,'Actor1_1',0,0,0,0,100,100,255,0]);
+            await renderer.draw({ state, screen, map });
+            const pixel = canvas.getContext('2d').getImageData(0,0,96,96).data;
+            screen.screen.fogs = []; await renderer.draw({ state, screen, map });
+            const noFogPicture = canvas.getContext('2d').getImageData(0,0,96,96).data;
+            context.globalAlpha = 1; context.clearRect(0,0,96,96);
+            context.drawImage(await renderer.loadImage('img/pictures/Actor1_1.png'),0,0);
+            const mask = context.getImageData(0,0,96,96).data;
+            let opaque = 0;
+            for (let index=0;index<mask.length;index+=4) if(mask[index+3]===255) {
+                opaque++;
+                for(let channel=0;channel<4;channel++) if(pixel[index+channel]!==noFogPicture[index+channel]) return false;
+            }
+            return opaque > 100;
+        })()`, true, false));
         check('renderer cắt đúng hai khối tileset B–E', await evalPage(cdp, `(async () => {
             const canvas = document.createElement('canvas');
             const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { width: 96, height: 48 });
@@ -1532,13 +1568,24 @@ async function main() {
                 const bitmap = await renderer.loadImage('img/enemies/' + enemy.battlerName + '.png');
                 context.drawImage(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height);
             }
+            const viewport = engine.map.viewport(engine.state,816,624);
+            for (const fog of engine.screen.screen.fogs.filter(fog=>fog.name.startsWith('$'))) {
+                const bitmap = await renderer.loadImage('img/fogs/' + fog.name + '.png');
+                const pattern = context.createPattern(bitmap,'repeat');
+                pattern.setTransform(new DOMMatrix().translate(-Math.floor(viewport.startX*24+fog.x)*fog.zoom,
+                    -Math.floor(viewport.startY*24+fog.y)*fog.zoom).scale(fog.zoom));
+                context.save(); context.fillStyle=pattern; context.globalAlpha=fog.opacity/255; context.globalCompositeOperation='lighter';
+                context.fillRect(0,0,816,624); context.restore();
+            }
             window.battleExpectedPixels = context.getImageData(0, 0, 816, 624).data;
             const actual = canvas.getContext('2d').getImageData(0, 0, 816, 624).data;
-            return actual.every((value, index) => value === battleExpectedPixels[index]);
+            // createPattern và drawImage làm tròn alpha khác nhau tối đa 1/255
+            // khi fog có zoom lẻ; bố cục/ảnh quái vẫn so sánh trên toàn bộ pixel.
+            return actual.every((value, index) => Math.abs(value - battleExpectedPixels[index]) <= 1);
         })()`, true, false));
         await waitFor(cdp, `(() => {
             const pixels = document.querySelector('#fnh-canvas').getContext('2d').getImageData(0, 0, 816, 624).data;
-            return pixels.every((value, index) => value === battleExpectedPixels[index]);
+            return pixels.every((value, index) => Math.abs(value - battleExpectedPixels[index]) <= 1);
         })()`, 5000, 'chuyển scene tự vẽ battle trên canvas chính');
         check('UI battle hiển thị HP và MP của nhân vật', await evalPage(cdp,
             'document.querySelector("#fnh-battle-party").textContent.includes("HP") && document.querySelector("#fnh-battle-party").textContent.includes("MP")', false, false));
