@@ -968,6 +968,14 @@ async function main() {
             const engine = FNHStandalonePreview.engine, enemy = engine.map.eventById(102);
             return engine.state.x === 15 && engine.state.y === 5 && enemy.x === 14 && enemy.y === 25;
         })()`, false, false));
+        check('script đổi hình và giới hạn HP giữ qua lưu/tải độc lập', await evalPage(cdp, `(async () => {
+            const engine = FNHStandalonePreview.engine;
+            FNHStandaloneScripts.executeScript("$gameActors.actor(1).setCharacterImage('mercenary3', 7);\\n$gameActors.actor(1).setMaxHp(30);", { state: engine.state });
+            await engine.restore(engine.save());
+            engine.state.recoverActor(1);
+            const actor = engine.state.actor(1);
+            return actor.characterName === 'mercenary3' && actor.characterIndex === 7 && actor.hp === 30;
+        })()`, true, false));
         // Chạy các lệnh audio dữ liệu bằng interpreter mới, không dùng AudioManager MV.
         await evalPage(cdp, `new FNHStandaloneEvents.EventInterpreter({
             state: FNHStandalonePreview.engine.state,

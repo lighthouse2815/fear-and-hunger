@@ -10,6 +10,10 @@
         this.id = data.id;
         this.name = snapshot && snapshot.name != null ? snapshot.name : data.name || '';
         this.classId = snapshot && snapshot.classId || data.classId;
+        ['characterName', 'characterIndex', 'faceName', 'faceIndex', 'battlerName'].forEach(function (key) {
+            this[key] = snapshot && snapshot[key] != null ? snapshot[key] : data[key];
+        }, this);
+        this.maxHpOverride = snapshot && snapshot.maxHpOverride != null ? snapshot.maxHpOverride : null;
         this.level = snapshot && snapshot.level || data.initialLevel || 1;
         this.hp = snapshot && snapshot.hp != null ? snapshot.hp : this.maxParam(data, classData, 0);
         this.mp = snapshot && snapshot.mp != null ? snapshot.mp : this.maxParam(data, classData, 1);
@@ -28,7 +32,9 @@
         return Number(values[Math.max(0, Math.min(values.length - 1, this.level))]) || 0;
     };
 
-    ActorState.prototype.maxHp = function (data, classData) { return this.maxParam(data, classData, 0); };
+    ActorState.prototype.maxHp = function (data, classData) {
+        return Math.min(this.maxParam(data, classData, 0), this.maxHpOverride == null ? Infinity : this.maxHpOverride);
+    };
     ActorState.prototype.maxMp = function (data, classData) { return this.maxParam(data, classData, 1); };
     ActorState.prototype.isAlive = function () { return this.hp > 0; };
     ActorState.prototype.changeHp = function (data, classData, amount, allowDeath) {
@@ -42,6 +48,9 @@
     };
     ActorState.prototype.toJSON = function () {
         return { id: this.id, name: this.name, classId: this.classId, level: this.level, hp: this.hp, mp: this.mp,
+            characterName: this.characterName, characterIndex: this.characterIndex,
+            faceName: this.faceName, faceIndex: this.faceIndex, battlerName: this.battlerName,
+            maxHpOverride: this.maxHpOverride,
             tp: this.tp, states: this.states.slice(), skills: this.skills.slice(), equips: this.equips.slice() };
     };
 

@@ -39,6 +39,11 @@ Interpreter chạy được common event lồng nhau, vòng lặp có giới h�
 điều kiện, biến ngẫu nhiên và self-switch. Test dùng thùng đồ event 39 trên Map074
 để xác nhận nhận vật phẩm từ common event 52 và không nhận lại sau khi đã mở.
 Lệnh hoặc loại điều kiện chưa triển khai sẽ báo lỗi cụ thể thay vì tự bỏ qua.
+`engine/script-runtime.js` chuyển 1.082 biến thể script hiện có trong JSON thành
+thao tác dữ liệu: đổi hình character/face/battler, đặt giới hạn HP, cấu hình chase
+và vô hiệu hóa click trên bản đồ. Không dùng `eval`, không nạp runtime gốc.
+Test quét và thực thi từng biến thể; hình và giới hạn HP được giữ khi sửa chỉ số
+và qua save. Cấu hình chase là dữ liệu cho hệ di chuyển, chưa tự tạo hành vi đuổi.
 Luồng bước đi xử lý trigger chạm 1/2, chạy common event trước khi chuyển map,
 không tự kích hoạt lại cửa tại ô xuất hiện. Lệnh đặt vị trí event giữ tọa độ riêng
 với JSON nguồn và tôn trọng note `<Save Event Locations>` khi rời map/lưu game.

@@ -51,7 +51,7 @@
             if (event.direction) image.direction = event.direction;
             return { x: event.x, y: event.y, image: image, priority: page.priorityType, id: event.id };
         }).filter(Boolean);
-        var actor = engine.database.Actors[state.party[0] || 1];
+        var actor = state.actor(state.party[0] || 1);
         if (actor) actors.push({ x: state.x, y: state.y, priority: 1, id: Infinity, image: {
             characterName: actor.characterName, characterIndex: actor.characterIndex,
             direction: state.direction, pattern: 1

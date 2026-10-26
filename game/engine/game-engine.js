@@ -5,15 +5,15 @@
     if (typeof module === 'object' && module.exports) {
         module.exports = factory(
             require('./data-store'), require('./game-state'),
-            require('./map-model'), require('./event-interpreter')
+            require('./map-model'), require('./event-interpreter'), require('./script-runtime')
         );
     } else {
         root.FNHStandaloneEngine = factory(
             root.FNHStandaloneData, root.FNHStandaloneState,
-            root.FNHStandaloneMap, root.FNHStandaloneEvents
+            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts
         );
     }
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi) {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi) {
     function GameEngine(options) {
         options = options || {};
         this.dataStore = options.dataStore || new dataApi.GameDataStore({ baseUrl: options.baseUrl || '' });
@@ -130,6 +130,10 @@
         if (!page) return null;
         var engine = this;
         var eventHandlers = Object.assign({}, handlers || {});
+        eventHandlers.script = function (source, interpreter) {
+            return scriptApi.executeScript(source, { state: engine.state,
+                character: engine.map.id === interpreter.mapId ? engine.map.eventById(interpreter.eventId) : null });
+        };
         var transfer = eventHandlers.transfer;
         eventHandlers.transfer = async function (destination, interpreter) {
             await engine.loadMap(destination.mapId, destination);
