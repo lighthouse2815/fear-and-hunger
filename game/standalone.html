@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Fear &amp; Hunger — engine độc lập</title>
+    <link rel="icon" href="icon/icon.png" type="image/png">
     <style>
         :root { color-scheme: dark; font-family: system-ui, sans-serif; }
         body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #080706; color: #e7ddca; }
@@ -22,11 +23,13 @@
     <button id="fnh-save" type="button">Lưu ô 1</button>
     <button id="fnh-load" type="button">Tải ô 1</button>
     <button id="fnh-clear" type="button">Xóa hội thoại</button>
+    <label for="fnh-volume">Âm lượng <input id="fnh-volume" type="range" min="0" max="100" value="100"></label>
 </main>
 <script src="engine/data-store.js"></script>
 <script src="engine/actor-state.js"></script>
 <script src="engine/game-state.js"></script>
 <script src="engine/save-store.js"></script>
+<script src="engine/audio-manager.js"></script>
 <script src="engine/map-model.js"></script>
 <script src="engine/event-interpreter.js"></script>
 <script src="engine/game-engine.js"></script>

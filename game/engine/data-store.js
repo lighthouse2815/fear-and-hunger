@@ -38,7 +38,7 @@
     function GameDataStore(options) {
         options = options || {};
         this.baseUrl = options.baseUrl || '';
-        this.fetchImpl = options.fetchImpl || (typeof fetch === 'function' ? fetch : null);
+        this.fetchImpl = options.fetchImpl || (typeof fetch === 'function' ? function (url) { return fetch(url); } : null);
         if (!this.fetchImpl) throw new Error('GameDataStore cần fetch hoặc fetchImpl.');
         this.database = null;
         this.mapCache = new Map();

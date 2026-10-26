@@ -876,6 +876,45 @@ async function main() {
         await screenshot('mobile-audio');
         await clickElement(cdp, '#fnh-audio-settings button');
 
+        // Kiểm tra entry của engine mới trong một document riêng, dùng cùng CDP.
+        await cdp.send('Page.navigate', { url: running.url + 'standalone.html' });
+        await waitFor(cdp, 'window.FNHStandalonePreview && FNHStandalonePreview.engine.map && document.querySelector("#fnh-status").textContent.startsWith("Map 74")',
+            30000, 'preview độc lập tải dữ liệu và vẽ map');
+        check('preview không nạp runtime hoặc plugin gốc', await evalPage(cdp, `(() => {
+            const scripts = performance.getEntriesByType('resource').filter(item => item.initiatorType === 'script');
+            return !window.SceneManager && !window.Game_Actor && !window.$plugins &&
+                scripts.length >= 8 && scripts.every(item => new URL(item.name).pathname.startsWith('/engine/'));
+        })()`, false, false));
+        check('preview vẽ asset thật trên Canvas', await evalPage(cdp, `(() => {
+            const canvas = document.querySelector('#fnh-canvas');
+            const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+            let different = 0;
+            for (let i = 0; i < pixels.length; i += 4) {
+                if (pixels[i] !== 8 || pixels[i + 1] !== 7 || pixels[i + 2] !== 6) different++;
+            }
+            return different > 10000;
+        })()`, false, false));
+        // Chạy các lệnh audio dữ liệu bằng interpreter mới, không dùng AudioManager MV.
+        await evalPage(cdp, `new FNHStandaloneEvents.EventInterpreter({
+            state: FNHStandalonePreview.engine.state,
+            commands: [{ code: 241, parameters: [{ name: 'fear_and_hunger', volume: 80, pitch: 100 }] }],
+            handlers: { effect: FNHStandalonePreview.audio.handleEffect.bind(FNHStandalonePreview.audio) }
+        }).run()`, true, true);
+        await waitFor(cdp, 'FNHStandalonePreview.audio.buffers.bgm && !FNHStandalonePreview.audio.buffers.bgm.paused && FNHStandalonePreview.audio.buffers.bgm.currentTime > 0',
+            20000, 'OGG phát trong audio manager độc lập');
+        check('interpreter mới phát được BGM OGG thật', await evalPage(cdp,
+            'FNHStandalonePreview.audio.buffers.bgm.src.endsWith("/audio/bgm/fear_and_hunger.ogg") && FNHStandalonePreview.audio.buffers.bgm.volume === 0.8', false, false));
+        await evalPage(cdp, `(() => {
+            const volume = document.querySelector('#fnh-volume');
+            volume.value = 50;
+            volume.dispatchEvent(new Event('input', { bubbles: true }));
+        })()`, false, false);
+        check('volume preview giữ âm lượng riêng của BGM', await evalPage(cdp,
+            'FNHStandalonePreview.audio.buffers.bgm.volume === 0.4', false, false));
+        await evalPage(cdp, 'FNHStandalonePreview.audio.handleEffect(242, [0.05])', false, false);
+        await waitFor(cdp, 'FNHStandalonePreview.audio.buffers.bgm === null', 3000, 'BGM fade và dừng');
+        await screenshot('standalone-preview');
+
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;
         check('không có lỗi runtime mới', relevantErrors.length === 0, JSON.stringify(relevantErrors.map((item) => ({

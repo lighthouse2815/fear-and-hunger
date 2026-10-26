@@ -19,6 +19,26 @@ Có thể copy nguyên thư mục dự án sang vị trí khác rồi chạy cá
 Khi chỉnh source, tải lại trình duyệt để xem kết quả. Build không ghi đè source.
 Save nằm trong trình duyệt, nên giữ cùng địa chỉ/cổng để tiếp tục save.
 
+## Engine độc lập đang chuyển đổi
+
+Mục tiêu mới là giữ asset, audio và JSON nội dung, thay toàn bộ runtime/plugin
+RPG Maker bằng mã của dự án. Entry chính `index.html` hiện vẫn chạy runtime cũ.
+Các module mới nằm trong `engine/`; mở `http://127.0.0.1:8140/standalone.html`
+để kiểm tra bản đồ và nhân vật bằng Canvas mà không tải `rpg_*.js`, plugin hay
+`__fnh/compat.js`. Trang preview cũng được đưa vào bản build.
+
+Preview hiện hỗ trợ di chuyển, một phần lệnh sự kiện, lưu/tải riêng và âm thanh.
+Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, fade, nhớ/phát tiếp
+BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.
+Thanh âm lượng cập nhật các âm đang phát, giữ volume của từng file.
+Save preview dùng prefix `FNH_STANDALONE_PREVIEW:`, tách biệt save bản chính.
+
+Đây chưa phải bản thay thế đầy đủ: combat, auto-event, movement route, script/plugin
+command và autotile còn cần chuyển đổi. Callback effect chỉ là đường truyền lệnh;
+có callback không có nghĩa lệnh đã được triển khai. Audio chưa xử lý pan stereo.
+Kiểm tra Chrome chạy cả entry chính và preview, xác nhận preview không nạp mã
+runtime cũ và phát được OGG thật.
+
 Ở màn hình đặt tên, nhập `lighthouse` để bật cheat cho nhân vật đó: luôn đầy HP,
 miễn trạng thái chết và gây ít nhất 9.999 sát thương mỗi đòn gây mất/hút HP trúng
 quái. Tên không phân biệt hoa thường; đổi sang tên khác sẽ tắt cheat. Cheat đi
