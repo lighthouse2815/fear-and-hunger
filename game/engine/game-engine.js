@@ -80,6 +80,7 @@
         if (this.battle) this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random);
         this.state.mapId = mapId;
         this.map = map;
+        delete this.screen.screen.battlebacks;
         this.lighting.sources(map);
         this.pendingTouchEvents = [];
         this.state.routeSnapshots = [];

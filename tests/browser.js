@@ -992,6 +992,43 @@ async function main() {
         })()`, false, false);
         await clickElement(cdp, '#fnh-controls [data-direction="0"]');
         await waitFor(cdp, '!document.querySelector("#fnh-battle").hidden', 5000, 'event mở giao diện battle');
+        check('renderer battle ghép đủ bộ phận Guard từ PNG thật', await evalPage(cdp, `(async () => {
+            const engine = FNHStandalonePreview.engine;
+            const canvas = document.createElement('canvas');
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas);
+            await renderer.draw(engine);
+            const reference = document.createElement('canvas'); reference.width = 816; reference.height = 624;
+            const context = reference.getContext('2d'); context.imageSmoothingEnabled = false;
+            context.fillStyle = '#000'; context.fillRect(0, 0, 816, 624);
+            const background = await renderer.loadImage('img/battlebacks2/front.png');
+            context.drawImage(background, (816 - background.width) / 2, (624 - background.height) / 2);
+            const enemies = engine.battle.battle.enemies.slice().sort((a, b) => a.y - b.y || a.index - b.index);
+            for (const enemy of enemies) {
+                const bitmap = await renderer.loadImage('img/enemies/' + enemy.battlerName + '.png');
+                context.drawImage(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height);
+            }
+            window.battleExpectedPixels = context.getImageData(0, 0, 816, 624).data;
+            const actual = canvas.getContext('2d').getImageData(0, 0, 816, 624).data;
+            return actual.every((value, index) => value === battleExpectedPixels[index]);
+        })()`, true, false));
+        await waitFor(cdp, `(() => {
+            const pixels = document.querySelector('#fnh-canvas').getContext('2d').getImageData(0, 0, 816, 624).data;
+            return pixels.every((value, index) => value === battleExpectedPixels[index]);
+        })()`, 5000, 'chuyển scene tự vẽ battle trên canvas chính');
+        check('UI battle hiển thị HP và MP của nhân vật', await evalPage(cdp,
+            'document.querySelector("#fnh-battle-party").textContent.includes("HP") && document.querySelector("#fnh-battle-party").textContent.includes("MP")', false, false));
+        check('battle bỏ sprite bộ phận ẩn và đã chết', await evalPage(cdp, `(async () => {
+            const original = FNHStandalonePreview.engine;
+            const battle = JSON.parse(JSON.stringify(original.battle.battle));
+            battle.enemies[1].hidden = true; battle.enemies[1].battlerName = 'khong-ton-tai';
+            battle.enemies[2].alive = false; battle.enemies[2].battlerName = 'khong-ton-tai';
+            const engine = Object.assign(Object.create(original), { battle: { battle } });
+            const canvas = document.createElement('canvas');
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas);
+            const result = await renderer.draw(engine);
+            return result.enemies === 5 && !renderer.images.has('img/enemies/khong-ton-tai.png');
+        })()`, true, false));
+        await evalPage(cdp, 'delete window.battleExpectedPixels', false, false);
         check('event chờ battle và chưa chạy nhánh kết quả', await evalPage(cdp,
             'FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.variableValue(999) === 0', false, false));
         await clickElement(cdp, '#fnh-controls [data-direction="2"]');

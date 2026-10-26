@@ -37,9 +37,68 @@
     };
 
     CanvasRenderer.prototype.draw = async function (engine) {
+        var frame = ++this.frame;
+        if (engine.state && engine.state.scene === 'battle' && engine.battle && engine.battle.battle) {
+            return this.drawBattle(engine, frame);
+        }
+        return this.drawMap(engine, frame);
+    };
+
+    CanvasRenderer.prototype.drawBattle = async function (engine, frame) {
+        var battle = engine.battle.battle, renderer = this;
+        var screen = engine.screen && engine.screen.screen;
+        var names = screen && screen.battlebacks || (engine.map.data.specifyBattleback ?
+            [engine.map.data.battleback1Name, engine.map.data.battleback2Name] : ['', '']);
+        var backgrounds = await Promise.all(names.map(function (name, index) {
+            return name ? renderer.loadImage('img/battlebacks' + (index + 1) + '/' + name + '.png') : null;
+        }));
+        var enemies = await Promise.all(battle.enemies.filter(function (enemy) {
+            return enemy.alive && !enemy.hidden && enemy.battlerName;
+        }).map(async function (enemy) {
+            var folder = engine.database.System.optSideView ? 'sv_enemies' : 'enemies';
+            return { enemy: enemy, bitmap: await renderer.loadImage('img/' + folder + '/' + enemy.battlerName + '.png') };
+        }));
+        if (frame !== this.frame || engine.state.scene !== 'battle' || engine.battle.battle !== battle) return;
+        if (!backgrounds.some(Boolean) && this.battleSnapshotFor !== battle) {
+            this.battleSnapshotFor = battle;
+            this.battleSnapshot = (async function () {
+                var snapshot = document.createElement('canvas');
+                var mapRenderer = new CanvasRenderer(snapshot, { baseUrl: renderer.baseUrl,
+                    width: renderer.canvas.width, height: renderer.canvas.height });
+                mapRenderer.images = renderer.images;
+                await mapRenderer.drawMap(engine, ++mapRenderer.frame);
+                return snapshot;
+            }());
+        }
+        var backdrop = !backgrounds.some(Boolean) ? await this.battleSnapshot : null;
+        if (frame !== this.frame || engine.state.scene !== 'battle' || engine.battle.battle !== battle) return;
+        var context = this.context, width = this.canvas.width, height = this.canvas.height;
+        context.save();
+        try {
+            context.fillStyle = '#000'; context.fillRect(0, 0, width, height);
+            if (!backgrounds.some(Boolean)) {
+                context.filter = 'blur(8px)';
+                context.drawImage(backdrop, 0, 0); context.filter = 'none';
+            }
+            backgrounds.forEach(function (bitmap) {
+                if (!bitmap) return;
+                var scale = Math.max(1, width / bitmap.width, height / bitmap.height);
+                var drawWidth = bitmap.width * scale, drawHeight = bitmap.height * scale;
+                context.drawImage(bitmap, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+            });
+            context.scale(width / 816, height / 624);
+            enemies.sort(function (a, b) { return a.enemy.y - b.enemy.y || a.enemy.index - b.enemy.index; });
+            enemies.forEach(function (entry) {
+                var enemy = entry.enemy, bitmap = entry.bitmap;
+                context.drawImage(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height);
+            });
+        } finally { context.restore(); }
+        return { battle: battle.troopId, enemies: enemies.length };
+    };
+
+    CanvasRenderer.prototype.drawMap = async function (engine, frame) {
         var map = engine.map, state = engine.state;
         if (!map || !state) return;
-        var frame = ++this.frame;
         var screen = engine.screen && engine.screen.screen;
         var lightSources = engine.lighting ? engine.lighting.sources(map) : [];
         var parallaxName = screen && screen.parallax ? screen.parallax.name : map.data.parallaxName;

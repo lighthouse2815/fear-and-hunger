@@ -50,6 +50,9 @@
             targets.appendChild(button);
         });
         document.getElementById('fnh-battle-title').textContent = battle.result || ('Lượt ' + (battle.turn + 1));
+        document.getElementById('fnh-battle-party').textContent = battle.actors.map(function (actor) {
+            return actor.name + ' · HP ' + actor.hp + ' · MP ' + actor.mp;
+        }).join(' | ');
         document.getElementById('fnh-battle-escape').disabled = !battle.canEscape;
     }
     async function draw() {
@@ -284,9 +287,10 @@
             try {
                 if (scrollAnimation) scrollAnimation.playbackRate = !scrollNoFast &&
                     (scrollFastHeld || engine.buttons.has('ok') || engine.buttons.has('cancel') || engine.buttons.has('shift')) ? 3 : 1;
-                if (lastBattle !== engine.battle.battle || lastScene !== engine.state.scene) renderBattleUi();
+                var sceneChanged = lastBattle !== engine.battle.battle || lastScene !== engine.state.scene;
+                if (sceneChanged) renderBattleUi();
                 if (scheduler) scheduler.tick();
-                var active = !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
+                var active = sceneChanged || !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
                     lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
                     return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0);
                 });

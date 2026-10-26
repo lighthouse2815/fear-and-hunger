@@ -68,6 +68,12 @@ Credits dùng lệnh 105/405, đọc đủ dòng và tốc độ trong JSON. Pre
 Animations API để cuộn chữ trên màn hình; event chờ cuộn hết. Giữ Shift, Enter,
 Escape hoặc nút chạy nhanh để tăng tốc khi JSON cho phép. Hủy event đóng credits
 và giải phóng điều khiển. Cờ hiện tên bản đồ thuộc lệnh 281, tách khỏi credits.
+Trận đấu vẽ nền battleback và sprite quái từ PNG, đặt từng bộ phận theo Troops.json
+và xếp lớp theo tọa độ. Bộ phận ẩn hoặc đã chết không được vẽ. Khi không có nền
+chỉ định, renderer làm mờ ảnh bản đồ hiện tại. Giao diện hiển thị HP/MP trong đội.
+Luồng 301 chờ kết quả rồi chỉ chạy nhánh 601/602/603 tương ứng; trận thua bắt buộc
+dừng event và chuyển sang trạng thái game over. Combat còn thiếu troop event,
+hiệu ứng kỹ năng, AI đầy đủ và giao diện game over để thay entry chính.
 Tải map/save lỗi giữ map và trạng thái hiện tại nhất quán.
 Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, fade, nhớ/phát tiếp
 BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.
