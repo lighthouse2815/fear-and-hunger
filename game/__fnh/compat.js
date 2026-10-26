@@ -139,6 +139,23 @@
 
     // Cài đặt âm thanh dùng ConfigManager gốc để đồng bộ với menu Options và save.
     window.addEventListener('load', function () {
+        // OptionsCore nạp cấu hình sau lớp gốc. Chuẩn hóa sau tất cả plugin,
+        // gồm masterVolume dùng cho video; chỉ nâng cấp cấu hình cũ một lần.
+        var applyData = ConfigManager.applyData, makeData = ConfigManager.makeData;
+        ConfigManager.makeData = function () {
+            var config = makeData.call(this);
+            config.fnhQuietVolumeApplied = true;
+            return config;
+        };
+        ConfigManager.applyData = function (config) {
+            applyData.call(this, config);
+            if (config.fnhQuietVolumeApplied !== true) {
+                ['masterVolume', 'bgmVolume', 'bgsVolume', 'meVolume', 'seVolume'].forEach(function (key) {
+                    ConfigManager[key] = Math.min(Number(ConfigManager[key]) || 0, 5);
+                });
+                this.save();
+            }
+        };
         var viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) viewport.content = 'width=device-width, initial-scale=1';
         var style = document.createElement('style');

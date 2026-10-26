@@ -20,6 +20,8 @@ const GAME_HINT = 'game/';
 const SAVE_SLOT = 20;
 const CHROME_ARGS = [
     '--headless=new',
+    // Chỉ tắt đầu ra loa; vẫn kiểm tra phát/giải mã audio và volume thật.
+    '--mute-audio',
     '--no-sandbox',
     '--disable-dev-shm-usage',
     '--disable-background-timer-throttling',
@@ -429,7 +431,15 @@ async function main() {
             cdp, 'FNHBrowser.audioState() === "running"', false, false
         ));
         check('cấu hình âm lượng cũ được hạ về năm phần trăm một lần', await evalPage(cdp,
-            'ConfigManager.bgmVolume <= 5 && ConfigManager.bgsVolume <= 5 && ConfigManager.meVolume <= 5 && ConfigManager.seVolume <= 5', false, false));
+            'ConfigManager.masterVolume <= 5 && ConfigManager.bgmVolume <= 5 && ConfigManager.bgsVolume <= 5 && ConfigManager.meVolume <= 5 && ConfigManager.seVolume <= 5 && Graphics._video.volume <= 0.05', false, false));
+        check('nâng cấp cấu hình 100 phần trăm sau khi plugin nạp', await evalPage(cdp, `(() => {
+            const config = ConfigManager.makeData();
+            delete config.fnhQuietVolumeApplied;
+            for (const key of ['masterVolume', 'bgmVolume', 'bgsVolume', 'meVolume', 'seVolume']) config[key] = 100;
+            ConfigManager.applyData(config);
+            return ['masterVolume', 'bgmVolume', 'bgsVolume', 'meVolume', 'seVolume'].every(key => ConfigManager[key] === 5) &&
+                JSON.parse(StorageManager.load(-1)).fnhQuietVolumeApplied === true;
+        })()`, false, false));
         check('nhạc tiêu đề đang phát', await evalPage(
             cdp,
             'AudioManager._currentBgm && AudioManager._currentBgm.name === "fear_and_hunger" && !!(AudioManager._bgmBuffer && AudioManager._bgmBuffer.isPlaying())',
@@ -2014,6 +2024,7 @@ async function main() {
         const failureShot = await screenshot('failure');
         console.error('');
         console.error('THẤT BẠI: ' + error.message);
+        if (runtimeErrors.length) console.error('Lỗi JavaScript trong trang:\n' + JSON.stringify(runtimeErrors, null, 2));
         if (chromeStderr) console.error('Chrome stderr (cuối):\n' + chromeStderr.slice(-3000));
         if (failureShot) console.error('Ảnh chụp lúc lỗi: ' + failureShot);
         else console.error('Thư mục ảnh chụp: ' + shotsDir);
