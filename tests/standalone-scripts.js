@@ -31,7 +31,7 @@ for (const script of scripts) {
             assert.equal(actor[operation.kind + 'Name'], operation.name);
             if (operation.kind !== 'battler') assert.equal(actor[operation.kind + 'Index'], operation.index);
         } else if (operation.type === 'maxHp') {
-            assert.equal(state.actor(operation.id).maxHpOverride, operation.value);
+            assert.equal(state.actorParam(operation.id, 0), operation.value);
         } else if (operation.type === 'disableTouch') assert.equal(state.touchEnabled, false);
         else if (operation.type !== 'refresh') assert.equal(character[operation.type], operation.value);
     }
@@ -53,7 +53,7 @@ executeScript('$gameActors.actor(1).setMaxHp(100);', { state: levelThree });
 levelThree.recoverActor(1);
 assert.equal(levelThree.actor(1).hp, 100, 'setMaxHp đặt giá trị mới, kể cả cao hơn chỉ số của class');
 assert.throws(() => executeScript('$gameActors.actor(1).setMaxHp(50);\nunknown()', { state }), /Chưa chuyển đổi script/);
-assert.equal(state.actor(1).maxHpOverride, 30, 'script không hỗ trợ không được áp dụng một phần');
+assert.equal(state.actorParam(1, 0), 30, 'script không hỗ trợ không được áp dụng một phần');
 assert.throws(() => compileScript('globalThis.__injected = true'), /Chưa chuyển đổi script/);
 assert.equal(globalThis.__injected, undefined);
 console.log('ĐẠT: chuyển 1.082 biến thể script JSON sang API mới, giữ hình và giới hạn HP qua save.');

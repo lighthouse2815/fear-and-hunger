@@ -39,8 +39,7 @@
                     actor[operation.kind + 'Name'] = operation.name;
                     if (operation.kind !== 'battler') actor[operation.kind + 'Index'] = operation.index;
                 } else {
-                    actor.maxHpOverride = Math.max(1, operation.value);
-                    actor.hp = Math.min(actor.hp, actor.maxHpOverride);
+                    context.state.setActorMaxHp(operation.id, operation.value);
                 }
             } else if (operation.type === 'disableTouch') context.state.touchEnabled = false;
             else if (operation.type !== 'refresh') {

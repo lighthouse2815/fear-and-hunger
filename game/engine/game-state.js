@@ -105,7 +105,7 @@
             data = data || (this.database && this.database.Actors && this.database.Actors[id]);
             if (data) {
                 var classData = this.database && this.database.Classes && this.database.Classes[data.classId];
-                this.actors[id] = new actorApi.ActorState(data, classData).toJSON();
+                this.actors[id] = new actorApi.ActorState(data, classData, null, this.database).toJSON();
             }
         }
         return this.actors[id] || null;
@@ -125,26 +125,68 @@
         this.party = this.party.filter(function (actorId) { return actorId !== id; });
     };
 
-    GameState.prototype.changeActorHp = function (id, amount, allowDeath) {
-        var actor = this.actor(id);
-        if (!actor || !this.database || !this.database.Actors[id]) return false;
-        var data = this.database.Actors[id];
-        var classData = this.database.Classes && this.database.Classes[data.classId];
-        var state = new actorApi.ActorState(data, classData, actor);
-        state.changeHp(data, classData, amount, allowDeath);
-        this.actors[id] = state.toJSON();
+    GameState.prototype.updateActor = function (id, change) {
+        var actor = this.actor(id), data = this.database && this.database.Actors[id];
+        if (!actor || !data) return false;
+        var classData = this.database.Classes && this.database.Classes[actor.classId || data.classId];
+        var model = new actorApi.ActorState(data, classData, actor, this.database);
+        change(model, data, classData);
+        this.actors[id] = model.toJSON();
         return true;
     };
 
-    GameState.prototype.changeActorMp = function (id, amount) {
+    GameState.prototype.actorParam = function (id, paramId) {
+        var value = 0;
+        this.updateActor(id, function (actor, data, classData) { value = actor.maxParam(data, classData, paramId); });
+        return value;
+    };
+
+    GameState.prototype.changeActorExp = function (id, amount, levelChange) {
+        return this.updateActor(id, function (actor, data, classData) {
+            var exp = levelChange ? actorApi.expForLevel(classData, Math.max(1, Math.min(data.maxLevel || 99, actor.level + amount))) : actor.exp + amount;
+            actor.setExp(data, exp);
+        });
+    };
+
+    GameState.prototype.changeActorParam = function (id, paramId, amount) {
+        return this.updateActor(id, function (actor, data, classData) {
+            actor.paramPlus[paramId] = (actor.paramPlus[paramId] || 0) + amount;
+            actor.hp = Math.min(actor.hp, actor.maxHp(data, classData));
+            actor.mp = Math.min(actor.mp, actor.maxMp(data, classData));
+        });
+    };
+
+    GameState.prototype.setActorMaxHp = function (id, value) {
+        return this.updateActor(id, function (actor, data, classData) {
+            actor.maxHpOverride = null;
+            actor.paramPlus[0] = 0;
+            actor.paramPlus[0] = Math.max(1, value) - actor.maxHp(data, classData);
+            actor.hp = Math.min(actor.hp, actor.maxHp(data, classData));
+        });
+    };
+
+    GameState.prototype.equipActor = function (id, slot, itemId) {
         var actor = this.actor(id);
-        if (!actor || !this.database || !this.database.Actors[id]) return false;
-        var data = this.database.Actors[id];
-        var classData = this.database.Classes && this.database.Classes[data.classId];
-        var state = new actorApi.ActorState(data, classData, actor);
-        state.changeMp(data, classData, amount);
-        this.actors[id] = state.toJSON();
+        if (!actor || !Number.isInteger(slot) || slot < 0 || slot >= actor.equips.length) return false;
+        var kind = slot === 0 ? 'weapons' : 'armors';
+        var table = this.database[slot === 0 ? 'Weapons' : 'Armors'];
+        if (itemId && (!table || !table[itemId] || table[itemId].etypeId !== slot + 1 || this.itemCount(kind, itemId) < 1)) return false;
+        if (itemId) this.gainItem(kind, itemId, -1);
+        if (actor.equips[slot]) this.gainItem(kind, actor.equips[slot], 1);
+        actor.equips[slot] = itemId || 0;
+        this.updateActor(id, function (model, data, classData) {
+            model.hp = Math.min(model.hp, model.maxHp(data, classData));
+            model.mp = Math.min(model.mp, model.maxMp(data, classData));
+        });
         return true;
+    };
+
+    GameState.prototype.changeActorHp = function (id, amount, allowDeath) {
+        return this.updateActor(id, function (actor, data, classData) { actor.changeHp(data, classData, amount, allowDeath); });
+    };
+
+    GameState.prototype.changeActorMp = function (id, amount) {
+        return this.updateActor(id, function (actor, data, classData) { actor.changeMp(data, classData, amount); });
     };
 
     GameState.prototype.changeActorState = function (id, stateId, add) {
@@ -154,6 +196,7 @@
         if (add && states.indexOf(stateId) < 0) states.push(stateId);
         if (!add) states = states.filter(function (value) { return value !== stateId; });
         actor.states = states;
+        if (stateId === 1) actor.hp = add ? 0 : Math.max(1, actor.hp);
         return true;
     };
 
@@ -161,8 +204,9 @@
         var actor = this.actor(id);
         if (!actor || !this.database || !this.database.Actors[id]) return false;
         var data = this.database.Actors[id];
-        var classData = this.database.Classes && this.database.Classes[data.classId];
-        var state = new actorApi.ActorState(data, classData, actor);
+        var classData = this.database.Classes && this.database.Classes[actor.classId || data.classId];
+        var state = new actorApi.ActorState(data, classData, actor, this.database);
+        state.states = [];
         actor.hp = state.maxHp(data, classData);
         actor.mp = state.maxMp(data, classData);
         actor.states = [];

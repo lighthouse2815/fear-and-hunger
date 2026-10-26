@@ -990,6 +990,18 @@ async function main() {
             const state = FNHStandalonePreview.engine.state;
             return state.x === 16 && state.y === 5 && state.characterName === '$guard1' && state.opacity === 128 && !state.through;
         })()`, false, false));
+        check('lệnh nhân vật chạy bằng interpreter mới trên Chrome', await evalPage(cdp, `(async () => {
+            const state = FNHStandalonePreview.engine.state;
+            await new FNHStandaloneEvents.EventInterpreter({ state, commands: [
+                { code: 318, parameters: [0, 1, 0, 40] },
+                { code: 320, parameters: [1, 'Người sống sót'] },
+                { code: 317, parameters: [0, 1, 2, 0, 0, 5] },
+                { code: 322, parameters: [1, 'mercenary', 0, 'Actor1', 0, 'Actor1_1'] }
+            ] }).run();
+            const actor = state.actor(1);
+            return actor.skills.includes(40) && actor.name === 'Người sống sót' &&
+                actor.characterName === 'mercenary' && state.actorParam(1, 2) === 62;
+        })()`, true, false));
         // Chạy các lệnh audio dữ liệu bằng interpreter mới, không dùng AudioManager MV.
         await evalPage(cdp, `new FNHStandaloneEvents.EventInterpreter({
             state: FNHStandalonePreview.engine.state,

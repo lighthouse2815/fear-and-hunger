@@ -44,6 +44,10 @@ thao tác dữ liệu: đổi hình character/face/battler, đặt giới hạn 
 và vô hiệu hóa click trên bản đồ. Không dùng `eval`, không nạp runtime gốc.
 Test quét và thực thi từng biến thể; hình và giới hạn HP được giữ khi sửa chỉ số
 và qua save. Cấu hình chase là dữ liệu cho hệ di chuyển, chưa tự tạo hành vi đuổi.
+Interpreter cũng chạy các lệnh EXP/level, chỉ số, học/quên kỹ năng, đổi trang bị,
+tên/biệt danh/hồ sơ, hình và TP. Chỉ số lấy từ class, trang bị và trait trạng thái;
+đổi trang bị trao đổi với túi đồ. EXP được nhớ riêng theo class. Lệnh nhảy nhãn
+dọn ngữ cảnh nhánh cũ; trạng thái chết và lệnh hồi phục đồng bộ HP.
 Luồng bước đi xử lý trigger chạm 1/2, chạy common event trước khi chuyển map,
 không tự kích hoạt lại cửa tại ô xuất hiện. Lệnh đặt vị trí event giữ tọa độ riêng
 với JSON nguồn và tôn trọng note `<Save Event Locations>` khi rời map/lưu game.

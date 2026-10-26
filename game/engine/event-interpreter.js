@@ -72,6 +72,10 @@
             return;
         case 117:
             return this.commonEvent(command.parameters[0]);
+        case 118:
+            return;
+        case 119:
+            return this.jumpToLabel(command.parameters[0]);
         case 411:
             return this.conditionElse(command);
         case 412:
@@ -102,6 +106,9 @@
             return this.controlActorState(command.parameters || []);
         case 314:
             return this.controlActorRecover(command.parameters || []);
+        case 315: case 316: case 317: case 318:
+        case 319: case 320: case 321: case 322: case 324: case 325: case 326:
+            return this.controlActor(command);
         case 201:
             return this.transferPlayer(command.parameters || []);
         case 205:
@@ -116,8 +123,7 @@
         case 249: case 250: case 251: case 261:
         case 281: case 282: case 283: case 284: case 285:
         case 301: case 302: case 303:
-        case 315: case 316:
-        case 317: case 318: case 319: case 320: case 321: case 322: case 323: case 324:
+        case 323:
         case 331: case 332: case 333: case 334: case 335: case 336: case 337: case 338:
         case 339: case 340: case 342: case 343: case 344: case 345: case 346:
         case 351: case 352: case 353: case 354: case 356:
@@ -167,6 +173,45 @@
         }).run();
         this.result.choices.push.apply(this.result.choices, result.choices);
         if (result.transferred) this.result.transferred = result.transferred;
+    };
+
+    EventInterpreter.prototype.jumpToLabel = function (name) {
+        var target = this.commands.findIndex(function (command) { return command.code === 118 && command.parameters[0] === name; });
+        if (target < 0) return;
+        this.index = target + 1;
+        this.conditionFrames = this.conditionFrames.filter(function (frame) { return target >= frame.startIndex && target <= frame.endIndex; });
+        this.choiceFrames = this.choiceFrames.filter(function (frame) { return target >= frame.startIndex && target <= frame.endIndex; });
+        this.loopFrames = this.loopFrames.filter(function (frame) { return target >= frame.start && target <= frame.end; });
+    };
+
+    EventInterpreter.prototype.controlActor = function (command) {
+        var p = command.parameters || [], code = command.code, state = this.state;
+        var targets = code <= 318 || code === 326 ? this.actorTargets(p) : [p[0]];
+        targets.forEach(function (id) {
+            var actor = state.actor(id);
+            if (!actor) return;
+            if (code === 315 || code === 316) state.changeActorExp(id, this.operateSigned(p[2], p[3], p[4]), code === 316);
+            else if (code === 317) state.changeActorParam(id, p[2], this.operateSigned(p[3], p[4], p[5]));
+            else if (code === 318) {
+                if (p[2] === 0 && !actor.skills.includes(p[3])) actor.skills.push(p[3]);
+                if (p[2] !== 0) actor.skills = actor.skills.filter(function (skill) { return skill !== p[3]; });
+                actor.skills.sort(function (a, b) { return a - b; });
+            } else if (code === 319) state.equipActor(id, p[1] - 1, p[2]);
+            else if (code === 320) actor.name = p[1];
+            else if (code === 321) {
+                if (!state.database.Classes[p[1]]) throw new Error('Không tìm thấy class ' + p[1]);
+                actor.expByClass = Object.assign({}, actor.expByClass, { [actor.classId]: actor.exp });
+                actor.classId = p[1];
+                if (!p[2]) actor.exp = actor.expByClass[p[1]] || 0;
+                state.changeActorExp(id, 0, false);
+            } else if (code === 322) {
+                actor.characterName = p[1]; actor.characterIndex = p[2];
+                actor.faceName = p[3]; actor.faceIndex = p[4]; actor.battlerName = p[5];
+                if (state.party[0] === id) { delete state.characterName; delete state.characterIndex; }
+            } else if (code === 324) actor.nickname = p[1];
+            else if (code === 325) actor.profile = p[1];
+            else if (code === 326) actor.tp = Math.max(0, Math.min(100, actor.tp + this.operateSigned(p[2], p[3], p[4])));
+        }, this);
     };
 
     EventInterpreter.prototype.beginLoop = function (command) {
@@ -246,7 +291,7 @@
             return;
         }
         this.index = marker + 1;
-        this.choiceFrames.push({ indent: indent, endIndex: this.findCommand(404, indent, marker + 1) });
+        this.choiceFrames.push({ indent: indent, startIndex: marker + 1, endIndex: this.findCommand(404, indent, marker + 1) });
     };
 
     EventInterpreter.prototype.findChoiceMarker = function (indent, choice, start) {
@@ -292,11 +337,11 @@
         if (endIndex < 0) throw new Error('Điều kiện thiếu lệnh kết thúc.');
         if (elseIndex > endIndex) elseIndex = -1;
         if (passed) {
-            this.conditionFrames.push({ indent: indent, passed: true, endIndex: endIndex });
+            this.conditionFrames.push({ indent: indent, startIndex: this.index, passed: true, endIndex: endIndex });
             return;
         }
         if (elseIndex >= 0) {
-            this.conditionFrames.push({ indent: indent, passed: false, endIndex: endIndex });
+            this.conditionFrames.push({ indent: indent, startIndex: elseIndex + 1, passed: false, endIndex: endIndex });
             this.index = elseIndex + 1;
         } else {
             this.index = endIndex >= 0 ? endIndex + 1 : this.commands.length;
@@ -390,8 +435,10 @@
             var actor = this.state.actor(id);
             if (!actor) return 0;
             if (field === 0) return actor.level;
+            if (field === 1) return actor.exp || 0;
             if (field === 2) return actor.hp;
             if (field === 3) return actor.mp;
+            if (field >= 4 && field <= 11) return this.state.actorParam(id, field - 4);
         }
         if (type === 6) return this.state.party[id] || 0;
         if (type === 7 && id === 0) return this.state.mapId;
