@@ -119,7 +119,14 @@ Flash đỏ và thanh trạng thái báo mất HP khi đi bộ. HP cập nhật 
 nếu cả đội bị hạ theo cấu hình slip death thì mở game over và không chạy event
 ở ô đích. Biến sự kiện đọc được tổng bước qua toán hạng dữ liệu 7/3.
 Hiện mới chuyển hiệu ứng kỹ năng cơ bản trong JSON, chưa thay toàn bộ cơ chế
-combat mở rộng trong note/plugin (counter, taunt, action sequence và state script).
+combat mở rộng trong note/plugin (counter, action sequence và state script).
+Taunt đọc note Physical/Magical/Certain từ state, nhân vật, class, trang bị và
+quái. State 100/101 hút đòn đơn phù hợp về mục tiêu còn sống/đang hiện; nhiều
+mục tiêu khiêu khích chọn ngẫu nhiên, đòn AI ngẫu nhiên vẫn dùng trọng số TGR.
+Đòn cả đội/nhiều mục tiêu và hồi phục cùng phe không bị chuyển hướng. Bốn skill
+39/62/99/304 có `<Bypass Taunt>` giữ cách chọn đích bình thường; các tag Ignore/Null
+cũng được đọc trực tiếp. Taunt được kiểm tra lại khi thực thi lệnh, kể cả 339,
+và hiện nhãn **Khiêu khích** trong UI. Save giữ state; rời trận dọn Taunt tạm.
 Preview có nút **Menu** (hoặc Escape trên bản đồ): chọn nhân vật để xem chỉ số,
 trạng thái, kỹ năng, túi đồ và đổi trang bị. Trang bị trao đổi với túi đồ và tôn
 trọng loại trang bị/ô bị khóa. Vật phẩm dùng ngoài trận đọc công thức hồi HP/MP,

@@ -1185,6 +1185,40 @@ async function main() {
             return e.state.actor(1).hp===87 && e.battle.enemy(0).hp===1170 &&
                 e.battle.battle.turnEffects.length===2 && /Cuối lượt:.*HP -13/.test(document.querySelector('#fnh-battle-log').textContent);
         })()`,false,false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine, current=e.battle.battle;
+            e.battle.finish('escape');e.leaveBattle('escape');
+            e.state.party.forEach(id=>e.state.recoverActor(id));e.state.changeActorState(3,101,true);
+            const troopId=e.database.Troops.length, member=e.database.Troops[current.troopId].members[0];
+            e.database.Troops.push({id:troopId,pages:[],members:[member,{...member,x:550}]});
+            e.battle.setup(troopId,true,true);e.state.scene='battle';e.battle.random=()=>0.75;
+            e.battle.handleEffect(333,[1,0,100]);e.state.changeActorSkill(1,39,true);
+        })()`,false,false);
+        await waitFor(cdp,`document.querySelector('#fnh-battle-targets button[data-index="1"]')?.textContent.includes('Khiêu khích')`,5000,'hiển thị Taunt từ state JSON');
+        check('UI đánh dấu mục tiêu khiêu khích ở cả hai phe',await evalPage(cdp,
+            'document.querySelector("#fnh-battle-party").textContent.includes("Khiêu khích")',false,false));
+        await clickElement(cdp,'#fnh-battle-targets button[data-index="0"]');
+        await clickElement(cdp,'#fnh-battle-attack');
+        await clickElement(cdp,'#fnh-battle-use-skill');
+        await clickElement(cdp,'#fnh-battle-start');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'Taunt chuyển mục tiêu đòn đã chọn');
+        check('đòn đánh từ UI bị Taunt chuyển sang đúng quái',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine, report=e.battle.battle.turnActions.find(action=>action.skillId===1);
+            return report.target===1 && e.battle.enemy(0).hp===e.battle.enemy(0).mhp && e.battle.enemy(1).hp<e.battle.enemy(1).mhp;
+        })()`,false,false));
+        await evalPage(cdp,`(() => {
+            const actor=document.querySelector('#fnh-battle-actor');actor.value='1';actor.dispatchEvent(new Event('change',{bubbles:true}));
+            const skill=document.querySelector('#fnh-battle-skill');skill.value='39';skill.dispatchEvent(new Event('change',{bubbles:true}));
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-battle-use-skill');
+        await clickElement(cdp,'#fnh-battle-use-skill');
+        await clickElement(cdp,'#fnh-battle-start');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===2 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'kỹ năng Bypass Taunt thật');
+        check('Bypass Taunt giữ mục tiêu đã chọn và quái hút về đồng đội khiêu khích',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine, report=e.battle.battle.turnActions.find(action=>action.skillId===39);
+            const enemy=e.battle.useSkill(e.battle.enemy(0),5,0,true);
+            return report.target===0 && enemy.target===3;
+        })()`,false,false));
         await evalPage(cdp,'delete window.beforeBattleItemHp;delete window.beforeBattleBottles',false,false);
         await evalPage(cdp,`(async()=>{
             const engine=FNHStandalonePreview.engine;engine.battle.finish('escape');engine.leaveBattle('escape');

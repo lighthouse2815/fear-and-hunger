@@ -124,11 +124,7 @@
     BattleRuntime.prototype.enemy = function (index) {
         return this.battle && this.battle.enemies[index];
     };
-    BattleRuntime.prototype.enemyTraits = function (enemy) {
-        var data = this.database.Enemies[enemy.enemyId], traits = (data.traits || []).slice(), database = this.database;
-        enemy.states.forEach(function (id) { if (database.States[id]) traits = traits.concat(database.States[id].traits || []); });
-        return traits;
-    };
+    BattleRuntime.prototype.enemyTraits = function (enemy) { return this.battlerTraits(enemy); };
     BattleRuntime.prototype.enemyParam = function (enemy, id) {
         var base = this.database.Enemies[enemy.enemyId].params[id] || 0;
         var rate = this.enemyTraits(enemy).reduce(function (value, trait) {
@@ -204,16 +200,32 @@
     BattleRuntime.prototype.battlerState = function (battler) {
         return battler.enemyId != null ? battler : this.state.actor(battler.id);
     };
+    BattleRuntime.prototype.battlerSources = function (battler) {
+        var data = this.battlerState(battler), sources;
+        if (battler.enemyId != null) sources = [this.database.Enemies[battler.enemyId]];
+        else {
+            sources = [this.database.Actors[battler.id], this.database.Classes[data.classId]];
+            data.equips.forEach(function (id, slot) { sources.push((slot === 0 ? this.database.Weapons : this.database.Armors)[id]); }, this);
+        }
+        data.states.forEach(function (id) { sources.push(this.database.States[id]); }, this);
+        return sources.filter(Boolean);
+    };
     BattleRuntime.prototype.battlerTraits = function (battler) {
-        if (battler.enemyId != null) return this.enemyTraits(battler);
-        var actor = this.state.actor(battler.id), data = this.database.Actors[battler.id];
-        var traits = (data.traits || []).concat((this.database.Classes[actor.classId] || {}).traits || []);
-        actor.equips.forEach(function (id, slot) {
-            var item = (slot === 0 ? this.database.Weapons : this.database.Armors)[id];
-            if (item) traits = traits.concat(item.traits || []);
-        }, this);
-        actor.states.forEach(function (id) { traits = traits.concat((this.database.States[id] || {}).traits || []); }, this);
-        return traits;
+        return this.battlerSources(battler).reduce(function (traits, data) { return traits.concat(data.traits || []); }, []);
+    };
+    BattleRuntime.prototype.hasBattlerTag = function (battler, tag) {
+        tag = '<' + tag.toLowerCase() + '>';
+        return this.battlerSources(battler).some(function (data) { return (data.note || '').toLowerCase().includes(tag); });
+    };
+    BattleRuntime.prototype.hasTaunt = function (battler, hitType) {
+        var type = ['Certain', 'Physical', 'Magical'][hitType];
+        return !!type && this.hasBattlerTag(battler, type + ' Taunt') && !this.hasBattlerTag(battler, 'Null ' + type + ' Taunt');
+    };
+    BattleRuntime.prototype.tauntTargets = function (subject, skill, targets) {
+        var type = ['Certain', 'Physical', 'Magical'][skill.hitType];
+        if (skill.scope !== 1 || /<Bypass Taunt>/i.test(skill.note || '') || this.hasBattlerTag(subject, 'Ignore ' + type + ' Taunt')) return targets;
+        var taunts = targets.filter(function (target) { return target.alive && !target.hidden && this.hasTaunt(target, skill.hitType); }, this);
+        return taunts.length ? taunts : targets;
     };
     BattleRuntime.prototype.battlerParam = function (battler, id) {
         return battler.enemyId != null ? this.enemyParam(battler, id) : this.state.actorParam(battler.id, id);
@@ -275,7 +287,8 @@
         if (scope < 0 || scope > 11) throw new Error('Phạm vi kỹ năng chưa hỗ trợ: ' + scope);
         var opponents = scope <= 6, dead = scope === 9 || scope === 10;
         var all = (opponents === enemy ? this.battle.actors : this.battle.enemies);
-        var targets = all.filter(function (target) { return !target.hidden && target.alive !== dead; });
+        var available = all.filter(function (target) { return !target.hidden && target.alive !== dead; });
+        var targets = this.tauntTargets(subject, skill, available);
         if ([2, 8, 10].includes(scope)) return targets;
         if (scope >= 3 && scope <= 6) {
             var result = [];
@@ -286,6 +299,7 @@
         var last = (this.battle.lastTargets || {})[key];
         if (index === -2) index = last == null ? -1 : last;
         var chosen = index >= 0 ? all[index] : null;
+        if (targets !== available && index >= 0 && !targets.includes(chosen)) chosen = targets[Math.floor(this.random() * targets.length)];
         return targets.length ? [targets.includes(chosen) ? chosen : index < 0 ? this.randomTarget(targets) : targets[0]] : [];
     };
     BattleRuntime.prototype.values = function (battler) {
