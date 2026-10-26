@@ -1059,6 +1059,7 @@ async function main() {
         })()`,false,false);
         await waitFor(cdp,'!document.querySelector("#fnh-battle").hidden',5000,'mở trận để kiểm tra chọn kỹ năng');
         await clickElement(cdp,'#fnh-battle-use-skill');
+        await clickElement(cdp,'#fnh-battle-start');
         await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'dùng Guard từ danh sách kỹ năng');
         check('giao diện chọn kỹ năng thực thi Guard và hết state cuối lượt',await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.battle.lastAction.skillId===2 && !FNHStandalonePreview.engine.state.actor(1).states.includes(2)',false,false));
@@ -1071,6 +1072,7 @@ async function main() {
         })()`,false,false);
         await clickElement(cdp,'#fnh-battle-friends button[data-index="0"]');
         await clickElement(cdp,'#fnh-battle-use-item');
+        await clickElement(cdp,'#fnh-battle-start');
         await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===2 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'dùng Blue vial trong trận');
         check('UI vật phẩm chiến đấu hồi HP, trả chai và dùng hết một item',await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine;
@@ -1082,11 +1084,48 @@ async function main() {
             const items=document.querySelector('#fnh-battle-item');items.value='10';items.dispatchEvent(new Event('change',{bubbles:true}));
         })()`,false,false);
         await clickElement(cdp,'#fnh-battle-use-item');
+        await clickElement(cdp,'#fnh-battle-start');
         await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===3 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'vial gây cháy chờ animation xong');
         check('UI item tấn công dùng JSON và hiện tên trong log',await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine;
             return e.battle.battle.lastAction.itemId===10 && e.state.itemCount('items',10)===0 &&
                 e.battle.enemy(0).hp<e.battle.enemy(0).mhp && document.querySelector('#fnh-battle-log').textContent.includes('Murky vial');
+        })()`,false,false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;e.state.addActor(3);e.syncBattleActors();
+            e.battle.enemy(0).hp=e.battle.enemy(0).mhp;
+            e.state.gainItem('items',28,1-e.state.itemCount('items',28));
+            const actors=document.querySelector('#fnh-battle-actor');
+            actors.dispatchEvent(new Event('change',{bubbles:true}));
+            const kind=document.querySelector('#fnh-battle-kind');kind.value='item';kind.dispatchEvent(new Event('change',{bubbles:true}));
+            const items=document.querySelector('#fnh-battle-item');items.value='28';items.dispatchEvent(new Event('change',{bubbles:true}));
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-battle-use-item');
+        check('chọn lệnh chưa tiêu item và chờ đủ đồng đội',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;
+            return e.battle.battle.turn===3 && e.state.itemCount('items',28)===1 && e.battle.battle.inputActions.length===1 &&
+                document.querySelector('#fnh-battle-start').disabled && document.querySelector('#fnh-battle-actor').value==='3';
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-battle-use-item');
+        check('UI giữ chỗ vật phẩm chung cả đội',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.inputActions.length===1 && document.querySelector("#fnh-status").textContent.includes("Không đủ vật phẩm")',false,false));
+        await evalPage(cdp,`(() => {
+            const kind=document.querySelector('#fnh-battle-kind');kind.value='skill';kind.dispatchEvent(new Event('change',{bubbles:true}));
+            const skill=document.querySelector('#fnh-battle-skill');skill.value='2';skill.dispatchEvent(new Event('change',{bubbles:true}));
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-battle-use-skill');
+        check('UI cho xem đủ lệnh cả đội trước khi bắt đầu',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.inputActions.length===2 && !document.querySelector("#fnh-battle-start").disabled && document.querySelector("#fnh-battle-queue").textContent.includes("Blue vial")',false,false));
+        await clickElement(cdp,'#fnh-battle-queue button[data-actor="1"]');
+        check('bỏ chọn lệnh không mất item và khóa bắt đầu',await evalPage(cdp,
+            'document.querySelector("#fnh-battle-start").disabled && FNHStandalonePreview.engine.state.itemCount("items",28)===1',false,false));
+        await clickElement(cdp,'#fnh-battle-attack');
+        await clickElement(cdp,'#fnh-battle-start');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===4 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'cả đội thực hiện đúng một lượt');
+        check('thực thi hai nhân vật chỉ tăng lượt một lần và dọn danh sách',await evalPage(cdp,`(() => {
+            const b=FNHStandalonePreview.engine.battle.battle;
+            return b.turnActions.length===2 && b.turnActions[0].subjectId===3 && b.turnActions[0].skillId===2 &&
+                b.turnActions[1].subjectId===1 && b.inputActions.length===0;
         })()`,false,false));
         await evalPage(cdp,'delete window.beforeBattleItemHp;delete window.beforeBattleBottles',false,false);
         await evalPage(cdp,`(async()=>{
@@ -1239,6 +1278,7 @@ async function main() {
         check('battle khóa nút di chuyển trên map', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.y === 8', false, false));
         await clickElement(cdp, '#fnh-battle-attack');
+        await clickElement(cdp, '#fnh-battle-start');
         await waitFor(cdp, 'FNHStandalonePreview.engine.battle.battle.turn === 1', 5000, 'đánh khi event vẫn đang chờ');
         check('nút đánh hoạt động trong event đang chờ battle', await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.enemy(0).hp < FNHStandalonePreview.engine.battle.enemy(0).mhp', false, false));
@@ -1269,6 +1309,7 @@ async function main() {
             delete window.originalTroopStart;`, false, false);
         await clickElement(cdp, '#fnh-battle-targets [data-index="1"]');
         await clickElement(cdp, '#fnh-battle-attack');
+        await clickElement(cdp, '#fnh-battle-start');
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.scene === "map" && !FNHStandalonePreview.engine.eventRunning && document.querySelector("#fnh-battle").hidden',
             5000, 'page hạ đầu Guard kết thúc trận thật');
         check('hạ đầu Guard chạy troop event và nhánh thắng của map', await evalPage(cdp,

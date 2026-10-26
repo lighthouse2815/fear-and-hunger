@@ -101,6 +101,7 @@
         if (!this.battle || this.battle.result) return this.battle && this.battle.result;
         this.battle.result = result;
         this.battle.phase = 'finished';
+        this.battle.inputActions = [];
         if (result === 'defeat-continue') {
             this.battle.actors.forEach(function (actor) {
                 this.state.changeActorState(actor.id, 1, false);
@@ -189,6 +190,17 @@
     };
     BattleRuntime.prototype.aliveEnemies = function () { return this.battle.enemies.filter(function (enemy) { return enemy.alive && !enemy.hidden; }); };
     BattleRuntime.prototype.aliveActors = function () { return this.battle.actors.filter(function (actor) { return actor.alive; }); };
+    BattleRuntime.prototype.inputActors = function () {
+        return this.aliveActors().filter(function (actor) {
+            return !this.battlerState(actor).states.some(function (id) { return (this.database.States[id] || {}).restriction > 0; }, this);
+        }, this);
+    };
+    BattleRuntime.prototype.actionSpeed = function (subject, data, attack) {
+        var agility = this.battlerParam(subject, 6);
+        var speed = agility + Math.floor(this.random() * Math.floor(5 + agility / 4)) + (data.speed || 0);
+        if (attack) speed += this.battlerTraits(subject).reduce(function (sum, trait) { return sum + (trait.code === 33 ? trait.value : 0); }, 0);
+        return speed;
+    };
     BattleRuntime.prototype.battlerState = function (battler) {
         return battler.enemyId != null ? battler : this.state.actor(battler.id);
     };

@@ -16,6 +16,7 @@ assert.match(html, /engine\/browser-menu\.js/);
 assert.match(html, /id="fnh-menu-dialog"/);
 assert.match(html, /id="fnh-battle-use-skill"/);
 assert.match(html, /id="fnh-battle-use-item"/);
+assert.match(html, /id="fnh-battle-start"/);
 assert.match(html, /engine\/battle-runtime\.js/);
 assert.match(html, /fnh-battle-targets/);
 assert.doesNotMatch(html, /js\/plugins\//);

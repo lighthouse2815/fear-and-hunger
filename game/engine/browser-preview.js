@@ -34,6 +34,7 @@
     var lastBattle = null, lastScene = null, lastBattlePhase = null;
     function renderBattleUi() {
         var panel = document.getElementById('fnh-battle'), battle = engine.battle && engine.battle.battle;
+        if (battle !== lastBattle) { battleKind = 'skill'; battleActor = 0; }
         lastBattle = battle; lastScene = engine.state.scene;
         lastBattlePhase = battle && battle.phase;
         if (!battle || engine.state.scene !== 'battle' || battle.result) { panel.hidden = true; return; }
@@ -56,12 +57,12 @@
             return actor.name + ' · HP ' + actor.hp + ' · MP ' + actor.mp;
         }).join(' | ');
         var actors = document.getElementById('fnh-battle-actor'); actors.replaceChildren();
-        if (!engine.battle.aliveActors().some(function (actor) { return actor.id === battleActor; })) {
-            var leader = engine.battle.aliveActors()[0]; battleActor = leader ? leader.id : 0;
+        if (!engine.battle.inputActors().some(function (actor) { return actor.id === battleActor; })) {
+            var leader = engine.battle.inputActors()[0]; battleActor = leader ? leader.id : 0;
         }
         battle.actors.forEach(function (actor) {
             var option = document.createElement('option'); option.value = actor.id; option.textContent = actor.name;
-            option.disabled = !actor.alive; actors.appendChild(option);
+            option.disabled = !engine.battle.inputActors().some(function (entry) { return entry.id === actor.id; }); actors.appendChild(option);
         });
         actors.value = battleActor; actors.disabled = battle.phase !== 'input';
         var skills = document.getElementById('fnh-battle-skill'); skills.replaceChildren();
@@ -97,10 +98,27 @@
             button.onclick = function () { battleFriend = index; renderBattleUi(); }; friends.appendChild(button);
         });
         document.getElementById('fnh-battle-use-skill').disabled = battle.phase !== 'input' || !battleActor || !engine.battle.canUseSkill(engine.battle.actor(battleActor), engine.database.Skills[battleSkill]);
+        var queued = battle.inputActions || [], queuePanel = document.getElementById('fnh-battle-queue');
+        queuePanel.replaceChildren();
+        var summary = document.createElement('p');
+        summary.textContent = 'Đã chọn ' + queued.length + '/' + engine.battle.inputActors().length + ' nhân vật'; queuePanel.appendChild(summary);
+        queued.forEach(function (action) {
+            var data = (action.kind === 'item' ? engine.database.Items : engine.database.Skills)[action.id];
+            var subject = engine.state.actor(action.actorId), row = document.createElement('p');
+            var target = data.scope === 1 ? engine.battle.enemy(action.targetIndex) : data.scope === 7 || data.scope === 9 ? battle.actors[action.targetIndex] : null;
+            row.textContent = subject.name + ': ' + data.name + (target ? ' → ' + target.name : '');
+            var remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Bỏ chọn'; remove.dataset.actor = action.actorId;
+            remove.disabled = battle.phase !== 'input';
+            remove.onclick = function () { engine.removeBattleAction(action.actorId); battleActor = action.actorId; renderBattleUi(); };
+            row.appendChild(remove); queuePanel.appendChild(row);
+        });
+        var start = document.getElementById('fnh-battle-start');
+        try { engine.validateBattleActions(queued, true); start.disabled = false; }
+        catch (_) { start.disabled = true; }
         var lastAction = battle.lastAction;
         document.getElementById('fnh-battle-log').textContent = lastAction ? engine.battle.actionData(lastAction).name +
             ' · ' + lastAction.hits.map(function (hit) { return hit.missed ? 'Trượt' : hit.evaded ? 'Né' : String(hit.damage); }).join(', ') : '';
-        document.getElementById('fnh-battle-attack').disabled = battle.phase !== 'input';
+        document.getElementById('fnh-battle-attack').disabled = battle.phase !== 'input' || !battleActor || !engine.battle.canUseSkill(engine.battle.actor(battleActor), engine.database.Skills[1]);
         document.getElementById('fnh-battle-escape').disabled = !battle.canEscape || battle.phase !== 'input';
     }
     var endScene = null;
@@ -491,11 +509,23 @@
             await draw();
         } catch (error) { setStatus(error.message); }
     }
+    function selectBattleAction(kind, id, targetIndex) {
+        engine.queueBattleAction(battleActor, kind, id, targetIndex);
+        var queued = engine.battle.battle.inputActions;
+        var nextActor = engine.battle.inputActors().find(function (actor) {
+            return !queued.some(function (action) { return action.actorId === actor.id; });
+        });
+        if (nextActor) battleActor = nextActor.id;
+        renderBattleUi();
+    }
+    document.getElementById('fnh-battle-start').addEventListener('click', function () {
+        battleAction(function () { return engine.startBattleTurn(eventHandlers); });
+    });
     document.getElementById('fnh-battle-attack').addEventListener('click', function () {
         battleAction(async function () {
             var actor = engine.battle.actor(battleActor);
             if (!actor) return;
-            await engine.battleAttack(actor.id, battleTarget, eventHandlers);
+            selectBattleAction('skill', 1, battleTarget);
         });
     });
     document.getElementById('fnh-battle-actor').addEventListener('change', function (event) { battleActor = Number(event.target.value); renderBattleUi(); });
@@ -504,11 +534,11 @@
     document.getElementById('fnh-battle-item').addEventListener('change', function (event) { battleItem = Number(event.target.value); renderBattleUi(); });
     document.getElementById('fnh-battle-use-item').addEventListener('click', function () {
         var item = engine.database.Items[battleItem];
-        battleAction(function () { return engine.battleItem(battleActor, battleItem, item && [7, 9].includes(item.scope) ? battleFriend : battleTarget, eventHandlers); });
+        battleAction(function () { return selectBattleAction('item', battleItem, item && [7, 9].includes(item.scope) ? battleFriend : battleTarget); });
     });
     document.getElementById('fnh-battle-use-skill').addEventListener('click', function () {
         var skill = engine.database.Skills[battleSkill];
-        battleAction(function () { return engine.battleSkill(battleActor, battleSkill, [7, 9].includes(skill.scope) ? battleFriend : battleTarget, eventHandlers); });
+        battleAction(function () { return selectBattleAction('skill', battleSkill, [7, 9].includes(skill.scope) ? battleFriend : battleTarget); });
     });
     document.getElementById('fnh-battle-escape').addEventListener('click', function () {
         battleAction(function () { return engine.battleEscape(eventHandlers); });

@@ -113,8 +113,17 @@ state, học skill và common event từ JSON; Blue vial trả vỏ chai và scr
 đúng nhân vật được chọn. Khi menu mở, map/di chuyển/timer được tạm dừng.
 Trong trận có thể chọn nhân vật, kỹ năng đã học hoặc Guard, mục tiêu quái/đồng đội.
 Kỹ năng chưa học hoặc thiếu MP/TP bị từ chối trước khi tiêu lượt; log hiện trượt,
-né và sát thương. Hiện mỗi lượt điều khiển một hành động của đội; chưa có hàng đợi
-chọn hành động riêng cho toàn bộ thành viên hay menu dùng kỹ năng ngoài trận.
+né và sát thương. Chọn lệnh cho từng nhân vật bằng **Chọn đánh**, **Chọn kỹ năng**
+hoặc **Chọn vật phẩm**, xem/sửa/bỏ lệnh trong danh sách rồi bấm **Bắt đầu lượt**.
+Engine chờ đủ các thành viên còn hành động được; nhân vật chết hoặc bị khóa hành
+động không cần chọn. Lệnh hai phe được sắp theo AGI, dao động tốc độ, speed của
+kỹ năng/vật phẩm và trait tốc độ đánh. Troop page được kiểm tra sau từng lệnh;
+cả đội chỉ tăng một lượt và cập nhật state cuối lượt một lần. Chủ thể chết,
+bị khóa hoặc đã hành động cưỡng chế sẽ bỏ lệnh thường; mục tiêu chết được chọn
+lại trong cùng phe. Kết quả thắng/thua dừng phần hàng đợi còn lại. Chọn/sửa/bỏ
+lệnh không trừ MP/TP/item; số item giữ chỗ được kiểm tra chung cả đội, lựa chọn
+được giữ qua save. Chưa có menu dùng kỹ năng ngoài trận hoặc AI cho đồng đội
+bị confusion/auto-battle.
 Trong trận, chọn loại hành động **Vật phẩm**, vật phẩm trong túi và mục tiêu rồi
 bấm **Dùng vật phẩm**. Item dùng chung luồng sát thương/animation/common event
 với kỹ năng, trừ số lượng đúng một lần, không trừ MP/TP. Bộ lọc occasion giữ các
