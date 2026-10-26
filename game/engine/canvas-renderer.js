@@ -52,10 +52,23 @@
         return this.drawMap(engine, frame);
     };
 
+    CanvasRenderer.prototype.animationImages = function (engine, battle) {
+        var renderer = this;
+        return Promise.all((engine.animations ? engine.animations.entries.slice() : []).filter(function (entry) {
+            return (entry.scope === 'battle') === battle;
+        }).map(async function (entry) {
+            var data = engine.database.Animations[entry.animationId];
+            return { entry: entry, data: data,
+                first: data.animation1Name ? await renderer.loadImage('img/animations/' + data.animation1Name + '.png') : null,
+                second: data.animation2Name ? await renderer.loadImage('img/animations/' + data.animation2Name + '.png') : null };
+        }));
+    };
+
     CanvasRenderer.prototype.drawBattle = async function (engine, frame) {
         var battle = engine.battle.battle, renderer = this;
         var screen = engine.screen && engine.screen.screen;
         var pictures = await this.pictureImages(screen);
+        var animations = await this.animationImages(engine, true);
         var names = screen && screen.battlebacks || (engine.map.data.specifyBattleback ?
             [engine.map.data.battleback1Name, engine.map.data.battleback2Name] : ['', '']);
         var backgrounds = await Promise.all(names.map(function (name, index) {
@@ -99,7 +112,18 @@
             enemies.sort(function (a, b) { return a.enemy.y - b.enemy.y || a.enemy.index - b.enemy.index; });
             enemies.forEach(function (entry) {
                 var enemy = entry.enemy, bitmap = entry.bitmap;
-                context.drawImage(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height);
+                var flash = engine.animations && engine.animations.targetEffect(enemy.index, null, 'enemy');
+                if (!flash || !flash.hide) {
+                    context.drawImage(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height);
+                    if (flash) renderer.drawBattlerFlash(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height, flash);
+                }
+            });
+            animations.forEach(function (animation) {
+                var entry = animation.entry, data = animation.data;
+                var target = enemies.find(function (item) { return entry.targetType === 'enemy' && item.enemy.index === entry.targetId; });
+                if (data.position === 3) renderer.drawAnimationCells(animation, 408, 312);
+                else if (target) renderer.drawAnimationCells(animation, target.enemy.x, target.enemy.y -
+                    (data.position === 0 ? target.bitmap.height : data.position === 1 ? target.bitmap.height / 2 : 0));
             });
         } finally { context.restore(); }
         if (screen) this.applyTone(context, width, height, screen.tone);
@@ -116,13 +140,7 @@
         var parallaxName = screen && screen.parallax ? screen.parallax.name : map.data.parallaxName;
         var parallax = parallaxName ? await this.loadImage('img/parallaxes/' + parallaxName + '.png') : null;
         var pictures = await this.pictureImages(screen);
-        var animationEntries = engine.animations ? engine.animations.entries.slice() : [];
-        var animationBitmaps = await Promise.all(animationEntries.map(async function (entry) {
-            var data = engine.database.Animations[entry.animationId];
-            return { entry: entry, data: data,
-                first: data.animation1Name ? await this.loadImage('img/animations/' + data.animation1Name + '.png') : null,
-                second: data.animation2Name ? await this.loadImage('img/animations/' + data.animation2Name + '.png') : null };
-        }, this));
+        var animationBitmaps = await this.animationImages(engine, false);
         var names = map.tileset.tilesetNames || [];
         var sheets = await Promise.all(names.map(function (name) {
             return name ? this.loadImage('img/tilesets/' + name + '.png') : null;
@@ -293,23 +311,41 @@
         if (frame < 0 || frame >= data.frames.length) return;
         var target = entry.targetId === -1 ? state : map.eventById(entry.targetId);
         if (!target) return;
-        var cells = data.frames[frame] || [], renderer = this;
-        cells.forEach(function (cell) {
+        this.drawAnimationCells(animation, (target.x - startX + 0.5) * TILE_SIZE,
+            (target.y - startY + (data.position === 2 ? 1 : data.position === 0 ? 0.35 : 0.5)) * TILE_SIZE);
+    };
+
+    CanvasRenderer.prototype.drawAnimationCells = function (animation, x, y) {
+        var entry = animation.entry, data = animation.data, frame = Math.floor(entry.elapsed / 4), renderer = this;
+        if (frame < 0 || frame >= data.frames.length) return;
+        (data.frames[frame] || []).forEach(function (cell) {
             var pattern = cell[0], bitmap = pattern >= 100 ? animation.second : animation.first;
-            if (!bitmap) return;
+            if (pattern < 0 || !bitmap) return;
             pattern %= 100;
-            var sourceX = (pattern % 5) * 192, sourceY = Math.floor(pattern / 5) * 192;
-            var x = (target.x - startX + 0.5) * TILE_SIZE + Number(cell[1] || 0);
-            var y = (target.y - startY + (data.position === 2 ? 1 : data.position === 0 ? 0.35 : 0.5)) * TILE_SIZE + Number(cell[2] || 0);
             var scale = Number(cell[3] == null ? 100 : cell[3]) / 100;
-            renderer.context.save();
-            renderer.context.globalAlpha = Math.max(0, Math.min(1, Number(cell[6] == null ? 255 : cell[6]) / 255));
-            renderer.context.globalCompositeOperation = ['source-over', 'lighter', 'multiply', 'screen'][cell[7] || 0] || 'source-over';
-            renderer.context.translate(x, y);
-            renderer.context.rotate(Number(cell[4] || 0) * Math.PI / 180);
-            renderer.context.drawImage(bitmap, sourceX, sourceY, 192, 192, -96 * scale, -96 * scale, 192 * scale, 192 * scale);
-            renderer.context.restore();
+            var context = renderer.context, mirror = entry.mirror ? -1 : 1;
+            context.save();
+            context.globalAlpha = Math.max(0, Math.min(1, Number(cell[6] == null ? 255 : cell[6]) / 255));
+            context.globalCompositeOperation = ['source-over', 'lighter', 'multiply', 'screen'][cell[7] || 0] || 'source-over';
+            context.translate(x + Number(cell[1] || 0) * mirror, y + Number(cell[2] || 0));
+            context.rotate(Number(cell[4] || 0) * Math.PI / 180 * mirror);
+            context.scale((cell[5] ? -1 : 1) * mirror, 1);
+            context.drawImage(bitmap, (pattern % 5) * 192, Math.floor(pattern / 5) * 192,
+                192, 192, -96 * scale, -96 * scale, 192 * scale, 192 * scale);
+            context.restore();
         });
+    };
+
+    CanvasRenderer.prototype.drawBattlerFlash = function (bitmap, x, y, flash) {
+        if (!this.flashCanvas) this.flashCanvas = document.createElement('canvas');
+        var canvas = this.flashCanvas;
+        canvas.width = bitmap.width; canvas.height = bitmap.height;
+        var context = canvas.getContext('2d');
+        context.drawImage(bitmap, 0, 0);
+        context.globalCompositeOperation = 'source-in';
+        context.fillStyle = 'rgba(' + flash.color.slice(0, 3).concat(flash.color[3] / 255 * flash.remaining / Math.max(1, flash.duration)).join(',') + ')';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        this.context.drawImage(canvas, x, y);
     };
 
     CanvasRenderer.prototype.drawRegionCover = function (map, cover, startX, startY, cols, rows) {

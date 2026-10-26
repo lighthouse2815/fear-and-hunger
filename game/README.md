@@ -76,7 +76,12 @@ và xếp lớp theo tọa độ. Bộ phận ẩn hoặc đã chết không đ�
 chỉ định, renderer làm mờ ảnh bản đồ hiện tại. Giao diện hiển thị HP/MP trong đội.
 Luồng 301 chờ kết quả rồi chỉ chạy nhánh 601/602/603 tương ứng; trận thua bắt buộc
 dừng event và mở màn game over. Combat còn thiếu hiệu ứng kỹ năng, hành động
-cưỡng chế/animation của quái và AI đầy đủ để thay entry chính.
+cưỡng chế và AI đầy đủ để thay entry chính.
+Lệnh 337 phát animation trên quái bằng sprite sheet PNG hiện có: chọn một hoặc
+toàn bộ mục tiêu còn sống/đang hiện, không chờ animation kết thúc. Frame, SE,
+flash/ẩn sprite, vị trí đầu/giữa/chân/toàn màn hình và phản chiếu được xử lý trong
+engine độc lập. Save giữ animation đang chạy; rời trận dọn animation trận và
+tiếp tục animation bản đồ đã tạm dừng.
 Các lệnh sự kiện 331–336, 340 và 342 đã đổi được HP/MP/TP, state, hồi phục, hiện
 quái, biến hình và kết thúc trận. Thao tác giữ index thành viên trong troop,
 tôn trọng miễn nhiễm state, đồng bộ trạng thái chết và lưu được qua save.

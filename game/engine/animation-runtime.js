@@ -12,10 +12,16 @@
         this.revision = 0;
     }
     AnimationRuntime.prototype.start = function (targetId, animationId, mapId, mirror) {
-        var data = this.engine.database.Animations[animationId];
-        if (!data) throw new Error('Không tìm thấy animation ' + animationId);
-        var entry = { targetId: targetId, animationId: animationId, mapId: mapId, mirror: !!mirror,
-            elapsed: -8, lastFrame: -1, flash: null, remaining: data.frames.length * 4 + 9 };
+        return this.enqueue({ targetId: targetId, animationId: animationId, mapId: mapId, mirror: !!mirror });
+    };
+    AnimationRuntime.prototype.startBattle = function (targetId, animationId, mirror, targetType) {
+        return this.enqueue({ targetId: targetId, animationId: animationId, scope: 'battle',
+            targetType: targetType || 'enemy', troopId: this.engine.battle.battle.troopId, mirror: !!mirror });
+    };
+    AnimationRuntime.prototype.enqueue = function (entry) {
+        var data = this.engine.database.Animations[entry.animationId];
+        if (!data) throw new Error('Không tìm thấy animation ' + entry.animationId);
+        Object.assign(entry, { elapsed: -8, lastFrame: -1, flash: null, remaining: data.frames.length * 4 + 9 });
         this.entries.push(entry); this.revision++;
         var runtime = this;
         return new Promise(function (resolve) { runtime.waiters.set(entry, resolve); });
@@ -30,7 +36,15 @@
     AnimationRuntime.prototype.advance = function (frames) {
         var runtime = this, engine = this.engine;
         this.entries.slice().forEach(function (entry) {
-            if (entry.mapId !== engine.map.id) { runtime.finish(entry); return; }
+            if (entry.scope === 'battle') {
+                var battle = engine.battle.battle;
+                if (!battle || battle.result || engine.state.scene !== 'battle' || battle.troopId !== entry.troopId) {
+                    runtime.finish(entry); return;
+                }
+            } else {
+                if (entry.mapId !== engine.map.id) { runtime.finish(entry); return; }
+                if (engine.state.scene === 'battle') return;
+            }
             var data = engine.database.Animations[entry.animationId];
             entry.elapsed += frames; entry.remaining -= frames;
             if (entry.flash) entry.flash.remaining = Math.max(0, entry.flash.remaining - frames);
@@ -57,12 +71,16 @@
             if (entry.remaining <= 0) runtime.finish(entry);
         });
     };
-    AnimationRuntime.prototype.targetEffect = function (targetId, mapId) {
+    AnimationRuntime.prototype.targetEffect = function (targetId, mapId, targetType) {
         var effect = null;
         this.entries.forEach(function (entry) {
-            if (entry.targetId === targetId && entry.mapId === mapId && entry.flash && entry.flash.remaining > 0) effect = entry.flash;
+            if (entry.targetId === targetId && (targetType ? entry.scope === 'battle' && entry.targetType === targetType :
+                entry.scope !== 'battle' && entry.mapId === mapId) && entry.flash && entry.flash.remaining > 0) effect = entry.flash;
         });
         return effect;
+    };
+    AnimationRuntime.prototype.clearBattle = function () {
+        this.entries.filter(function (entry) { return entry.scope === 'battle'; }).forEach(this.finish.bind(this));
     };
     AnimationRuntime.prototype.dispose = function () {
         this.entries.slice().forEach(this.finish.bind(this));

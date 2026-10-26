@@ -197,6 +197,7 @@
             if (this.routeErrors.length) throw this.routeErrors.shift();
             this.screen.advance(frames, 'battle');
             this.filters.advance(frames);
+            this.animations.advance(frames);
             return;
         }
         if (this.routeErrors.length) throw this.routeErrors.shift();
@@ -366,6 +367,17 @@
         eventHandlers.effect = function (code, parameters, command, interpreter) {
             if (code === 356 && engine.lighting.handleCommand(parameters[0], engine.map)) return true;
             if (code === 356 && engine.filters.handleCommand(parameters[0])) return true;
+            if (code === 337) {
+                var battle = engine.battle.battle;
+                if (!battle || battle.result) throw new Error('Trận chiến không hoạt động.');
+                if (!engine.database.Animations[parameters[1]]) throw new Error('Không tìm thấy animation ' + parameters[1]);
+                battle.enemies.forEach(function (enemy) {
+                    if (enemy.alive && !enemy.hidden && (parameters[2] || parameters[0] < 0 || enemy.index === parameters[0])) {
+                        engine.animations.startBattle(enemy.index, parameters[1]);
+                    }
+                });
+                return true;
+            }
             if (engine.battle.handleEffect(code, parameters)) return true;
             if (code === 203) { engine.setEventLocation(parameters, interpreter); return true; }
             if (code === 205) return engine.applyRoute(parameters, interpreter);
@@ -492,6 +504,7 @@
     };
 
     GameEngine.prototype.leaveBattle = function (result, interpreter) {
+        this.animations.clearBattle();
         if (this.state.scene === 'battle') this.state.scene = result === 'defeat' ? 'gameover' : 'map';
         if (result === 'defeat' && interpreter) interpreter.index = interpreter.commands.length;
         return result === 'victory' ? 0 : result === 'escape' ? 1 : 2;
@@ -511,6 +524,7 @@
             var selected = this.random() * total;
             troopId = encounters.find(function (entry) { selected -= entry.weight; return selected < 0; }).troopId;
         } else throw new Error('Kiểu chọn troop không hợp lệ.');
+        this.animations.clearBattle();
         this.battle.setup(troopId, parameters[2] === true, parameters[3] === true);
         var runtime = this.battle;
         runtime.battle.managed = true;

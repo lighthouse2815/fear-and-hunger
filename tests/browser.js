@@ -1037,6 +1037,32 @@ async function main() {
             return result.enemies === 5 && !renderer.images.has('img/enemies/khong-ton-tai.png');
         })()`, true, false));
         await evalPage(cdp, 'delete window.battleExpectedPixels', false, false);
+        check('337 vẽ sprite sheet tại quái, phản chiếu và flash đúng alpha', await evalPage(cdp, `(async () => {
+            const original = FNHStandalonePreview.engine;
+            const engine = new FNHStandaloneEngine.GameEngine({ dataStore: original.dataStore, onRouteEffect: () => true });
+            await engine.boot({ mapId: 74, x: 8, y: 8, party: [1] });
+            engine.battle.setup(1); engine.state.scene = 'battle';
+            engine.screen.screen.battlebacks = ['', 'front'];
+            const canvas = document.createElement('canvas'), renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas);
+            await renderer.draw(engine);
+            const base = canvas.getContext('2d').getImageData(0,0,816,624).data;
+            await engine.createInterpreter([{code:337,parameters:[0,7,false]}],0).run();
+            engine.advanceRoutes(8); await renderer.draw(engine);
+            const actual = canvas.getContext('2d').getImageData(0,0,816,624).data;
+            if (!actual.some((v,i) => v !== base[i])) return false;
+            const sheet = document.createElement('canvas'); sheet.width = 192; sheet.height = 192;
+            const ctx = sheet.getContext('2d'); ctx.fillStyle = '#ff0000'; ctx.fillRect(0,0,96,192);
+            const cell = {entry:{elapsed:0,mirror:true},data:{frames:[[[0,20,0,100,0,false,255,0]]]},first:sheet};
+            const test = document.createElement('canvas'), draw = new FNHStandaloneCanvas.CanvasRenderer(test,{width:384,height:384});
+            draw.drawAnimationCells(cell,192,192);
+            const pixel = (x,y) => Array.from(draw.context.getImageData(x,y,1,1).data);
+            if (pixel(200,192)[0] !== 255 || pixel(100,192)[3] !== 0) return false;
+            draw.context.clearRect(0,0,384,384);
+            draw.context.fillStyle = '#000'; draw.context.fillRect(0,0,384,384);
+            draw.drawBattlerFlash(sheet,0,0,{color:[0,255,0,255],remaining:4,duration:4});
+            if (pixel(20,20)[1] !== 255 || pixel(100,20)[1] !== 0) return false;
+            engine.animations.dispose(); return true;
+        })()`, true, false));
         check('event độc lập điều khiển quái và giữ thay đổi qua save', await evalPage(cdp, `(async () => {
             const source = FNHStandalonePreview.engine;
             const engine = new FNHStandaloneEngine.GameEngine({ dataStore: source.dataStore });
