@@ -21,12 +21,12 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
 2. Menu: đối chiếu đội hình, trang bị và các lựa chọn theo cấu hình gốc;
-   hoàn thiện tùy chọn người chơi. Chế tạo item/weapon/armor theo recipe và
+   Chế tạo item/weapon/armor theo recipe và
    ingredient note đã chạy trong menu, kiểm tra bạc/nguyên liệu và save số lần
    chế tạo; cần đối chiếu thêm recipe dùng tên thay vì ID và custom synthesis effect.
 3. Bản đồ: di chuyển mượt và nhạc trận.
    Chỉ đánh dấu xong sau khi xác minh.
-4. Điều khiển: đặt lại phím và đối chiếu thêm thao tác trên điện thoại.
+4. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
 5. Luồng chính: Map072 trước tiêu đề, chơi mới/tiếp tục, nội dung kết thúc,
    cheat theo tên và cập nhật server/build/check khi chuyển entry chính.
 6. Quét nội dung toàn bộ, kiểm tra các nhánh đại diện và loại các giả định chỉ
@@ -36,6 +36,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 - T/C gọi common event 289/257 thật trên bản đồ, có nút cho điện thoại, giữ
   khóa điều khiển khi chờ thoại và tôn trọng MP/switch; Z/X xác nhận/hủy.
+- Tùy chọn âm lượng tổng/nhóm (mặc định tổng 5%), gán/bỏ phím, WASD và reset
+  bàn phím giữ qua tải lại trang; preset/reset không đổi âm lượng.
 
 - Các mã lệnh xuất hiện trong JSON đều có nhánh interpreter; 401/405/505 là
   dòng tiếp nối. Cần kiểm chứng handler thực thi, không chỉ đếm nhánh.

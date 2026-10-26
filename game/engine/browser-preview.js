@@ -12,22 +12,26 @@
     var engine = new FNHStandaloneEngine.GameEngine({ baseUrl: '.' });
     var renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { baseUrl: '.' });
     var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
+    var settings = new FNHStandaloneSettings.PlayerSettings({ key: 'FNH_STANDALONE_PREVIEW_SETTINGS' });
     var audio = new FNHStandaloneAudio.AudioManager({ baseUrl: '.', masterVolume: 0.05, onError: function (error) { setStatus(error.message); } });
+    FNHStandaloneSettings.categories.forEach(function (category) { audio.setVolume(category, settings.volumes[category] / 100); });
+    document.getElementById('fnh-volume').value = settings.volumes.master;
     var ready = false;
     var busy = false;
     var audioMap = null;
     var scheduler = null;
     var errors = [];
     var inputPulses = new Map();
-    var commonKeys = new Map(), commonBindings = { t: 289, c: 257 };
+    var commonKeys = new Map(), commonBindings = { torch: 289, skill: 257 };
     var video = document.getElementById('fnh-video');
+    video.volume = audio.masterVolume;
     var videoPlay = document.getElementById('fnh-video-play');
     var stopVideo = null;
     var uiTail = Promise.resolve();
     var scrollAnimation = null, scrollFastHeld = false, scrollNoFast = false, stopScrollText = null;
 
     // Cho phép xem trạng thái engine đang chạy trong công cụ phát triển.
-    window.FNHStandalonePreview = { engine: engine, audio: audio, errors: errors };
+    window.FNHStandalonePreview = { engine: engine, audio: audio, settings: settings, errors: errors };
 
     function setStatus(text) { status.textContent = text; }
     var menuUi;
@@ -406,7 +410,14 @@
         }
     };
     engine.onRouteEffect = eventHandlers.effect;
-    menuUi = new FNHStandaloneMenu.MenuUi(engine, saveStore, eventHandlers, draw);
+    function updateVolume(category, value) {
+        settings.setVolume(category, value); audio.setVolume(category, value / 100);
+        video.volume = audio.masterVolume; document.getElementById('fnh-volume').value = settings.volumes.master;
+    }
+    menuUi = new FNHStandaloneMenu.MenuUi(engine, saveStore, eventHandlers, draw, {
+        settings: settings, updateVolume: updateVolume,
+        clearInput: function () { engine.buttons.clear(); commonKeys.clear(); inputPulses.clear(); }
+    });
     var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;
     function animate(now) {
         var frames = Math.min(6, Math.max(0, (now - previousFrame) * 60 / 1000));
@@ -476,15 +487,13 @@
     }
     document.addEventListener('pointerdown', function () { audio.unlock(); });
     function inputName(key) {
-        if (key.length === 1) key = key.toLowerCase();
-        return { ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up',
-            Enter: 'ok', ' ': 'ok', z: 'ok', x: 'cancel', Escape: 'cancel', Shift: 'shift', PageUp: 'pageup', PageDown: 'pagedown' }[key];
+        return settings.actionFor(key);
     }
     function pictureInput() {
         return automaticEvents && (!video.hidden || engine.state.mapId === 10);
     }
     document.addEventListener('keyup', function (event) {
-        engine.buttons.delete(inputName(event.key)); commonKeys.delete(event.key.toLowerCase());
+        engine.buttons.delete(inputName(event.key)); commonKeys.delete(inputName(event.key));
     });
     window.addEventListener('blur', function () { engine.buttons.clear(); inputPulses.clear(); commonKeys.clear(); });
     document.addEventListener('keydown', function (event) {
@@ -496,7 +505,7 @@
             event.preventDefault(); menuUi.render(); return;
         }
         if (event.target.closest('button,input,select,textarea')) return;
-        var commonKey = event.key.toLowerCase();
+        var commonKey = buttonName;
         if (commonBindings[commonKey]) {
             event.preventDefault();
             if (!commonKeys.has(commonKey)) {
@@ -512,7 +521,7 @@
             return;
         }
         if (pictureInput() && buttonName) { event.preventDefault(); return; }
-        var direction = { ArrowDown: 2, ArrowLeft: 4, ArrowRight: 6, ArrowUp: 8 }[event.key];
+        var direction = { down: 2, left: 4, right: 6, up: 8 }[buttonName];
         if (direction) {
             event.preventDefault();
             perform(function () { return step(direction); });
@@ -558,11 +567,13 @@
         });
     });
     document.getElementById('fnh-volume').addEventListener('input', function (event) {
-        audio.setVolume('master', Number(event.target.value) / 100);
-        video.volume = audio.masterVolume;
+        try { updateVolume('master', Number(event.target.value)); }
+        catch (error) { setStatus(error.message); }
     });
     document.getElementById('fnh-always-dash').addEventListener('change', function (event) {
         if (engine.state) engine.state.alwaysDash = event.target.checked;
+        try { settings.alwaysDash = event.target.checked; settings.save(); }
+        catch (error) { setStatus(error.message); }
     });
     async function battleAction(action) {
         if (!ready || engine.state.scene !== 'battle') return;
@@ -634,6 +645,7 @@
             if (automaticEvents && mapId === 10) await engine.boot();
             else await engine.boot({ mapId: mapId, x: mapId === 74 ? 8 : 1, y: mapId === 74 ? 8 : 0,
                 direction: mapId === 74 ? 8 : 2, party: [1], switches: { 246: true }, variables: { 121: 1 } });
+            engine.state.alwaysDash = settings.alwaysDash;
             await draw();
             if (automaticEvents) {
                 scheduler = new FNHStandaloneScheduler.EventScheduler(engine, eventHandlers, function (error) {

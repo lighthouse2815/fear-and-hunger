@@ -34,6 +34,9 @@ Các lựa chọn hiển thị bằng nút trong trang, không mở hộp thoạ
 Phím T đốt đuốc qua common event 289, C dùng Phase qua common event 257. Các
 nút **Đốt đuốc**/**Kỹ năng** gọi cùng luồng trên điện thoại. Z xác nhận/tương tác,
 X hủy/mở menu; phím tắt chỉ chạy trên bản đồ khi không có sự kiện đang chờ.
+Tab **Tùy chọn** chỉnh âm lượng tổng và từng nhóm, dùng WASD hoặc tự gán/bỏ
+phím cho từng hành động. Cấu hình được lưu riêng trong trình duyệt và giữ khi
+tải lại trang; đặt lại bàn phím không đổi âm lượng. Mặc định âm lượng tổng 5%.
 Đi qua cửa ở cổng ngục có thể vào Map001 và quay lại bằng sự kiện chạm thật.
 Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro.

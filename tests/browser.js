@@ -946,6 +946,53 @@ async function main() {
         check('phím C dùng Phase theo MP và switch trong JSON', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.actor(1).mp === window.shortcutMp - 10', false, false));
         await evalPage(cdp, '(async () => { await FNHStandalonePreview.engine.restore(window.shortcutBefore); delete window.shortcutBefore; delete window.shortcutMp; })()', true, false);
+        const settingsState = await evalPage(cdp,'FNHStandalonePreview.engine.save()',false,false);
+        await clickElement(cdp,'#fnh-menu');await clickElement(cdp,'[data-menu-tab="options"]');
+        await evalPage(cdp, `(() => {
+            for(const [category,value] of [['master',3],['bgm',37],['se',2]]) {
+                const slider=document.querySelector('[data-volume="'+category+'"]');slider.value=value;slider.dispatchEvent(new Event('input'));
+            }
+            document.querySelector('#fnh-key-action').value='torch';document.querySelector('#fnh-key-input').focus();
+        })()`,false,false);
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'h',code:'KeyH',windowsVirtualKeyCode:72});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'h',code:'KeyH',windowsVirtualKeyCode:72});
+        await evalPage(cdp,'document.querySelector("#fnh-key-action").value="";document.querySelector("#fnh-key-input").focus()',false,false);
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'t',code:'KeyT',windowsVirtualKeyCode:84});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'t',code:'KeyT',windowsVirtualKeyCode:84});
+        check('menu tùy chọn cập nhật âm lượng và gán/bỏ phím',await evalPage(cdp, `(() => {
+            const app=FNHStandalonePreview;
+            return document.querySelectorAll('[data-volume]').length===5 && app.audio.masterVolume===0.03 && app.audio.volumes.bgm===0.37 &&
+                app.audio.volumes.se===0.02 && document.querySelector('#fnh-video').volume===0.03 && document.querySelector('#fnh-volume').value==='3' &&
+                app.settings.actionFor('h')==='torch' && !app.settings.actionFor('t');
+        })()`,false,false));
+        const settingsTime = await evalPage(cdp,'performance.timeOrigin',false,false);
+        await cdp.send('Page.navigate',{url:running.url+'standalone.html'});
+        await waitFor(cdp,'performance.timeOrigin!=='+settingsTime+' && window.FNHStandalonePreview && FNHStandalonePreview.engine.map && document.querySelector("#fnh-status").textContent.startsWith("Map 74")',30000,'tải lại tùy chọn đã lưu');
+        check('âm lượng và cấu hình phím giữ sau tải lại trang',await evalPage(cdp,
+            'FNHStandalonePreview.audio.masterVolume===0.03 && FNHStandalonePreview.audio.volumes.bgm===0.37 && FNHStandalonePreview.settings.actionFor("h")==="torch" && !FNHStandalonePreview.settings.actionFor("t")',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.state.gainItem("items",5,1);document.querySelector("#fnh-canvas").focus()',false,false);
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'h',code:'KeyH',windowsVirtualKeyCode:72});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'h',code:'KeyH',windowsVirtualKeyCode:72});
+        await waitFor(cdp,'!document.querySelector("#fnh-next").hidden && document.querySelector("#fnh-message-text").textContent.includes("light the torch")',5000,'phím vừa gán gọi common event thật');
+        await clickElement(cdp,'#fnh-next');await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'xong common event phím mới');
+        check('nhấn nhanh phím đã gán vẫn chạy đốt đuốc đúng một lần',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.itemCount("items",5)===0 && FNHStandalonePreview.engine.state.switchValue(3151)',false,false));
+        await clickElement(cdp,'#fnh-menu');await clickElement(cdp,'[data-menu-tab="options"]');await clickElement(cdp,'[data-key-layout="wasd"]');
+        await clickElement(cdp,'#fnh-menu-close');
+        await evalPage(cdp,'FNHStandalonePreview.engine.state.through=true;window.settingsX=FNHStandalonePreview.engine.state.x;document.querySelector("#fnh-canvas").focus()',false,false);
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'d',code:'KeyD',windowsVirtualKeyCode:68});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'d',code:'KeyD',windowsVirtualKeyCode:68});
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.x===window.settingsX+1',5000,'WASD di chuyển thật');
+        check('layout WASD điều khiển được nhân vật',await evalPage(cdp,'FNHStandalonePreview.settings.actionFor("w")==="up" && FNHStandalonePreview.settings.actionFor("d")==="right"',false,false));
+        await clickElement(cdp,'#fnh-menu');await clickElement(cdp,'[data-menu-tab="options"]');await clickElement(cdp,'[data-key-layout="default"]');
+        await evalPage(cdp, `(() => {
+            for(const [category,value] of [['master',5],['bgm',100],['se',100]]) {
+                const slider=document.querySelector('[data-volume="'+category+'"]');slider.value=value;slider.dispatchEvent(new Event('input'));
+            }
+            delete window.settingsX;
+        })()`,false,false);
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore('+JSON.stringify(settingsState)+').then(()=>true)',true,false);
+        await waitFor(cdp,'!document.querySelector("#fnh-menu-dialog").open',5000,'khôi phục bản đồ sau kiểm tra tùy chọn');
         check('Canvas vẽ follower và guest ở vị trí lưu, ẩn cả hai đúng lệnh', await evalPage(cdp, `(async () => {
             const source = FNHStandalonePreview.engine;
             const state = new FNHStandaloneState.GameState({ mapId: 74, x: 15, y: 15, party: [1, 2], guests: [3],

@@ -18,8 +18,9 @@
         }
         select.value = selected || 1;
     }
-    function MenuUi(engine, saveStore, handlers, changed) {
+    function MenuUi(engine, saveStore, handlers, changed, options) {
         this.engine = engine; this.saveStore = saveStore; this.handlers = handlers; this.changed = changed;
+        this.options = options;
         this.dialog = document.getElementById('fnh-menu-dialog');
         this.content = document.getElementById('fnh-menu-content');
         this.message = document.getElementById('fnh-menu-message');
@@ -150,6 +151,58 @@
                 }); };
                 label.appendChild(select); content.appendChild(label);
             });
+        } else if (this.tab === 'options') {
+            var settings = this.options.settings;
+            [['master','Âm lượng tổng'],['bgm','Nhạc nền'],['bgs','Môi trường'],['me','Nhạc sự kiện'],['se','Hiệu ứng']].forEach(function (entry) {
+                var label = node('label', entry[1] + ': '), slider = node('input'), value = node('output', settings.volumes[entry[0]] + '%');
+                slider.type = 'range'; slider.min = 0; slider.max = 100; slider.value = settings.volumes[entry[0]];
+                slider.dataset.volume = entry[0]; slider.disabled = ui.busy;
+                slider.oninput = function () {
+                    try { ui.options.updateVolume(entry[0], Number(slider.value)); value.textContent = slider.value + '%'; }
+                    catch (error) { ui.message.textContent = error.message; }
+                };
+                label.append(slider, value); content.appendChild(label);
+            });
+            var dashLabel = node('label', 'Luôn chạy nhanh '), dash = node('input'); dash.type = 'checkbox'; dash.checked = state.alwaysDash;
+            dash.id = 'fnh-option-dash'; dash.onchange = function () {
+                state.alwaysDash = dash.checked; settings.alwaysDash = dash.checked;
+                try { settings.save(); ui.changed(); } catch (error) { ui.message.textContent = error.message; }
+            };
+            dashLabel.appendChild(dash); content.appendChild(dashLabel);
+            content.appendChild(node('h3', 'Bàn phím'));
+            content.appendChild(node('p', 'Chọn hành động rồi nhấn phím trong ô bên dưới để gán. Chọn “Không gán” để bỏ phím.'));
+            var action = node('select'); action.id = 'fnh-key-action';
+            action.setAttribute('aria-label', 'Hành động của phím');
+            var names = { '': 'Không gán', down: 'Đi xuống', left: 'Đi trái', right: 'Đi phải', up: 'Đi lên', ok: 'Xác nhận / Tương tác',
+                cancel: 'Hủy / Menu', shift: 'Chạy nhanh', pageup: 'Trang trước', pagedown: 'Trang sau', torch: 'Đốt đuốc', skill: 'Kỹ năng' };
+            Object.keys(names).forEach(function (key) { var option = node('option', names[key]); option.value = key; action.appendChild(option); });
+            var keyLabel = node('label', 'Phím: '), input = node('input'); input.id = 'fnh-key-input'; input.readOnly = true;
+            input.placeholder = 'Nhấn phím để gán'; input.onkeydown = function (event) {
+                event.preventDefault(); event.stopPropagation();
+                try {
+                    settings.bind(event.key, action.value); ui.options.clearInput(); input.value = event.key === ' ' ? 'Space' : event.key;
+                    ui.message.textContent = 'Đã gán ' + input.value + ': ' + names[action.value];
+                } catch (error) { ui.message.textContent = error.message; }
+            };
+            keyLabel.appendChild(input); content.append(action, keyLabel);
+            var bindings = node('dl'); bindings.id = 'fnh-key-bindings';
+            function showBindings() {
+                bindings.replaceChildren();
+                Object.keys(names).filter(Boolean).forEach(function (name) {
+                    bindings.append(node('dt', names[name]), node('dd', Object.keys(settings.keys).filter(function (key) {
+                        return settings.keys[key] === name;
+                    }).map(function (key) { return key === ' ' ? 'Space' : key; }).join(', ') || 'Chưa gán'));
+                });
+            }
+            input.addEventListener('keydown', showBindings); showBindings();
+            [false, true].forEach(function (wasd) {
+                var layout = node('button', wasd ? 'Dùng WASD' : 'Phím mặc định'); layout.type = 'button'; layout.dataset.keyLayout = wasd ? 'wasd' : 'default';
+                layout.onclick = function () {
+                    try { settings.layout(wasd); ui.options.clearInput(); ui.render(); }
+                    catch (error) { ui.message.textContent = error.message; }
+                }; content.appendChild(layout);
+            });
+            content.appendChild(bindings);
         } else if (this.tab === 'system') {
             var slotLabel = node('label', 'Ô lưu: '), slots = node('select'); slots.id = 'fnh-menu-save-slot';
             fillSaveSlots(slots, ui.saveStore, this.saveSlot);
