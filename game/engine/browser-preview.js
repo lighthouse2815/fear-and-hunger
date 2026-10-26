@@ -43,6 +43,10 @@
     function tauntLabel(battler) {
         return battler.alive && !battler.hidden && [0, 1, 2].some(function (hitType) { return engine.battle.hasTaunt(battler, hitType); }) ? ' · Khiêu khích' : '';
     }
+    function confusionLabel(battler) {
+        var level = engine.battle.confusionLevel(battler);
+        return level ? ' · Rối loạn: tự đánh ' + ['', 'địch', 'một trong hai phe', 'đồng đội'][level] : '';
+    }
     function renderBattleUi() {
         var panel = document.getElementById('fnh-battle'), battle = engine.battle && engine.battle.battle;
         if (battle !== lastBattle) { battleKind = 'skill'; battleActor = 0; }
@@ -57,7 +61,7 @@
         var targets = document.getElementById('fnh-battle-targets'); targets.replaceChildren();
         battle.enemies.forEach(function (enemy) {
             if (enemy.hidden) return;
-            var button = document.createElement('button'); button.type = 'button'; button.textContent = enemy.name + ' · ' + enemy.hp + '/' + enemy.mhp + tauntLabel(enemy);
+            var button = document.createElement('button'); button.type = 'button'; button.textContent = enemy.name + ' · ' + enemy.hp + '/' + enemy.mhp + tauntLabel(enemy) + confusionLabel(enemy);
             button.disabled = !enemy.alive; button.dataset.index = enemy.index;
             if (enemy.index === battleTarget) button.setAttribute('aria-pressed', 'true');
             button.onclick = function () { battleTarget = enemy.index; renderBattleUi(); };
@@ -65,7 +69,7 @@
         });
         document.getElementById('fnh-battle-title').textContent = battle.result || ('Lượt ' + (battle.turn + 1));
         document.getElementById('fnh-battle-party').textContent = battle.actors.map(function (actor) {
-            return actor.name + ' · HP ' + actor.hp + ' · MP ' + actor.mp + tauntLabel(actor);
+            return actor.name + ' · HP ' + actor.hp + ' · MP ' + actor.mp + tauntLabel(actor) + confusionLabel(actor);
         }).join(' | ');
         var actors = document.getElementById('fnh-battle-actor'); actors.replaceChildren();
         if (!engine.battle.inputActors().some(function (actor) { return actor.id === battleActor; })) {
@@ -127,7 +131,7 @@
         try { engine.validateBattleActions(queued, true); start.disabled = false; }
         catch (_) { start.disabled = true; }
         var lastAction = battle.lastAction;
-        document.getElementById('fnh-battle-log').textContent = lastAction ? engine.battle.actionData(lastAction).name +
+        document.getElementById('fnh-battle-log').textContent = lastAction ? (lastAction.confusion ? 'Rối loạn · ' : '') + engine.battle.actionData(lastAction).name +
             ' · ' + lastAction.hits.map(function (hit) {
                 var text = hit.missed ? 'Trượt' : hit.evaded ? 'Né' : String(hit.damage);
                 if (hit.counter) text += ' → Phản đòn: ' + hit.counter.hits.map(function (reply) {

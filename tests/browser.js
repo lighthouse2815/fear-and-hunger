@@ -1250,6 +1250,41 @@ async function main() {
             return e.state.actor(1).hp===hp && e.battle.enemy(0).hp===enemyHp &&
                 e.battle.battle.lastAction.hits.every(hit=>hit.counter?.counter) && !e.animations.entries.length;
         })()`,true,false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,troopId=e.battle.battle.troopId;
+            e.battle.finish('escape');e.leaveBattle('escape');e.state.addActor(3);
+            [1,3].forEach(id=>{e.state.changeActorParam(id,0,2000);e.state.recoverActor(id);});
+            e.state.changeActorState(1,9,true);e.state.changeActorState(3,16,true);
+            e.battle.setup(troopId,true,true);e.state.scene='battle';e.battle.random=()=>0.75;
+            window.confusionAllyHp=e.state.actor(3).hp;
+        })()`,false,false);
+        await waitFor(cdp,'document.querySelector("#fnh-battle-party").textContent.includes("Rối loạn: tự đánh đồng đội") && !document.querySelector("#fnh-battle-start").disabled',5000,'đội mất điều khiển vẫn bắt đầu lượt');
+        check('UI khóa lệnh tay và cho bắt đầu khi cả đội rối loạn/bất động',await evalPage(cdp,
+            'document.querySelector("#fnh-battle-attack").disabled && [...document.querySelector("#fnh-battle-actor").options].every(option=>option.disabled)',false,false));
+        await clickElement(cdp,'#fnh-battle-start');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'Fascination tự tấn công đồng đội');
+        check('rối loạn đánh đồng đội bằng Attack thật và hiện log',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,r=e.battle.battle.lastAction;
+            return e.battle.battle.turnActions.length===1 && r.skillId===1 && r.confusion===3 &&
+                r.hits.length===3 && r.hits.every(hit=>hit.targetType==='actor' && hit.target===3) &&
+                e.state.actor(3).hp===window.confusionAllyHp-r.damage && r.damage>0 &&
+                document.querySelector('#fnh-battle-log').textContent.includes('Rối loạn');
+        })()`,false,false));
+        check('Brain flower giữ mất điều khiển qua save mà không đánh lại',await evalPage(cdp,`(async () => {
+            const e=FNHStandalonePreview.engine,hp=e.state.actor(3).hp;
+            e.state.changeActorState(1,9,false);e.state.changeActorState(1,99,true);
+            await e.restore(e.save());e.battle.random=()=>0.1;delete window.confusionAllyHp;
+            return e.battle.confusionLevel(e.battle.actor(1))===2 && e.state.actor(3).hp===hp &&
+                e.battle.battle.turn===1 && e.battle.inputActors().length===0;
+        })()`,true,false));
+        await waitFor(cdp,'document.querySelector("#fnh-battle-party").textContent.includes("Rối loạn: tự đánh một trong hai phe")',5000,'UI đọc Brain flower từ save');
+        await clickElement(cdp,'#fnh-battle-start');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===2 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'Brain flower chọn phe địch');
+        check('Brain flower có thể chọn phe địch và Confused khóa 4 không tự đánh',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,r=e.battle.battle.lastAction;
+            return r.confusion===2 && r.subjectId===1 && r.hits.every(hit=>hit.targetType==='enemy') &&
+                r.damage>0 && e.battle.battle.turnActions.length===1;
+        })()`,false,false));
         await evalPage(cdp,'delete window.beforeBattleItemHp;delete window.beforeBattleBottles',false,false);
         await evalPage(cdp,`(async()=>{
             const engine=FNHStandalonePreview.engine;engine.battle.finish('escape');engine.leaveBattle('escape');

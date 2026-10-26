@@ -150,7 +150,19 @@ cả đội chỉ tăng một lượt và cập nhật state cuối lượt mộ
 bị khóa hoặc đã hành động cưỡng chế sẽ bỏ lệnh thường; mục tiêu chết được chọn
 lại trong cùng phe. Kết quả thắng/thua dừng phần hàng đợi còn lại. Chọn/sửa/bỏ
 lệnh không trừ MP/TP/item; số item giữ chỗ được kiểm tra chung cả đội, lựa chọn
-được giữ qua save. Chưa có AI cho đồng đội bị confusion/auto-battle.
+được giữ qua save. Chưa có AI cho đồng đội mang trait auto-battle.
+Rối loạn đọc mức khóa lớn nhất trong state: mức 1 tự đánh địch (Rage/Bloodlust),
+mức 2 chọn ngẫu nhiên một trong hai phe (Confusion/Brain flower), mức 3 đánh
+đồng đội kể cả bản thân (Fascination). Đòn tự động dùng Attack, lặp/chi phí/khóa
+kỹ năng theo JSON, chọn mục tiêu còn sống/đang hiện theo TGR và Taunt trong phe
+đã chọn. Nhân vật rối loạn không cần nhận lệnh tay; cả đội rối loạn vẫn có thể
+bấm **Bắt đầu lượt**. Trạng thái mới trước lúc thực thi đổi lệnh đã chọn thành
+Attack và không tiêu vật phẩm cũ. Lệnh 339 và phản đòn giữ đích chỉ định.
+Mức khóa 4 ưu tiên hơn rối loạn; Confused/Confused_enemy trong JSON thuộc mức này
+nên không tự đánh. UI hiện phe có thể bị tấn công; hết state trả quyền chọn lệnh.
+Sát thương HP dương có thể xóa state theo `removeByDamage`/`chanceByDamage`;
+mất MP, hồi HP và sát thương bằng 0 không kích hoạt việc này.
+Save giữ trạng thái, lượt và kết quả mà không chạy lại hành động đã xong.
 Trong trận, chọn loại hành động **Vật phẩm**, vật phẩm trong túi và mục tiêu rồi
 bấm **Chọn vật phẩm**, sau đó xác nhận cả lượt. Item dùng chung luồng sát thương/animation/common event
 với kỹ năng, trừ số lượng đúng một lần, không trừ MP/TP. Bộ lọc occasion giữ các

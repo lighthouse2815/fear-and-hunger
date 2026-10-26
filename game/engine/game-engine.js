@@ -653,11 +653,11 @@
         var runtime = this.battle, battle = runtime.battle;
         var actions = runtime.enemyActions();
         for (var index = 0; index < actions.length && !battle.result; index++) {
-            var action = actions[index], enemy = runtime.enemy(action.enemy), skill = this.database.Skills[action.skillId];
+            var action = actions[index], enemy = runtime.enemy(action.enemy), skillId = runtime.confusionLevel(enemy) ? 1 : action.skillId, skill = this.database.Skills[skillId];
             if (this.state.scene !== 'battle') return;
             if ((battle.forcedThisTurn || []).includes('enemy:' + enemy.index) || !runtime.canUseSkill(enemy, skill)) continue;
             battle.phase = 'action';
-            var report = runtime.useSkill(enemy, action.skillId, -1);
+            var report = runtime.useSkill(enemy, skillId, -1);
             await this.completeBattleAction(report, handlers, signal);
             await this.runBattlePages(false, handlers, signal);
         }
@@ -685,7 +685,7 @@
         var data = (item ? this.database.Items : this.database.Skills)[action.id];
         if (!subject || !subject.alive || !data || !Number.isInteger(action.targetIndex)) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
         if (!item && ![1, 2].includes(data.id) && !runtime.actorSkills(subject.id).some(function (entry) { return entry.id === data.id; })) throw new Error('Nhân vật chưa học kỹ năng này.');
-        if (!(item ? runtime.canUseItem(subject, data) : runtime.canUseSkill(subject, data))) throw new Error(item ? 'Chưa thể dùng vật phẩm ' + data.name : 'Chưa thể dùng kỹ năng ' + data.name);
+        if (runtime.restriction(subject) > 0 || !(item ? runtime.canUseItem(subject, data) : runtime.canUseSkill(subject, data))) throw new Error(item ? 'Chưa thể dùng vật phẩm ' + data.name : 'Chưa thể dùng kỹ năng ' + data.name);
         var chosen = data.scope === 1 ? runtime.enemy(action.targetIndex) : [7, 9].includes(data.scope) ? battle.actors[action.targetIndex] : null;
         if ([1, 7, 9].includes(data.scope) && (!chosen || (data.scope === 9 ? chosen.alive : !chosen.alive) || chosen.hidden)) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
         return data;
@@ -744,6 +744,11 @@
             await this.runBattlePages(false, handlers || context.handlers, context.signal);
             if (battle.result) return battle.turnActions;
             var queue = actions.map(function (action) { return Object.assign({}, action); });
+            runtime.aliveActors().forEach(function (actor) {
+                if (runtime.confusionLevel(actor) && !queue.some(function (action) { return action.actorId === actor.id; })) {
+                    queue.push({ actorId: actor.id, kind: 'skill', id: 1, targetIndex: -1 });
+                }
+            });
             runtime.enemyActions().forEach(function (action) { queue.push({ enemy: action.enemy, kind: 'skill', id: action.skillId, targetIndex: -1 }); });
             queue.forEach(function (action, index) {
                 var subject = action.enemy == null ? runtime.actor(action.actorId) : runtime.enemy(action.enemy);
@@ -756,9 +761,10 @@
                 if (context.signal && context.signal.aborted) throw context.signal.reason;
                 var action = queue[index], enemy = action.enemy != null;
                 var subject = enemy ? runtime.enemy(action.enemy) : runtime.actor(action.actorId);
-                var data = (action.kind === 'item' ? this.database.Items : this.database.Skills)[action.id];
                 if (this.state.scene !== 'battle') { runtime.finish('abort'); break; }
                 if (!subject || (battle.forcedThisTurn || []).includes(enemy ? 'enemy:' + action.enemy : 'actor:' + action.actorId)) continue;
+                if (runtime.confusionLevel(subject)) { action.kind = 'skill'; action.id = 1; action.targetIndex = -1; }
+                var data = (action.kind === 'item' ? this.database.Items : this.database.Skills)[action.id];
                 if (!(action.kind === 'item' ? runtime.canUseItem(subject, data) : runtime.canUseSkill(subject, data))) continue;
                 if (!enemy && action.kind === 'skill' && ![1, 2].includes(action.id) && !runtime.actorSkills(action.actorId).some(function (skill) { return skill.id === action.id; })) continue;
                 battle.phase = 'action';

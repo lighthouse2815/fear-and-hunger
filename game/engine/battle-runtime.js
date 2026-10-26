@@ -188,8 +188,17 @@
     BattleRuntime.prototype.aliveActors = function () { return this.battle.actors.filter(function (actor) { return actor.alive; }); };
     BattleRuntime.prototype.inputActors = function () {
         return this.aliveActors().filter(function (actor) {
-            return !this.battlerState(actor).states.some(function (id) { return (this.database.States[id] || {}).restriction > 0; }, this);
+            return this.restriction(actor) === 0;
         }, this);
+    };
+    BattleRuntime.prototype.restriction = function (battler) {
+        return this.battlerState(battler).states.reduce(function (level, id) {
+            return Math.max(level, (this.database.States[id] || {}).restriction || 0);
+        }.bind(this), 0);
+    };
+    BattleRuntime.prototype.confusionLevel = function (battler) {
+        var level = this.restriction(battler);
+        return battler.alive && !battler.hidden && level >= 1 && level <= 3 ? level : 0;
     };
     BattleRuntime.prototype.actionSpeed = function (subject, data, attack) {
         var agility = this.battlerParam(subject, 6);
@@ -248,9 +257,7 @@
     BattleRuntime.prototype.canUseSkill = function (battler, skill, menu) {
         if (!battler || !skill || !battler.alive || battler.hidden || !(menu ? [0, 2] : [0, 1]).includes(skill.occasion)) return false;
         var data = this.battlerState(battler), cost = this.skillCost(battler, skill), traits = this.battlerTraits(battler);
-        if (data.mp < cost.mp || (data.tp || 0) < cost.tp || data.states.some(function (id) {
-            return (this.database.States[id] || {}).restriction > 0;
-        }, this)) return false;
+        if (data.mp < cost.mp || (data.tp || 0) < cost.tp || this.restriction(battler) >= (menu ? 1 : 4)) return false;
         if (traits.some(function (trait) { return trait.code === 42 && trait.dataId === skill.stypeId || trait.code === 44 && trait.dataId === skill.id; })) return false;
         if (battler.enemyId == null && (skill.requiredWtypeId1 || skill.requiredWtypeId2)) {
             var weapon = this.database.Weapons[data.equips[0]];
@@ -279,6 +286,14 @@
         if (!sum) return targets[0];
         var draw = this.random() * sum;
         return targets.find(function (_, index) { draw -= weights[index]; return draw < 0; }) || targets[targets.length - 1];
+    };
+    BattleRuntime.prototype.confusionTarget = function (subject, skill) {
+        var level = this.confusionLevel(subject), enemy = subject.enemyId != null;
+        var opponents = level === 1 || level === 2 && this.random() < 0.5;
+        var unit = opponents === enemy ? this.battle.actors : this.battle.enemies;
+        var targets = unit.filter(function (target) { return target.alive && !target.hidden; });
+        targets = this.tauntTargets(subject, skill, targets);
+        return targets.length ? [this.randomTarget(targets)] : [];
     };
     BattleRuntime.prototype.skillTargets = function (subject, skill, index) {
         var enemy = subject.enemyId != null, scope = skill.scope;
@@ -376,21 +391,22 @@
         return this.useAction(subject, item, index, true, false);
     };
     BattleRuntime.prototype.canCounter = function (battler) {
-        return battler.alive && !battler.hidden && !this.battlerState(battler).states.some(function (id) {
-            return (this.database.States[id] || {}).restriction >= 4;
-        }, this);
+        return battler.alive && !battler.hidden && this.restriction(battler) < 4;
     };
     BattleRuntime.prototype.useAction = function (subject, skill, index, item, forced, menuTargets, counterTarget) {
         var menu = Array.isArray(menuTargets);
         if (!menu && (!this.battle || this.battle.result)) throw new Error('Trận chiến không hoạt động.');
         if (!subject || !subject.alive || subject.hidden) throw new Error('Chủ thể chiến đấu không hợp lệ.');
+        var confusion = !menu && !forced && !counterTarget ? this.confusionLevel(subject) : 0;
+        if (confusion) { skill = this.database.Skills[1]; item = false; }
         if (!forced && !(item ? this.canUseItem(subject, skill, menu) : this.canUseSkill(subject, skill, menu))) {
             throw new Error(item ? 'Chưa thể dùng vật phẩm ' + skill.name : 'Chưa thể dùng kỹ năng ' + skill.name);
         }
-        var targets = counterTarget ? [counterTarget] : menu ? menuTargets : this.skillTargets(subject, skill, index), runtime = this;
+        var targets = counterTarget ? [counterTarget] : menu ? menuTargets : confusion ? this.confusionTarget(subject, skill) : this.skillTargets(subject, skill, index), runtime = this;
         var report = { subject: subject.enemyId != null ? 'enemy' : 'actor',
             subjectId: subject.enemyId != null ? subject.index : subject.id, hits: [], commonEvents: [], targets: [], damage: 0, critical: false };
         report[item ? 'itemId' : 'skillId'] = skill.id;
+        if (confusion) report.confusion = confusion;
         (skill.effects || []).forEach(function (effect) {
             if (effect.code === 44) {
                 if (counterTarget) return;
@@ -437,6 +453,10 @@
                         value = calculated.damage; hit.critical = calculated.critical;
                         var resource = calculated.resource;
                         runtime.changeResource(target, resource, -value);
+                        if (resource === 'hp' && value > 0) runtime.battlerState(target).states.slice().forEach(function (id) {
+                            var state = runtime.database.States[id];
+                            if (state.removeByDamage && runtime.random() * 100 < state.chanceByDamage) runtime.removeState(target, id);
+                        });
                         if (damage.type === 5 || damage.type === 6) runtime.changeResource(subject, resource, value);
                         hit.damage = value; hit.resource = resource; report.damage += value;
                         report.critical = report.critical || hit.critical;
@@ -493,6 +513,7 @@
         }
     };
     BattleRuntime.prototype.chooseEnemyAction = function (enemy) {
+        if (this.confusionLevel(enemy)) return this.canUseSkill(enemy, this.database.Skills[1]) ? { skillId: 1 } : null;
         var actions = (this.database.Enemies[enemy.enemyId].actions || []).filter(function (action) {
             return this.enemyActionMatches(enemy, action) && this.canUseSkill(enemy, this.database.Skills[action.skillId]);
         }, this);
@@ -559,8 +580,8 @@
         if (!this.battle || this.battle.result || this.battle.phase !== 'enemy') return [];
         var reports = [];
         this.enemyActions().forEach(function (action) {
-            var enemy = this.enemy(action.enemy), skill = this.database.Skills[action.skillId];
-            if (this.canUseSkill(enemy, skill)) reports.push(this.useSkill(enemy, action.skillId, -1));
+            var enemy = this.enemy(action.enemy), skillId = this.confusionLevel(enemy) ? 1 : action.skillId, skill = this.database.Skills[skillId];
+            if (this.canUseSkill(enemy, skill)) reports.push(this.useSkill(enemy, skillId, -1));
         }, this);
         this.endTurn();
         if (!this.battle.managed) this.battle.turn++;
