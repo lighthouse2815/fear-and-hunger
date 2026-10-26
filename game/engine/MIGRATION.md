@@ -15,7 +15,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: action sequence trong sáu nhóm note, WeaponSkill, animation vũ khí,
+1. Combat: action sequence trong sáu nhóm note, animation vũ khí,
    phản phép/thế thân, TP khi nhận damage, thoát trận, lượt thêm theo AGI và
    trigger cuối trận. Đối chiếu phần thưởng.
    Hiện action effect, số lần lặp, action animation, wait animation, death break,
@@ -42,6 +42,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   drop tự động; vật phẩm và tiến trình chiến thắng được xử lý qua sự kiện.
 - Party chỉ đưa bốn người đầu vào trận, đồng bộ sau troop page; người dự bị
   còn sống không ngăn thất bại khi cả đội tham chiến bị hạ.
+- WeaponSkill 36/37 dùng skill 281/293 cho Attack, gồm UI/chi phí/khóa/scope/AI/
+  rối loạn/save; lệnh 339 giữ skill chỉ định như setSkill của runtime gốc.
 - State 15/22 có modifier `b.hp - 1`; state 22 có animation thêm 22.
 - Follower/guest lưu vị trí, đuổi người phía trước, chặn event khi đang hiện;
   lệnh 217 chờ tập hợp, chuyển map/nhảy đặt lại vị trí. Không đưa guest vào combat.

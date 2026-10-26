@@ -318,9 +318,12 @@
         match = weapon && /<skill_id\s*:\s*(\d+)>/i.exec(weapon.note || '');
         return match ? Number(match[1]) : 1;
     };
+    BattleRuntime.prototype.skillFor = function (battler, id, forced) {
+        return this.database.Skills[id === 1 && !forced ? this.attackSkillId(battler) : id];
+    };
     BattleRuntime.prototype.chooseActorAction = function (actor) {
         if (!actor || !actor.alive || actor.hidden || this.restriction(actor) > 0) return null;
-        var skills = [this.database.Skills[1]].concat(this.actorSkills(actor.id)), best = null, bestScore = 0;
+        var attack = this.skillFor(actor, 1), skills = [attack].concat(this.actorSkills(actor.id)), best = null, bestScore = 0;
         skills.forEach(function (skill, skillIndex) {
             if (!skill || skills.indexOf(skill) !== skillIndex || !this.canUseSkill(actor, skill) || !skill.damage || ![1, 3, 5].includes(skill.damage.type)) return;
             var scope = skill.scope, opponents = scope >= 1 && scope <= 6;
@@ -342,7 +345,7 @@
             if (score > 0) score += this.random();
             if (score > bestScore) {
                 bestScore = score;
-                best = { actorId: actor.id, kind: 'skill', id: skill.id, targetIndex: targetIndex, autoBattle: true };
+                best = { actorId: actor.id, kind: 'skill', id: skill === attack ? 1 : skill.id, targetIndex: targetIndex, autoBattle: true };
             }
         }, this);
         return best;
@@ -463,8 +466,7 @@
         return { damage: value, resource: resource, critical: !!hit.critical };
     };
     BattleRuntime.prototype.useSkill = function (subject, skillId, index, forced) {
-        if (skillId === 1) skillId = this.attackSkillId(subject);
-        var skill = this.database.Skills[skillId];
+        var skill = this.skillFor(subject, skillId, forced);
         if (!skill) throw new Error('Không tìm thấy skill ' + skillId);
         return this.useAction(subject, skill, index, false, forced);
     };
@@ -481,7 +483,7 @@
         if (!menu && (!this.battle || this.battle.result)) throw new Error('Trận chiến không hoạt động.');
         if (!subject || !subject.alive || subject.hidden) throw new Error('Chủ thể chiến đấu không hợp lệ.');
         var confusion = !menu && !forced && !counterTarget ? this.confusionLevel(subject) : 0;
-        if (confusion) { skill = this.database.Skills[1]; item = false; }
+        if (confusion) { skill = this.skillFor(subject, 1); item = false; }
         if (!forced && !(item ? this.canUseItem(subject, skill, menu) : this.canUseSkill(subject, skill, menu))) {
             throw new Error(item ? 'Chưa thể dùng vật phẩm ' + skill.name : 'Chưa thể dùng kỹ năng ' + skill.name);
         }

@@ -1161,6 +1161,35 @@ async function main() {
             '!FNHStandalonePreview.engine.state.screen.pictures[1] && !FNHStandalonePreview.engine.state.switchValue(3350) && FNHStandalonePreview.engine.state.itemCount("items",40)===(window.bookBefore.inventory.items[40]||0)',false,false));
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.bookBefore).then(()=>true)',true,false);
         await evalPage(cdp,'delete window.bookBefore',false,false);
+        await evalPage(cdp, `(() => {
+            const e = FNHStandalonePreview.engine, db = e.database;
+            window.weaponUiBefore = e.save();
+            const enemyId = db.Enemies.length, troopId = db.Troops.length;
+            db.Enemies.push({ ...db.Enemies[1], id: enemyId, note: '', traits: [], params: [99999,100,1,1,1,1,1,1], actions: [] });
+            db.Troops.push({ id: troopId, pages: [], members: [0,1].map(i => ({ enemyId, x: 300+i*100, y: 400 })) });
+            e.state.actor(1).equips[0] = 36;
+            e.battle.setup(troopId, true, true); e.state.scene = 'battle'; e.battle.random = () => 0.1;
+        })()`, false, false);
+        await waitFor(cdp, '!document.querySelector("#fnh-battle").hidden && !document.querySelector("#fnh-battle-attack").disabled', 5000, 'Attack nhận War scythe');
+        check('UI Attack kiểm tra đúng chi phí skill vũ khí', await evalPage(cdp, `(() => {
+            const e = FNHStandalonePreview.engine, skill = e.database.Skills[281], cost = skill.mpCost;
+            const actors = document.querySelector('#fnh-battle-actor');
+            skill.mpCost = 9999; actors.dispatchEvent(new Event('change'));
+            const disabled = document.querySelector('#fnh-battle-attack').disabled;
+            skill.mpCost = cost; actors.dispatchEvent(new Event('change'));
+            return disabled && !document.querySelector('#fnh-battle-attack').disabled;
+        })()`, false, false));
+        await clickElement(cdp, '#fnh-battle-attack'); await clickElement(cdp, '#fnh-battle-start');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.battle.battle.turn === 1 && FNHStandalonePreview.engine.battle.battle.phase === "input"', 10000, 'War scythe đánh cả nhóm');
+        check('nút Attack dùng skill 281 và gây damage lên cả nhóm', await evalPage(cdp, `(() => {
+            const e = FNHStandalonePreview.engine;
+            return e.battle.battle.lastAction.skillId === 281 && e.battle.battle.lastAction.targets.length === 2 &&
+                e.battle.battle.enemies.every(enemy => enemy.hp < enemy.mhp);
+        })()`, false, false));
+        await evalPage(cdp, 'FNHStandalonePreview.engine.forceBattleAction([1,1,1,0])', true, true);
+        check('339 giữ skill 1 khi chủ thể đang cầm War scythe', await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.lastAction.skillId === 1 && FNHStandalonePreview.engine.battle.battle.lastAction.targets.length === 1', false, false));
+        await evalPage(cdp, '(async () => { await FNHStandalonePreview.engine.restore(window.weaponUiBefore); delete window.weaponUiBefore; })()', true, false);
         await evalPage(cdp,`(() => {
             const engine=FNHStandalonePreview.engine;
             window.skillUiBefore=engine.save();

@@ -45,7 +45,8 @@ const { GameDataStore } = require('../game/engine/data-store');
     const originalWeapon = engine.state.actor(1).equips[0];
     engine.state.actor(1).equips[0] = 36;
     assert.equal(r.attackSkillId(r.actor(1)), 281, 'WeaponSkill đọc skill_id từ vũ khí');
-    assert.equal(r.useSkill(r.actor(1), 1, 0, true).skillId, 281, 'Attack dùng kỹ năng do vũ khí chỉ định');
+    assert.equal(r.useSkill(r.actor(1), 1, 0).skillId, 281, 'Attack dùng kỹ năng do vũ khí chỉ định');
+    assert.equal(r.useSkill(r.actor(1), 1, 0, true).skillId, 1, 'cưỡng chế giữ ID skill chỉ định như setSkill của runtime gốc');
     engine.state.actor(1).equips[0] = originalWeapon;
     reset(); const skillId = db.Skills.length;
     db.Skills.push({ ...db.Skills[3], id: skillId, repeats: 3, note: '', effects: [], hitType: 0,

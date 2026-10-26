@@ -150,6 +150,9 @@ state, học skill và common event từ JSON; Blue vial trả vỏ chai và scr
 Trong trận có thể chọn nhân vật, kỹ năng đã học hoặc Guard, mục tiêu quái/đồng đội.
 Bốn người đầu trong party tham chiến; người dự bị và guest không vào hàng đợi
 hay danh sách mục tiêu. Thay đổi party trong troop page cập nhật lại bốn vị trí.
+Attack đọc `<skill_id>` của vũ khí: War scythe/Cursed war scythe dùng skill
+281/293 đánh cả nhóm. Phạm vi, chi phí, khóa kỹ năng, tốc độ và AI đều dùng skill
+thực tế; rối loạn vẫn chọn một đích theo phe. Lệnh 339 giữ ID skill chỉ định.
 Kỹ năng chưa học hoặc thiếu MP/TP bị từ chối trước khi tiêu lượt; log hiện trượt,
 né và sát thương. Chọn lệnh cho từng nhân vật bằng **Chọn đánh**, **Chọn kỹ năng**
 hoặc **Chọn vật phẩm**, xem/sửa/bỏ lệnh trong danh sách rồi bấm **Bắt đầu lượt**.

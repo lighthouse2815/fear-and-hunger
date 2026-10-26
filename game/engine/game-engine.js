@@ -851,9 +851,9 @@
         if (this.state.scene !== 'battle' || !battle || battle.result || battle.phase !== 'input') throw new Error('Chưa đến lượt nhân vật.');
         if (!action || !['skill', 'item'].includes(action.kind)) throw new Error('Loại hành động không hợp lệ.');
         var item = action.kind === 'item', subject = runtime.actor(action.actorId);
-        var data = (item ? this.database.Items : this.database.Skills)[action.id];
+        var data = item ? this.database.Items[action.id] : runtime.skillFor(subject, action.id);
         if (!subject || !subject.alive || !data || !Number.isInteger(action.targetIndex)) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
-        if (!item && ![1, 2].includes(data.id) && !runtime.actorSkills(subject.id).some(function (entry) { return entry.id === data.id; })) throw new Error('Nhân vật chưa học kỹ năng này.');
+        if (!item && ![1, 2].includes(action.id) && !runtime.actorSkills(subject.id).some(function (entry) { return entry.id === data.id; })) throw new Error('Nhân vật chưa học kỹ năng này.');
         if (runtime.restriction(subject) > 0 || runtime.isAutoBattle(subject) || !(item ? runtime.canUseItem(subject, data) : runtime.canUseSkill(subject, data))) throw new Error(item ? 'Chưa thể dùng vật phẩm ' + data.name : 'Chưa thể dùng kỹ năng ' + data.name);
         var chosen = data.scope === 1 ? runtime.enemy(action.targetIndex) : [7, 9].includes(data.scope) ? battle.actors[action.targetIndex] : null;
         if ([1, 7, 9].includes(data.scope) && (!chosen || (data.scope === 9 ? chosen.alive : !chosen.alive) || chosen.hidden)) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
@@ -925,7 +925,7 @@
             runtime.enemyActions().forEach(function (action) { queue.push({ enemy: action.enemy, kind: 'skill', id: action.skillId, targetIndex: -1 }); });
             queue.forEach(function (action, index) {
                 var subject = action.enemy == null ? runtime.actor(action.actorId) : runtime.enemy(action.enemy);
-                var data = (action.kind === 'item' ? engine.database.Items : engine.database.Skills)[action.id];
+                var data = action.kind === 'item' ? engine.database.Items[action.id] : runtime.skillFor(subject, action.id);
                 action.order = index;
                 action.speed = subject ? runtime.actionSpeed(subject, data, action.kind === 'skill' && action.id === 1) : -Infinity;
             });
@@ -937,7 +937,7 @@
                 if (this.state.scene !== 'battle') { runtime.finish('abort'); break; }
                 if (!subject || (battle.forcedThisTurn || []).includes(enemy ? 'enemy:' + action.enemy : 'actor:' + action.actorId)) continue;
                 if (runtime.confusionLevel(subject)) { action.kind = 'skill'; action.id = 1; action.targetIndex = -1; }
-                var data = (action.kind === 'item' ? this.database.Items : this.database.Skills)[action.id];
+                var data = action.kind === 'item' ? this.database.Items[action.id] : runtime.skillFor(subject, action.id);
                 if (!(action.kind === 'item' ? runtime.canUseItem(subject, data) : runtime.canUseSkill(subject, data))) continue;
                 if (!enemy && action.kind === 'skill' && ![1, 2].includes(action.id) && !runtime.actorSkills(action.actorId).some(function (skill) { return skill.id === action.id; })) continue;
                 battle.phase = 'action';
