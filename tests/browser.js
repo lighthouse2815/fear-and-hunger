@@ -1391,7 +1391,39 @@ async function main() {
         await waitFor(cdp, 'FNHStandalonePreview.audio.buffers.bgm === null', 3000, 'BGM fade và dừng');
         await screenshot('standalone-preview');
 
-        await cdp.send('Page.navigate', { url: running.url + 'standalone.html?map=10&events=1' });
+        await evalPage(cdp, `(async () => {
+            const engine = FNHStandalonePreview.engine;
+            const store = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
+            engine.saveTo(store, 1);
+            await engine.createInterpreter([{ code: 353 }, { code: 121, parameters: [996, 996, 0] }], 0).run();
+        })()`, true, false);
+        await waitFor(cdp, `!document.querySelector('#fnh-end-screen').hidden &&
+            document.querySelector('#fnh-end-background').naturalWidth > 0`, 5000, 'màn game over dùng asset thật');
+        check('game over dừng sự kiện và khóa di chuyển', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.scene === "gameover" && !FNHStandalonePreview.engine.state.switchValue(996) && !FNHStandalonePreview.engine.move(2) && document.querySelector("#fnh-end-title").textContent === "Game Over"', false, false));
+        await clickElement(cdp, '#fnh-save');
+        check('game over không ghi đè save bằng trạng thái đã chết', await evalPage(cdp,
+            'new FNHStandaloneSave.SaveStore({ prefix: "FNH_STANDALONE_PREVIEW:" }).load(1).scene === "map" && FNHStandalonePreview.engine.state.scene === "gameover"', false, false));
+        await clickElement(cdp, '#fnh-end-load');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.scene === "map" && document.querySelector("#fnh-end-screen").hidden',
+            5000, 'tải save từ màn game over');
+        check('tải save game over trở lại map', await evalPage(cdp,
+            '!FNHStandalonePreview.engine.eventRunning && document.querySelector("#fnh-status").textContent.startsWith("Map ")', false, false));
+        await evalPage(cdp, `localStorage.removeItem('FNH_STANDALONE_PREVIEW:1');
+            FNHStandalonePreview.engine.createInterpreter([{ code: 353 }], 0).run()`, true, false);
+        await waitFor(cdp, '!document.querySelector("#fnh-end-screen").hidden', 5000, 'game over lần hai');
+        await clickElement(cdp, '#fnh-end-load');
+        await waitFor(cdp, 'document.querySelector("#fnh-status").textContent.includes("chưa có dữ liệu")', 5000, 'báo ô lưu trống');
+        check('ô lưu trống giữ màn game over hoạt động', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.scene === "gameover" && !document.querySelector("#fnh-end-screen").hidden', false, false));
+        await evalPage(cdp, 'FNHStandalonePreview.engine.createInterpreter([{ code: 354 }], 0).run()', true, false);
+        await waitFor(cdp, `FNHStandalonePreview.engine.state.scene === 'title' &&
+            !document.querySelector('#fnh-end-overlay').hidden && document.querySelector('#fnh-end-overlay').naturalWidth > 0 &&
+            FNHStandalonePreview.audio.buffers.bgm && !FNHStandalonePreview.audio.buffers.bgm.paused`,
+            10000, 'về tiêu đề dùng asset và BGM độc lập');
+        check('màn tiêu đề có hình, nhạc và nút chơi mới', await evalPage(cdp,
+            'document.querySelector("#fnh-end-title").textContent === FNHStandalonePreview.engine.database.System.gameTitle && document.querySelector("#fnh-new-game").getBoundingClientRect().width > 0', false, false));
+        await clickElement(cdp, '#fnh-new-game');
         await waitFor(cdp, 'window.FNHStandalonePreview && FNHStandalonePreview.engine.state && FNHStandalonePreview.engine.state.switchValue(296)',
             30000, 'engine mới mở màn chọn nhân vật thật');
         check('màn chọn nhân vật chạy sự kiện nền và giữ màu picture', await evalPage(cdp, `(() => {

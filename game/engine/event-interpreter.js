@@ -41,6 +41,10 @@
                 if (--this.budget.remaining < 0) throw new Error('Event vượt giới hạn số lệnh thực thi.');
                 var command = this.commands[this.index++];
                 await this.awaitCommand(this.execute(command));
+                if (this.state.scene === 'gameover' || this.state.scene === 'title') {
+                    this.result.terminated = this.state.scene;
+                    this.index = this.commands.length;
+                }
             }
             return this.result;
         } finally {
@@ -257,6 +261,7 @@
         }).run();
         this.result.choices.push.apply(this.result.choices, result.choices);
         if (result.transferred) this.result.transferred = result.transferred;
+        if (result.terminated) { this.result.terminated = result.terminated; this.index = this.commands.length; }
     };
 
     EventInterpreter.prototype.jumpToLabel = function (name) {

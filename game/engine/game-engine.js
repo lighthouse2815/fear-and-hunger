@@ -192,7 +192,7 @@
     };
 
     GameEngine.prototype.advanceRoutes = function (frames) {
-        if (this.state && this.state.scene === 'battle') return;
+        if (this.state && ['battle', 'gameover', 'title'].includes(this.state.scene)) return;
         if (this.routeErrors.length) throw this.routeErrors.shift();
         if (this.state && this.state.timer.active) this.state.timer.frames = Math.max(0, this.state.timer.frames - frames);
         if (this.map && this.state) [this.state].concat(this.map.events).forEach(function (character) {

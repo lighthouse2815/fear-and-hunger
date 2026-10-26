@@ -24,7 +24,14 @@
         if (this.autorun) this.autorun.controller.abort();
     };
     EventScheduler.prototype.tick = function () {
-        if (!this.enabled || !this.engine.map || this.engine.state.scene !== 'map') return;
+        if (!this.enabled || !this.engine.map) return;
+        if (this.engine.state.scene === 'gameover' || this.engine.state.scene === 'title') {
+            this.parallel.forEach(function (job) { job.controller.abort(); });
+            this.parallel.clear();
+            if (this.autorun) this.autorun.controller.abort();
+            return;
+        }
+        if (this.engine.state.scene !== 'map') return;
         var engine = this.engine, scheduler = this;
         if (this.map !== engine.map) {
             this.parallel.forEach(function (job) { job.controller.abort(); });

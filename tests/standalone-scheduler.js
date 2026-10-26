@@ -91,5 +91,20 @@ async function fixture(events, commonEvents = []) {
     assert.equal(errors.length, 1, 'lệnh chưa hỗ trợ báo một lần, không lặp lỗi mỗi frame');
     assert.match(errors[0].message, /Chưa hỗ trợ lệnh 999/);
     brokenScheduler.stop();
+    const ending = await fixture([null, { id: 1, x: 1, y: 1, pages: [page(4, [
+        { code: 230, parameters: [60] }, { code: 121, parameters: [14, 14, 0] }
+    ])] }]);
+    const endingScheduler = new EventScheduler(ending, {}, error => errors.push(error));
+    endingScheduler.tick(); await delay();
+    ending.state.scene = 'gameover'; endingScheduler.tick();
+    ending.state.timer = { active: true, frames: 120 };
+    ending.advanceRoutes(120); await delay();
+    assert.equal(ending.state.timer.frames, 120, 'game over dừng thời gian gameplay');
+    assert.equal(ending.state.switchValue(14), false, 'game over hủy parallel đang chờ');
+    assert.equal(endingScheduler.parallel.size, 0);
+    ending.state.scene = 'map'; endingScheduler.tick(); await delay();
+    ending.advanceRoutes(60); await delay();
+    assert.equal(ending.state.switchValue(14), true, 'scheduler hoạt động lại sau khi tải map');
+    endingScheduler.stop();
     console.log('ĐẠT: autorun/parallel của map/common event, hủy khi đổi page/map/switch, timer và erase/save.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

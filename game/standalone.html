@@ -26,6 +26,10 @@
         #fnh-scroll-text { position: absolute; inset: 0; overflow: hidden; background: #000; }
         #fnh-scroll-content { position: absolute; inset: 0 24px auto; text-align: center; white-space: pre-wrap; font: 28px/36px GameFont, serif; }
         #fnh-scroll-fast { position: absolute; bottom: 8px; right: 8px; touch-action: none; }
+        #fnh-end-screen { position: absolute; inset: 0; background: #000; }
+        #fnh-end-screen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        #fnh-end-actions { position: absolute; inset: auto 0 8%; text-align: center; }
+        #fnh-end-title { font: 28px GameFont, serif; text-shadow: 1px 1px #000; }
         dialog { color: inherit; background: #17120f; border: 1px solid #8c7759; }
         dialog::backdrop { background: #000b; }
         #fnh-name-input { display: block; margin-top: 12px; padding: 8px; font: inherit; }
@@ -41,6 +45,15 @@
             <div id="fnh-scroll-content"></div>
             <button id="fnh-scroll-fast" type="button">Giữ để chạy nhanh</button>
         </div>
+        <section id="fnh-end-screen" hidden aria-labelledby="fnh-end-title">
+            <img id="fnh-end-background" alt="">
+            <img id="fnh-end-overlay" alt="" hidden>
+            <div id="fnh-end-actions">
+                <h2 id="fnh-end-title"></h2>
+                <button id="fnh-new-game" type="button">Chơi mới</button>
+                <button id="fnh-end-load" type="button">Tải ô 1</button>
+            </div>
+        </section>
     </div>
     <dialog id="fnh-name-dialog">
         <form id="fnh-name-form">

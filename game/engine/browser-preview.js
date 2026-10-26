@@ -55,11 +55,37 @@
         }).join(' | ');
         document.getElementById('fnh-battle-escape').disabled = !battle.canEscape;
     }
+    var endScene = null;
+    function renderEndScreen() {
+        var scene = engine.state.scene, panel = document.getElementById('fnh-end-screen');
+        var visible = scene === 'gameover' || scene === 'title';
+        panel.hidden = !visible;
+        if (!visible) { endScene = null; return; }
+        if (endScene === scene) return;
+        endScene = scene;
+        var system = engine.database.System;
+        var background = document.getElementById('fnh-end-background');
+        var overlay = document.getElementById('fnh-end-overlay');
+        document.getElementById('fnh-end-title').textContent = scene === 'gameover' ? 'Game Over' : system.gameTitle;
+        var first = scene === 'gameover' ? './img/system/GameOver.png' :
+            system.title1Name ? './img/titles1/' + encodeURIComponent(system.title1Name) + '.png' : null;
+        background.hidden = !first;
+        if (first) background.src = first; else background.removeAttribute('src');
+        overlay.hidden = scene !== 'title' || !system.title2Name;
+        if (!overlay.hidden) overlay.src = './img/titles2/' + encodeURIComponent(system.title2Name) + '.png';
+        else overlay.removeAttribute('src');
+        audio.stop('bgm'); audio.stop('bgs'); audio.stop('me');
+        if (scene === 'title') audio.play('bgm', system.titleBgm);
+        else if (system.gameoverMe.name) audio.play('me', system.gameoverMe);
+        panel.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+        document.getElementById('fnh-new-game').focus({ preventScroll: true });
+    }
     async function draw() {
         await renderer.draw(engine);
         renderBattleUi();
+        renderEndScreen();
         document.getElementById('fnh-always-dash').checked = engine.state.alwaysDash;
-        if (audioMap !== engine.map) {
+        if (audioMap !== engine.map && engine.state.scene === 'map') {
             audioMap = engine.map;
             if (audioMap.data.autoplayBgm) audio.play('bgm', audioMap.data.bgm);
             if (audioMap.data.autoplayBgs) audio.play('bgs', audioMap.data.bgs);
@@ -288,7 +314,7 @@
                 if (scrollAnimation) scrollAnimation.playbackRate = !scrollNoFast &&
                     (scrollFastHeld || engine.buttons.has('ok') || engine.buttons.has('cancel') || engine.buttons.has('shift')) ? 3 : 1;
                 var sceneChanged = lastBattle !== engine.battle.battle || lastScene !== engine.state.scene;
-                if (sceneChanged) renderBattleUi();
+                if (sceneChanged) { renderBattleUi(); renderEndScreen(); }
                 if (scheduler) scheduler.tick();
                 var active = sceneChanged || !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
                     lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
@@ -376,7 +402,7 @@
     });
     document.getElementById('fnh-save').addEventListener('click', function () {
         perform(function () {
-            if (!engine.state.saveEnabled || engine.eventRunning || (scheduler && scheduler.parallel.size)) {
+            if (engine.state.scene !== 'map' || !engine.state.saveEnabled || engine.eventRunning || (scheduler && scheduler.parallel.size)) {
                 setStatus('Chưa thể lưu khi sự kiện đang chạy hoặc việc lưu đang bị khóa.');
                 return;
             }
@@ -419,6 +445,16 @@
     });
     document.getElementById('fnh-battle-escape').addEventListener('click', function () {
         battleAction(function () { engine.battle.escape(); });
+    });
+    document.getElementById('fnh-new-game').addEventListener('click', function () {
+        location.assign('./standalone.html?map=10&events=1');
+    });
+    document.getElementById('fnh-end-load').addEventListener('click', function () {
+        perform(async function () {
+            if (!await engine.loadFrom(saveStore, 1)) { setStatus('Ô 1 chưa có dữ liệu lưu.'); return; }
+            audioMap = null;
+            await draw();
+        });
     });
     window.addEventListener('pagehide', function () {
         if (scheduler) scheduler.stop();
