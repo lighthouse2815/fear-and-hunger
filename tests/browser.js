@@ -1319,6 +1319,21 @@ async function main() {
             return e.battle.isAutoBattle(e.battle.actor(7)) && e.battle.inputActors().length===0 &&
                 e.state.actor(7).hp===hp && e.state.actor(7).mp===mp && e.battle.battle.lastAction.autoBattle && e.battle.battle.turn===2;
         })()`,true,false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;e.battle.enemy(0).hp=500;e.battle.handleEffect(333,[0,0,22]);
+        })()`,false,false);
+        check('Critical state phát animation 22 trên đúng quái',await evalPage(cdp,
+            'FNHStandalonePreview.engine.animations.entries.some(entry=>entry.animationId===22 && entry.targetType==="enemy" && entry.targetId===0)',false,false));
+        check('modifier Critical state giữ một HP rồi xóa khi nhận damage',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,r=e.battle.useSkill(e.battle.actor(7),88,0,true);
+            return r.damage===499 && e.battle.enemy(0).hp===1 && !e.battle.enemy(0).states.includes(22);
+        })()`,false,false));
+        check('Vulnerable buộc crit cho đòn thật và không rò sang đòn sau',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;e.battle.enemy(0).hp=700;e.battle.random=()=>0.5;
+            e.battle.handleEffect(333,[0,0,23]);const critical=e.battle.useSkill(e.battle.actor(7),1,0,true);
+            e.battle.handleEffect(333,[0,1,23]);const normal=e.battle.useSkill(e.battle.actor(7),1,0,true);
+            return critical.hits.length===3 && critical.hits.every(hit=>hit.critical) && !normal.critical && normal.damage>0;
+        })()`,false,false));
         await evalPage(cdp,'delete window.beforeBattleItemHp;delete window.beforeBattleBottles',false,false);
         await evalPage(cdp,`(async()=>{
             const engine=FNHStandalonePreview.engine;engine.battle.finish('escape');engine.leaveBattle('escape');

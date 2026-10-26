@@ -22,8 +22,9 @@
         output.forEach(function (token) { if (typeof token === 'number') stack.push(token); else { var right = stack.pop(), left = stack.pop(); stack.push(token === '+' ? left + right : token === '-' ? left - right : token === '*' ? left * right : right === 0 ? 0 : left / right); } });
         return Number(stack[0]) || 0;
     }
-    function BattleRuntime(state, database, random) {
+    function BattleRuntime(state, database, random, onStateChange) {
         this.state = state; this.database = database; this.random = random || Math.random;
+        this.onStateChange = onStateChange;
         this.battle = state.battle || null;
         this.waiters = new Set();
         state.battle = this.battle;
@@ -162,6 +163,7 @@
             if (code === 342) enemy.tp = Math.max(0, Math.min(100, (enemy.tp || 0) + amount));
             if (code === 333) {
                 var stateId = p[2];
+                var hadState = enemy.states.includes(stateId);
                 var immune = this.enemyTraits(enemy).some(function (trait) { return trait.code === 14 && trait.dataId === stateId; });
                 if (p[1] === 0 && enemy.alive && !immune) {
                     if (enemy.stateTurns) delete enemy.stateTurns[stateId];
@@ -172,6 +174,7 @@
                     enemy.states = enemy.states.filter(function (id) { return id !== stateId; });
                     if (stateId === 1 && enemy.hp === 0) enemy.hp = 1;
                 }
+                if (hadState !== enemy.states.includes(stateId) && this.onStateChange) this.onStateChange(enemy, stateId, p[1] === 0);
             }
             if (code === 334) { enemy.states = []; enemy.stateTurns = {}; enemy.hp = this.enemyParam(enemy, 0); enemy.mp = this.enemyParam(enemy, 1); }
             if (code === 335) enemy.hidden = false;
@@ -400,14 +403,29 @@
         } else if (element > 0) value *= this.traitRate(target, 11, element);
         if (skill.hitType === 1) value *= this.traitRate(target, 23, 6);
         if (skill.hitType === 2) value *= this.traitRate(target, 23, 7);
-        hit.critical = allowCritical !== false && !!damage.critical && this.random() < this.traitRate(subject, 22, 2, true) * (1 - this.traitRate(target, 22, 3, true));
+        var vulnerable = this.battlerState(target).states.some(function (id) {
+            return /<Custom Select Effect>[\s\S]*?BattleManager\.actionForceCritical\(\)/i.test(this.database.States[id].note || '');
+        }, this);
+        hit.critical = allowCritical !== false && !!damage.critical && (vulnerable || this.random() < this.traitRate(subject, 22, 2, true) * (1 - this.traitRate(target, 22, 3, true)));
         if (hit.critical) value *= 3;
         var amplitude = Math.floor(value * (damage.variance || 0) / 100);
         value += Math.floor(this.random() * (amplitude + 1)) + Math.floor(this.random() * (amplitude + 1)) - amplitude;
         var recovery = damage.type === 3 || damage.type === 4;
         if (recovery) value = -value * this.traitRate(target, 23, 2);
         else if (this.battlerTraits(target).some(function (trait) { return trait.code === 62 && trait.dataId === 1; })) value /= 2 * this.traitRate(target, 23, 1);
-        value = Math.round(value);
+        value = Math.max(-9999, Math.min(9999, Math.round(value)));
+        [subject, target].forEach(function (battler, side) {
+            this.battlerState(battler).states.slice().sort(function (a, b) {
+                return (this.database.States[b].priority || 0) - (this.database.States[a].priority || 0) || a - b;
+            }.bind(this)).forEach(function (id) {
+                var note = this.database.States[id].note || '';
+                var block = new RegExp('<state[-_ ]damage[-_ ]modifier:\\s*' + (side ? 'defender' : 'attacker') + '>([\\s\\S]*?)<\\/state[-_ ]damage[-_ ]modifier>', 'i').exec(note);
+                if (!block) return;
+                var expression = /^\s*return\s+([^;]+);?\s*$/.exec(block[1]);
+                if (!expression) throw new Error('Modifier sát thương state chưa hỗ trợ: ' + id);
+                value = formulaValue(expression[1].replace(/\bd\b/g, '(' + value + ')'), { a: this.values(subject), b: this.values(target) });
+            }, this);
+        }, this);
         var resource = [2, 4, 6].includes(damage.type) ? 'mp' : 'hp';
         if (damage.type === 5 || damage.type === 6) value = Math.min(value, this.battlerState(target)[resource]);
         return { damage: value, resource: resource, critical: !!hit.critical };

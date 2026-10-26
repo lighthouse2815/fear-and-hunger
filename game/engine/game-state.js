@@ -227,6 +227,7 @@
     GameState.prototype.changeActorState = function (id, stateId, add) {
         var actor = this.actor(id);
         if (!actor) return false;
+        var hadState = actor.states.includes(stateId);
         var states = actor.states.slice();
         if (add && states.indexOf(stateId) < 0) states.push(stateId);
         if (!add) states = states.filter(function (value) { return value !== stateId; });
@@ -237,6 +238,7 @@
         if (add && definition) actor.stateSteps[stateId] = definition.stepsToRemove || 0;
         else delete actor.stateSteps[stateId];
         if (stateId === 1) actor.hp = add ? 0 : Math.max(1, actor.hp);
+        if (hadState !== actor.states.includes(stateId) && this.onStateChange) this.onStateChange({ id: id }, stateId, add);
         return true;
     };
 

@@ -33,7 +33,15 @@
         this.height = options.height || 624;
         this.autonomousEnabled = options.autonomousMovement === true;
         this.pendingTouchEvents = [];
+        this.onStateChange = this.playStateAnimation.bind(this);
     }
+
+    GameEngine.prototype.playStateAnimation = function (battler, stateId, added) {
+        if (this.state.scene !== 'battle' || !this.battle || !this.battle.battle || this.battle.battle.result) return;
+        var state = this.database.States[stateId], type = battler.enemyId != null ? 'enemy' : 'actor';
+        var match = new RegExp('<state[-_ ]' + (added ? 'add' : 'remove') + '[-_ ]animation:\\s*(\\d+)\\s*\\/>', 'i').exec(state.note || '');
+        if (match) this.animations.startBattle(type === 'enemy' ? battler.index : battler.id, Number(match[1]), false, type);
+    };
 
     GameEngine.prototype.boot = async function (initialState) {
         this.database = await this.dataStore.loadDatabase();
@@ -46,11 +54,12 @@
             party: (system.partyMembers || []).slice()
         };
         this.state = new stateApi.GameState(state, this.database);
+        this.state.onStateChange = this.onStateChange;
         this.screen = new screenApi.ScreenRuntime(this.state);
         this.lighting = new lightingApi.LightingRuntime(this.state);
         this.filters = new filterApi.FilterRuntime(this.state);
         this.animations = new animationApi.AnimationRuntime(this);
-        this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random);
+        this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange);
         this.state.party.slice().forEach(function (actorId) {
             if (!this.state.actor(actorId) && this.database.Actors[actorId]) this.state.addActor(actorId);
         }, this);
@@ -77,7 +86,7 @@
         }
         if (this.movement) this.movement.clear();
         if (this.animations) this.animations.dispose();
-        if (this.battle) this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random);
+        if (this.battle) this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange);
         this.state.mapId = mapId;
         this.map = map;
         delete this.screen.screen.battlebacks;
@@ -967,6 +976,7 @@
         var map = await this.prepareMap(state.mapId, state);
         if (!map.isValid(state.x, state.y) || !mapApi.DIRECTION_BITS[state.direction]) throw new Error('Vị trí trong save không hợp lệ.');
         this.state = state;
+        this.state.onStateChange = this.onStateChange;
         if (this.screen) this.screen.dispose();
         this.screen = new screenApi.ScreenRuntime(state);
         this.lighting = new lightingApi.LightingRuntime(state);
@@ -974,7 +984,7 @@
         this.filters = new filterApi.FilterRuntime(state);
         if (this.animations) this.animations.dispose();
         this.animations = new animationApi.AnimationRuntime(this);
-        this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random);
+        this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange);
         if (this.movement) this.movement.clear();
         this.map = map;
         this.lighting.sources(map);

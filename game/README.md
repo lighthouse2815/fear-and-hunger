@@ -118,8 +118,15 @@ phương tiện không tăng nhịp này. Save giữ tổng bước, tiến trì
 Flash đỏ và thanh trạng thái báo mất HP khi đi bộ. HP cập nhật trước event chạm;
 nếu cả đội bị hạ theo cấu hình slip death thì mở game over và không chạy event
 ở ô đích. Biến sự kiện đọc được tổng bước qua toán hạng dữ liệu 7/3.
-Hiện mới chuyển hiệu ứng kỹ năng cơ bản trong JSON, chưa thay toàn bộ cơ chế
-combat mở rộng trong note/plugin (action sequence và state script).
+Engine đã xử lý các note state hiện có, nhưng chưa thay toàn bộ cơ chế combat
+mở rộng trong plugin; action sequence còn cần chuyển.
+Danh sách nghiệm thu toàn bộ được theo dõi tại [engine/MIGRATION.md](engine/MIGRATION.md).
+Modifier của Terror/Critical state đọc công thức số học trong note và chạy sau
+damage/Guard/cap, giữ đích ở 1 HP theo `b.hp - 1`. Nhận damage xóa state theo
+JSON. Vulnerable buộc chí mạng cho skill cho phép crit, chỉ trong lần áp dụng
+lên đúng đích; không thay cờ crit toàn cục và không chạy script khi AI chấm điểm.
+State add/remove animation đọc note, không phát lại khi thêm state đã có hoặc
+khi miễn nhiễm; save giữ tiến trình và rời trận dọn animation. Không eval note.
 Taunt đọc note Physical/Magical/Certain từ state, nhân vật, class, trang bị và
 quái. State 100/101 hút đòn đơn phù hợp về mục tiêu còn sống/đang hiện; nhiều
 mục tiêu khiêu khích chọn ngẫu nhiên, đòn AI ngẫu nhiên vẫn dùng trọng số TGR.
