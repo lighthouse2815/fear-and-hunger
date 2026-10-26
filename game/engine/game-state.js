@@ -54,6 +54,7 @@
         this.followersGathering = source.followersGathering === true;
         this.vehicleBgm = source.vehicleBgm || null;
         this.scene = source.scene || 'map';
+        this.mapNameDisplay = source.mapNameDisplay !== false;
         if (!Array.isArray(this.regionCover.open)) this.regionCover.open = [0];
         this.mapTileset = source.mapTileset || null;
         this.timer = source.timer || { active: false, frames: 0 };
@@ -272,6 +273,7 @@
             achievements: this.achievements,
             followersVisible: this.followersVisible, followersGathering: this.followersGathering, vehicleBgm: this.vehicleBgm,
             scene: this.scene,
+            mapNameDisplay: this.mapNameDisplay,
             timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
             wordWrap: this.wordWrap, pendingChoices: this.pendingChoices,
             dashEnabled: this.dashEnabled,
