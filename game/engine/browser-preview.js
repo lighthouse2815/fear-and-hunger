@@ -5,7 +5,9 @@
     var mapId = Number(query.get('map') || 74);
     var canvas = document.getElementById('fnh-canvas');
     var status = document.getElementById('fnh-status');
-    var message = document.getElementById('fnh-message');
+    var message = document.getElementById('fnh-message-text');
+    var next = document.getElementById('fnh-next');
+    var choicesPanel = document.getElementById('fnh-choices');
     var engine = new FNHStandaloneEngine.GameEngine({ baseUrl: '.' });
     var renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { baseUrl: '.' });
     var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
@@ -25,7 +27,7 @@
             if (audioMap.data.autoplayBgm) audio.play('bgm', audioMap.data.bgm);
             if (audioMap.data.autoplayBgs) audio.play('bgs', audioMap.data.bgs);
         }
-        setStatus('Map ' + engine.state.mapId + ' · ô ' + engine.state.x + ',' + engine.state.y + ' · dùng phím mũi tên để di chuyển');
+        setStatus('Map ' + engine.state.mapId + ' · ô ' + engine.state.x + ',' + engine.state.y + ' · Mũi tên: di chuyển · Enter: tương tác');
     }
     async function perform(action) {
         if (!ready || busy) return;
@@ -34,23 +36,49 @@
         catch (error) { setStatus(error.message); }
         finally { busy = false; }
     }
-    async function runEventAtPlayer() {
-        var events = engine.map.eventAt(engine.state.x, engine.state.y);
-        if (!events.length) return;
-        var event = events[events.length - 1];
-        await engine.runEvent(event.id, {
-            message: function (text) { message.textContent = text; },
-            choice: function (choices) {
-                var answer = window.prompt(choices.map(function (choice, index) { return index + ': ' + choice; }).join('\n'), '0');
-                return Number(answer);
-            },
+    function showMessage(text) {
+        message.textContent = text.replace(/\\c\[\d+\]/gi, '');
+        next.hidden = false;
+        next.focus({ preventScroll: true });
+        return new Promise(function (resolve) {
+            next.onclick = function () {
+                next.hidden = true;
+                next.onclick = null;
+                canvas.focus({ preventScroll: true });
+                resolve();
+            };
+        });
+    }
+    function showChoices(choices, cancelType) {
+        return new Promise(function (resolve) {
+            choicesPanel.replaceChildren();
+            function addChoice(label, index) {
+                var button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = label;
+                button.onclick = function () {
+                    choicesPanel.replaceChildren();
+                    canvas.focus({ preventScroll: true });
+                    resolve(index);
+                };
+                choicesPanel.appendChild(button);
+            }
+            choices.forEach(addChoice);
+            if (cancelType !== -1) addChoice('Quay lại', -1);
+            if (choicesPanel.firstElementChild) choicesPanel.firstElementChild.focus({ preventScroll: true });
+        });
+    }
+    async function interact() {
+        await engine.interact({
+            message: showMessage,
+            choice: showChoices,
             effect: async function (code, parameters) {
                 if (audio.handleEffect(code, parameters)) return;
                 if (code === 230) {
                     await new Promise(function (resolve) { setTimeout(resolve, parameters[0] * 1000 / 60); });
                     return;
                 }
-                throw new Error('Chưa hỗ trợ lệnh sự kiện ' + code + ' trong preview.');
+                return false;
             }
         });
         await draw();
@@ -59,26 +87,38 @@
     document.addEventListener('keydown', function (event) {
         audio.unlock();
         if (event.target.closest('button,input,select,textarea')) return;
+        if (!next.hidden && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            if (!event.repeat) next.click();
+            return;
+        }
         var direction = { ArrowDown: 2, ArrowLeft: 4, ArrowRight: 6, ArrowUp: 8 }[event.key];
         if (direction) {
             event.preventDefault();
             perform(async function () { engine.move(direction); await draw(); });
         } else if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            perform(runEventAtPlayer);
+            if (!event.repeat) perform(interact);
         }
     });
-    document.getElementById('fnh-clear').addEventListener('click', function () { message.textContent = ''; });
+    document.getElementById('fnh-controls').addEventListener('click', function (event) {
+        var button = event.target.closest('button[data-direction]');
+        if (!button) return;
+        var direction = Number(button.dataset.direction);
+        if (direction) perform(async function () { engine.move(direction); await draw(); });
+        else perform(interact);
+    });
     document.getElementById('fnh-save').addEventListener('click', function () {
-        if (!ready || busy) return;
-        engine.saveTo(saveStore, 1);
-        setStatus('Đã lưu ô 1 · Map ' + engine.state.mapId + ' · ô ' + engine.state.x + ',' + engine.state.y);
+        perform(function () {
+            engine.saveTo(saveStore, 1);
+            setStatus('Đã lưu ô 1 · Map ' + engine.state.mapId + ' · ô ' + engine.state.x + ',' + engine.state.y);
+        });
     });
     document.getElementById('fnh-load').addEventListener('click', function () {
         perform(async function () {
             if (!await engine.loadFrom(saveStore, 1)) {
-            setStatus('Ô 1 chưa có dữ liệu lưu.');
-            return;
+                setStatus('Ô 1 chưa có dữ liệu lưu.');
+                return;
             }
             await draw();
         });
@@ -89,7 +129,8 @@
     window.addEventListener('pagehide', function () { audio.dispose(); });
     (async function () {
         try {
-            await engine.boot({ mapId: mapId, x: 1, y: 0, direction: 2, party: [1] });
+            await engine.boot({ mapId: mapId, x: mapId === 74 ? 8 : 1, y: mapId === 74 ? 8 : 0,
+                direction: mapId === 74 ? 8 : 2, party: [1] });
             await draw();
             ready = true;
         } catch (error) {

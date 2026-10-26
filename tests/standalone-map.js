@@ -37,4 +37,25 @@ for (let y = 0; y < map.height && !compared; y += 1) {
 }
 assert.equal(compared, true, 'map phải có ít nhất một ô bị chặn để kiểm tra flags');
 
+// Tile chỉ chặn một hướng vẫn phải chặn, dù lớp đất bên dưới cho phép đi.
+const flags = [16, 0, 4, 2];
+const layers = Array(12).fill(0);
+layers[0] = layers[1] = 1;
+layers[6] = 2;
+const directional = new GameMap({ id: 1, width: 2, height: 1, data: layers, events: [] }, { flags }, state);
+assert.equal(directional.isPassable(0, 0, 6), false);
+flags[2] = 16 | 4;
+assert.equal(directional.isPassable(0, 0, 6), true, 'tile star không chặn đường');
+layers[7] = 3;
+assert.equal(directional.isPassable(0, 0, 6), false, 'kiểm tra cả hướng đi vào ô đích');
+
+directional.events.push({ id: 1, x: 1, y: 0, pages: [
+    { conditions: { switch1Valid: true, switch1Id: 1 }, priorityType: 1, through: false }
+] });
+assert.equal(directional.eventBlocks(1, 0), false);
+state.setSwitch(1, true);
+assert.equal(directional.eventBlocks(1, 0), true);
+directional.events[0].pages[0].through = true;
+assert.equal(directional.eventBlocks(1, 0), false);
+
 console.log('ĐẠT: map model độc lập đọc tile, vùng, event page và passability.');

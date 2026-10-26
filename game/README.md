@@ -27,6 +27,11 @@ Các module mới nằm trong `engine/`; mở `http://127.0.0.1:8140/standalone.
 để kiểm tra bản đồ và nhân vật bằng Canvas mà không tải `rpg_*.js`, plugin hay
 `__fnh/compat.js`. Trang preview cũng được đưa vào bản build.
 
+Preview mở cạnh thùng đồ trên Map074. Bấm Enter hoặc **Tương tác** để mở thùng,
+bấm **Tiếp tục** để đọc hội thoại. Dùng mũi tên hoặc các nút hướng để di chuyển;
+khi hội thoại/sự kiện đang chạy, engine khóa di chuyển và các sự kiện khác.
+Các lựa chọn hiển thị bằng nút trong trang, không mở hộp thoại `prompt`.
+
 Preview hiện hỗ trợ di chuyển, một phần lệnh sự kiện, lưu/tải riêng và âm thanh.
 Interpreter chạy được common event lồng nhau, vòng lặp có giới hạn thực thi,
 điều kiện, biến ngẫu nhiên và self-switch. Test dùng thùng đồ event 39 trên Map074

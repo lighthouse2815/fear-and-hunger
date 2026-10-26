@@ -21,6 +21,7 @@
         this.database = null;
         this.state = null;
         this.map = null;
+        this.eventRunning = false;
     }
 
     GameEngine.prototype.boot = async function (initialState) {
@@ -51,15 +52,41 @@
 
     GameEngine.prototype.move = function (direction) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
-        if (!this.map.isPassable(this.state.x, this.state.y, direction)) return false;
-        this.state.x += direction === 4 ? -1 : direction === 6 ? 1 : 0;
-        this.state.y += direction === 8 ? -1 : direction === 2 ? 1 : 0;
+        if (this.eventRunning || !mapApi.DIRECTION_BITS[direction]) return false;
         this.state.direction = direction;
+        if (!this.map.isPassable(this.state.x, this.state.y, direction)) return false;
+        var x = this.state.x + (direction === 4 ? -1 : direction === 6 ? 1 : 0);
+        var y = this.state.y + (direction === 8 ? -1 : direction === 2 ? 1 : 0);
+        if (this.map.eventBlocks(x, y)) return false;
+        this.state.x = x;
+        this.state.y = y;
         return true;
+    };
+
+    GameEngine.prototype.interact = async function (handlers) {
+        if (!this.map || !this.state) throw new Error('Engine chưa boot.');
+        if (this.eventRunning) return null;
+        var direction = this.state.direction;
+        var x = this.state.x + (direction === 4 ? -1 : direction === 6 ? 1 : 0);
+        var y = this.state.y + (direction === 8 ? -1 : direction === 2 ? 1 : 0);
+        var candidates = this.map.eventAt(this.state.x, this.state.y).map(function (event) {
+            return { event: event, sameTile: true };
+        }).concat(this.map.eventAt(x, y).map(function (event) {
+            return { event: event, sameTile: false };
+        }));
+        for (var i = 0; i < candidates.length; i += 1) {
+            var candidate = candidates[i];
+            var page = this.map.eventPage(candidate.event);
+            if (page && page.trigger === 0 && candidate.sameTile === (page.priorityType !== 1)) {
+                return this.runEvent(candidate.event.id, handlers);
+            }
+        }
+        return null;
     };
 
     GameEngine.prototype.runEvent = async function (eventId, handlers) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
+        if (this.eventRunning) throw new Error('Một sự kiện khác đang chạy.');
         var event = this.map.events.find(function (entry) { return entry.id === eventId; });
         if (!event) throw new Error('Không tìm thấy event ' + eventId + ' trên map ' + this.state.mapId);
         var page = this.map.eventPage(event, this.state);
@@ -71,10 +98,13 @@
             await engine.loadMap(destination.mapId);
             if (transfer) return transfer(destination, interpreter);
         };
-        return new eventApi.EventInterpreter({
-            commands: page.list, state: this.state, mapId: this.state.mapId,
-            eventId: event.id, handlers: eventHandlers, commonEvents: this.database.CommonEvents, random: this.random
-        }).run();
+        this.eventRunning = true;
+        try {
+            return await new eventApi.EventInterpreter({
+                commands: page.list, state: this.state, mapId: this.state.mapId,
+                eventId: event.id, handlers: eventHandlers, commonEvents: this.database.CommonEvents, random: this.random
+            }).run();
+        } finally { this.eventRunning = false; }
     };
 
     GameEngine.prototype.save = function () {

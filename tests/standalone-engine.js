@@ -40,5 +40,20 @@ async function fetchFromGame(relativeUrl) {
     assert.equal(messages.at(-1), 'Nothing left here.');
     assert.equal(engine.state.itemCount('items', 15), 2, 'thùng đã mở không được cấp lại vật phẩm');
     assert.equal(engine.state.mapId, 74);
+    await engine.restore(Object.assign({}, initial, { x: 8, y: 8, direction: 8 }));
+    assert.equal(engine.move(8), false, 'không đi xuyên qua thùng đồ');
+    assert.equal(engine.state.direction, 8, 'vẫn quay mặt khi bước đi bị chặn');
+    let resume, shown = 0;
+    const interaction = engine.interact({ message: () => {
+        shown += 1;
+        if (shown === 1) return new Promise(resolve => { resume = resolve; });
+    } });
+    assert.equal(engine.eventRunning, true);
+    assert.equal(engine.move(2), false, 'chờ hội thoại xong mới được di chuyển');
+    await assert.rejects(engine.runEvent(39), /sự kiện khác đang chạy/);
+    resume();
+    await interaction;
+    assert.equal(engine.eventRunning, false);
+    assert.equal(engine.state.itemCount('items', 15), 2);
     console.log('ĐẠT: game engine độc lập boot, di chuyển, chạy event và save/restore.');
 })().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });

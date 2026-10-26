@@ -55,7 +55,8 @@
     };
 
     GameMap.prototype.pageConditionsMet = function (conditions, state, eventId) {
-        if (!state) return !conditions.switch1Valid && !conditions.switch2Valid && !conditions.selfSwitchValid && !conditions.variableValid;
+        if (!state) return !conditions.switch1Valid && !conditions.switch2Valid && !conditions.selfSwitchValid &&
+            !conditions.variableValid && !conditions.itemValid && !conditions.actorValid;
         if (conditions.switch1Valid && !state.switchValue(conditions.switch1Id)) return false;
         if (conditions.switch2Valid && !state.switchValue(conditions.switch2Id)) return false;
         if (conditions.selfSwitchValid && !state.selfSwitchValue(this.id, eventId, conditions.selfSwitchCh)) return false;
@@ -80,10 +81,16 @@
             var tileId = this.tileId(x, y, z);
             var flag = this.tileset.flags && this.tileset.flags[tileId] || 0;
             if ((flag & 0x10) !== 0) continue;
-            if ((flag & 0x0f) === 0x0f) return false;
-            if ((flag & bit) === 0) return true;
+            return (flag & bit) === 0;
         }
         return false;
+    };
+
+    GameMap.prototype.eventBlocks = function (x, y) {
+        return this.eventAt(x, y).some(function (event) {
+            var page = this.eventPage(event);
+            return page && page.priorityType === 1 && !page.through;
+        }, this);
     };
 
     return { GameMap: GameMap, DIRECTION_BITS: Object.assign({}, DIRECTION_BITS) };

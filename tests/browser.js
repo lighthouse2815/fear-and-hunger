@@ -924,16 +924,35 @@ async function main() {
             const expected = reference.getContext('2d').getImageData(0, 0, 400, 300).data;
             return actual.every((value, index) => value === expected[index]);
         })()`, true, false));
-        check('engine mới mở thùng đồ thật và không cấp vật phẩm lặp', await evalPage(cdp, `(async () => {
-            const engine = FNHStandalonePreview.engine;
-            engine.random = () => 0;
-            const messages = [];
-            await engine.runEvent(39, { message: text => messages.push(text) });
-            const eggs = engine.state.itemCount('items', 15);
-            await engine.runEvent(39, { message: text => messages.push(text) });
-            return eggs === 2 && engine.state.itemCount('items', 15) === 2 &&
-                engine.state.selfSwitchValue(74, 39, 'A') && messages.at(-1) === 'Nothing left here.';
-        })()`, true, false));
+        await evalPage(cdp, 'FNHStandalonePreview.engine.random = () => 0; document.querySelector("#fnh-canvas").focus()', false, false);
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+        await waitFor(cdp, '!document.querySelector("#fnh-next").hidden && document.querySelector("#fnh-message-text").textContent.includes("You search the barrel")',
+            5000, 'Enter mở hội thoại của thùng phía trước');
+        await clickElement(cdp, '#fnh-controls [data-direction="2"]');
+        check('hội thoại chờ xác nhận và khóa di chuyển', await evalPage(cdp,
+            'FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.y === 8 && FNHStandalonePreview.engine.state.itemCount("items", 15) === 0', false, false));
+        await clickElement(cdp, '#fnh-next');
+        await waitFor(cdp, 'document.querySelector("#fnh-message-text").textContent.includes("Eggs") && !document.querySelector("#fnh-next").hidden',
+            5000, 'common event hiển thị vật phẩm');
+        await clickElement(cdp, '#fnh-next');
+        await waitFor(cdp, '!FNHStandalonePreview.engine.eventRunning', 5000, 'đóng hội thoại thùng đồ');
+        await clickElement(cdp, '#fnh-controls [data-direction="0"]');
+        await waitFor(cdp, 'document.querySelector("#fnh-message-text").textContent === "Nothing left here." && !document.querySelector("#fnh-next").hidden',
+            5000, 'mở thùng lần hai');
+        await clickElement(cdp, '#fnh-next');
+        await waitFor(cdp, '!FNHStandalonePreview.engine.eventRunning', 5000, 'kết thúc sự kiện lần hai');
+        check('engine mới mở thùng đồ thật và không cấp vật phẩm lặp', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.itemCount("items", 15) === 2 && FNHStandalonePreview.engine.state.selfSwitchValue(74, 39, "A")', false, false));
+        await clickElement(cdp, '#fnh-save');
+        await waitFor(cdp, 'document.querySelector("#fnh-status").textContent.startsWith("Đã lưu")', 5000, 'lưu preview');
+        await clickElement(cdp, '#fnh-controls [data-direction="2"]');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.y === 9', 5000, 'nút di chuyển preview');
+        await clickElement(cdp, '#fnh-load');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.y === 8', 5000, 'tải save preview');
+        check('save preview khôi phục vị trí, vật phẩm và trạng thái thùng', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.itemCount("items", 15) === 2 && FNHStandalonePreview.engine.state.selfSwitchValue(74, 39, "A")', false, false));
+        await evalPage(cdp, 'localStorage.removeItem("FNH_STANDALONE_PREVIEW:1")', false, false);
         // Chạy các lệnh audio dữ liệu bằng interpreter mới, không dùng AudioManager MV.
         await evalPage(cdp, `new FNHStandaloneEvents.EventInterpreter({
             state: FNHStandalonePreview.engine.state,

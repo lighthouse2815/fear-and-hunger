@@ -13,16 +13,29 @@
         #fnh-status { padding: 10px 12px; color: #b8aa95; font-size: 13px; }
         #fnh-message { min-height: 48px; padding: 12px; border: 1px solid #564a3c; background: #17120f; white-space: pre-wrap; }
         button { margin-top: 8px; padding: 6px 10px; color: #e7ddca; background: #17120f; border: 1px solid #8c7759; }
+        #fnh-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+        #fnh-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+        button:focus-visible { outline: 2px solid #e7ddca; }
     </style>
 </head>
 <body>
 <main>
-    <canvas id="fnh-canvas" width="816" height="624" aria-label="Bản đồ game"></canvas>
+    <canvas id="fnh-canvas" width="816" height="624" tabindex="0" aria-label="Bản đồ game"></canvas>
     <div id="fnh-status">Đang tải engine độc lập…</div>
-    <div id="fnh-message" aria-live="polite"></div>
+    <div id="fnh-message" aria-live="polite">
+        <div id="fnh-message-text"></div>
+        <button id="fnh-next" type="button" hidden>Tiếp tục</button>
+        <div id="fnh-choices"></div>
+    </div>
+    <nav id="fnh-controls" aria-label="Điều khiển game">
+        <button type="button" data-direction="4" aria-label="Đi trái">←</button>
+        <button type="button" data-direction="8" aria-label="Đi lên">↑</button>
+        <button type="button" data-direction="2" aria-label="Đi xuống">↓</button>
+        <button type="button" data-direction="6" aria-label="Đi phải">→</button>
+        <button type="button" data-direction="0">Tương tác</button>
+    </nav>
     <button id="fnh-save" type="button">Lưu ô 1</button>
     <button id="fnh-load" type="button">Tải ô 1</button>
-    <button id="fnh-clear" type="button">Xóa hội thoại</button>
     <label for="fnh-volume">Âm lượng <input id="fnh-volume" type="range" min="0" max="100" value="100"></label>
 </main>
 <script src="engine/data-store.js"></script>
