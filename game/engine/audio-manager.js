@@ -19,6 +19,8 @@
         this.tracks = new Map();
         this.pending = new Set();
         this.savedBgm = null;
+        this.context = options.audioContext || (!options.audioFactory && typeof AudioContext !== 'undefined' ? new AudioContext() : null);
+        this.panGraphs = new WeakMap();
     }
 
     function volumeValue(value) {
@@ -55,7 +57,23 @@
     // App gọi trực tiếp trong pointerdown/keydown để giữ quyền phát của gesture.
     AudioManager.prototype.unlock = function () {
         var manager = this;
+        if (this.context && this.context.state === 'suspended') {
+            this.context.resume().catch(function (error) { manager.onError(error); });
+        }
         Array.from(this.pending).forEach(function (audio) { manager.requestPlay(audio); });
+    };
+
+    AudioManager.prototype.applyPan = function (audio, track) {
+        if (!this.context) return;
+        var graph = this.panGraphs.get(audio);
+        if (!graph) {
+            graph = { source: this.context.createMediaElementSource(audio), panner: this.context.createStereoPanner() };
+            this.panGraphs.set(audio, graph);
+        }
+        graph.source.disconnect(); graph.panner.disconnect();
+        graph.source.connect(graph.panner); graph.panner.connect(this.context.destination);
+        graph.panner.pan.value = Math.max(-1, Math.min(1, (Number(track.sound.pan) || 0) / 100));
+        track.panGraph = graph;
     };
 
     AudioManager.prototype.play = function (category, sound, position) {
@@ -69,6 +87,7 @@
         track = { category: category, sound: Object.assign({}, sound),
             volume: volumeValue(sound.volume == null ? 1 : sound.volume / 100), fade: 1, timer: null };
         this.tracks.set(audio, track);
+        this.applyPan(audio, track);
         audio.loop = category === 'bgm' || category === 'bgs';
         audio.playbackRate = Math.max(0.01, Number(sound.pitch == null ? 100 : sound.pitch) / 100);
         audio.preservesPitch = false;
@@ -98,6 +117,7 @@
     AudioManager.prototype.release = function (audio) {
         var track = this.tracks.get(audio);
         if (track && track.timer) clearInterval(track.timer);
+        if (track && track.panGraph) { track.panGraph.source.disconnect(); track.panGraph.panner.disconnect(); }
         this.pending.delete(audio);
         this.tracks.delete(audio);
         audio.pause();
@@ -159,6 +179,7 @@
     AudioManager.prototype.dispose = function () {
         // Dừng ME cuối cùng để không phát lại BGM trong lúc thu hồi tài nguyên.
         ['bgm', 'bgs', 'se', 'me'].forEach(this.stop.bind(this));
+        if (this.context && this.context.state !== 'closed') this.context.close().catch(this.onError);
     };
 
     return { AudioManager: AudioManager };

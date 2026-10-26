@@ -217,7 +217,7 @@ trình tập hợp; chuyển map đặt cả nhóm ở ô đích. Guest không v
 Chơi mới mở luồng chọn nhân vật độc lập từ Map010. Tải save trở lại map và tiếp
 tục scheduler; ô lưu trống được báo ngay trên giao diện.
 Tải map/save lỗi giữ map và trạng thái hiện tại nhất quán.
-Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, fade, nhớ/phát tiếp
+Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, stereo pan, fade, nhớ/phát tiếp
 BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.
 Thanh âm lượng cập nhật các âm đang phát, giữ volume của từng file.
 Save preview dùng prefix `FNH_STANDALONE_PREVIEW:`, tách biệt save bản chính.
@@ -225,7 +225,7 @@ Save preview dùng prefix `FNH_STANDALONE_PREVIEW:`, tách biệt save bản ch�
 Đây chưa phải bản thay thế đầy đủ: combat, menu và một số hành vi sự kiện vẫn
 cần hoàn thiện. Entry chính vẫn dùng runtime cũ. Các map hiện có không chứa autotile A1–A4.
 Callback effect chỉ là đường truyền lệnh;
-có callback không có nghĩa lệnh đã được triển khai. Audio chưa xử lý pan stereo.
+có callback không có nghĩa lệnh đã được triển khai.
 Kiểm tra Chrome chạy cả entry chính và preview, xác nhận preview không nạp mã
 runtime cũ và phát được OGG thật.
 

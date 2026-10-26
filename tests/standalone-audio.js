@@ -79,10 +79,46 @@ class FakeAudio extends EventTarget {
         assert.match(errors[0].message, /Không tải được âm thanh/);
         locked.dispose();
 
+        const sourceElements = new WeakSet(), nodes = [];
+        const context = {
+            state: 'suspended', destination: {}, resumes: 0,
+            createMediaElementSource(audio) {
+                assert.equal(sourceElements.has(audio), false, 'mỗi element chỉ được tạo một MediaElementSource');
+                sourceElements.add(audio);
+                const node = { connections: [], connect(target) { this.connections.push(target); }, disconnect() { this.connections = []; } };
+                nodes.push(node); return node;
+            },
+            createStereoPanner() {
+                const node = { pan: { value: 0 }, connections: [], connect(target) { this.connections.push(target); }, disconnect() { this.connections = []; } };
+                nodes.push(node); return node;
+            },
+            async resume() { this.state = 'running'; this.resumes++; },
+            async close() { this.state = 'closed'; }
+        };
+        const stereoAudio = new FakeAudio();
+        const stereo = new AudioManager({ audioFactory: () => stereoAudio, audioContext: context, masterVolume: 0.05 });
+        stereo.unlock(); await Promise.resolve();
+        assert.equal(context.resumes, 1, 'gesture mở cả AudioContext');
+        stereo.play('bgm', { name: 'wind', pan: -100, volume: 80 });
+        assert.equal(nodes[1].pan.value, -1);
+        assert.ok(Math.abs(stereoAudio.volume - 0.04) < 0.000001, 'stereo giữ âm lượng nhỏ');
+        assert.deepEqual(nodes[0].connections, [nodes[1]]);
+        assert.deepEqual(nodes[1].connections, [context.destination]);
+        stereo.play('bgm', { name: 'wind', pan: 300, volume: 80 });
+        assert.equal(nodes[1].pan.value, 1, 'pan giới hạn trong -100..100');
+        assert.equal(nodes.length, 2, 'đổi pan cùng nhạc dùng lại graph');
+        stereo.stop('bgm');
+        assert.equal(nodes[0].connections.length, 0);
+        stereo.play('bgm', { name: 'wind', pan: 25 });
+        assert.equal(nodes[1].pan.value, 0.25, 'phát lại element đã dừng không tạo source trùng');
+        stereo.dispose(); await Promise.resolve();
+        assert.equal(context.state, 'closed');
+        assert.equal(nodes[1].connections.length, 0);
+
         manager.fadeOut('bgm', 10);
         manager.dispose();
         assert.equal(manager.tracks.size, 0);
         assert.equal(manager.pending.size, 0);
-        console.log('ĐẠT: audio độc lập xử lý volume, pitch, ME, fade, replay, autoplay và thu hồi tài nguyên.');
+        console.log('ĐẠT: audio độc lập xử lý volume, stereo pan, pitch, ME, fade, replay, autoplay và thu hồi tài nguyên.');
     } finally { manager.dispose(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

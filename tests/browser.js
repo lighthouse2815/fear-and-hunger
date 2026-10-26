@@ -1917,6 +1917,31 @@ async function main() {
             20000, 'OGG phát trong audio manager độc lập');
         check('interpreter mới phát được BGM OGG thật', await evalPage(cdp,
             'FNHStandalonePreview.audio.buffers.bgm.src.endsWith("/audio/bgm/fear_and_hunger.ogg") && Math.abs(FNHStandalonePreview.audio.buffers.bgm.volume - 0.04) < 0.000001', false, false));
+        check('pan OGG thật chuyển năng lượng sang đúng kênh stereo', await evalPage(cdp, `(async () => {
+            const manager = FNHStandalonePreview.audio, context = manager.context;
+            manager.unlock(); await context.resume();
+            const audio = manager.buffers.bgm, graph = manager.tracks.get(audio).panGraph;
+            const splitter = context.createChannelSplitter(2), left = context.createAnalyser(), right = context.createAnalyser();
+            left.fftSize = right.fftSize = 256;
+            graph.panner.connect(splitter); splitter.connect(left, 0); splitter.connect(right, 1);
+            async function energy(pan) {
+                manager.play('bgm', { name: 'fear_and_hunger', volume: 80, pitch: 100, pan });
+                // Cùng BGM dùng lại graph; nối lại nhánh đo sau cập nhật pan.
+                graph.panner.connect(splitter);
+                await new Promise(resolve => setTimeout(resolve, 200));
+                const l = new Float32Array(256), r = new Float32Array(256);
+                left.getFloatTimeDomainData(l); right.getFloatTimeDomainData(r);
+                return [l.reduce((sum, value) => sum + value * value, 0), r.reduce((sum, value) => sum + value * value, 0)];
+            }
+            try {
+                const leftOnly = await energy(-100), rightOnly = await energy(100);
+                return leftOnly[0] > 0.00000001 && leftOnly[1] < leftOnly[0] * 0.001 &&
+                    rightOnly[1] > 0.00000001 && rightOnly[0] < rightOnly[1] * 0.001 && !audio.paused;
+            } finally {
+                splitter.disconnect(); left.disconnect(); right.disconnect();
+                manager.play('bgm', { name: 'fear_and_hunger', volume: 80, pitch: 100, pan: 0 });
+            }
+        })()`, true, true));
         await evalPage(cdp, `(() => {
             const volume = document.querySelector('#fnh-volume');
             volume.value = 50;
