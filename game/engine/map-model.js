@@ -56,9 +56,10 @@
 
     GameMap.prototype.viewport = function (player, width, height) {
         var cols = Math.ceil(width / 48), rows = Math.ceil(height / 48);
+        var camera = this.state && this.state.screen && this.state.screen.mapCamera;
         return {
-            startX: Math.max(0, Math.min(this.width - cols, player.x - Math.floor(cols / 2))),
-            startY: Math.max(0, Math.min(this.height - rows, player.y - Math.floor(rows / 2)))
+            startX: Math.max(0, Math.min(this.width - cols, camera && camera.mapId === this.id ? camera.x : player.x - Math.floor(cols / 2))),
+            startY: Math.max(0, Math.min(this.height - rows, camera && camera.mapId === this.id ? camera.y : player.y - Math.floor(rows / 2)))
         };
     };
 

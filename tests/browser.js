@@ -915,6 +915,24 @@ async function main() {
             const expected = context.getImageData(0, 0, 96, 48).data;
             return actual.every((value, index) => value === expected[index]);
         })()`, true, false));
+        check('camera giữa hai ô vẽ đủ tile và đúng pixel', await evalPage(cdp, `(async () => {
+            const source = FNHStandalonePreview.engine;
+            const state = new FNHStandaloneState.GameState({ mapId: 74, x: 15, y: 15 }, source.database);
+            const map = new FNHStandaloneMap.GameMap({ ...source.map.data, id: 74, events: [], parallaxName: '' }, source.map.tileset, state);
+            const screen = new FNHStandaloneScreen.ScreenRuntime(state);
+            const engine = { map, state, screen };
+            const reference = document.createElement('canvas');
+            const full = new FNHStandaloneCanvas.CanvasRenderer(reference, { width: 192, height: 192 });
+            screen.screen.mapCamera = { mapId: 74, x: 7, y: 9 };
+            await full.draw(engine);
+            const canvas = document.createElement('canvas');
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { width: 144, height: 144 });
+            screen.screen.mapCamera = { mapId: 74, x: 7.5, y: 9.5 };
+            await renderer.draw(engine);
+            const expected = reference.getContext('2d').getImageData(24, 24, 144, 144).data;
+            const actual = canvas.getContext('2d').getImageData(0, 0, 144, 144).data;
+            return actual.every((value, index) => value === expected[index]);
+        })()`, true, false));
         check('sprite lớn giữ kích thước và nhận diện dấu $', await evalPage(cdp, `(async () => {
             const canvas = document.createElement('canvas');
             const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { width: 400, height: 300 });

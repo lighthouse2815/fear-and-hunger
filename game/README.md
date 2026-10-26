@@ -60,6 +60,10 @@ Movement route hỗ trợ lệnh 0–45: đi/quay/nhảy/chờ, công tắc, t�
 qua theo `skippable`, có thể lặp/thay/hủy; save giữ vị trí, hình và tiến trình route.
 Test kiểm tra từng nhóm lệnh và quét hơn 100.000 route hiện có trong JSON.
 Hiện bước đi đổi tọa độ theo ô, chưa nội suy chuyển động/sprite giữa hai ô.
+Lệnh cuộn bản đồ 204 điều khiển camera theo hướng, khoảng cách và tốc độ trong JSON.
+Camera cuộn theo frame, giữ tiến trình qua save, dừng ở mép map và tiếp tục theo
+nhân vật khi di chuyển. Hai lệnh cuộn nối tiếp chạy lần lượt; cờ chờ giữ event
+đến khi cuộn xong. Chuyển map đặt lại camera. Renderer vẽ được vị trí giữa hai ô.
 Tải map/save lỗi giữ map và trạng thái hiện tại nhất quán.
 Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, fade, nhớ/phát tiếp
 BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.

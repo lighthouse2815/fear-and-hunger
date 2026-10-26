@@ -104,8 +104,8 @@
             }
             try {
                 var upper = [], renderer = this;
-                for (var y = startY; y < Math.min(map.height, startY + rows); y += 1) {
-                    for (var x = startX; x < Math.min(map.width, startX + cols); x += 1) {
+                for (var y = Math.floor(startY); y < Math.min(map.height, startY + rows); y += 1) {
+                    for (var x = Math.floor(startX); x < Math.min(map.width, startX + cols); x += 1) {
                         for (var z = 0; z < 4; z += 1) {
                             var tileId = map.tileId(x, y, z);
                             if ((map.tileset.flags[tileId] & 0x10) !== 0) upper.push([tileId, x - startX, y - startY]);
@@ -242,8 +242,8 @@
     CanvasRenderer.prototype.drawRegionCover = function (map, cover, startX, startY, cols, rows) {
         var context = this.context;
         context.save(); context.fillStyle = '#000';
-        for (var y = startY; y < Math.min(map.height, startY + rows); y += 1) {
-            for (var x = startX; x < Math.min(map.width, startX + cols); x += 1) {
+        for (var y = Math.floor(startY); y < Math.min(map.height, startY + rows); y += 1) {
+            for (var x = Math.floor(startX); x < Math.min(map.width, startX + cols); x += 1) {
                 if (!cover.open.includes(map.regionId(x, y))) context.fillRect((x - startX) * TILE_SIZE, (y - startY) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
         }

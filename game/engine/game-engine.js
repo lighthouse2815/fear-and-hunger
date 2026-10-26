@@ -89,7 +89,58 @@
             this.state.y = destination.y;
             if (destination.direction && !this.state.directionFixed) this.state.direction = destination.direction;
         }
+        this.resetCamera();
         return this.map;
+    };
+
+    GameEngine.prototype.resetCamera = function () {
+        var screen = this.screen;
+        screen.screen.tweens.slice().forEach(function (track) {
+            if (track.path[0] === 'mapCamera') screen.finish(track);
+        });
+        delete screen.screen.mapCamera;
+        screen.revision++;
+    };
+
+    GameEngine.prototype.scrollMap = async function (parameters, interpreter) {
+        var direction = parameters[0], distance = parameters[1], speed = parameters[2];
+        if (!mapApi.DIRECTION_BITS[direction] || !Number.isFinite(distance) || distance < 0 ||
+            !Number.isInteger(speed) || speed < 1 || speed > 6) throw new Error('Tham số cuộn bản đồ không hợp lệ.');
+        var map = this.map, screen = this.screen, track;
+        // Hai lệnh cuộn liên tiếp phải chạy lần lượt, kể cả khi không bật cờ chờ.
+        while ((track = screen.screen.tweens.find(function (entry) { return entry.path[0] === 'mapCamera'; }))) {
+            await screen.tween([], {}, track.frames - track.elapsed);
+            if (this.map !== map) return true;
+            if (interpreter.signal && interpreter.signal.aborted) throw interpreter.signal.reason;
+        }
+        var viewport = map.viewport(this.state, this.width, this.height);
+        var camera = screen.screen.mapCamera = { mapId: map.id, x: viewport.startX, y: viewport.startY };
+        var dx = direction === 4 ? -distance : direction === 6 ? distance : 0;
+        var dy = direction === 8 ? -distance : direction === 2 ? distance : 0;
+        var goal = { x: Math.max(0, Math.min(Math.max(0, map.width - Math.ceil(this.width / 48)), camera.x + dx)),
+            y: Math.max(0, Math.min(Math.max(0, map.height - Math.ceil(this.height / 48)), camera.y + dy)) };
+        var frames = (Math.abs(goal.x - camera.x) + Math.abs(goal.y - camera.y)) * 256 / Math.pow(2, speed);
+        var done = screen.tween(['mapCamera'], goal, frames);
+        screen.revision++;
+        return parameters[3] ? done : true;
+    };
+
+    GameEngine.prototype.followCamera = function (dx, dy) {
+        var camera = this.screen.screen.mapCamera;
+        if (!camera || camera.mapId !== this.map.id) return;
+        var x = this.state.x - camera.x, y = this.state.y - camera.y;
+        var centerX = Math.floor(Math.ceil(this.width / 48) / 2), centerY = Math.floor(Math.ceil(this.height / 48) / 2);
+        var shiftX = (dx > 0 && x > centerX) || (dx < 0 && x < centerX) ? dx : 0;
+        var shiftY = (dy > 0 && y > centerY) || (dy < 0 && y < centerY) ? dy : 0;
+        var nextX = Math.max(0, Math.min(Math.max(0, this.map.width - Math.ceil(this.width / 48)), camera.x + shiftX));
+        var nextY = Math.max(0, Math.min(Math.max(0, this.map.height - Math.ceil(this.height / 48)), camera.y + shiftY));
+        shiftX = nextX - camera.x; shiftY = nextY - camera.y;
+        camera.x = nextX; camera.y = nextY;
+        this.screen.screen.tweens.forEach(function (track) {
+            if (track.path[0] !== 'mapCamera') return;
+            track.start.x += shiftX; track.goal.x += shiftX;
+            track.start.y += shiftY; track.goal.y += shiftY;
+        });
     };
 
     GameEngine.prototype.move = function (direction) {
@@ -179,7 +230,9 @@
                 return false;
             }
         }
+        var dx = x - character.x, dy = y - character.y;
         character.x = x; character.y = y;
+        if (character === this.state) this.followCamera(dx, dy);
         return true;
     };
 
@@ -301,7 +354,7 @@
             if (code === 203) { engine.setEventLocation(parameters, interpreter); return true; }
             if (code === 205) return engine.applyRoute(parameters, interpreter);
             if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }
-            if (code === 204) { engine.state.vehicleBgm = parameters[0] ? Object.assign({}, parameters[1]) : null; return true; }
+            if (code === 204) return engine.scrollMap(parameters, interpreter);
             if (code === 301) return engine.startBattle(parameters, interpreter);
             if (code === 216) { engine.state.followersVisible = parameters[0] !== 0; return true; }
             if (code === 217) { engine.state.followersGathering = true; return true; }
@@ -397,6 +450,7 @@
             if (targetId < 0) {
                 engine.state.x = x; engine.state.y = y;
                 if (direction && !engine.state.directionFixed) engine.state.direction = direction;
+                engine.resetCamera();
             } else engine.map.locateEvent(targetId, x, y, direction);
         }
         var x = parameters[2], y = parameters[3];
