@@ -546,6 +546,9 @@
             animationId = weapon && weapon.animationId || 1;
         }
         var activeAnimations = [], animationWaits = [], waits = [], counterIndex = 0;
+        var releaseImmortal = pending && !report.counter ? runtime.protectActionTargets(report.targets.map(function (target) {
+            return target.type === 'enemy' ? runtime.enemy(target.id) : runtime.actor(target.id);
+        }).filter(Boolean)) : null;
         var waiter = this.createInterpreter([], 0, handlers, signal);
         function waitFrames(frames) {
             var before = engine.screen.screen.nextId;
@@ -598,6 +601,12 @@
             await waiter.awaitCommand(Promise.all(animationWaits));
             await counters();
             if (pending) pending.finish();
+            if (releaseImmortal) releaseImmortal();
+            report.hits.forEach(function (hit) {
+                var target = hit.targetType === 'enemy' ? runtime.enemy(hit.target) : runtime.actor(hit.target);
+                hit.defeated = target ? !target.alive : hit.defeated;
+            });
+            report.defeated = !!(report.hits.length && report.hits[report.hits.length - 1].defeated);
             for (var index = 0; index < report.commonEvents.length; index++) {
                 if (signal && signal.aborted) throw signal.reason;
                 if (this.state.scene !== 'battle' || this.battle.battle.result) return;
@@ -605,6 +614,7 @@
                 this.syncBattleActors();
             }
         } finally {
+            if (releaseImmortal) releaseImmortal();
             if (pending) pending.cancel();
             delete runtime.battle.motion;
             activeAnimations.forEach(function (entry) { engine.animations.finish(entry); });

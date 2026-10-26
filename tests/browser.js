@@ -1290,6 +1290,20 @@ async function main() {
         await evalPage(cdp, 'window.sequenceAction', true, false);
         check('effect sau animation áp damage đúng một lần', await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.enemy(0).hp === 990 && FNHStandalonePreview.engine.battle.battle.lastAction.hits.length === 1', false, false));
+        await evalPage(cdp, `(() => {
+            const e=FNHStandalonePreview.engine,id=e.battle.battle.lastAction.skillId,skill=e.database.Skills[id];
+            skill.animationId=7;
+            skill.note='<Whole Action>\\naction effect\\naction animation\\nwait for animation\\naction effect\\n</Whole Action>';
+            e.battle.enemy(0).hp=1;
+            window.immortalAction=e.forceBattleAction([1,1,id,0]);
+        })()`,false,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.animations.entries.some(entry=>entry.animationId===7&&entry.elapsed>=0)',5000,'IMMORTAL giữ đích khi animation đang chạy');
+        check('đích 0 HP còn hiện trong animation của action',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.enemy(0).hp===0 && FNHStandalonePreview.engine.battle.enemy(0).alive && !FNHStandalonePreview.engine.battle.enemy(0).states.includes(1)',false,false));
+        await evalPage(cdp,'window.immortalAction',true,false);
+        check('bỏ IMMORTAL sau đủ effect và dọn trạng thái khi kết thúc action',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.lastAction.hits.length===2 && !FNHStandalonePreview.engine.battle.enemy(0).alive && FNHStandalonePreview.engine.battle.enemy(0).states.includes(1) && FNHStandalonePreview.engine.battle.immortal.size===0',false,false));
+        await evalPage(cdp,'delete window.immortalAction',false,false);
         await evalPage(cdp, '(async () => { await FNHStandalonePreview.engine.restore(window.sequenceBefore); delete window.sequenceBefore; delete window.sequenceAction; })()', true, false);
         await evalPage(cdp,`(() => {
             const engine=FNHStandalonePreview.engine;

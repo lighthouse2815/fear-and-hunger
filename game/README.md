@@ -134,8 +134,10 @@ Engine chạy phase setup/whole/target/follow/finish theo thứ tự dữ liệu
 giữ hành động đến khi xong. Attack đặt effect trước wait, kỹ năng mặc định đặt
 effect sau animation. Phản công chạy sau từng effect, trước effect tiếp theo;
 death break kiểm tra chủ thể. Common event chạy cuối hành động. Hủy dọn các wait
-và animation còn dở, không áp effect muộn. Thiết lập IMMORTAL và phần hiển thị
-motion vẫn cần đối chiếu tiếp với plugin gốc trước khi chuyển entry chính.
+và animation còn dở, không áp effect muộn. IMMORTAL mặc định giữ đích sống ở
+0 HP qua các effect, chặn death state rồi xác nhận chết trước common event cuối
+action. Hành động lồng nhau giữ bộ đếm riêng, hủy luôn giải phóng bảo vệ. Phần
+hiển thị motion vẫn cần đối chiếu tiếp trước khi chuyển entry chính.
 Danh sách nghiệm thu toàn bộ được theo dõi tại [engine/MIGRATION.md](engine/MIGRATION.md).
 Modifier của Terror/Critical state đọc công thức số học trong note và chạy sau
 damage/Guard/cap, giữ đích ở 1 HP theo `b.hp - 1`. Nhận damage xóa state theo

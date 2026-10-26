@@ -27,6 +27,7 @@
         this.onStateChange = onStateChange;
         this.battle = state.battle || null;
         this.waiters = new Set();
+        this.immortal = new Map();
         state.battle = this.battle;
     }
     BattleRuntime.prototype.setup = function (troopId, canEscape, canLose) {
@@ -137,7 +138,7 @@
         enemy.mhp = this.enemyParam(enemy, 0); enemy.mmp = this.enemyParam(enemy, 1);
         enemy.hp = Math.max(0, Math.min(enemy.mhp, enemy.hp));
         enemy.mp = Math.max(0, Math.min(enemy.mmp, enemy.mp));
-        enemy.alive = enemy.hp > 0;
+        enemy.alive = enemy.hp > 0 || this.isImmortal(enemy);
         if (!enemy.alive && !enemy.states.includes(1)) enemy.states.push(1);
         if (enemy.alive) enemy.states = enemy.states.filter(function (id) { return id !== 1; });
     };
@@ -164,7 +165,7 @@
             if (code === 333) {
                 var stateId = p[2];
                 var hadState = enemy.states.includes(stateId);
-                var immune = this.enemyTraits(enemy).some(function (trait) { return trait.code === 14 && trait.dataId === stateId; });
+                var immune = stateId === 1 && this.isImmortal(enemy) || this.enemyTraits(enemy).some(function (trait) { return trait.code === 14 && trait.dataId === stateId; });
                 if (p[1] === 0 && enemy.alive && !immune) {
                     if (enemy.stateTurns) delete enemy.stateTurns[stateId];
                     if (!enemy.states.includes(stateId)) enemy.states.push(stateId);
@@ -252,10 +253,41 @@
     };
     BattleRuntime.prototype.refreshActor = function (actor) {
         var data = this.state.actor(actor.id);
-        actor.hp = data.hp; actor.mp = data.mp; actor.alive = data.hp > 0;
+        if (this.isImmortal(actor)) data.states = data.states.filter(function (id) { return id !== 1; });
+        actor.hp = data.hp; actor.mp = data.mp; actor.alive = data.hp > 0 || this.isImmortal(actor);
     };
     BattleRuntime.prototype.syncActors = function () {
         if (this.battle) this.battle.actors.forEach(this.refreshActor, this);
+    };
+    BattleRuntime.prototype.immortalKey = function (battler) {
+        return battler.enemyId != null ? 'enemy:' + battler.index : 'actor:' + battler.id;
+    };
+    BattleRuntime.prototype.isImmortal = function (battler) { return this.immortal.has(this.immortalKey(battler)); };
+    BattleRuntime.prototype.protectActionTargets = function (targets) {
+        var runtime = this, keys = new Set(), protectedTargets = [];
+        targets.forEach(function (target) {
+            var key = runtime.immortalKey(target);
+            if (keys.has(key) || !target.alive) return;
+            keys.add(key); protectedTargets.push(target);
+            runtime.immortal.set(key, (runtime.immortal.get(key) || 0) + 1);
+        });
+        var released = false;
+        return function () {
+            if (released) return;
+            released = true;
+            protectedTargets.forEach(function (target) {
+                var key = runtime.immortalKey(target), count = runtime.immortal.get(key) - 1;
+                if (count > 0) runtime.immortal.set(key, count);
+                else {
+                    runtime.immortal.delete(key);
+                    if (target.enemyId != null) runtime.refreshEnemy(target);
+                    else {
+                        if (runtime.state.actor(target.id).hp <= 0) runtime.state.changeActorState(target.id, 1, true);
+                        runtime.refreshActor(target);
+                    }
+                }
+            });
+        };
     };
     BattleRuntime.prototype.skillCost = function (battler, skill) {
         return { mp: Math.floor((skill.mpCost || 0) * this.traitRate(battler, 23, 4)), tp: skill.tpCost || 0 };
@@ -410,6 +442,11 @@
         if (battler.enemyId != null) {
             battler[resource] += amount; this.refreshEnemy(battler);
         } else if (resource === 'hp') {
+            if (this.isImmortal(battler)) {
+                var maximum = this.battlerParam(battler, 0), data = this.battlerState(battler);
+                data.hp = Math.max(0, Math.min(maximum, data.hp + amount));
+                this.syncActors(); return;
+            }
             if (amount > 0 && this.state.actor(battler.id).hp === 0) {
                 this.state.changeActorState(battler.id, 1, false); amount--;
             }
@@ -433,7 +470,7 @@
     };
     BattleRuntime.prototype.addState = function (target, id, chance, certain) {
         if (!this.database.States[id]) throw new Error('Không tìm thấy state ' + id);
-        if (!target.alive || this.battlerTraits(target).some(function (trait) { return trait.code === 14 && trait.dataId === id; })) return;
+        if (!target.alive || id === 1 && this.isImmortal(target) || this.battlerTraits(target).some(function (trait) { return trait.code === 14 && trait.dataId === id; })) return;
         if (this.random() >= chance * (certain ? 1 : this.traitRate(target, 13, id))) return;
         if (target.enemyId != null) this.handleEffect(333, [target.index, 0, id]);
         else this.state.changeActorState(target.id, id, true);

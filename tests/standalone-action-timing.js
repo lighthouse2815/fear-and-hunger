@@ -66,7 +66,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     reset(); e.battle.enemy(0).hp = 1;
     await finish(force());
     assert.equal(e.battle.enemy(1).hp, 980, 'death break kiểm tra chủ thể, không bỏ mục tiêu tiếp theo khi đích trước bị hạ');
-    assert.equal(e.battle.battle.lastAction.hits.length, 3);
+    assert.equal(e.battle.battle.lastAction.hits.length, 4, 'IMMORTAL giữ đích ở 0 HP đến cuối sequence nên nhận đủ effect');
 
     for (const [id, count] of [[1,1],[121,1],[143,4],[191,2],[242,2],[270,5],[283,1]]) {
         reset();

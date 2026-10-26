@@ -15,7 +15,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: thiết lập IMMORTAL trong action sequence, hiển thị motion/animation vũ khí,
+1. Combat: hiển thị motion/animation vũ khí,
    phản phép/thế thân, TP khi nhận damage, thoát trận, lượt thêm theo AGI và
    trigger cuối trận. Đối chiếu phần thưởng.
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
@@ -49,6 +49,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 - Sequence thực thi effect tại vị trí lệnh, đợi animation/frame, chạy phản công
   trước effect tiếp và common event cuối action. Death break kiểm tra chủ thể;
   hủy dọn wait/animation, không chạy effect muộn hay lặp action đã xong.
+- IMMORTAL giữ đích ở 0 HP đến hết sequence, chặn death state và xác nhận chết
+  trước common event; bộ đếm giữ đúng action lồng nhau, hủy/save không để bất tử.
 - State 15/22 có modifier `b.hp - 1`; state 22 có animation thêm 22.
 - Follower/guest lưu vị trí, đuổi người phía trước, chặn event khi đang hiện;
   lệnh 217 chờ tập hợp, chuyển map/nhảy đặt lại vị trí. Không đưa guest vào combat.
