@@ -49,6 +49,7 @@
         this.filters = source.filters || {};
         this.animations = source.animations || [];
         this.regionCover = source.regionCover || { enabled: false, open: [0] };
+        this.achievements = Object.assign({}, source.achievements);
         if (!Array.isArray(this.regionCover.open)) this.regionCover.open = [0];
         this.mapTileset = source.mapTileset || null;
         this.timer = source.timer || { active: false, frames: 0 };
@@ -264,6 +265,7 @@
             screen: this.screen, lighting: this.lighting, filters: this.filters, mapTileset: this.mapTileset,
             animations: this.animations,
             regionCover: this.regionCover,
+            achievements: this.achievements,
             timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
             wordWrap: this.wordWrap, pendingChoices: this.pendingChoices,
             dashEnabled: this.dashEnabled,

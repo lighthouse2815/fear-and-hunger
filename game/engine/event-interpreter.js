@@ -357,6 +357,11 @@
             this.state.pendingChoices.text[Number(match[1]) - 1] = match[2];
             return;
         }
+        var achievement = /^steamworks\s+activateachievement\s+([\w-]+)$/i.exec(text);
+        if (achievement) {
+            this.state.achievements[achievement[1]] = true;
+            return;
+        }
         if ((match = /^disable_choice\s+(\d+)$/i.exec(text))) {
             var index = Number(match[1]) - 1;
             if (!this.state.pendingChoices.disabled.includes(index)) this.state.pendingChoices.disabled.push(index);
