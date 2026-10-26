@@ -188,8 +188,11 @@
     BattleRuntime.prototype.aliveActors = function () { return this.battle.actors.filter(function (actor) { return actor.alive; }); };
     BattleRuntime.prototype.inputActors = function () {
         return this.aliveActors().filter(function (actor) {
-            return this.restriction(actor) === 0;
+            return this.restriction(actor) === 0 && !this.isAutoBattle(actor);
         }, this);
+    };
+    BattleRuntime.prototype.isAutoBattle = function (battler) {
+        return this.battlerTraits(battler).some(function (trait) { return trait.code === 62 && trait.dataId === 0; });
     };
     BattleRuntime.prototype.restriction = function (battler) {
         return this.battlerState(battler).states.reduce(function (level, id) {
@@ -280,6 +283,35 @@
             .map(function (trait) { return trait.dataId; }));
         return Array.from(new Set(ids)).map(function (skillId) { return this.database.Skills[skillId]; }, this).filter(Boolean);
     };
+    BattleRuntime.prototype.chooseActorAction = function (actor) {
+        if (!actor || !actor.alive || actor.hidden || this.restriction(actor) > 0) return null;
+        var skills = [this.database.Skills[1]].concat(this.actorSkills(actor.id)), best = null, bestScore = 0;
+        skills.forEach(function (skill, skillIndex) {
+            if (!skill || skills.indexOf(skill) !== skillIndex || !this.canUseSkill(actor, skill) || !skill.damage || ![1, 3, 5].includes(skill.damage.type)) return;
+            var scope = skill.scope, opponents = scope >= 1 && scope <= 6;
+            if (scope < 1 || scope > 11) return;
+            var unit = opponents ? this.battle.enemies : this.battle.actors;
+            var targets = scope === 11 ? [actor] : unit.filter(function (target) {
+                return !target.hidden && target.alive !== [9, 10].includes(scope);
+            });
+            targets = this.tauntTargets(actor, skill, targets);
+            var score = 0, targetIndex = -1, all = [2, 8, 10].includes(scope);
+            targets.forEach(function (target) {
+                var hp = this.battlerState(target).hp, mhp = this.battlerParam(target, 0);
+                var damage = this.damageValue(actor, target, skill, false).damage;
+                var value = opponents ? damage / Math.max(hp, 1) : Math.min(-damage, mhp - hp) / mhp;
+                if (all) score += value;
+                else if (value > score) { score = value; targetIndex = unit.indexOf(target); }
+            }, this);
+            score *= skill.repeats || 1;
+            if (score > 0) score += this.random();
+            if (score > bestScore) {
+                bestScore = score;
+                best = { actorId: actor.id, kind: 'skill', id: skill.id, targetIndex: targetIndex, autoBattle: true };
+            }
+        }, this);
+        return best;
+    };
     BattleRuntime.prototype.randomTarget = function (targets) {
         var weights = targets.map(function (target) { return this.traitRate(target, 23, 0); }, this);
         var sum = weights.reduce(function (value, weight) { return value + weight; }, 0);
@@ -358,7 +390,7 @@
         if (target.enemyId == null) this.refreshActor(target);
         this.syncActors();
     };
-    BattleRuntime.prototype.damageValue = function (subject, target, skill) {
+    BattleRuntime.prototype.damageValue = function (subject, target, skill, allowCritical) {
         var damage = skill.damage, value = 0, hit = {};
         value = Math.max(0, formulaValue(damage.formula, { a: this.values(subject), b: this.values(target) }));
         var element = damage.elementId;
@@ -368,7 +400,7 @@
         } else if (element > 0) value *= this.traitRate(target, 11, element);
         if (skill.hitType === 1) value *= this.traitRate(target, 23, 6);
         if (skill.hitType === 2) value *= this.traitRate(target, 23, 7);
-        hit.critical = !!damage.critical && this.random() < this.traitRate(subject, 22, 2, true) * (1 - this.traitRate(target, 22, 3, true));
+        hit.critical = allowCritical !== false && !!damage.critical && this.random() < this.traitRate(subject, 22, 2, true) * (1 - this.traitRate(target, 22, 3, true));
         if (hit.critical) value *= 3;
         var amplitude = Math.floor(value * (damage.variance || 0) / 100);
         value += Math.floor(this.random() * (amplitude + 1)) + Math.floor(this.random() * (amplitude + 1)) - amplitude;

@@ -150,7 +150,19 @@ cả đội chỉ tăng một lượt và cập nhật state cuối lượt mộ
 bị khóa hoặc đã hành động cưỡng chế sẽ bỏ lệnh thường; mục tiêu chết được chọn
 lại trong cùng phe. Kết quả thắng/thua dừng phần hàng đợi còn lại. Chọn/sửa/bỏ
 lệnh không trừ MP/TP/item; số item giữ chỗ được kiểm tra chung cả đội, lựa chọn
-được giữ qua save. Chưa có AI cho đồng đội mang trait auto-battle.
+được giữ qua save.
+Đồng đội có trait auto-battle (62/0) tự chọn Attack hoặc kỹ năng đang dùng được;
+Moonless, Ghoul, Skeleton, Blood golem, Baby Demon và Buckman đọc flag từ dữ liệu
+actor/class. Các nguồn trang bị/state cũng dùng chung cách đọc trait. AI chấm
+điểm sát thương theo HP hiện tại của đích, hồi phục theo lượng HP còn thiếu,
+cộng điểm đòn cả nhóm và nhân số lần đánh; dao động sát thương được đọc từ JSON,
+không giả định chí mạng. Kỹ năng chỉ đổi MP/state không có điểm HP để AI chọn.
+Chấm điểm không tiêu tài nguyên hay chạy hiệu ứng. Khi thực thi vẫn kiểm tra lại
+MP/TP, khóa kỹ năng, vũ khí, chủ thể chết/bất động và mục tiêu ẩn/chết/Taunt.
+Không có lựa chọn có điểm dương thì bỏ lượt. UI ghi **Tự chiến đấu**, khóa lệnh
+tay và cho bắt đầu lượt khi cả đội tự động. Lệnh 339 thay hành động AI trong lượt;
+save giữ flag và kết quả mà không áp dụng hành động lại. Rối loạn ưu tiên cách
+đánh thường và chọn phe bên dưới.
 Rối loạn đọc mức khóa lớn nhất trong state: mức 1 tự đánh địch (Rage/Bloodlust),
 mức 2 chọn ngẫu nhiên một trong hai phe (Confusion/Brain flower), mức 3 đánh
 đồng đội kể cả bản thân (Fascination). Đòn tự động dùng Attack, lặp/chi phí/khóa

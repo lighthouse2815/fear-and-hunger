@@ -685,7 +685,7 @@
         var data = (item ? this.database.Items : this.database.Skills)[action.id];
         if (!subject || !subject.alive || !data || !Number.isInteger(action.targetIndex)) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
         if (!item && ![1, 2].includes(data.id) && !runtime.actorSkills(subject.id).some(function (entry) { return entry.id === data.id; })) throw new Error('Nhân vật chưa học kỹ năng này.');
-        if (runtime.restriction(subject) > 0 || !(item ? runtime.canUseItem(subject, data) : runtime.canUseSkill(subject, data))) throw new Error(item ? 'Chưa thể dùng vật phẩm ' + data.name : 'Chưa thể dùng kỹ năng ' + data.name);
+        if (runtime.restriction(subject) > 0 || runtime.isAutoBattle(subject) || !(item ? runtime.canUseItem(subject, data) : runtime.canUseSkill(subject, data))) throw new Error(item ? 'Chưa thể dùng vật phẩm ' + data.name : 'Chưa thể dùng kỹ năng ' + data.name);
         var chosen = data.scope === 1 ? runtime.enemy(action.targetIndex) : [7, 9].includes(data.scope) ? battle.actors[action.targetIndex] : null;
         if ([1, 7, 9].includes(data.scope) && (!chosen || (data.scope === 9 ? chosen.alive : !chosen.alive) || chosen.hidden)) throw new Error('Mục tiêu chiến đấu không hợp lệ.');
         return data;
@@ -745,8 +745,12 @@
             if (battle.result) return battle.turnActions;
             var queue = actions.map(function (action) { return Object.assign({}, action); });
             runtime.aliveActors().forEach(function (actor) {
-                if (runtime.confusionLevel(actor) && !queue.some(function (action) { return action.actorId === actor.id; })) {
+                if (queue.some(function (action) { return action.actorId === actor.id; })) return;
+                if (runtime.confusionLevel(actor)) {
                     queue.push({ actorId: actor.id, kind: 'skill', id: 1, targetIndex: -1 });
+                } else if (runtime.isAutoBattle(actor)) {
+                    var action = runtime.chooseActorAction(actor);
+                    if (action) queue.push(action);
                 }
             });
             runtime.enemyActions().forEach(function (action) { queue.push({ enemy: action.enemy, kind: 'skill', id: action.skillId, targetIndex: -1 }); });
@@ -769,6 +773,7 @@
                 if (!enemy && action.kind === 'skill' && ![1, 2].includes(action.id) && !runtime.actorSkills(action.actorId).some(function (skill) { return skill.id === action.id; })) continue;
                 battle.phase = 'action';
                 var report = action.kind === 'item' ? runtime.useItem(subject, action.id, action.targetIndex) : runtime.useSkill(subject, action.id, action.targetIndex);
+                if (action.autoBattle && !report.confusion) report.autoBattle = true;
                 battle.turnActions.push(report);
                 await this.completeBattleAction(report, handlers || context.handlers, context.signal);
                 await this.runBattlePages(false, handlers || context.handlers, context.signal);

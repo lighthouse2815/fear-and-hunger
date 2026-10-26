@@ -1285,6 +1285,40 @@ async function main() {
             return r.confusion===2 && r.subjectId===1 && r.hits.every(hit=>hit.targetType==='enemy') &&
                 r.damage>0 && e.battle.battle.turnActions.length===1;
         })()`,false,false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,troopId=e.battle.battle.troopId;
+            e.battle.finish('escape');e.leaveBattle('escape');
+            [...e.state.party].forEach(id=>e.state.removeActor(id));e.state.addActor(7);e.state.recoverActor(7);
+            e.battle.setup(troopId,true,true);e.state.scene='battle';e.battle.random=()=>0.5;
+        })()`,false,false);
+        await waitFor(cdp,'document.querySelector("#fnh-battle-party").textContent.includes("Moonless") && document.querySelector("#fnh-battle-party").textContent.includes("Tự chiến đấu") && !document.querySelector("#fnh-battle-start").disabled',5000,'Moonless đọc auto-battle từ class');
+        check('Moonless hiện chế độ tự chiến đấu và không đòi lệnh tay',await evalPage(cdp,
+            `document.querySelector('#fnh-battle-attack').disabled && document.querySelector('#fnh-battle-actor option[value="7"]').disabled`,false,false));
+        await clickElement(cdp,'#fnh-battle-start');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'Moonless tự chọn đòn đánh');
+        check('AI dùng kỹ năng thật gây damage và hiện log trên Chrome',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,r=e.battle.battle.lastAction;
+            return r.autoBattle && r.subjectId===7 && [1,88].includes(r.skillId) && r.damage>0 &&
+                r.hits.every(hit=>hit.targetType==='enemy') && e.battle.enemy(0).hp<10000 &&
+                document.querySelector('#fnh-battle-log').textContent.includes('Tự chiến đấu');
+        })()`,false,false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;e.state.changeActorSkill(7,238,true);e.state.changeActorHp(7,-90,true);e.battle.syncActors();
+            window.autoBefore={hp:e.state.actor(7).hp,mp:e.state.actor(7).mp,cost:e.battle.skillCost(e.battle.actor(7),e.database.Skills[238]).mp};
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-battle-start');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn===2 && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'AI chọn Loving whispers khi thiếu HP');
+        check('AI chọn hồi HP thật và chỉ trả MP một lần khi thực thi',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,r=e.battle.battle.lastAction;
+            return r.autoBattle && r.skillId===238 && r.target===7 && r.damage<0 &&
+                e.state.actor(7).hp===window.autoBefore.hp-r.damage && e.state.actor(7).mp===window.autoBefore.mp-window.autoBefore.cost;
+        })()`,false,false));
+        check('lưu tải đồng đội tự động giữ HP/MP và quyền điều khiển',await evalPage(cdp,`(async () => {
+            const e=FNHStandalonePreview.engine,hp=e.state.actor(7).hp,mp=e.state.actor(7).mp;
+            await e.restore(e.save());delete window.autoBefore;
+            return e.battle.isAutoBattle(e.battle.actor(7)) && e.battle.inputActors().length===0 &&
+                e.state.actor(7).hp===hp && e.state.actor(7).mp===mp && e.battle.battle.lastAction.autoBattle && e.battle.battle.turn===2;
+        })()`,true,false));
         await evalPage(cdp,'delete window.beforeBattleItemHp;delete window.beforeBattleBottles',false,false);
         await evalPage(cdp,`(async()=>{
             const engine=FNHStandalonePreview.engine;engine.battle.finish('escape');engine.leaveBattle('escape');
