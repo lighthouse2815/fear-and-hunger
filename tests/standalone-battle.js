@@ -5,6 +5,9 @@ const path = require('node:path');
 const { GameEngine } = require('../game/engine/game-engine');
 const { GameDataStore } = require('../game/engine/data-store');
 const flush = () => new Promise(resolve => setImmediate(resolve));
+let engine;
+const watchdog = setTimeout(() => { console.error('Trận chưa kết thúc:', JSON.stringify(engine && engine.battle.battle)); process.exit(1); }, 5000);
+const ticker = setInterval(() => { if (engine) engine.advanceRoutes(12); }, 1);
 const command = (code, parameters = [], indent = 0) => ({ code, parameters, indent });
 function branches(troopId, canLose = true) {
     return [command(301, [0, troopId, true, canLose]),
@@ -16,11 +19,13 @@ function branches(troopId, canLose = true) {
 (async () => {
     const store = new GameDataStore({ fetchImpl: async url => ({ ok: true, json: async () =>
         JSON.parse(await fs.readFile(path.join(__dirname, '../game', url), 'utf8')) }) });
-    const engine = new GameEngine({ dataStore: store, random: () => 0 });
+    engine = new GameEngine({ dataStore: store, random: () => 0.75, onRouteEffect: () => true });
     await engine.boot({ mapId: 74, x: 15, y: 22, direction: 8, party: [1] });
     const handlers = { effect: code => code === 250, message: () => {}, choice: () => 0 };
     const interpret = (commands, signal) => engine.createInterpreter(commands, 1, handlers, signal);
-    const troop = engine.database.Troops.find(item => item && item.members && item.members.length > 0);
+    const sourceTroop = engine.database.Troops.find(item => item && item.members && item.members.length > 0);
+    const troop = { ...sourceTroop, id: engine.database.Troops.length, pages: [] };
+    engine.database.Troops.push(troop);
     let completed = false;
     let running = interpret(branches(troop.id)).run().then(() => { completed = true; });
     await flush();
@@ -41,8 +46,10 @@ function branches(troopId, canLose = true) {
     assert.equal(engine.battle.battle.turn, 1);
     engine.battle.enemyTurn();
     assert.equal(engine.battle.battle.turn, 1, 'không chạy lượt địch hai lần');
+    engine.battle.random = () => 0;
     assert.equal(engine.battle.escape(), true);
     await running;
+    engine.battle.random = () => 0.75;
     assert.equal(engine.state.scene, 'map');
     assert.equal(engine.state.variableValue(50), 20, 'chỉ chạy nhánh thoát');
     assert.equal(engine.state.switchValue(51), true, 'tiếp tục sau 604');
@@ -119,4 +126,4 @@ function branches(troopId, canLose = true) {
     const snapshot = engine.save(); await engine.restore(snapshot);
     assert.equal(engine.state.battle.result, 'escape');
     console.log('ĐẠT: event chờ battle, nhánh thắng/thoát/thua, hồi sinh, khóa map, hủy và index enemy ẩn.');
-})().catch(error => { console.error(error); process.exitCode = 1; });
+})().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { clearInterval(ticker); clearTimeout(watchdog); });

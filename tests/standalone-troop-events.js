@@ -8,13 +8,17 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 const command = (code, parameters = [], indent = 0) => ({ code, parameters, indent });
 const page = (conditions, list, span = 0) => ({ conditions, list, span });
 const variable = id => command(122, [id, id, 1, 0, 1]);
+const engines = [];
+const ticker = setInterval(() => engines.forEach(engine => engine.advanceRoutes(12)), 1);
 const watchdog = setTimeout(() => { console.error('Sự kiện troop không kết thúc trong thời hạn kiểm thử.'); process.exit(1); }, 15000);
 (async () => {
     const store = new GameDataStore({ fetchImpl: async url => ({ ok: true, json: async () =>
         JSON.parse(await fs.readFile(path.join(__dirname, '../game', url), 'utf8')) }) });
     async function boot() {
-        const engine = new GameEngine({ dataStore: store, random: () => 0 });
+        const engine = new GameEngine({ dataStore: store, random: () => 0.75, onRouteEffect: () => true });
         await engine.boot({ mapId: 74, x: 8, y: 8, direction: 8, party: [1] });
+        engines.push(engine);
+        engine.battle.random = () => 0.75;
         return engine;
     }
     const engine = await boot();
@@ -48,6 +52,7 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
     assert.equal(runtime.pageMatches(page({ turnEnding: true }, []), true), true);
     runtime.finish('escape'); engine.state.recoverActor(1); engine.state.setSwitch(6001, false);
 
+    engine.database.Enemies[1] = { ...engine.database.Enemies[1], params: [10000, ...engine.database.Enemies[1].params.slice(1)] };
     const id = troop([
         page({ turnValid: true, turnA: 0, turnB: 0 }, [variable(6100)]),
         page({ turnEnding: true }, [variable(6101)], 1),
@@ -68,19 +73,20 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
     assert.equal(engine.state.variableValue(6104), 1, 'page mỗi lượt không lặp ở các lần kiểm tra trong lượt');
     assert.equal(engine.battle.battle.turn, 1);
     const loaded = await boot(); loaded.database.Troops[id] = engine.database.Troops[id];
+    loaded.database.Enemies[1] = engine.database.Enemies[1];
     await loaded.restore(engine.save());
     assert.equal(loaded.battle.nextEventPage(false), null, 'save giữ cờ một lần và cờ theo lượt');
     await loaded.battleAttack(1, 0);
     assert.equal(loaded.state.variableValue(6100), 1, 'tải save không chạy lại page đầu trận');
     assert.equal(loaded.state.variableValue(6101), 2);
     assert.equal(loaded.state.variableValue(6104), 2);
-    await loaded.createInterpreter([command(331, [0, 1, 0, 400, true])], 0).run();
+    await loaded.createInterpreter([command(331, [0, 1, 0, 6000, true])], 0).run();
     await loaded.battleAttack(1, 0);
     assert.equal(loaded.state.variableValue(6102), 1, 'page HP chạy khi qua ngưỡng');
     await loaded.battleAttack(1, 0);
     assert.equal(loaded.state.variableValue(6102), 1, 'page một lần không lặp dù HP vẫn thấp');
-    await loaded.battleEscape(); assert.equal(loaded.state.scene, 'map');
-    await engine.battleEscape(); await running;
+    loaded.battle.random = () => 0; await loaded.battleEscape(); assert.equal(loaded.state.scene, 'map');
+    engine.battle.random = () => 0; await engine.battleEscape(); await running;
 
     const retarget = await boot();
     const retargetId = retarget.database.Troops.length;
@@ -92,7 +98,7 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
     assert.equal(retarget.battle.battle.turn, 0, 'lệnh sai không tiêu tốn lượt');
     const redirected = await retarget.battleAttack(1, 1);
     assert.equal(redirected.target, 0, 'đổi mục tiêu khi page đầu lượt đã hạ mục tiêu được chọn');
-    await retarget.battleEscape(); await running;
+    retarget.battle.random = () => 0; await retarget.battleEscape(); await running;
 
     // Wait của troop chạy theo frame trong trận; wait bản đồ vẫn tạm dừng.
     const waiting = await boot();
@@ -107,7 +113,7 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
     waiting.advanceRoutes(5); await flush();
     assert.equal(waiting.state.variableValue(6110), 1);
     assert.equal(waiting.battle.battle.phase, 'input'); assert.equal(mapWaitDone, false);
-    await waiting.battleEscape(); await running;
+    waiting.battle.random = () => 0; await waiting.battleEscape(); await running;
     waiting.advanceRoutes(5); await mapWait; assert.equal(mapWaitDone, true);
 
     const abortPage = await boot();
@@ -155,4 +161,4 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
     assert.equal(cancelled.state.variableValue(6112), 0);
     assert.equal(cancelled.state.scene, 'map'); assert.equal(cancelled.battle.waiters.size, 0);
     console.log('ĐẠT: điều kiện/span/đầu-cuối lượt/save/wait/hủy/lỗi troop; Guard thật nhớ chân bị chặt và thắng khi hạ đầu.');
-})().then(() => clearTimeout(watchdog)).catch(error => { clearTimeout(watchdog); console.error(error); process.exitCode = 1; });
+})().then(() => { clearTimeout(watchdog); clearInterval(ticker); }).catch(error => { clearTimeout(watchdog); clearInterval(ticker); console.error(error); process.exitCode = 1; });

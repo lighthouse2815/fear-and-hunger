@@ -75,8 +75,7 @@ Trận đấu vẽ nền battleback và sprite quái từ PNG, đặt từng b�
 và xếp lớp theo tọa độ. Bộ phận ẩn hoặc đã chết không được vẽ. Khi không có nền
 chỉ định, renderer làm mờ ảnh bản đồ hiện tại. Giao diện hiển thị HP/MP trong đội.
 Luồng 301 chờ kết quả rồi chỉ chạy nhánh 601/602/603 tương ứng; trận thua bắt buộc
-dừng event và mở màn game over. Combat còn thiếu hiệu ứng kỹ năng, hành động
-cưỡng chế và AI đầy đủ để thay entry chính.
+dừng event và mở màn game over. Combat còn thiếu AI đầy đủ và giao diện chọn kỹ năng/menu để thay entry chính.
 Lệnh 337 phát animation trên quái bằng sprite sheet PNG hiện có: chọn một hoặc
 toàn bộ mục tiêu còn sống/đang hiện, không chờ animation kết thúc. Frame, SE,
 flash/ẩn sprite, vị trí đầu/giữa/chân/toàn màn hình và phản chiếu được xử lý trong
@@ -93,6 +92,14 @@ event, khóa nút đánh/chạy trong lúc chờ. Hiệu ứng, Gab và picture 
 trong trận; wait bản đồ được tạm dừng. Guard thật có thể thắng bằng page hạ đầu
 và nhớ chân đã bị chặt. Lệnh chưa hỗ trợ trong page báo lỗi và dừng trận; không
 tự bỏ qua. Sự kiện lặp liên tục có giới hạn để tránh treo trình duyệt.
+Kỹ năng đọc công thức, phạm vi, lặp đòn, MP/TP, tỉ lệ trúng/né/chí mạng, nguyên tố,
+Guard và hiệu ứng thêm state/common event từ JSON. Attack thực hiện đủ ba lần đánh
+trong dữ liệu, không còn là một đòn đơn. Lệnh 339 ép quái theo index hoặc nhân vật
+theo ID hành động, chọn mục tiêu chỉ định/ngẫu nhiên/mục tiêu trước, chạy cả khi
+không đủ MP/TP nhưng bỏ qua chủ thể ẩn/chết. Event chờ animation và common event
+xong mới tiếp tục; hủy event dọn animation và ngăn common event chạy muộn.
+Hiện mới chuyển hiệu ứng kỹ năng cơ bản trong JSON, chưa thay toàn bộ cơ chế
+combat mở rộng trong note/plugin (counter, taunt, action sequence và state script).
 Lệnh game over/về tiêu đề dừng cả chuỗi common event đang gọi và hủy các sự kiện
 nền đang chờ. Hai màn này dùng ảnh/nhạc có sẵn, cho tải ô lưu 1 hoặc chơi mới.
 Chơi mới mở luồng chọn nhân vật độc lập từ Map010. Tải save trở lại map và tiếp

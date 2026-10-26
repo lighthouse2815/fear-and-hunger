@@ -6,8 +6,11 @@ const { GameEngine } = require('../game/engine/game-engine');
 const { GameDataStore } = require('../game/engine/data-store');
 (async () => {
     const store = new GameDataStore({ fetchImpl: async url => ({ ok: true, json: async () => JSON.parse(await fs.readFile(path.join(__dirname, '../game', url), 'utf8')) }) });
-    const engine = new GameEngine({ dataStore: store });
+    const engine = new GameEngine({ dataStore: store, random: () => 0.5 });
     await engine.boot({ mapId: 74, x: 15, y: 22, direction: 8, party: [1] });
+    // Cô lập công thức khỏi lặp đòn, chí mạng, dao động và hệ số nguyên tố.
+    engine.database.Skills = engine.database.Skills.map(skill => skill && ({ ...skill, repeats: 1,
+        damage: { ...skill.damage, variance: 0, critical: false, elementId: 0 } }));
     const troop = engine.database.Troops.find(item => item && item.members && item.members.length);
     function reset() {
         if (engine.battle.battle && !engine.battle.battle.result) engine.battle.finish('escape');

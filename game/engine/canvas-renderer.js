@@ -121,7 +121,9 @@
             animations.forEach(function (animation) {
                 var entry = animation.entry, data = animation.data;
                 var target = enemies.find(function (item) { return entry.targetType === 'enemy' && item.enemy.index === entry.targetId; });
+                var actorIndex = entry.targetType === 'actor' ? battle.actors.findIndex(function (actor) { return actor.id === entry.targetId; }) : -1;
                 if (data.position === 3) renderer.drawAnimationCells(animation, 408, 312);
+                else if (actorIndex >= 0) renderer.drawAnimationCells(animation, 816 * (actorIndex + 0.5) / battle.actors.length, 576);
                 else if (target) renderer.drawAnimationCells(animation, target.enemy.x, target.enemy.y -
                     (data.position === 0 ? target.bitmap.height : data.position === 1 ? target.bitmap.height / 2 : 0));
             });

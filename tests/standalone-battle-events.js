@@ -7,7 +7,7 @@ const { GameDataStore } = require('../game/engine/data-store');
 (async () => {
     const store = new GameDataStore({ fetchImpl: async url => ({ ok: true, json: async () =>
         JSON.parse(await fs.readFile(path.join(__dirname, '../game', url), 'utf8')) }) });
-    const engine = new GameEngine({ dataStore: store });
+    const engine = new GameEngine({ dataStore: store, random: () => 0.5 });
     await engine.boot({ mapId: 74, x: 8, y: 8, direction: 8, party: [1] });
     const reset = (troopId = 1) => {
         if (engine.battle.battle && !engine.battle.battle.result) engine.battle.finish('escape');
@@ -32,8 +32,12 @@ const { GameDataStore } = require('../game/engine/data-store');
     await run(334, [0]); assert.equal(enemy.hp, enemy.mhp); assert.deepEqual(enemy.states, []);
     await run(333, [0, 0, 57]);
     assert.equal(reader.gameDataOperand(4, 0, 5), 15, 'state DEFENCE UP tăng phòng thủ 50%');
+    const beforeAttack = enemy.hp;
     const defended = engine.battle.attack(1, 0);
-    assert.equal(defended.damage, engine.state.actorParam(1, 2) * 4 - 30, 'sát thương đọc chỉ số sau khi thêm state');
+    const expected = (engine.state.actorParam(1, 2) * 4 - 30) * 1.15;
+    assert.ok(defended.hits.every(hit => Math.abs(hit.damage - expected) <= expected * 0.2 + 1), 'đọc phòng thủ state và nguyên tố từ JSON');
+    assert.equal(enemy.hp, beforeAttack - defended.damage);
+    assert.equal(defended.hits.length, 3, 'Attack lặp ba lần theo JSON');
     await run(333, [0, 1, 57]); assert.equal(reader.gameDataOperand(4, 0, 5), 10);
     await run(342, [0, 0, 0, 500]); assert.equal(enemy.tp, 100);
     await run(342, [0, 1, 1, 60]); assert.equal(enemy.tp, 0);

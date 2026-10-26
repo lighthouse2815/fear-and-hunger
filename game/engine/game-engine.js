@@ -367,6 +367,7 @@
         eventHandlers.effect = function (code, parameters, command, interpreter) {
             if (code === 356 && engine.lighting.handleCommand(parameters[0], engine.map)) return true;
             if (code === 356 && engine.filters.handleCommand(parameters[0])) return true;
+            if (code === 339) return engine.forceBattleAction(parameters, handlers, interpreter.signal);
             if (code === 337) {
                 var battle = engine.battle.battle;
                 if (!battle || battle.result) throw new Error('Trận chiến không hoạt động.');
@@ -420,6 +421,58 @@
         });
     };
 
+    GameEngine.prototype.completeBattleSkill = async function (report, handlers, signal) {
+        var skill = this.database.Skills[report.skillId], engine = this;
+        var animationId = skill.animationId;
+        if (animationId < 0) {
+            var actor = report.subject === 'actor' && this.state.actor(report.subjectId);
+            var weapon = actor && this.database.Weapons[actor.equips[0]];
+            animationId = weapon && weapon.animationId || 1;
+        }
+        var activeAnimations = [], waiter = this.createInterpreter([], 0, handlers, signal);
+        try {
+            if (animationId > 0) await waiter.awaitCommand(Promise.all(report.targets.map(function (target) {
+                var waiting = engine.animations.startBattle(target.id, animationId, report.subject === 'enemy', target.type);
+                activeAnimations.push(engine.animations.entries[engine.animations.entries.length - 1]);
+                return waiting;
+            })));
+            for (var index = 0; index < report.commonEvents.length; index++) {
+                if (signal && signal.aborted) throw signal.reason;
+                if (this.state.scene !== 'battle' || this.battle.battle.result) return;
+                await this.createInterpreter([{ code: 117, parameters: [report.commonEvents[index]] }], 0, handlers, signal).run();
+                this.syncBattleActors();
+            }
+        } finally {
+            activeAnimations.forEach(function (entry) { engine.animations.finish(entry); });
+        }
+    };
+
+    GameEngine.prototype.forceBattleAction = async function (parameters, handlers, signal) {
+        var runtime = this.battle, battle = runtime.battle;
+        if (!battle || battle.result || this.state.scene !== 'battle') throw new Error('Trận chiến không hoạt động.');
+        if (!this.database.Skills[parameters[2]]) throw new Error('Không tìm thấy skill ' + parameters[2]);
+        if ((this.forcedActionDepth || 0) >= 16) throw new Error('Hành động cưỡng chế lặp quá sâu.');
+        var subjects = parameters[0] === 0 ? battle.enemies.filter(function (enemy) {
+            return parameters[1] < 0 || enemy.index === parameters[1];
+        }) : battle.actors.filter(function (actor) { return parameters[1] === 0 || actor.id === parameters[1]; });
+        var phase = battle.phase, running = runtime.eventRunning;
+        battle.phase = 'action'; runtime.eventRunning = true;
+        this.forcedActionDepth = (this.forcedActionDepth || 0) + 1;
+        try {
+            for (var index = 0; index < subjects.length; index++) {
+                if (signal && signal.aborted) throw signal.reason;
+                var subject = subjects[index];
+                if (!subject.alive || subject.hidden || battle.result || this.state.scene !== 'battle') continue;
+                var report = runtime.useSkill(subject, parameters[2], parameters[3], true);
+                await this.completeBattleSkill(report, handlers, signal);
+            }
+            return true;
+        } finally {
+            this.forcedActionDepth--; runtime.eventRunning = running;
+            if (!battle.result) battle.phase = phase;
+        }
+    };
+
     GameEngine.prototype.runBattlePages = async function (turnEnding, handlers, signal) {
         var runtime = this.battle, battle = runtime.battle;
         battle.phase = 'events';
@@ -466,6 +519,8 @@
                 if (!chosen || !chosen.alive || chosen.hidden) chosen = runtime.aliveEnemies()[0];
                 battle.phase = 'input';
                 result = runtime.attack(actorId, chosen.index);
+                battle.phase = 'action';
+                await this.completeBattleSkill(result, handlers || context.handlers, context.signal);
                 await this.runBattlePages(false, handlers || context.handlers, context.signal);
             }
             if (!battle.result) {
