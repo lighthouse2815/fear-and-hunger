@@ -46,6 +46,12 @@ chạy trước khi mở bản còn lại để giữ nguyên địa chỉ lưu 
 
 ## Kiểm chứng
 
+Engine viết lại có bản xem thử tại `/standalone.html`. Mở
+`/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro
+từ các sự kiện JSON bằng engine mới. Trang này chỉ nạp mã trong `game/engine/`.
+Việc thay runtime ở trang chính vẫn đang tiếp tục; combat và các hiệu ứng plugin
+chưa được chuyển hết.
+
 Kiểm tra dữ liệu quét tất cả map, cửa chuyển map và tên ảnh/âm thanh trực tiếp
 trong map, common event và battle event. Test trình duyệt dùng runtime thật để
 kiểm tra menu, di chuyển, chuyển map, combat, hội thoại, video, âm thanh,

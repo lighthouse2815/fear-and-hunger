@@ -1046,6 +1046,45 @@ async function main() {
         await waitFor(cdp, 'FNHStandalonePreview.audio.buffers.bgm === null', 3000, 'BGM fade và dừng');
         await screenshot('standalone-preview');
 
+        await cdp.send('Page.navigate', { url: running.url + 'standalone.html?map=10&events=1' });
+        await waitFor(cdp, 'window.FNHStandalonePreview && FNHStandalonePreview.engine.state && FNHStandalonePreview.engine.state.switchValue(296)',
+            30000, 'engine mới mở màn chọn nhân vật thật');
+        check('màn chọn nhân vật chạy sự kiện nền và giữ màu picture', await evalPage(cdp, `(() => {
+            const engine = FNHStandalonePreview.engine;
+            const pixels = document.querySelector('#fnh-canvas').getContext('2d').getImageData(0,0,816,624).data;
+            let colored = 0;
+            for (let i = 0; i < pixels.length; i += 4) if (pixels[i] + pixels[i+1] + pixels[i+2] > 60) colored++;
+            return engine.state.screen.pictures[7].name === 'text_mercenary' && colored > 10000 && !window.SceneManager;
+        })()`, false, false));
+        await clickElement(cdp, '#fnh-controls [data-direction="6"]');
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.variableValue(9) === 2', 5000, 'chọn knight bằng nút phải');
+        check('sự kiện JSON đổi ảnh và vị trí khung chọn', await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.screen.pictures[8].x === 225 && FNHStandalonePreview.engine.state.screen.pictures[7].name === "text_knight"', false, false));
+        await sleep(250);
+        await clickElement(cdp, '#fnh-controls [data-direction="0"]');
+        await waitFor(cdp, 'document.querySelector("#fnh-name-dialog").open', 5000, 'nhập tên độc lập');
+        check('nhập tên giữ khóa autorun và đúng nhân vật được chọn', await evalPage(cdp,
+            'FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.switchValue(242) && document.querySelector("#fnh-name-input").maxLength === 10', false, false));
+        await evalPage(cdp, 'document.querySelector("#fnh-name-input").value = "Schoolkid"; document.querySelector("#fnh-name-form").requestSubmit()', false, false);
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.selfSwitchValue(10,1,"A")', 5000, 'kết thúc chọn nhân vật');
+        check('luồng chọn knight cập nhật party, tên và nhánh đặc biệt', await evalPage(cdp, `(() => {
+            const state = FNHStandalonePreview.engine.state;
+            return state.party.join(',') === '3' && state.actor(3).name === 'Schoolkid' && state.switchValue(2839) &&
+                state.itemCount('items',5) === 3 && !document.querySelector('#fnh-name-dialog').open;
+        })()`, false, false));
+        await waitFor(cdp, '!document.querySelector("#fnh-video").hidden && document.querySelector("#fnh-video").currentTime > 0',
+            25000, 'intro chạy bằng video trình duyệt trong engine mới');
+        check('intro độc lập phát asset webm thật và giữ sự kiện đang chờ', await evalPage(cdp, `(() => {
+            const video = document.querySelector('#fnh-video');
+            return video.src.endsWith('/movies/intro.webm') && !video.paused && video.duration > 1 &&
+                !FNHStandalonePreview.engine.state.switchValue(295);
+        })()`, false, false));
+        await screenshot('standalone-opening');
+        await evalPage(cdp, 'FNHStandalonePreview.scheduler.stop()', false, false);
+        await waitFor(cdp, 'document.querySelector("#fnh-video").hidden', 5000, 'hủy sự kiện dọn video');
+        check('dừng sự kiện intro không áp dụng lệnh tiếp theo', await evalPage(cdp,
+            '!FNHStandalonePreview.engine.state.switchValue(295) && FNHStandalonePreview.errors.length === 0', false, false));
+
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;
         check('không có lỗi runtime mới', relevantErrors.length === 0, JSON.stringify(relevantErrors.map((item) => ({

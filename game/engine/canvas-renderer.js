@@ -100,11 +100,12 @@
         actors.forEach(function (entry) {
             if (entry.priority === 2) renderer.drawActor(sheets, entry, startX, startY);
         });
+        // Tint thuộc lớp bản đồ; picture giao diện giữ màu riêng.
+        if (screen) this.applyTone(context, this.canvas.width, this.canvas.height, screen.tone);
         this.drawWeather(screen && screen.weather);
         pictures.forEach(function (entry) { renderer.drawPicture(entry); });
         context.restore();
         if (screen) {
-            this.applyTone(context, this.canvas.width, this.canvas.height, screen.tone);
             if (screen.brightness < 255) {
                 context.fillStyle = 'rgba(0,0,0,' + (1 - screen.brightness / 255) + ')';
                 context.fillRect(0, 0, this.canvas.width, this.canvas.height);

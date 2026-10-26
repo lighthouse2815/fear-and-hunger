@@ -16,11 +16,29 @@
         #fnh-choices { display: flex; flex-wrap: wrap; gap: 8px; }
         #fnh-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
         button:focus-visible { outline: 2px solid #e7ddca; }
+        .fnh-stage { position: relative; }
+        #fnh-video { position: absolute; inset: 0; width: 100%; height: 100%; background: black; }
+        #fnh-video[hidden] { display: none; }
+        #fnh-video-play { position: absolute; inset: 40% 30%; }
+        dialog { color: inherit; background: #17120f; border: 1px solid #8c7759; }
+        dialog::backdrop { background: #000b; }
+        #fnh-name-input { display: block; margin-top: 12px; padding: 8px; font: inherit; }
     </style>
 </head>
 <body>
 <main>
-    <canvas id="fnh-canvas" width="816" height="624" tabindex="0" aria-label="Bản đồ game"></canvas>
+    <div class="fnh-stage">
+        <canvas id="fnh-canvas" width="816" height="624" tabindex="0" aria-label="Bản đồ game"></canvas>
+        <video id="fnh-video" playsinline controls hidden aria-label="Phim trong game"></video>
+        <button id="fnh-video-play" type="button" hidden>Phát video</button>
+    </div>
+    <dialog id="fnh-name-dialog">
+        <form id="fnh-name-form">
+            <label for="fnh-name-input">Tên nhân vật</label>
+            <input id="fnh-name-input" autocomplete="off" required>
+            <button type="submit">Xác nhận</button>
+        </form>
+    </dialog>
     <div id="fnh-status">Đang tải engine độc lập…</div>
     <div id="fnh-message" aria-live="polite">
         <div id="fnh-message-text"></div>
@@ -49,6 +67,7 @@
 <script src="engine/movement-runtime.js"></script>
 <script src="engine/screen-runtime.js"></script>
 <script src="engine/game-engine.js"></script>
+<script src="engine/event-scheduler.js"></script>
 <script src="engine/canvas-renderer.js"></script>
 <script src="engine/browser-preview.js"></script>
 </body>
