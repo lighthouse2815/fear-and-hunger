@@ -216,6 +216,7 @@
         }
         if (type === 2) return this.state.selfSwitchValue(this.mapId, this.eventId, parameters[1]);
         if (type === 7) return this.compare(this.state.gold, Number(parameters[1]), parameters[2]);
+        if (type === 4) return this.state.hasActor(parameters[1]);
         if (type === 8) return this.state.itemCount('items', parameters[1]) > 0;
         if (type === 9) return this.state.itemCount('weapons', parameters[1]) > 0;
         if (type === 10) return this.state.itemCount('armors', parameters[1]) > 0;

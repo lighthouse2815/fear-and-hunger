@@ -32,7 +32,10 @@
             direction: 2,
             party: []
         };
-        this.state = new stateApi.GameState(state);
+        this.state = new stateApi.GameState(state, this.database);
+        this.state.party.slice().forEach(function (actorId) {
+            if (!this.state.actor(actorId) && this.database.Actors[actorId]) this.state.addActor(actorId);
+        }, this);
         await this.loadMap(this.state.mapId);
         return this;
     };
@@ -80,7 +83,7 @@
 
     GameEngine.prototype.restore = async function (snapshot) {
         if (!this.database) throw new Error('Engine chưa boot database.');
-        this.state = new stateApi.GameState(snapshot);
+        this.state = new stateApi.GameState(snapshot, this.database);
         await this.loadMap(this.state.mapId);
         return this;
     };
