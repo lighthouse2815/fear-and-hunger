@@ -14,6 +14,12 @@ assert.equal(restored.actionFor('h'),'torch');assert.equal(restored.actionFor('t
 restored.layout(true);assert.equal(restored.actionFor('w'),'up');assert.equal(restored.actionFor('d'),'right');assert.equal(restored.actionFor('ArrowUp'),'up');
 restored.layout(false);assert.equal(restored.actionFor('w'),'pagedown');assert.equal(restored.actionFor('t'),'torch');assert.equal(restored.actionFor('h'),'');
 assert.equal(restored.volumes.master,3,'đặt lại phím không đổi âm lượng');
+restored.setVolume('master',100);assert.equal(restored.volumes.master,5,'không tăng tổng vượt 5%');
+storage.setItem('loud',JSON.stringify({version:1,volumes:{master:100,bgm:73},keys:{h:'torch'},alwaysDash:false}));
+const quiet=new PlayerSettings({storage,key:'loud'});
+assert.equal(quiet.volumes.master,5,'cấu hình đã lưu không vượt giới hạn');assert.equal(quiet.volumes.bgm,73);
+assert.equal(quiet.actionFor('h'),'torch');assert.equal(quiet.alwaysDash,false);
+quiet.setVolume('master',0);assert.equal(quiet.volumes.master,0);quiet.setVolume('master',2);assert.equal(quiet.volumes.master,2);
 assert.throws(()=>restored.bind('F5','ok'),/không hợp lệ/);assert.throws(()=>restored.bind('a','script'),/không hợp lệ/);
 assert.throws(()=>restored.bind('__proto__','ok'),/không hợp lệ/);assert.throws(()=>restored.setVolume('unknown',3),/không hợp lệ/);
 assert.throws(()=>restored.setVolume('master',NaN),/không hợp lệ/);

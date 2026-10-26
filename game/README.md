@@ -36,7 +36,9 @@ nút **Đốt đuốc**/**Kỹ năng** gọi cùng luồng trên điện thoại
 X hủy/mở menu; phím tắt chỉ chạy trên bản đồ khi không có sự kiện đang chờ.
 Tab **Tùy chọn** chỉnh âm lượng tổng và từng nhóm, dùng WASD hoặc tự gán/bỏ
 phím cho từng hành động. Cấu hình được lưu riêng trong trình duyệt và giữ khi
-tải lại trang; đặt lại bàn phím không đổi âm lượng. Mặc định âm lượng tổng 5%.
+tải lại trang; đặt lại bàn phím không đổi âm lượng. Âm lượng tổng giới hạn 0–5%
+ở cả entry chính và preview, kể cả khi cấu hình cũ đã lưu mức cao hơn. Kiểm thử
+Chrome tắt đầu ra loa nhưng vẫn xác minh giải mã, phát OGG và âm lượng thật.
 Đi qua cửa ở cổng ngục có thể vào Map001 và quay lại bằng sự kiện chạm thật.
 Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro.

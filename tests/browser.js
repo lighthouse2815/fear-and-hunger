@@ -454,9 +454,15 @@ async function main() {
         await waitFor(cdp, 'document.querySelector("#fnh-audio-settings").open', 5000, 'mở cài đặt âm thanh');
         check('nút cài đặt mở đủ năm thanh âm lượng', await evalPage(cdp,
             'document.querySelectorAll("#fnh-audio-settings input[type=range]").length === 5', false, false));
-        const audioSettings = { masterVolume: 80, bgmVolume: 37, bgsVolume: 29, meVolume: 43, seVolume: 61 };
+        check('cấu hình đã đánh dấu và plugin không tăng tổng vượt 5%', await evalPage(cdp, `(() => {
+            const config = ConfigManager.makeData(); config.masterVolume = 100;
+            ConfigManager.applyData(config); AudioManager.masterVolume = 1;
+            return ConfigManager.masterVolume === 5 && Graphics._video.volume === 0.05 &&
+                WebAudio._masterGainNode && WebAudio._masterGainNode.gain.value <= 0.050001;
+        })()`, false, false));
+        const audioSettings = { masterVolume: 5, bgmVolume: 37, bgsVolume: 29, meVolume: 43, seVolume: 61 };
         await evalPage(cdp, `(() => {
-            const settings = ${JSON.stringify(audioSettings)};
+            const settings = { ...${JSON.stringify(audioSettings)}, masterVolume: 80 };
             for (const key of Object.keys(settings)) {
                 const slider = document.querySelector('#fnh-' + key);
                 slider.value = settings[key];
@@ -465,7 +471,7 @@ async function main() {
             }
         })()`, false, false);
         check('thanh âm lượng cập nhật nhạc đang phát và âm lượng video', await evalPage(cdp,
-            'Math.abs(AudioManager._bgmBuffer.volume - 37 * AudioManager._currentBgm.volume / 10000) < 0.00001 && AudioManager.bgsVolume === 29 && AudioManager.meVolume === 43 && AudioManager.seVolume === 61 && Graphics._video.volume === 0.8', false, false));
+            'Math.abs(AudioManager._bgmBuffer.volume - 37 * AudioManager._currentBgm.volume / 10000) < 0.00001 && AudioManager.bgsVolume === 29 && AudioManager.meVolume === 43 && AudioManager.seVolume === 61 && Graphics._video.volume === 0.05 && ConfigManager.masterVolume === 5 && document.querySelector("#fnh-masterVolume").max === "5"', false, false));
         await evalPage(cdp, 'document.querySelector("#fnh-bgmVolume").focus()', false, false);
         await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Home', code: 'Home', windowsVirtualKeyCode: 36 });
         await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Home', code: 'Home', windowsVirtualKeyCode: 36 });
@@ -2211,8 +2217,18 @@ async function main() {
             volume.value = 50;
             volume.dispatchEvent(new Event('input', { bubbles: true }));
         })()`, false, false);
-        check('volume preview giữ âm lượng riêng của BGM', await evalPage(cdp,
-            'FNHStandalonePreview.audio.buffers.bgm.volume === 0.4', false, false));
+        check('volume preview chặn thanh kéo ở 5% và giữ âm lượng riêng BGM', await evalPage(cdp,
+            'Math.abs(FNHStandalonePreview.audio.buffers.bgm.volume - 0.04) < 0.000001 && document.querySelector("#fnh-volume").max === "5"', false, false));
+        check('cấu hình preview cũ và API audio đều bị giới hạn 5%', await evalPage(cdp, `(() => {
+            const app = FNHStandalonePreview, key = 'FNH_QUIET_TEST';
+            localStorage.setItem(key, JSON.stringify({version:1,volumes:{master:100}}));
+            try {
+                const settings = new FNHStandaloneSettings.PlayerSettings({key});
+                app.audio.setVolume('master',1);
+                return settings.volumes.master === 5 && app.audio.masterVolume === 0.05 &&
+                    Math.abs(app.audio.buffers.bgm.volume - 0.04) < 0.000001 && document.querySelector('#fnh-video').volume <= 0.05;
+            } finally { localStorage.removeItem(key); }
+        })()`, false, false));
         check('bước đi phát SE OGG thật theo terrain và volume tổng', await evalPage(cdp, `(async () => {
             const engine = FNHStandalonePreview.engine, manager = FNHStandalonePreview.audio, snapshot = engine.save();
             try {

@@ -36,7 +36,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 - T/C gọi common event 289/257 thật trên bản đồ, có nút cho điện thoại, giữ
   khóa điều khiển khi chờ thoại và tôn trọng MP/switch; Z/X xác nhận/hủy.
-- Tùy chọn âm lượng tổng/nhóm (mặc định tổng 5%), gán/bỏ phím, WASD và reset
+- Tùy chọn âm lượng tổng/nhóm (giới hạn tổng 0–5%, kể cả cấu hình cũ và API), gán/bỏ phím, WASD và reset
   bàn phím giữ qua tải lại trang; preset/reset không đổi âm lượng.
 
 - Các mã lệnh xuất hiện trong JSON đều có nhánh interpreter; 401/405/505 là
