@@ -5,15 +5,15 @@
     if (typeof module === 'object' && module.exports) {
         module.exports = factory(
             require('./data-store'), require('./game-state'),
-            require('./map-model'), require('./event-interpreter'), require('./script-runtime'), require('./movement-runtime'), require('./screen-runtime'), require('./autonomous-movement'), require('./lighting-runtime')
+            require('./map-model'), require('./event-interpreter'), require('./script-runtime'), require('./movement-runtime'), require('./screen-runtime'), require('./autonomous-movement'), require('./lighting-runtime'), require('./filter-runtime')
         );
     } else {
         root.FNHStandaloneEngine = factory(
             root.FNHStandaloneData, root.FNHStandaloneState,
-            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts, root.FNHStandaloneMovement, root.FNHStandaloneScreen, root.FNHStandaloneAutonomous, root.FNHStandaloneLighting
+            root.FNHStandaloneMap, root.FNHStandaloneEvents, root.FNHStandaloneScripts, root.FNHStandaloneMovement, root.FNHStandaloneScreen, root.FNHStandaloneAutonomous, root.FNHStandaloneLighting, root.FNHStandaloneFilters
         );
     }
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi, screenApi, autonomousApi, lightingApi) {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi, screenApi, autonomousApi, lightingApi, filterApi) {
     function GameEngine(options) {
         options = options || {};
         this.dataStore = options.dataStore || new dataApi.GameDataStore({ baseUrl: options.baseUrl || '' });
@@ -48,6 +48,7 @@
         this.state = new stateApi.GameState(state, this.database);
         this.screen = new screenApi.ScreenRuntime(this.state);
         this.lighting = new lightingApi.LightingRuntime(this.state);
+        this.filters = new filterApi.FilterRuntime(this.state);
         this.state.party.slice().forEach(function (actorId) {
             if (!this.state.actor(actorId) && this.database.Actors[actorId]) this.state.addActor(actorId);
         }, this);
@@ -129,6 +130,7 @@
         if (this.autonomous && this.autonomousEnabled) this.autonomous.advance(frames);
         if (this.screen) this.screen.advance(frames);
         if (this.lighting) this.lighting.advance(frames);
+        if (this.filters) this.filters.advance(frames);
     };
 
     GameEngine.prototype.moveCharacter = function (character, direction, vertical, backward) {
@@ -268,6 +270,7 @@
         var effect = eventHandlers.effect;
         eventHandlers.effect = function (code, parameters, command, interpreter) {
             if (code === 356 && engine.lighting.handleCommand(parameters[0], engine.map)) return true;
+            if (code === 356 && engine.filters.handleCommand(parameters[0])) return true;
             if (code === 203) { engine.setEventLocation(parameters, interpreter); return true; }
             if (code === 205) return engine.applyRoute(parameters, interpreter);
             if (code === 211) { engine.state.transparent = parameters[0] === 0; return true; }
@@ -381,6 +384,8 @@
         if (this.screen) this.screen.dispose();
         this.screen = new screenApi.ScreenRuntime(state);
         this.lighting = new lightingApi.LightingRuntime(state);
+        if (this.filters) this.filters.dispose();
+        this.filters = new filterApi.FilterRuntime(state);
         if (this.movement) this.movement.clear();
         this.map = map;
         this.lighting.sources(map);

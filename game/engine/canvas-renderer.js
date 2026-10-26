@@ -82,34 +82,54 @@
         context.fillStyle = '#080706';
         context.fillRect(0, 0, this.canvas.width, this.canvas.height);
         context.save();
-        var shake = screen && screen.shake;
-        if (shake && shake.remaining > 0) context.translate(Math.sin(shake.phase * shake.speed / 10) * shake.power * 2, 0);
-        if (parallax) context.drawImage(parallax, -startX * TILE_SIZE, -startY * TILE_SIZE);
-        var upper = [], renderer = this;
-        for (var y = startY; y < Math.min(map.height, startY + rows); y += 1) {
-            for (var x = startX; x < Math.min(map.width, startX + cols); x += 1) {
-                for (var z = 0; z < 4; z += 1) {
-                    var tileId = map.tileId(x, y, z);
-                    if ((map.tileset.flags[tileId] & 0x10) !== 0) upper.push([tileId, x - startX, y - startY]);
-                    else this.drawTile(sheets, tileId, x - startX, y - startY);
-                }
+        try {
+            var shake = screen && screen.shake;
+            if (shake && shake.remaining > 0) context.translate(Math.sin(shake.phase * shake.speed / 10) * shake.power * 2, 0);
+            if (parallax) context.drawImage(parallax, -startX * TILE_SIZE, -startY * TILE_SIZE);
+            var mapFilters = engine.filters ? engine.filters.forTarget(2) : [];
+            if (mapFilters.length) {
+                if (!this.mapCanvas) this.mapCanvas = document.createElement('canvas');
+                if (this.mapCanvas.width !== this.canvas.width) this.mapCanvas.width = this.canvas.width;
+                if (this.mapCanvas.height !== this.canvas.height) this.mapCanvas.height = this.canvas.height;
+                this.context = this.mapCanvas.getContext('2d');
+                this.context.imageSmoothingEnabled = false;
+                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
             }
-        }
-        actors.sort(function (a, b) { return a.priority - b.priority || a.y - b.y || a.id - b.id; });
-        actors.forEach(function (entry) {
-            if (entry.priority < 2) renderer.drawActor(sheets, entry, startX, startY);
-        });
-        upper.forEach(function (tile) { renderer.drawTile(sheets, tile[0], tile[1], tile[2]); });
-        actors.forEach(function (entry) {
-            if (entry.priority === 2) renderer.drawActor(sheets, entry, startX, startY);
-        });
-        if (balloonBitmap) actors.forEach(function (entry) { renderer.drawBalloon(balloonBitmap, entry, startX, startY); });
-        if (engine.lighting) this.drawLighting(engine.lighting, lightSources, state, viewport);
-        // Tint thuộc lớp bản đồ; picture giao diện giữ màu riêng.
-        if (screen) this.applyTone(context, this.canvas.width, this.canvas.height, screen.tone);
-        this.drawWeather(screen && screen.weather);
-        pictures.forEach(function (entry) { renderer.drawPicture(entry); });
-        context.restore();
+            try {
+                var upper = [], renderer = this;
+                for (var y = startY; y < Math.min(map.height, startY + rows); y += 1) {
+                    for (var x = startX; x < Math.min(map.width, startX + cols); x += 1) {
+                        for (var z = 0; z < 4; z += 1) {
+                            var tileId = map.tileId(x, y, z);
+                            if ((map.tileset.flags[tileId] & 0x10) !== 0) upper.push([tileId, x - startX, y - startY]);
+                            else this.drawTile(sheets, tileId, x - startX, y - startY);
+                        }
+                    }
+                }
+                actors.sort(function (a, b) { return a.priority - b.priority || a.y - b.y || a.id - b.id; });
+                actors.forEach(function (entry) {
+                    if (entry.priority < 2) renderer.drawActor(sheets, entry, startX, startY);
+                });
+                upper.forEach(function (tile) { renderer.drawTile(sheets, tile[0], tile[1], tile[2]); });
+                actors.forEach(function (entry) {
+                    if (entry.priority === 2) renderer.drawActor(sheets, entry, startX, startY);
+                });
+                if (balloonBitmap) actors.forEach(function (entry) { renderer.drawBalloon(balloonBitmap, entry, startX, startY); });
+            } finally { this.context = context; }
+            if (mapFilters.length) context.drawImage(engine.filters.apply(this.mapCanvas, mapFilters), 0, 0);
+            var wholeMapFilters = engine.filters ? engine.filters.forTarget(21) : [];
+            if (wholeMapFilters.length) {
+                var filtered = engine.filters.apply(this.canvas, wholeMapFilters);
+                context.save(); context.setTransform(1,0,0,1,0,0);
+                context.clearRect(0,0,this.canvas.width,this.canvas.height);
+                context.drawImage(filtered,0,0); context.restore();
+            }
+            if (engine.lighting) this.drawLighting(engine.lighting, lightSources, state, viewport);
+            // Tint thuộc lớp bản đồ; picture giao diện giữ màu riêng.
+            if (screen) this.applyTone(context, this.canvas.width, this.canvas.height, screen.tone);
+            this.drawWeather(screen && screen.weather);
+            pictures.forEach(function (entry) { renderer.drawPicture(entry); });
+        } finally { this.context = context; context.restore(); }
         if (screen) {
             if (screen.brightness < 255) {
                 context.fillStyle = 'rgba(0,0,0,' + (1 - screen.brightness / 255) + ')';

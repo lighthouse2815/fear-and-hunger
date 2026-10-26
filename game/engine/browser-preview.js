@@ -209,7 +209,7 @@
         }
     };
     engine.onRouteEffect = eventHandlers.effect;
-    var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1;
+    var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1;
     function animate(now) {
         var frames = Math.min(6, Math.max(0, (now - previousFrame) * 60 / 1000));
         previousFrame = now;
@@ -220,6 +220,7 @@
                     lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
                     return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0);
                 });
+                active = active || filterRevision !== engine.filters.revision || engine.filters.active();
                 engine.advanceRoutes(frames);
                 inputPulses.forEach(function (remaining, button) {
                     if (remaining <= frames) { inputPulses.delete(button); engine.buttons.delete(button); }
@@ -229,6 +230,7 @@
                     drawing = true;
                     screenRevision = engine.screen.revision;
                     lightingRevision = engine.lighting.revision;
+                    filterRevision = engine.filters.revision;
                     renderer.draw(engine).catch(function (error) { setStatus(error.message); })
                         .finally(function () { drawing = false; });
                 }
@@ -313,6 +315,7 @@
     window.addEventListener('pagehide', function () {
         if (scheduler) scheduler.stop();
         if (stopVideo) stopVideo();
+        if (engine.filters) engine.filters.dispose();
         audio.dispose();
     });
     (async function () {

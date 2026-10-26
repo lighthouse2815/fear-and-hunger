@@ -883,7 +883,10 @@ async function main() {
         check('preview không nạp runtime hoặc plugin gốc', await evalPage(cdp, `(() => {
             const scripts = performance.getEntriesByType('resource').filter(item => item.initiatorType === 'script');
             return !window.SceneManager && !window.Game_Actor && !window.$plugins &&
-                scripts.length >= 8 && scripts.every(item => new URL(item.name).pathname.startsWith('/engine/'));
+                scripts.length >= 8 && scripts.every(item => {
+                    const path = new URL(item.name).pathname;
+                    return path.startsWith('/engine/') || path === '/js/libs/pixi.js';
+                });
         })()`, false, false));
         check('preview vẽ asset thật trên Canvas', await evalPage(cdp, `(() => {
             const canvas = document.querySelector('#fnh-canvas');
@@ -1046,6 +1049,80 @@ async function main() {
             runtime.handleCommand('Flashlight on 8 12 #FFFFFF'); draw();
             return pixel(534,312)[0] > 50 && pixel(282,312)[0] === 0 && !state.selfSwitchValue(1,1,'D');
         })()`, false, false));
+        check('filter GPU xử lý màu, RGB split, zoom và tia sáng thật', await evalPage(cdp, `(() => {
+            const canvas = document.createElement('canvas'); canvas.width = 96; canvas.height = 96;
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#4060a0'; context.fillRect(0,0,96,96);
+            context.fillStyle = '#ff8040'; context.fillRect(32,32,24,24);
+            const result = document.createElement('canvas'); result.width = 96; result.height = 96;
+            const output = result.getContext('2d');
+            const runtime = new FNHStandaloneFilters.FilterRuntime(new FNHStandaloneState.GameState());
+            function draw() {
+                output.clearRect(0,0,96,96);
+                output.drawImage(runtime.apply(canvas, runtime.forTarget(2)),0,0);
+                return output.getImageData(0,0,96,96).data;
+            }
+            function differs(a,b) { return a.some((value,index) => Math.abs(value - b[index]) > 3); }
+            try {
+                runtime.handleCommand('createFilter A adjustment 2 screen');
+                runtime.handleCommand('setFilter A 1 1 1 1 0 1 1 1');
+                const color = draw();
+                if (color[0] > 1 || Math.abs(color[1]-96) > 2 || Math.abs(color[2]-160) > 2 || color[3] !== 255) return false;
+                runtime.handleCommand('eraseFilter A');
+                const baseline = context.getImageData(0,0,96,96).data;
+                runtime.handleCommand('createFilter RGB rgbsplit 2 screen'); runtime.handleCommand('setFilter RGB 5 30');
+                if (!differs(draw(),baseline)) return false;
+                runtime.handleCommand('eraseFilter RGB');
+                runtime.handleCommand('createFilter Z zoomblur 2 screen'); runtime.handleCommand('setFilter Z 48 48 0 0.5');
+                if (!differs(draw(),baseline)) return false;
+                runtime.handleCommand('eraseFilter Z');
+                runtime.handleCommand('createFilter G godray-np 2 screen'); runtime.handleCommand('setFilter G 45 -30 0.8 2 0.3');
+                const first = draw(); runtime.advance(60); const second = draw();
+                return differs(first,baseline) && differs(first,second) && runtime.backend.renderer.type === PIXI.RENDERER_TYPE.WEBGL;
+            } finally { runtime.dispose(); }
+        })()`, false, false));
+        check('filter tôn trọng scope parallax và giữ nguyên màu picture', await evalPage(cdp, `(async () => {
+            const engine = FNHStandalonePreview.engine;
+            const canvas = document.createElement('canvas');
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { width: 96, height: 96 });
+            const map = new FNHStandaloneMap.GameMap({ id: 999, width: 2, height: 2, events: [],
+                data: Array(24).fill(0), parallaxName: 'unused' }, { flags: [16], tilesetNames: [] }, engine.state);
+            const background = document.createElement('canvas'); background.width = 96; background.height = 96;
+            background.getContext('2d').fillStyle = '#c86432'; background.getContext('2d').fillRect(0,0,96,96);
+            renderer.images.set('img/parallaxes/unused.png', Promise.resolve(background));
+            const state = new FNHStandaloneState.GameState({ x: 0, y: 0, party: [] });
+            state.actor = () => null;
+            const screen = new FNHStandaloneScreen.ScreenRuntime(state);
+            const filters = new FNHStandaloneFilters.FilterRuntime(state);
+            const view = { state, map, screen, filters };
+            const pixel = () => Array.from(canvas.getContext('2d').getImageData(40,40,1,1).data);
+            try {
+                filters.handleCommand('createFilter A adjustment 2 screen'); filters.handleCommand('setFilter A 1 1 1 1 0 1 1 1');
+                await renderer.draw(view); const mapOnly = pixel();
+                filters.handleCommand('createFilter A adjustment 21 screen'); filters.handleCommand('setFilter A 1 1 1 1 0 1 1 1');
+                await renderer.draw(view); const withBackground = pixel();
+                const picture = document.createElement('canvas'); picture.width = 96; picture.height = 96;
+                picture.getContext('2d').fillStyle = '#c86432'; picture.getContext('2d').fillRect(0,0,96,96);
+                renderer.images.set('img/pictures/unused.png', Promise.resolve(picture));
+                screen.handleEffect(231,[1,'unused',0,0,0,0,100,100,255,0]);
+                await renderer.draw(view); const withPicture = pixel();
+                return mapOnly[0] === 200 && withBackground[0] <= 1 && withBackground[1] === 100 &&
+                    withPicture[0] === 200 && withPicture[1] === 100 && withPicture[2] === 50;
+            } finally { filters.dispose(); }
+        })()`, true, false));
+        check('filter qua interpreter giữ tham số và thời gian sau lưu/tải', await evalPage(cdp, `(async () => {
+            const engine = FNHStandalonePreview.engine;
+            await engine.createInterpreter([
+                {code:356,parameters:['createFilter GOD godray-np 2 screen']},
+                {code:356,parameters:['setFilter GOD 450 -300 0.8 2 0.2']}
+            ],39).run();
+            engine.filters.advance(40);
+            const saved = engine.save(), time = saved.filters.GOD.time;
+            await engine.restore(saved);
+            const valid = engine.state.filters.GOD.time === time && engine.state.filters.GOD.parameters[4] === 0.2;
+            engine.filters.handleCommand('eraseFilter GOD');
+            return valid;
+        })()`, true, false));
         await evalPage(cdp, 'FNHStandalonePreview.engine.createInterpreter([{code:213,parameters:[-1,1,true]},{code:121,parameters:[501,501,0]}],39).run()', true, false);
         check('lệnh balloon chờ kết thúc trước khi chạy lệnh tiếp', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.balloon.remaining === 0 && FNHStandalonePreview.engine.state.switchValue(501)', false, false));
