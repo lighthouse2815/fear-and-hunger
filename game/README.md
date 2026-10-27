@@ -22,10 +22,11 @@ Save nằm trong trình duyệt, nên giữ cùng địa chỉ/cổng để ti�
 ## Engine độc lập đang chuyển đổi
 
 Mục tiêu mới là giữ asset, audio và JSON nội dung, thay toàn bộ runtime/plugin
-RPG Maker bằng mã của dự án. Entry chính `index.html` hiện vẫn chạy runtime cũ.
-Các module mới nằm trong `engine/`; mở `http://127.0.0.1:8140/standalone.html`
-để kiểm tra bản đồ và nhân vật bằng Canvas mà không tải `rpg_*.js`, plugin hay
-`__fnh/compat.js`. Trang preview cũng được đưa vào bản build.
+RPG Maker bằng mã của dự án. Entry chính `index.html` mở engine trong `engine/`
+và chạy luồng khởi động, không tải `rpg_*.js`, plugin hay `__fnh/compat.js`.
+Mở `http://127.0.0.1:8140/standalone.html` để kiểm tra bản đồ trực tiếp. Trang
+`legacy.html` giữ runtime cũ để đối chiếu và mở save cũ; save engine độc lập
+tách riêng và không tự chuyển đổi save RPG Maker.
 
 Preview mở cạnh thùng đồ trên Map074. Bấm Enter hoặc **Tương tác** để mở thùng,
 bấm **Tiếp tục** để đọc hội thoại. Dùng mũi tên hoặc các nút hướng để di chuyển;
@@ -402,14 +403,15 @@ Tilesets.json được giữ nguyên tên, volume và pitch. Quái/follower/gues
 theo khoảng cách và có pan; follower ẩn, event `<No Footsteps>` và người chơi
 trên phương tiện không phát bước chân. Lệnh EnableFootsteps/DisableFootsteps
 được lưu cùng trạng thái. Mẫu terrain lấy tại ô vừa bước tới.
-Save preview dùng prefix `FNH_STANDALONE_PREVIEW:`, tách biệt save bản chính.
+Save entry chính và preview cùng dùng prefix `FNH_STANDALONE_PREVIEW:`, tách
+biệt save của trang legacy.
 
 Đây chưa phải bản thay thế đầy đủ: combat, menu và một số hành vi sự kiện vẫn
-cần hoàn thiện. Entry chính vẫn dùng runtime cũ. Các map hiện có không chứa autotile A1–A4.
+cần đối chiếu trên các hành trình cốt truyện. Các map hiện có không chứa autotile A1–A4.
 Callback effect chỉ là đường truyền lệnh;
 có callback không có nghĩa lệnh đã được triển khai.
-Kiểm tra Chrome chạy cả entry chính và preview, xác nhận preview không nạp mã
-runtime cũ và phát được OGG thật.
+Kiểm tra Chrome chạy entry chính, preview và trang đối chiếu cũ; entry chính
+không nạp runtime/plugin cũ và phát được OGG thật.
 
 Ở màn hình đặt tên, nhập `lighthouse` để bật cheat cho nhân vật đó: luôn đầy HP,
 miễn trạng thái chết và gây ít nhất 9.999 sát thương mỗi đòn gây mất/hút HP trúng
@@ -423,13 +425,12 @@ Cheat này cũng đã được triển khai trong engine độc lập, không c�
 
 | Phần cần sửa | File/thư mục |
 | --- | --- |
-| Công thức sát thương, di chuyển, vật phẩm, trạng thái | `js/rpg_objects.js` |
-| Luồng trận đấu, âm thanh, tải dữ liệu, lưu/đọc | `js/rpg_managers.js` |
-| Các màn hình và menu | `js/rpg_scenes.js` |
-| Hộp thoại, danh sách lựa chọn, cửa sổ giao diện | `js/rpg_windows.js` |
-| Vẽ nhân vật, hiệu ứng và animation | `js/rpg_sprites.js` |
-| Hành vi mở rộng và combat riêng | `js/plugins/`, cấu hình trong `js/plugins.js` |
-| Nút âm thanh trên web, tự vào menu, thoại ở dưới | `__fnh/compat.js` |
+| Trận đấu, sát thương và kỹ năng | `engine/battle-runtime.js` |
+| Di chuyển, chỉ số, trạng thái và sự kiện | `engine/game-engine.js`, `game-state.js`, `movement-runtime.js`, `event-interpreter.js` |
+| Âm thanh, tải dữ liệu, lưu/đọc | `engine/audio-manager.js`, `data-store.js`, `save-store.js` |
+| Giao diện, hội thoại và menu | `engine/browser-preview.js`, `browser-menu.js`, `standalone.html` |
+| Vẽ nhân vật, hiệu ứng và animation | `engine/canvas-renderer.js`, `animation-runtime.js`, `screen-runtime.js` |
+| Runtime và plugin cũ để đối chiếu | `js/`, `__fnh/compat.js`, `legacy.html` |
 | Nhân vật, quái, kỹ năng, vật phẩm, vũ khí, giáp | `data/Actors.json`, `Enemies.json`, `Skills.json`, `Items.json`, `Weapons.json`, `Armors.json` |
 | Map và sự kiện trên map | `data/MapNNN.json`, danh sách trong `data/MapInfos.json` |
 | Sự kiện dùng chung và sự kiện chiến đấu | `data/CommonEvents.json`, `data/Troops.json` |
@@ -439,9 +440,8 @@ Cheat này cũng đã được triển khai trong engine độc lập, không c�
 | Font và video | `fonts/`, `movies/` |
 
 Ví dụ sửa máu quái: mở `data/Enemies.json`, tìm quái theo `name` và sửa `params[0]`.
-Ví dụ sửa sát thương: tìm `Game_Action.prototype.makeDamageValue` trong
-`js/rpg_objects.js`. Công thức riêng của kỹ năng còn nằm ở `damage.formula` trong
-`data/Skills.json`; plugin có thể thay đổi kết quả sau đó.
+Ví dụ sửa sát thương: xem `engine/battle-runtime.js`. Công thức riêng của kỹ năng
+còn nằm ở `damage.formula` trong `data/Skills.json`.
 
 Ảnh và âm thanh đã được xuất thành định dạng mở, giữ nguyên tên file và thư mục.
 Thay PNG/OGG tại đúng đường dẫn để dùng asset mới. Không cần mã hoá lại.

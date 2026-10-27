@@ -47,6 +47,24 @@ const { buildWeb } = require('../game/build');
         await fs.symlink(path.join(source, 'img/encrypted.rpgmvp'), path.join(source, 'img/link.rpgmvp'));
         await assert.rejects(buildWeb({ gameRoot: source, output }), /symlink/);
         assert.equal(await fs.readFile(path.join(output, 'index.html'), 'utf8'), rebuilt, 'Build lỗi giữ nguyên gói đang chạy');
+        await fs.unlink(path.join(source, 'img/link.rpgmvp'));
+        await fs.mkdir(path.join(source, 'engine'));
+        await fs.writeFile(path.join(source, 'engine/game-engine.js'), '/* engine độc lập */');
+        await fs.writeFile(path.join(source, 'standalone.html'), '<body>engine</body>');
+        await fs.writeFile(path.join(source, 'legacy.html'), original);
+        const independent = '<body><script>location.replace("./standalone.html?title=1")</script></body>';
+        await fs.writeFile(path.join(source, 'index.html'), independent);
+        await fs.unlink(path.join(source, 'js/rpg_core.js'));
+        await fs.unlink(path.join(source, 'js/rpg_managers.js'));
+        const independentOutput = path.join(temporary, 'independent');
+        await buildWeb({ gameRoot: source, output: independentOutput });
+        const independentServer = require(path.join(independentOutput, 'server.js'));
+        assert.equal(independentServer.findGameRoot(), independentOutput, 'engine độc lập không cần runtime cũ');
+        const independentRunning = await independentServer.startServer({ port: 0 });
+        try {
+            assert.equal(await (await fetch(independentRunning.url)).text(), independent, 'không chèn compat vào entry độc lập');
+            assert.equal(await (await fetch(independentRunning.url + 'legacy.html')).text(), original);
+        } finally { independentRunning.server.closeAllConnections(); await independentRunning.close(); }
         await fs.rm(source, { recursive: true });
         const packagedServer = require(path.join(output, 'server.js'));
         assert.equal(packagedServer.findGameRoot(), output, 'Máy chủ gói tự tìm tài nguyên mà không có game nguồn');

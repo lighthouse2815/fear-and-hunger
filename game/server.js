@@ -89,10 +89,10 @@ function parseArgs(argv) {
 }
 
 function isGameRoot(directory) {
-    return ['index.html', 'js/rpg_core.js', 'js/rpg_managers.js', 'data/System.json']
-        .every(function (name) {
-            return fs.existsSync(path.join(directory, name));
-        });
+    const has = name => fs.existsSync(path.join(directory, name));
+    return has('index.html') && has('data/System.json') &&
+        ((has('standalone.html') && has('engine/game-engine.js')) ||
+         (has('js/rpg_core.js') && has('js/rpg_managers.js')));
 }
 
 function findGameRoot(input) {
@@ -137,7 +137,7 @@ function buildIndexHtml(originalHtml, compatUrl = '/__fnh/compat.js') {
         });
     }
 
-    return originalHtml.replace(/<\/body>/i, compatTag + '\n</body>');
+    return originalHtml;
 }
 
 function sendText(res, statusCode, text, contentType) {

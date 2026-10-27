@@ -325,7 +325,9 @@ async function main() {
                 path.resolve(health.gameRoot) === path.resolve(packageRoot));
         }
 
-        const indexResponse = await fetch(running.url);
+        const primaryHtml = await (await fetch(running.url)).text();
+        check('entry chính mở engine độc lập và không chèn compat', primaryHtml.includes('standalone.html?') && !primaryHtml.includes('__fnh/compat.js'));
+        const indexResponse = await fetch(running.url + 'legacy.html');
         const indexHtml = await indexResponse.text();
         const pluginsAt = indexHtml.indexOf('src="js/plugins.js"');
         const compatAt = indexHtml.indexOf('/__fnh/compat.js');
@@ -385,7 +387,7 @@ async function main() {
         await cdp.send('Log.enable');
 
         const namespace = 'smoke-' + process.pid + '-' + Date.now().toString(36);
-        const url = running.url + '?fnh_save_ns=' + encodeURIComponent(namespace);
+        const url = running.url + 'legacy.html?fnh_save_ns=' + encodeURIComponent(namespace);
         log('Mở: ' + url);
         await cdp.send('Page.navigate', { url: url });
         await sleep(800);
@@ -3135,7 +3137,7 @@ async function main() {
             state.actor(1);const snapshot=state.toJSON();
             new FNHStandaloneSave.SaveStore({prefix:'FNH_STANDALONE_PREVIEW:'}).save(20,snapshot);
         })()`,false,false);
-        await cdp.send('Page.navigate',{url:running.url+'standalone.html?title=1'});
+        await cdp.send('Page.navigate',{url:running.url});
         await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.engine.state && FNHStandalonePreview.engine.state.mapId===72 && FNHStandalonePreview.engine.state.screen.pictures[1] && FNHStandalonePreview.engine.state.screen.pictures[1].opacity>0',
             15000,'Map072 chạy splash thật sau khi khởi động');
         check('pre-title dùng Map072, nhân vật ẩn và khóa điều khiển gameplay',await evalPage(cdp,

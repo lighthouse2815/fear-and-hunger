@@ -19,12 +19,15 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    Playback/số effect, sprite, popup và chuyển cảnh đã có đối chiếu riêng.
 2. Menu: đối chiếu tiếp bố cục và thông tin các màn so với cấu hình gốc.
 3. Điều khiển: kiểm tra thêm thao tác điện thoại xuyên suốt luồng chơi chính.
-4. Luồng chính: cập nhật server/build/check khi chuyển entry chính.
+4. Luồng chính: kiểm tra các hành trình cốt truyện dài trên entry mới.
 5. Quét nội dung toàn bộ, kiểm tra các nhánh đại diện và loại các giả định chỉ
    đúng trong fixture. Cập nhật README để chỉ rõ kết quả và giới hạn còn lại.
 
 ## Đã đối chiếu
 
+- Entry chính mở luồng khởi động engine độc lập; trang legacy giữ riêng để
+  đối chiếu và mở save RPG Maker. Server/build nhận engine mới không cần runtime
+  cũ, không chèn compat vào entry mới và vẫn đóng gói trang legacy.
 - Luồng chơi dùng Force Dashing của TDDP_ManageDashing: luôn chạy, kể cả khi
   giữ Shift hoặc thiết lập cũ tắt tự chạy; map, trang bị/state và lệnh sự kiện
   cấm chạy vẫn ưu tiên. Ẩn tùy chọn đi bộ trong menu chơi, giữ trong preview.
