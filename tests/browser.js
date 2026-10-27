@@ -3025,6 +3025,58 @@ async function main() {
             'FNHStandalonePreview.engine.state.menuEnabled && FNHStandalonePreview.engine.state.switchValue(79) && !window.SceneManager', false, false));
         await screenshot('standalone-dungeon');
 
+        await evalPage(cdp,`(async()=>{
+            const preview=FNHStandalonePreview,e=preview.engine;preview.scheduler.stop();
+            await e.loadMap(86);e.state.x=8;e.state.y=8;e.state.setSwitch(2249,true);e.state.setSwitch(662,true);
+            window.__endingDone=false;window.__endingError=null;
+            e.runEvent(4,preview.scheduler.handlers).then(()=>{window.__endingDone=true;},error=>{window.__endingError=error.message;});
+        })()`,true,false);
+        await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine;
+            for(let i=0;i<1000;i++){
+                const picture=e.screen.screen.pictures[26];
+                if(picture && picture.name==='ending_S_true_god' && picture.opacity===255)return;
+                if(!document.querySelector('#fnh-next').hidden)document.querySelector('#fnh-next').click();
+                e.advanceRoutes(30);await new Promise(resolve=>setTimeout(resolve,0));
+            }
+            throw Error('Ending S chưa hiện ảnh');
+        })()`,true,false);
+        check('kết thúc S chạy page thật, hiện PNG và giữ khóa sự kiện',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine,renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas'));
+            await renderer.draw(e);const image=await renderer.loadImage('img/pictures/ending_S_true_god.png');
+            return image.width>0 && renderer.images.has('img/pictures/ending_S_true_god.png') && e.eventRunning &&
+                !e.state.menuEnabled && !e.openMenu() && !window.__endingDone && !window.SceneManager;
+        })()`,true,false));
+        await screenshot('standalone-ending-s');
+        await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine;
+            for(let i=0;i<1000;i++){
+                if(!document.querySelector('#fnh-scroll-text').hidden)return;
+                if(!document.querySelector('#fnh-next').hidden)document.querySelector('#fnh-next').click();
+                e.advanceRoutes(120);await new Promise(resolve=>setTimeout(resolve,0));
+            }
+            throw Error('Ending S chưa tới credits');
+        })()`,true,false);
+        check('Ending S ghi achievement rồi chờ credits đầy đủ trước game over',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine,content=document.querySelector('#fnh-scroll-content');
+            return e.state.achievements.ENDING_S_KNIGHT && e.state.scene==='map' && e.eventRunning && e.messageRunning &&
+                content.textContent.includes('CREDITS') && content.textContent.includes('Miro') && content.getAnimations().length===1 && !window.__endingDone;
+        })()`,false,false));
+        await evalPage(cdp,`(async()=>{
+            document.querySelector('#fnh-scroll-content').getAnimations()[0].finish();
+            const e=FNHStandalonePreview.engine;
+            for(let i=0;i<1000 && !window.__endingDone && !window.__endingError;i++){
+                if(!document.querySelector('#fnh-next').hidden)document.querySelector('#fnh-next').click();
+                e.advanceRoutes(120);await new Promise(resolve=>setTimeout(resolve,0));
+            }
+        })()`,true,false);
+        await waitFor(cdp,'window.__endingDone && !document.querySelector("#fnh-end-screen").hidden',5000,'kết thúc S tới game over');
+        check('kết thúc thật mở game over, giữ achievement qua save và khóa di chuyển',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine,saved=e.save();await e.restore(saved);
+            return e.state.scene==='gameover' && e.state.achievements.ENDING_S_KNIGHT && !e.move(6) &&
+                !e.eventRunning && !window.__endingError && document.querySelector('#fnh-end-title').textContent==='Game Over';
+        })()`,true,false));
+
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;
         check('không có lỗi runtime mới', relevantErrors.length === 0, JSON.stringify(relevantErrors.map((item) => ({

@@ -96,6 +96,11 @@ Credits dùng lệnh 105/405, đọc đủ dòng và tốc độ trong JSON. Pre
 Animations API để cuộn chữ trên màn hình; event chờ cuộn hết. Giữ Shift, Enter,
 Escape hoặc nút chạy nhanh để tăng tốc khi JSON cho phép. Hủy event đóng credits
 và giải phóng điều khiển. Cờ hiện tên bản đồ thuộc lệnh 281, tách khỏi credits.
+Test chạy nguyên 11 trang kết thúc Map086, Happy Map161, bốn nhánh Prom Map181
+và sáu ảnh chữ Map159 chuyển tới Ending A. Hình, thoại, credits và achievement
+đọc JSON thật; kết thúc mở game over và giữ kết quả qua save. Chrome kiểm tra
+trang S Knight qua UI/Canvas, gồm chờ credits và khóa menu/di chuyển. Các ca
+này bắt đầu tại trang kết thúc, chưa thay thế kiểm thử cả hành trình cốt truyện.
 Trận đấu vẽ nền battleback và sprite quái từ PNG, đặt từng bộ phận theo Troops.json
 và xếp lớp theo tọa độ. Bộ phận ẩn hoặc đã chết không được vẽ. Khi không có nền
 chỉ định, renderer làm mờ ảnh bản đồ hiện tại. Giao diện hiển thị HP/MP trong đội.

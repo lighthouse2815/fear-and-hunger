@@ -20,13 +20,19 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
 3. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
-4. Luồng chính: đối chiếu tiếp nội dung kết thúc
-   và cập nhật server/build/check khi chuyển entry chính.
+4. Luồng chính: cập nhật server/build/check khi chuyển entry chính.
 5. Quét nội dung toàn bộ, kiểm tra các nhánh đại diện và loại các giả định chỉ
    đúng trong fixture. Cập nhật README để chỉ rõ kết quả và giới hạn còn lại.
 
 ## Đã đối chiếu
 
+- Chạy nguyên 11 trang kết thúc Map086 bằng điều kiện switch thật (A/B/C/D/E,
+  C thứ hai, bốn S và nhánh S dự phòng); hình/thoại/Common310/achievement rồi
+  game over, save giữ kết quả. Chạy Happy Map161, bốn Prom Map181 và đoạn sáu
+  ảnh chữ Map159 chuyển đúng trang Ending A. Chrome chạy toàn bộ trang S Knight
+  bằng UI thật, vẽ PNG, chờ credits, mở game over và khóa di chuyển/menu.
+  Đây là kiểm tra các trang kết thúc và đường chuyển cuối, chưa chứng minh mọi
+  hành trình từ đầu game tới kết thúc đều đã được chơi hết.
 - IconSet.png xoay state quái mỗi 40 frame, ưu tiên/ID như runtime gốc,
   chặn mép trên và hiện số lượt theo BuffsStatesCore. State từ sự kiện/kỹ năng
   có thời lượng ngay lúc thêm; thêm lại đặt lại, lưu/tải không bốc số lại.
