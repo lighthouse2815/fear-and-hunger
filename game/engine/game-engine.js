@@ -33,6 +33,7 @@
         this.width = options.width || 816;
         this.height = options.height || 624;
         this.autonomousEnabled = options.autonomousMovement === true;
+        this.forceDashing = options.forceDashing === true;
         this.pendingTouchEvents = [];
         this.onStateChange = this.playStateAnimation.bind(this);
         this.onBattleSound = this.playBattleSound.bind(this);
@@ -228,7 +229,7 @@
 
     GameEngine.prototype.playerStepFrames = function () {
         var speed = this.state.moveSpeed == null ? 4 : this.state.moveSpeed;
-        if ((this.state.alwaysDash || this.buttons.has('shift')) && this.canDash()) speed++;
+        if ((this.forceDashing || this.state.alwaysDash || this.buttons.has('shift')) && this.canDash()) speed++;
         return Math.pow(2, 8 - speed);
     };
 

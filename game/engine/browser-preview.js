@@ -10,7 +10,7 @@
     var message = document.getElementById('fnh-message-text');
     var next = document.getElementById('fnh-next');
     var choicesPanel = document.getElementById('fnh-choices');
-    var engine = new FNHStandaloneEngine.GameEngine({ baseUrl: '.' });
+    var engine = new FNHStandaloneEngine.GameEngine({ baseUrl: '.', forceDashing: automaticEvents });
     var renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { baseUrl: '.' });
     var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
     var settings = new FNHStandaloneSettings.PlayerSettings({ key: 'FNH_STANDALONE_PREVIEW_SETTINGS' });
@@ -18,6 +18,7 @@
     engine.audio = audio;
     FNHStandaloneSettings.categories.forEach(function (category) { audio.setVolume(category, settings.volumes[category] / 100); });
     document.getElementById('fnh-volume').value = settings.volumes.master;
+    document.getElementById('fnh-always-dash').closest('label').hidden = automaticEvents;
     var ready = false;
     var busy = false;
     var scheduler = null;

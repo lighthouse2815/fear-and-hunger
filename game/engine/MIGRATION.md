@@ -25,6 +25,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Luồng chơi dùng Force Dashing của TDDP_ManageDashing: luôn chạy, kể cả khi
+  giữ Shift hoặc thiết lập cũ tắt tự chạy; map, trang bị/state và lệnh sự kiện
+  cấm chạy vẫn ưu tiên. Ẩn tùy chọn đi bộ trong menu chơi, giữ trong preview.
 - Encounter trình duyệt 60 frame theo q=((p-1)*20*p+5)*p+1, tâm zoom dùng
   tọa độ màn hình hiện có của nhân vật, snapshot map ẩn sprite. Flash frame
   2/10, fade đen từ frame 30 tới 54, rồi fade mở trận. Bắt đầu phát SE System

@@ -215,12 +215,14 @@
                 };
                 label.append(slider, value); content.appendChild(label);
             });
-            var dashLabel = node('label', 'Luôn chạy nhanh '), dash = node('input'); dash.type = 'checkbox'; dash.checked = state.alwaysDash;
-            dash.id = 'fnh-option-dash'; dash.onchange = function () {
-                state.alwaysDash = dash.checked; settings.alwaysDash = dash.checked;
-                try { settings.save(); ui.changed(); } catch (error) { ui.message.textContent = error.message; }
-            };
-            dashLabel.appendChild(dash); content.appendChild(dashLabel);
+            if (!this.options.gameplay) {
+                var dashLabel = node('label', 'Luôn chạy nhanh '), dash = node('input'); dash.type = 'checkbox'; dash.checked = state.alwaysDash;
+                dash.id = 'fnh-option-dash'; dash.onchange = function () {
+                    state.alwaysDash = dash.checked; settings.alwaysDash = dash.checked;
+                    try { settings.save(); ui.changed(); } catch (error) { ui.message.textContent = error.message; }
+                };
+                dashLabel.appendChild(dash); content.appendChild(dashLabel);
+            }
             content.appendChild(node('h3', 'Bàn phím'));
             content.appendChild(node('p', 'Chọn hành động rồi nhấn phím trong ô bên dưới để gán. Chọn “Không gán” để bỏ phím.'));
             var action = node('select'); action.id = 'fnh-key-action';

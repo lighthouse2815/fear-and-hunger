@@ -3163,6 +3163,17 @@ async function main() {
             10000,'tiếp tục ô lưu từ title sau splash');
         check('Continue tải đúng ô, trả điều khiển và scheduler sang map đã lưu',await evalPage(cdp,
             'FNHStandalonePreview.engine.state.variableValue(8235)===72 && !document.querySelector("#fnh-controls").hidden && FNHStandalonePreview.scheduler.enabled',false,false));
+        check('luồng chơi luôn chạy nhanh theo cấu hình gốc và ẩn tùy chọn đi bộ',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine,old=e.state.alwaysDash,enabled=e.state.dashEnabled;e.state.alwaysDash=false;e.state.dashEnabled=true;
+            const fast=e.playerStepFrames();e.state.dashEnabled=false;const slow=e.playerStepFrames();
+            e.state.dashEnabled=enabled;e.state.alwaysDash=old;
+            return e.forceDashing && fast*2===slow && document.querySelector('#fnh-always-dash').closest('label').hidden;
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-menu');
+        await clickElement(cdp,'[data-menu-tab="options"]');
+        check('menu luồng chơi không hiển thị tùy chọn luôn chạy',await evalPage(cdp,
+            '!document.querySelector("#fnh-option-dash")',false,false));
+        await clickElement(cdp,'#fnh-menu-close');
         await evalPage(cdp, `(() => {
             const e=FNHStandalonePreview.engine;window.cheatNamePage=e.map.eventPage(e.map.eventById(39));window.cheatNameList=window.cheatNamePage.list;
             e.state.setActorName(1,'Mercenary');e.state.changeActorHp(1,-99999,true);e.state.setSwitch(7388,false);

@@ -57,6 +57,8 @@ Về title trong cùng phiên không phát splash lại. Trạng thái chơi m�
 nhân vật từ System.json; preview có trạng thái chỉ định vẫn giữ cờ riêng.
 Luồng chơi có `events=1` hoặc `title=1` dùng menu theo cấu hình gốc: ẩn bạc,
 không hiện Formation hoặc lệnh lưu tự do, ẩn nút lưu/tải nhanh ngoài khung game.
+Nhân vật luôn chạy nhanh theo cấu hình Force Dashing, trừ khi map, trạng thái
+hoặc lệnh sự kiện cấm chạy; tùy chọn đi bộ chỉ hiện trong preview kiểm thử.
 Vật phẩm/sự kiện gọi 352 vẫn mở màn lưu 20 ô riêng; màn này chỉ hiện chức năng
 lưu và nút đóng. Menu có **Kết thúc** để hủy hoặc về tiêu đề; nếu menu được mở
 từ 351, về tiêu đề dừng luôn sự kiện gọi. Preview Map074 mặc định giữ các nút
