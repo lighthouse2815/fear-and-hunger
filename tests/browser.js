@@ -3483,6 +3483,16 @@ async function main() {
         })()`,false,false));
         await evalPage(cdp,'FNHStandalonePreview.engine.battle.finish("escape")',false,false);
         await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="map" && !FNHStandalonePreview.engine.eventRunning',10000,'kết thúc ca Guard chạm');
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore({mapId:1,x:16,y:63,direction:4,party:[1]}).then(()=>true)',true,false);
+        await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+        await waitFor(cdp,'document.querySelectorAll("#fnh-choices button").length===4',5000,'cửa Map001 phía sau quầy');
+        check('tương tác qua ô quầy mở lựa chọn cửa Map001 thật',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;
+            return e.map.isCounter(15,63) && e.map.eventById(7).locked && e.state.x===16 && e.state.y===63 &&
+                document.querySelector('#fnh-message-text').textContent.includes('faint sound');
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-choices button:nth-child(4)');
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'rời cửa phía sau quầy');
 
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;

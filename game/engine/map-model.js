@@ -65,6 +65,14 @@
         return this.tileId(x, y, 5);
     };
 
+    GameMap.prototype.isCounter = function (x, y) {
+        if (!this.isValid(x, y)) return false;
+        for (var layer = 0; layer < 4; layer++) {
+            if ((this.tileset.flags[this.tileId(x, y, layer)] || 0) & 0x80) return true;
+        }
+        return false;
+    };
+
     GameMap.prototype.terrainTag = function (x, y) {
         for (var layer = 3; layer >= 0; layer--) {
             var tag = (this.tileset.flags[this.tileId(x, y, layer)] || 0) >> 12;

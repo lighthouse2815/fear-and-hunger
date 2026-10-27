@@ -25,6 +25,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Tương tác qua một ô quầy (tileset flag 0x80 ở bất kỳ lớp nào) khi không có
+  event trực tiếp nhận lệnh, giữ thứ tự ưu tiên và trigger 0/1/2. Có 2.378 ô
+  trên 24 map; unit và Chrome kiểm tra cửa event 7 thật ở Map001.
 - Nút xác nhận kích hoạt event priority thường phía trước với trigger 0/1/2;
   dưới chân chỉ trigger 0. Chrome gọi Guard trigger 2 thật ở Map051, chờ trận
   troop 1 rồi thoát; unit đối chiếu cả ba trigger và không tự bước.

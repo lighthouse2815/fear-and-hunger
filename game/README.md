@@ -35,6 +35,8 @@ Tương tác bỏ trang chỉ có lệnh kết thúc, để event rỗng dưới
 phía trước; cửa đôi ở Map051 mở được bằng lựa chọn và route JSON thật.
 Nút tương tác cũng kích hoạt event chạm ở ô trước mặt, gồm Guard thật, như nút
 xác nhận của game gốc; event chạm dưới chân vẫn chờ người chơi bước tới.
+Tương tác cũng đi qua một ô có cờ quầy trong tileset nếu ô đó không có event
+đang nhận lệnh; cửa ở Map001 là một trường hợp dùng dữ liệu thật.
 Giữ nút hướng trên điện thoại để đi liên tục; thả tay, hủy chạm, mất capture
 hoặc rời trang dừng hướng. Nhiều ngón và bàn phím giữ cùng hướng không xóa
 trạng thái của nhau. Chạm nhanh vẫn điều khiển được màn chọn nhân vật bằng JSON;

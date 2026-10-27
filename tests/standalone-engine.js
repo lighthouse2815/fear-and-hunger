@@ -92,5 +92,12 @@ async function fetchFromGame(relativeUrl) {
     for (let frame = 0; frame < 60 && !opened; frame++) { engine.advanceRoutes(1); await new Promise(resolve => setImmediate(resolve)); }
     await opening;
     assert.equal(engine.state.switchValue(22), true, 'Open hoàn tất route và mở cả hai cánh cửa thật');
+    await engine.restore({ mapId: 1, x: 16, y: 63, direction: 4, party: [1] });
+    assert.equal(engine.map.isCounter(15, 63), true, 'ô trước cửa Map001 dùng cờ quầy thật');
+    const counterMessages = [];
+    const counterDoor = await engine.interact({ message: text => counterMessages.push(text), choice: () => 3 });
+    assert.match(counterMessages[0], /faint sound/, 'event cửa thật phía sau quầy nhận tương tác');
+    assert.equal(counterDoor.choices[0].selected, 3);
+    assert.deepEqual([engine.state.x, engine.state.y], [16, 63]);
     console.log('ĐẠT: game engine độc lập boot, di chuyển, chạy event và save/restore.');
 })().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });

@@ -471,6 +471,13 @@
         }).concat(this.map.eventAt(x, y).map(function (event) {
             return { event: event, sameTile: false };
         }));
+        if (this.map.isCounter(x, y)) {
+            var behindX = x + (direction === 4 ? -1 : direction === 6 ? 1 : 0);
+            var behindY = y + (direction === 8 ? -1 : direction === 2 ? 1 : 0);
+            candidates = candidates.concat(this.map.eventAt(behindX, behindY).map(function (event) {
+                return { event: event, sameTile: false };
+            }));
+        }
         for (var i = 0; i < candidates.length; i += 1) {
             var candidate = candidates[i];
             var page = this.map.eventPage(candidate.event);

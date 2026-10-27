@@ -53,6 +53,24 @@ function step(engine, direction) {
     assert.equal(await beneath.interact(), null, 'event chạm dưới chân không chạy bằng nút xác nhận');
     assert.equal(beneath.state.switchValue(49), false);
 
+    for (const trigger of [0, 1, 2]) {
+        const target = event(1, trigger, 1, [{ code: 121, parameters: [50 + trigger, 50 + trigger, 0] }, { code: 0 }]); target.x = 2;
+        const counter = await fixture({ 1: map([target]) });
+        assert.equal(await counter.interact(), null, 'không tương tác xuyên hai ô khi không có quầy');
+        counter.map.tileset.flags[2] = 0x80; counter.map.data.data[counter.map.tileIndex(1, 0, 3)] = 2;
+        assert.equal(counter.map.isCounter(1, 0), true, 'cờ quầy ở lớp trên được nhận diện');
+        assert.equal(counter.map.isCounter(-1, 0), false, 'ngoài map không phải quầy');
+        await counter.interact();
+        assert.equal(counter.state.switchValue(50 + trigger), true, 'tương tác qua quầy hỗ trợ trigger ' + trigger);
+    }
+    const front = event(1, 0, 1, [{ code: 121, parameters: [54, 54, 0] }, { code: 0 }]);
+    const behind = event(2, 0, 1, [{ code: 121, parameters: [55, 55, 0] }, { code: 0 }]); behind.x = 2;
+    const priority = await fixture({ 1: map([front, behind]) });
+    priority.map.tileset.flags[2] = 0x80; priority.map.data.data[priority.map.tileIndex(1, 0, 3)] = 2;
+    await priority.interact();
+    assert.equal(priority.state.switchValue(54), true, 'event trước mặt ưu tiên hơn event sau quầy');
+    assert.equal(priority.state.switchValue(55), false);
+
     const bump = await fixture({ 1: map([event(1, 2, 1, [
         { code: 101, parameters: [] }, { code: 401, parameters: ['Bị chặn'] },
         { code: 121, parameters: [5, 5, 0] }
