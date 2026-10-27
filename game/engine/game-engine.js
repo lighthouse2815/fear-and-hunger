@@ -51,6 +51,7 @@
             x: system.startX,
             y: system.startY,
             direction: 2,
+            transparent: system.optTransparent === true,
             party: (system.partyMembers || []).slice()
         };
         this.state = new stateApi.GameState(state, this.database);

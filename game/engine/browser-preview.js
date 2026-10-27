@@ -2,8 +2,9 @@
 
 (function () {
     var query = new URLSearchParams(location.search);
+    var titleFlow = query.get('title') === '1';
     var mapId = Number(query.get('map') || 74);
-    var automaticEvents = query.get('events') === '1';
+    var automaticEvents = titleFlow || query.get('events') === '1';
     var canvas = document.getElementById('fnh-canvas');
     var status = document.getElementById('fnh-status');
     var message = document.getElementById('fnh-message-text');
@@ -162,6 +163,9 @@
         document.getElementById('fnh-battle-escape').disabled = !battle.canEscape || battle.phase !== 'input';
     }
     var endScene = null;
+    function presentationInput() {
+        return titleFlow && engine.state && (engine.state.scene === 'title' || engine.state.mapId === 72 && engine.state.scene === 'map');
+    }
     function syncBattleAudio() {
         var battle = engine.battle.battle;
         if (engine.state.scene === 'battle' && battle && !battle.result) {
@@ -172,6 +176,9 @@
     }
     function renderEndScreen() {
         var scene = engine.state.scene, panel = document.getElementById('fnh-end-screen');
+        ['fnh-controls', 'fnh-menu', 'fnh-save', 'fnh-load'].forEach(function (id) {
+            document.getElementById(id).hidden = presentationInput();
+        });
         var visible = scene === 'gameover' || scene === 'title';
         panel.hidden = !visible;
         if (!visible) { endScene = null; return; }
@@ -519,6 +526,7 @@
     window.addEventListener('blur', function () { engine.buttons.clear(); inputPulses.clear(); commonKeys.clear(); });
     document.addEventListener('keydown', function (event) {
         audio.unlock();
+        if (presentationInput()) return;
         if (document.querySelector('dialog[open]')) return;
         var buttonName = inputName(event.key);
         if (buttonName === 'cancel' && engine.state && engine.state.scene === 'map' &&
@@ -552,6 +560,7 @@
         }
     });
     document.getElementById('fnh-controls').addEventListener('click', function (event) {
+        if (presentationInput()) return;
         var shortcut = event.target.closest('button[data-common-event]');
         if (shortcut) {
             perform(async function () { await engine.runCommonEvent(Number(shortcut.dataset.commonEvent), eventHandlers); await draw(); });
@@ -569,6 +578,7 @@
         else perform(interact);
     });
     document.getElementById('fnh-save').addEventListener('click', function () {
+        if (presentationInput()) return;
         perform(function () {
             if (engine.state.scene !== 'map' || !engine.state.saveEnabled || engine.eventRunning || (scheduler && scheduler.parallel.size)) {
                 setStatus('Chưa thể lưu khi sự kiện đang chạy hoặc việc lưu đang bị khóa.');
@@ -579,6 +589,7 @@
         });
     });
     document.getElementById('fnh-load').addEventListener('click', function () {
+        if (presentationInput()) return;
         perform(async function () {
             if (!await engine.loadFrom(saveStore, 1, eventHandlers)) {
                 setStatus('Ô 1 chưa có dữ liệu lưu.');
@@ -663,7 +674,8 @@
     });
     (async function () {
         try {
-            if (automaticEvents && mapId === 10) await engine.boot();
+            if (titleFlow) { await engine.boot(); await engine.loadMap(72, { x: 0, y: 0, direction: 2 }); }
+            else if (automaticEvents && mapId === 10) await engine.boot();
             else await engine.boot({ mapId: mapId, x: mapId === 74 ? 8 : 1, y: mapId === 74 ? 8 : 0,
                 direction: mapId === 74 ? 8 : 2, party: [1], switches: { 246: true }, variables: { 121: 1 } });
             engine.state.alwaysDash = settings.alwaysDash;

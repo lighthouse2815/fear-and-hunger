@@ -2412,6 +2412,42 @@ async function main() {
             10000, 'về tiêu đề dùng asset và BGM độc lập');
         check('màn tiêu đề có hình, nhạc và nút chơi mới', await evalPage(cdp,
             'document.querySelector("#fnh-end-title").textContent === FNHStandalonePreview.engine.database.System.gameTitle && document.querySelector("#fnh-new-game").getBoundingClientRect().width > 0', false, false));
+        await evalPage(cdp, `(() => {
+            const snapshot=FNHStandalonePreview.engine.save();snapshot.scene='map';snapshot.pendingEventStack=[];snapshot.variables[8235]=72;
+            new FNHStandaloneSave.SaveStore({prefix:'FNH_STANDALONE_PREVIEW:'}).save(20,snapshot);
+        })()`,false,false);
+        await cdp.send('Page.navigate',{url:running.url+'standalone.html?title=1'});
+        await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.engine.state && FNHStandalonePreview.engine.state.mapId===72 && FNHStandalonePreview.engine.state.screen.pictures[1] && FNHStandalonePreview.engine.state.screen.pictures[1].opacity>0',
+            15000,'Map072 chạy splash thật sau khi khởi động');
+        check('pre-title dùng Map072, nhân vật ẩn và khóa điều khiển gameplay',await evalPage(cdp,
+            'FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.transparent && FNHStandalonePreview.engine.state.x===0 && FNHStandalonePreview.engine.state.y===0 && getComputedStyle(document.querySelector("#fnh-controls")).display==="none" && document.querySelector("#fnh-save").hidden && document.querySelector("#fnh-menu").hidden',false,false));
+        await evalPage(cdp, `(async()=>{
+            window.pretitleImage=new Image();pretitleImage.src='img/pictures/splash_screen1.png';await pretitleImage.decode();
+        })()`,true,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.screen.pictures[1].opacity===255',5000,'splash tăng đủ opacity theo sự kiện');
+        check('Canvas vẽ splash PNG thật đủ màu trước tiêu đề',await evalPage(cdp,`(async()=>{
+            await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);
+            const expected=document.createElement('canvas');expected.width=816;expected.height=624;
+            const context=expected.getContext('2d');context.drawImage(pretitleImage,0,0);
+            const pixels=context.getImageData(0,0,816,624).data,actual=document.querySelector('#fnh-canvas').getContext('2d').getImageData(0,0,816,624).data;
+            let checked=0;
+            for(let i=0;i<pixels.length;i+=4)if(pixels[i+3]===255){checked++;if(pixels[i]!==actual[i]||pixels[i+1]!==actual[i+1]||pixels[i+2]!==actual[i+2])return false;}
+            delete window.pretitleImage;return checked>10000;
+        })()`,true,false));
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="title" && !FNHStandalonePreview.engine.eventRunning && !document.querySelector("#fnh-end-screen").hidden',
+            10000,'splash tự fade ra và lệnh 354 mở title');
+        check('pre-title kết thúc sạch và không nạp runtime/plugin cũ',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.screen.pictures[1].opacity===0 && !FNHStandalonePreview.scheduler.autorun && FNHStandalonePreview.scheduler.parallel.size===0 && !window.SceneManager && !performance.getEntriesByType("resource").some(entry=>/\\/js\\/rpg_|\\/js\\/plugins|\\/__fnh\\//.test(entry.name))',false,false));
+        await evalPage(cdp,'document.querySelector("#fnh-end-save-slot").value=20',false,false);
+        await clickElement(cdp,'#fnh-end-load');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.mapId===74 && FNHStandalonePreview.engine.state.scene==="map" && document.querySelector("#fnh-end-screen").hidden',
+            10000,'tiếp tục ô lưu từ title sau splash');
+        check('Continue tải đúng ô, trả điều khiển và scheduler sang map đã lưu',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.variableValue(8235)===72 && !document.querySelector("#fnh-controls").hidden && FNHStandalonePreview.scheduler.enabled',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.createInterpreter([{code:354}],0).run()',true,false);
+        await waitFor(cdp,'!document.querySelector("#fnh-end-screen").hidden && FNHStandalonePreview.engine.state.scene==="title"',5000,'trở lại tiêu đề không phát splash lần hai');
+        check('về title trong cùng phiên không chuyển lại Map072',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.mapId===74 && (!FNHStandalonePreview.engine.state.screen.pictures[1] || FNHStandalonePreview.engine.state.screen.pictures[1].name!=="splash_screen1")',false,false));
         await clickElement(cdp, '#fnh-new-game');
         await waitFor(cdp, 'window.FNHStandalonePreview && FNHStandalonePreview.engine.state && FNHStandalonePreview.engine.state.switchValue(296)',
             30000, 'engine mới mở màn chọn nhân vật thật');

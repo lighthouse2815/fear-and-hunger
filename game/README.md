@@ -43,6 +43,11 @@ xác minh giải mã, phát OGG và âm lượng thật.
 Đi qua cửa ở cổng ngục có thể vào Map001 và quay lại bằng sự kiện chạm thật.
 Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro.
+Mở `/standalone.html?title=1` để chạy luồng khởi động: sự kiện autorun Map072
+chờ/hiện/fade ảnh `splash_screen1`, rồi lệnh 354 mở tiêu đề. Gameplay bị khóa
+trong splash; title cho chơi mới từ Map010 hoặc tải một trong 20 ô lưu độc lập.
+Về title trong cùng phiên không phát splash lại. Trạng thái chơi mới đọc cờ ẩn
+nhân vật từ System.json; preview có trạng thái chỉ định vẫn giữ cờ riêng.
 
 Preview hiện hỗ trợ di chuyển, một phần lệnh sự kiện, lưu/tải riêng và âm thanh.
 Interpreter chạy được common event lồng nhau, vòng lặp có giới hạn thực thi,
