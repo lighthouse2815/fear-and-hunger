@@ -3147,6 +3147,66 @@ async function main() {
             'FNHStandalonePreview.engine.state.menuEnabled && FNHStandalonePreview.engine.state.switchValue(79) && !window.SceneManager', false, false));
         await screenshot('standalone-dungeon');
 
+        await evalPage(cdp,`(()=>{
+            const preview=FNHStandalonePreview;preview.scheduler.stop();window.__gameplayMenuSnapshot=preview.engine.save();
+            preview.engine.state.gold=123;preview.engine.state.menuEnabled=true;
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-menu');
+        check('menu chơi thường ẩn bạc, lưu tự do và nút lưu nhanh theo cấu hình gốc',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;
+            return e.state.scene==='menu' && !document.querySelector('#fnh-menu-content').textContent.includes('Bạc:') &&
+                document.querySelector('[data-menu-tab="system"]').hidden && document.querySelector('#fnh-save').hidden && document.querySelector('#fnh-load').hidden &&
+                !document.querySelector('[data-menu-tab="gameEnd"]').hidden && !document.querySelector('[data-menu-tab="options"]').hidden &&
+                !document.querySelector('[data-menu-tab="synthesis"]').hidden && !document.querySelector('[data-menu-tab="formation"]');
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-menu-close');
+        await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;e.state.gainItem('items',40,1);
+            window.__gameplayBookDone=false;window.__gameplayBookError=null;
+            window.__gameplayUseMenuItem=e.useMenuItem;
+            e.useMenuItem=async function(...args){try{const result=await __gameplayUseMenuItem.apply(this,args);window.__gameplayBookDone=true;return result;}
+                catch(error){window.__gameplayBookError=error.message;throw error;}};
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-menu');
+        await clickElement(cdp,'[data-menu-tab="inventory"]');
+        await clickElement(cdp,'#fnh-menu-content button[data-item="40"]');
+        await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine;
+            for(let i=0;i<1000 && e.state.scene!=='save' && !window.__gameplayBookError;i++){
+                if(!document.querySelector('#fnh-next').hidden)document.querySelector('#fnh-next').click();
+                e.advanceRoutes(120);await new Promise(resolve=>setTimeout(resolve,0));
+            }
+        })()`,true,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="save" && document.querySelector("#fnh-menu-dialog").open',5000,'sách mở màn lưu riêng trong chơi thường');
+        check('lệnh 352 từ sách vẫn mở lưu và khóa các tab khác trong chơi thường',await evalPage(cdp,`(()=>{
+            const tabs=Array.from(document.querySelectorAll('[data-menu-tab]')).filter(button=>!button.hidden).map(button=>button.dataset.menuTab);
+            return tabs.join(',')==='system' && !document.querySelector('#fnh-menu-save').disabled && document.querySelector('#fnh-menu-load').hidden;
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-menu-save');
+        await clickElement(cdp,'#fnh-menu-close');
+        await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine;
+            for(let i=0;i<1000 && !window.__gameplayBookDone && !window.__gameplayBookError;i++){
+                if(!document.querySelector('#fnh-next').hidden)document.querySelector('#fnh-next').click();
+                e.advanceRoutes(120);await new Promise(resolve=>setTimeout(resolve,0));
+            }
+        })()`,true,false);
+        check('sách lưu trong chơi thường giữ checkpoint và dọn common event đúng một lần',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine,saved=new FNHStandaloneSave.SaveStore({prefix:'FNH_STANDALONE_PREVIEW:'}).load(1);
+            return window.__gameplayBookDone && !window.__gameplayBookError && saved.pendingEventStack.length>0 &&
+                e.state.scene==='map' && !e.state.switchValue(3350) && !e.state.screen.pictures[1];
+        })()`,false,false));
+        await waitFor(cdp,'!document.querySelector("#fnh-menu-dialog").open && !document.querySelector("#fnh-menu").disabled',5000,'sách kết thúc và trả điều khiển menu');
+        await clickElement(cdp,'#fnh-menu');
+        await clickElement(cdp,'[data-menu-tab="gameEnd"]');
+        await clickElement(cdp,'#fnh-menu-end-cancel');
+        check('hủy kết thúc giữ menu và trạng thái chơi',await evalPage(cdp,'FNHStandalonePreview.engine.state.scene==="menu" && document.querySelector("#fnh-menu-dialog").open',false,false));
+        await clickElement(cdp,'[data-menu-tab="gameEnd"]');
+        await clickElement(cdp,'#fnh-menu-to-title');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="title" && !document.querySelector("#fnh-end-screen").hidden && !document.querySelector("#fnh-menu-dialog").open',5000,'menu trở về title');
+        check('lệnh kết thúc mở tiêu đề độc lập và dọn input/menu',await evalPage(cdp,'FNHStandalonePreview.engine.buttons.size===0 && document.querySelector("#fnh-end-title").textContent===FNHStandalonePreview.engine.database.System.gameTitle && !window.SceneManager',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.useMenuItem=window.__gameplayUseMenuItem;delete window.__gameplayUseMenuItem;FNHStandalonePreview.engine.restore(window.__gameplayMenuSnapshot).then(()=>{delete window.__gameplayMenuSnapshot;return true;})',true,false);
+
         await evalPage(cdp,`(async()=>{
             const preview=FNHStandalonePreview,e=preview.engine;preview.scheduler.stop();
             await e.loadMap(86);e.state.x=8;e.state.y=8;e.state.setSwitch(2249,true);e.state.setSwitch(662,true);

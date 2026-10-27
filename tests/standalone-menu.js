@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const vm = require('node:vm');
 const { GameEngine } = require('../game/engine/game-engine');
 const { GameDataStore } = require('../game/engine/data-store');
 const { SaveStore } = require('../game/engine/save-store');
@@ -108,5 +109,23 @@ const watchdog = setTimeout(() => { console.error('Menu chưa kết thúc trong 
     for (let i = 0; i < 1000 && !finished; i++) { engine.advanceRoutes(16); await flush(); }
     await cast; if (failure) throw failure;
     assert.equal(finished, true); assert.ok(engine.state.actor(1).hp > 50, 'dùng kỹ năng hồi máu lên đồng đội');
+    assert.equal(engine.returnMenuToTitle(),false,'không dùng lệnh menu kết thúc khi đang đánh');
+    engine.battle.finish('escape');engine.leaveBattle('escape');engine.openMenu();
+    engine.buttons.add('right');assert.equal(engine.returnMenuToTitle(),true);
+    assert.equal(engine.state.scene,'title');assert.equal(engine.buttons.size,0);
+    engine.state.scene='map';engine.state.setSwitch(6235,false);
+    const fromEvent=engine.createInterpreter([{code:351},{code:121,parameters:[6235,6235,0]}],0).run();
+    await flush();assert.equal(engine.state.scene,'menu');engine.returnMenuToTitle();
+    const titleResult=await fromEvent;assert.equal(titleResult.terminated,'title');
+    assert.equal(engine.state.switchValue(6235),false,'về title dừng event gọi 351 và giải phóng wait');
+    assert.equal(engine.menuWaiters.size,0);assert.equal(engine.menuInterpreter,null);
+    const config={};vm.createContext(config);vm.runInContext(await fs.readFile(path.join(__dirname,'../game/js/plugins.js'),'utf8'),config);
+    const menu=config.$plugins.find(p=>p.status&&p.name==='YEP_MainMenuManager').parameters;
+    const commands=[];
+    for(let i=1;i<=100;i++)if(menu['Menu '+i+' Symbol'] && menu['Menu '+i+' Show']!=='false' &&
+        !menu['Menu '+i+' Show'].includes('Imported.YEP_ClassChangeCore'))commands.push(menu['Menu '+i+' Symbol']);
+    assert.deepEqual(commands,['item','equip','synthesis','skill','options','gameEnd']);
+    assert.equal(menu['Hide Gold Window'],'true');assert.equal(engine.database.System.menuCommands[4],false);
+    assert.equal(engine.database.System.menuCommands[5],false);
     console.log('ĐẠT: menu khóa/tạm dừng, 351/352 chờ/hủy, trang bị, vật phẩm/scroll/common event, lưu/tải và chọn kỹ năng.');
 })().then(() => clearTimeout(watchdog)).catch(error => { clearTimeout(watchdog); console.error(error); process.exitCode = 1; });

@@ -17,8 +17,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 1. Combat: đối chiếu chuyển cảnh mở/kết thúc trận.
    Thứ tự playback và số effect trong từng phase đã đối chiếu với 560 skill/item.
-2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
-   đối chiếu đầy đủ bố cục và thông tin của các màn menu.
+2. Menu: đối chiếu tiếp bố cục và thông tin các màn so với cấu hình gốc.
 3. Điều khiển: kiểm tra thêm thao tác điện thoại xuyên suốt luồng chơi chính.
 4. Luồng chính: cập nhật server/build/check khi chuyển entry chính.
 5. Quét nội dung toàn bộ, kiểm tra các nhánh đại diện và loại các giả định chỉ
@@ -26,6 +25,12 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- MainMenuManager thật bật item/equip/synthesis/skill/options/gameEnd; không
+  bật Formation hoặc Save, Hide Gold Window=true. Luồng có sự kiện giữ cấu
+  hình này, bỏ nút lưu/tải nhanh; preview mặc định giữ công cụ kiểm tra.
+  Lệnh 352/sách thật vẫn mở lưu 20 ô và chỉ hiện tab lưu; đóng rồi dọn common
+  event bình thường. GameEnd hủy hoặc về title, giải phóng wait 351 và không
+  chạy lệnh tiếp của event. Chrome kiểm tra sách/UI/lưu/title trên điện thoại.
 - Weak của OctoBattle: đòn HP dương có rate nguyên tố >=1.1 thay popup số bằng
   chữ sheet Damage.png (ô 4, hàng 4, rộng ba ô). Theo trait thường/Attack và
   No Weak Popup; không tạo cho MP/hồi/0/Miss. Vị trí đọc PNG quái/frame actor,

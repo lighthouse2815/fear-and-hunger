@@ -860,6 +860,12 @@
         if (this.menuWaiters) this.menuWaiters.forEach(function (done) { done(); });
         return true;
     };
+    GameEngine.prototype.returnMenuToTitle = function () {
+        if (!this.state || this.state.scene !== 'menu') return false;
+        this.state.scene = 'title'; this.buttons.clear();
+        if (this.menuWaiters) this.menuWaiters.forEach(function (done) { done(); });
+        return true;
+    };
     GameEngine.prototype.saveMenuTo = function (saveStore, slot) {
         if (!['menu', 'save'].includes(this.state.scene) || !this.state.saveEnabled) throw new Error('Chưa thể lưu lúc này.');
         var snapshot = this.save(); snapshot.scene = 'map';

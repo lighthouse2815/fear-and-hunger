@@ -181,7 +181,7 @@
     function renderEndScreen() {
         var scene = engine.state.scene, panel = document.getElementById('fnh-end-screen');
         ['fnh-controls', 'fnh-menu', 'fnh-save', 'fnh-load'].forEach(function (id) {
-            document.getElementById(id).hidden = presentationInput();
+            document.getElementById(id).hidden = presentationInput() || automaticEvents && ['fnh-save','fnh-load'].includes(id);
         });
         var visible = scene === 'gameover' || scene === 'title';
         panel.hidden = !visible;
@@ -442,7 +442,7 @@
         video.volume = audio.masterVolume; document.getElementById('fnh-volume').value = settings.volumes.master;
     }
     menuUi = new FNHStandaloneMenu.MenuUi(engine, saveStore, eventHandlers, draw, {
-        settings: settings, updateVolume: updateVolume,
+        settings: settings, updateVolume: updateVolume, gameplay: automaticEvents,
         clearInput: clearInput
     });
     var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;

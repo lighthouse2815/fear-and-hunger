@@ -66,9 +66,13 @@
         var actor = actorId && state.actor(actorId), content = this.content;
         content.replaceChildren();
         this.dialog.querySelectorAll('[data-menu-tab]').forEach(function (button) {
+            var tab = button.dataset.menuTab, flag = {inventory:0,skills:1,equipment:2,status:3,system:5}[tab];
+            button.hidden = !!(ui.options && ui.options.gameplay) &&
+                (state.scene === 'save' ? tab !== 'system' : flag != null && engine.database.System.menuCommands[flag] === false);
+            button.disabled = ui.busy || ['inventory','skills','equipment','synthesis','status'].includes(tab) && !state.party.length;
             button.setAttribute('aria-pressed', String(button.dataset.menuTab === ui.tab));
         });
-        content.appendChild(node('p', 'Bạc: ' + state.gold));
+        if (!this.options || !this.options.gameplay) content.appendChild(node('p', 'Bạc: ' + state.gold));
         if (this.tab === 'status' && actor) {
             var overview=node('div');overview.className='fnh-party-overview';
             state.party.forEach(function (id) {
@@ -245,6 +249,13 @@
                 }; content.appendChild(layout);
             });
             content.appendChild(bindings);
+        } else if (this.tab === 'gameEnd') {
+            content.appendChild(node('p','Trở về màn tiêu đề?'));
+            var title = node('button','Về tiêu đề'); title.type='button'; title.id='fnh-menu-to-title'; title.disabled=ui.busy;
+            title.onclick=function () { ui.act(function () { engine.returnMenuToTitle(); }); };
+            var cancel = node('button','Hủy'); cancel.type='button'; cancel.id='fnh-menu-end-cancel';
+            cancel.onclick=function () { ui.tab='status';ui.render(); };
+            content.append(title,cancel);
         } else if (this.tab === 'system') {
             var slotLabel = node('label', 'Ô lưu: '), slots = node('select'); slots.id = 'fnh-menu-save-slot';
             fillSaveSlots(slots, ui.saveStore, this.saveSlot);
@@ -258,6 +269,7 @@
                 catch (error) { ui.message.textContent = error.message; }
             };
             var load = node('button', 'Tải ô ' + this.saveSlot); load.type = 'button'; load.id = 'fnh-menu-load';
+            load.hidden = !!(this.options && this.options.gameplay);
             load.disabled = ui.busy || engine.eventRunning;
             load.onclick = function () { ui.act(async function () {
                 if (!ui.saveStore.exists(ui.saveSlot)) throw new Error('Ô ' + ui.saveSlot + ' chưa có dữ liệu lưu.');
