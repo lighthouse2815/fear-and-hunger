@@ -219,6 +219,10 @@
         });
     };
 
+    GameState.prototype.actorExpForLevel = function (id, level) {
+        return actorApi.expForLevel(this.database.Classes[this.actor(id).classId],level);
+    };
+
     GameState.prototype.changeActorParam = function (id, paramId, amount) {
         return this.updateActor(id, function (actor, data, classData) {
             actor.paramPlus[paramId] = (actor.paramPlus[paramId] || 0) + amount;

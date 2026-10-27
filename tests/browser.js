@@ -1316,6 +1316,37 @@ async function main() {
             for(const key of ['equipmentBefore','equipmentWrong','equipmentShield','equipmentShieldCount'])delete window[key];
         })()`,true,false);
         await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;window.statusBefore=e.save();e.state.party=[1,3];e.state.addActor(3);e.state.addGuestActor(2);
+            const actor=e.state.actor(1),base=e.state.actorExpForLevel(1,actor.level),next=e.state.actorExpForLevel(1,actor.level+1);
+            e.state.changeActorExp(1,base+Math.floor((next-base)/2)-actor.exp,false);
+            e.state.updateActor(1,model=>{model.nickname='Người sống sót';model.profile='Tiểu sử: '+String.fromCharCode(92)+'N[3]';model.equips[4]=28;});
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-menu');
+        await waitFor(cdp,'Array.from(document.querySelectorAll(".fnh-menu-bust")).every(image=>image.complete && image.naturalWidth>0)',5000,'ảnh bust PNG thật nạp trong menu đội');
+        check('menu hiện bust và Hunger ngược EXP cho đúng đội, không đưa guest vào',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,cards=Array.from(document.querySelectorAll('[data-party-actor]'));
+            const expected=e.menuActorStatus(1),meter=document.querySelector('[data-hunger-actor="1"]'),image=cards[0].querySelector('img');
+            return cards.map(card=>Number(card.dataset.partyActor)).join(',')==='1,3' && image.src.endsWith('/img/pictures/Actor1_1.png') &&
+                image.naturalWidth>0 && meter.value===expected.hunger && meter.value>0 && meter.value<1 &&
+                cards[0].textContent.includes('Hunger: '+expected.nextExp) && getComputedStyle(image).objectFit==='none';
+        })()`,false,false));
+        const statusDetails=await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,content=document.querySelector('#fnh-menu-content'),text=content.textContent;
+            const bleeding=Array.from(content.querySelectorAll('.fnh-state-rates dt')).find(node=>node.textContent===e.database.States[5].name);
+            return {nickname:text.includes('Người sống sót'),profile:text.includes('Tiểu sử: '+e.state.actor(3).name),
+                equipment:text.includes(e.database.Armors[28].name),exp:text.includes('EXP: '+e.state.actor(1).exp),
+                immune:bleeding.nextElementSibling.textContent==='0.00%',actualProfile:content.querySelector('.fnh-actor-profile').textContent};
+        })()`,false,false);
+        check('chi tiết menu đọc nickname, profile, trang bị và tỷ lệ miễn nhiễm',
+            ['nickname','profile','equipment','exp','immune'].every(key=>statusDetails[key]),JSON.stringify(statusDetails));
+        await clickElement(cdp,'[data-party-actor="3"] button');
+        check('bấm thẻ đồng đội đổi chi tiết nhân vật và menu không tràn chiều ngang',await evalPage(cdp,`(() => {
+            const panel=document.querySelector('#fnh-menu-dialog');
+            return document.querySelector('#fnh-menu-actor').value==='3' && document.querySelector('[data-party-actor="3"] button').getAttribute('aria-pressed')==='true' &&
+                panel.scrollWidth<=panel.clientWidth+1;
+        })()`,false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.statusBefore).then(()=>{delete window.statusBefore;return true;})',true,false);
+        await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine;window.menuSkillBefore=e.save();e.state.addActor(3);
             [1,3].forEach(id=>{e.state.recoverActor(id);e.state.changeActorHp(id,-80,true);});
             [151,238,189,218].forEach(id=>e.state.changeActorSkill(1,id,true));

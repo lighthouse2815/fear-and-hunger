@@ -28,6 +28,11 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Menu nhân vật dùng bust PNG theo faceName/faceIndex, HP/MP và Hunger theo
+  `(EXP cấp sau - EXP hiện tại) / (EXP cấp sau - EXP đầu cấp)` của GALV_BustMenu.
+  Chọn thẻ đổi actor chi tiết; không đưa guest vào menu. Hiện nickname/class,
+  profile có escape tên/biến, EXP/trang bị và tám tỷ lệ state cấu hình gốc;
+  trait kháng nhân chồng, miễn nhiễm bằng 0%, save/cấp tối đa đều kiểm tra.
 - Menu trang bị lọc quyền dùng/loại/ô và món trong túi; ô bị lock/seal vô hiệu
   hóa. Vũ khí hai tay trả khiên về túi, tháo vũ khí mở lại ô; vòng nguyền giữ
   khóa. Tối ưu/tháo hết theo thứ tự ô, tổng tám params và ID khi hòa, không tháo

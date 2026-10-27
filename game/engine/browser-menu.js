@@ -70,12 +70,46 @@
         });
         content.appendChild(node('p', 'Bạc: ' + state.gold));
         if (this.tab === 'status' && actor) {
+            var overview=node('div');overview.className='fnh-party-overview';
+            state.party.forEach(function (id) {
+                var member=state.actor(id),status=engine.menuActorStatus(id),card=node('section');card.dataset.partyActor=id;
+                var choose=node('button',member.name);choose.type='button';choose.setAttribute('aria-pressed',String(id===actorId));
+                choose.onclick=function () { ui.actorSelect.value=id;ui.render(); };card.appendChild(choose);
+                if(member.faceName) {
+                    var bust=node('img');bust.className='fnh-menu-bust';bust.alt=member.name;
+                    bust.src='./img/pictures/'+encodeURIComponent(member.faceName+'_'+(member.faceIndex+1))+'.png';card.appendChild(bust);
+                }
+                card.appendChild(node('p',member.nickname));
+                [['HP',member.hp,state.actorParam(id,0)],['MP',member.mp,state.actorParam(id,1)]].forEach(function (entry) {
+                    var label=node('label',entry[0]+': '+entry[1]+'/'+entry[2]),bar=node('meter');
+                    bar.min=0;bar.max=Math.max(1,entry[2]);bar.value=entry[1];bar.setAttribute('aria-label',entry[0]+' '+member.name);
+                    label.appendChild(bar);card.appendChild(label);
+                });
+                var hunger=node('label',status.nextExp==null?'':'Hunger: '+status.nextExp),gauge=node('meter');
+                gauge.min=0;gauge.max=1;gauge.value=status.hunger;gauge.dataset.hungerActor=id;gauge.setAttribute('aria-label','Hunger '+member.name);
+                hunger.appendChild(gauge);card.appendChild(hunger);overview.appendChild(card);
+            });
+            content.appendChild(overview);
+            var details=engine.menuActorStatus(actorId);
             content.appendChild(node('h3', actor.name + ' · Lv ' + actor.level));
+            content.appendChild(node('p',details.className+(actor.nickname?' · '+actor.nickname:'')));
             ['HP', 'MP', 'ATK', 'DEF', 'MAT', 'MDF', 'AGI', 'LUK'].forEach(function (name, index) {
                 content.appendChild(node('p', name + ': ' + (index < 2 ? actor[index === 0 ? 'hp' : 'mp'] + '/' : '') + state.actorParam(actorId, index)));
             });
             content.appendChild(node('p', 'TP: ' + actor.tp));
             content.appendChild(node('p', actor.states.map(function (id) { return engine.database.States[id].name; }).join(', ') || 'Không có trạng thái bất lợi.'));
+            content.appendChild(node('p','EXP: '+(details.nextExp==null?'—':details.exp)+' · Tới cấp tiếp: '+(details.nextExp==null?'—':details.nextExp)));
+            content.appendChild(node('h4','Trang bị'));
+            actor.equips.forEach(function (id,slot) {
+                var item=(slot===0?engine.database.Weapons:engine.database.Armors)[id];
+                content.appendChild(node('p',engine.database.System.equipTypes[slot+1]+': '+(item?item.name:'—')));
+            });
+            if(actor.profile) { var profile=node('p',root.FNHStandaloneText.formatText(actor.profile,state));profile.className='fnh-actor-profile';content.appendChild(profile); }
+            content.appendChild(node('h4','Tỷ lệ nhận trạng thái'));
+            var rates=node('dl');rates.className='fnh-state-rates';
+            details.stateRates.forEach(function (entry) {
+                rates.append(node('dt',engine.database.States[entry.id].name),node('dd',(entry.rate*100).toFixed(2)+'%'));
+            });content.appendChild(rates);
         } else if (this.tab === 'inventory') {
             ['items', 'weapons', 'armors'].forEach(function (kind) {
                 content.appendChild(node('h3', {items:'Vật phẩm',weapons:'Vũ khí',armors:'Giáp'}[kind]));

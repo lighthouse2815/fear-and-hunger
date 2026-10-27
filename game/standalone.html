@@ -34,6 +34,13 @@
         #fnh-menu-dialog { width: min(720px, 92vw); max-height: 85vh; overflow: auto; }
         #fnh-menu-dialog nav { display: flex; flex-wrap: wrap; gap: 6px; }
         #fnh-menu-content label { display: block; margin: 12px 0; }
+        .fnh-party-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); gap: 12px; }
+        .fnh-party-overview section { min-width: 0; }
+        .fnh-party-overview meter { display: block; width: 100%; }
+        .fnh-menu-bust { display: block; width: 100%; height: 360px; object-fit: none; object-position: center top; }
+        .fnh-actor-profile { white-space: pre-wrap; }
+        .fnh-state-rates { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+        .fnh-state-rates dd { margin: 0; }
         #fnh-menu-save-slot, #fnh-end-save-slot { max-width: 100%; }
         [aria-pressed="true"] { outline: 2px solid #e7ddca; }
         dialog { color: inherit; background: #17120f; border: 1px solid #8c7759; }

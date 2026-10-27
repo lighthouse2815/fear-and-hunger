@@ -794,6 +794,19 @@
         var traits = this.battle.battlerTraits({ id: actorId });
         return !traits.some(function (trait) { return [53, 54].includes(trait.code) && trait.dataId === slot + 1; });
     };
+    GameEngine.prototype.menuActorStatus = function (actorId) {
+        if (!this.state.party.includes(actorId)) return null;
+        var actor = this.state.actor(actorId), data = this.database.Actors[actorId], classData = this.database.Classes[actor.classId];
+        // EXP cũng là dữ liệu thanh Hunger của GALV_BustMenu trong nội dung gốc.
+        var next = actor.level >= data.maxLevel ? null : this.state.actorExpForLevel(actorId,actor.level + 1);
+        var base = this.state.actorExpForLevel(actorId,actor.level);
+        var traits = this.battle.battlerTraits({id:actorId});
+        return { className: classData.name, exp: actor.exp, nextExp: next == null ? null : next - actor.exp,
+            hunger: next == null || next === base ? 0 : Math.max(0,Math.min(1,(next - actor.exp) / (next - base))),
+            stateRates: [1,4,5,6,7,8,9,10].map(function (id) {
+                return {id:id,rate:traits.some(function (trait) { return trait.code === 14 && trait.dataId === id; }) ? 0 : this.battle.traitRate({id:actorId},13,id)};
+            },this) };
+    };
     GameEngine.prototype.canEquipMenuActor = function (actorId, slot, itemId) {
         if (!this.canChangeMenuEquipment(actorId, slot)) return false;
         if (!Number.isInteger(itemId) || itemId < 0) return false;
