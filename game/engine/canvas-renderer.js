@@ -113,6 +113,7 @@
         var pictures = await this.pictureImages(screen);
         var animations = await this.animationImages(engine, true);
         var fogs = await this.fogImages(screen, true);
+        var damageSheet = battle.popups && battle.popups.length ? await this.loadImage('img/system/Damage.png') : null;
         var fogView = engine.map.viewport(engine.state, this.canvas.width, this.canvas.height);
         var names = screen && screen.battlebacks || (engine.map.data.specifyBattleback ?
             [engine.map.data.battleback1Name, engine.map.data.battleback2Name] : ['', '']);
@@ -182,11 +183,29 @@
                     (data.position === 0 ? target.bitmap.height : data.position === 1 ? target.bitmap.height / 2 : 0));
             });
             [4, 3, 2, 1, 0].forEach(function (depth) { renderer.drawFogs(fogs, depth, fogView.startX, fogView.startY); });
+            if (damageSheet) (battle.popups || []).forEach(function (popup) { renderer.drawDamagePopup(damageSheet,popup); });
         } finally { context.restore(); }
         if (screen) this.applyTone(context, width, height, screen.tone);
         pictures.forEach(function (entry) { renderer.drawPicture(entry); });
         this.drawScreenEffects(screen, engine.state);
         return { battle: battle.troopId, enemies: enemies.length, actors: actors.filter(function (entry) { return entry.bitmap; }).length };
+    };
+
+    CanvasRenderer.prototype.drawDamagePopup = function (bitmap,popup) {
+        var width = bitmap.width / 10, height = bitmap.height / 5, renderer = this;
+        this.context.save(); this.context.globalAlpha = Math.max(0,Math.min(1,(128-popup.elapsed)/10));
+        popup.digits.forEach(function (digit) {
+            var w = digit.miss ? width * 4 : width, sx = digit.digit * width, sy = popup.row * height;
+            var x = popup.x + digit.x - w / 2, y = popup.y + Math.round(digit.y) - height * (1 + popup.stack);
+            if (popup.critical && popup.elapsed < 60) {
+                if (!renderer.flashCanvas) renderer.flashCanvas = document.createElement('canvas');
+                var flash = renderer.flashCanvas; flash.width = w; flash.height = height;
+                var context = flash.getContext('2d'); context.drawImage(bitmap,sx,sy,w,height,0,0,w,height);
+                context.globalCompositeOperation = 'source-atop'; context.fillStyle = 'rgba(255,0,0,' + (160/255*(1-popup.elapsed/60)) + ')';
+                context.fillRect(0,0,w,height); renderer.context.drawImage(flash,x,y);
+            } else renderer.context.drawImage(bitmap,sx,sy,w,height,x,y,w,height);
+        });
+        this.context.restore();
     };
 
     CanvasRenderer.prototype.drawBattleEnemy = function (entry, engine) {

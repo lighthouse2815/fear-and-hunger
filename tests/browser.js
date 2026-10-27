@@ -2165,6 +2165,49 @@ async function main() {
             e.advanceRoutes(1000);const after=await renderer.draw(e);
             return after.enemies===2 && e.battle.enemy(1).collapse.type===3 && !e.battle.enemy(1).alive && e.battle.aliveEnemies().length===1;
         })()`,true,false));
+        check('popup Damage.png cắt đúng HP/MP/hồi/Miss, stack và fade theo pixel thật',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
+            await e.boot({mapId:74,x:8,y:8,party:[1]});e.battle.setup(1);e.state.scene='battle';
+            const renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas')),bitmap=await renderer.loadImage('img/system/Damage.png');
+            const ref=document.createElement('canvas');ref.width=816;ref.height=624;const ctx=ref.getContext('2d');ctx.imageSmoothingEnabled=false;
+            for(const [resource,value,miss,row] of [['hp',123,false,0],['hp',-123,false,1],['mp',123,false,2],['mp',-123,false,3],['hp',0,true,4]]) {
+                e.battle.battle.popups=[];e.battle.addDamagePopup(e.battle.enemy(0),{resource,damage:value,missed:miss});
+                const p=e.battle.battle.popups[0];p.x=400;p.y=442;
+                for(const elapsed of [0,123]) {
+                    p.elapsed=elapsed;renderer.context.clearRect(0,0,816,624);ctx.clearRect(0,0,816,624);
+                    renderer.drawDamagePopup(bitmap,p);ctx.globalAlpha=elapsed===123?0.5:1;
+                    if(miss)ctx.drawImage(bitmap,0,128,96,32,352,442-40-32*1.9,96,32);
+                    else [1,2,3].forEach((digit,i)=>ctx.drawImage(bitmap,digit*24,row*32,24,32,400+(i-1)*24-12,442-40-32*1.9,24,32));
+                    const actual=renderer.context.getImageData(0,0,816,624).data,expected=ctx.getImageData(0,0,816,624).data;
+                    if(!actual.every((value,index)=>value===expected[index]))return false;
+                }
+            }
+            return true;
+        })()`,true,false));
+        const popupVisual=await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
+            await e.boot({mapId:74,x:8,y:8,party:[1]});e.battle.setup(1);e.state.scene='battle';
+            e.battle.addDamagePopup(e.battle.enemy(0),{resource:'hp',damage:123,critical:true});e.advanceRoutes(12.5);
+            const popupState=JSON.stringify(e.battle.battle.popups[0]);
+            const renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas')),sheet=await renderer.loadImage('img/system/Damage.png');
+            renderer.drawDamagePopup(sheet,e.battle.battle.popups[0]);const before=renderer.context.getImageData(0,0,816,624).data;
+            await e.restore(e.save());renderer.context.clearRect(0,0,816,624);renderer.drawDamagePopup(sheet,e.battle.battle.popups[0]);
+            const restored=renderer.context.getImageData(0,0,816,624).data;
+            // Chrome có thể chuyển Canvas từ GPU sang CPU sau getImageData:
+            // source-atop làm tròn RGB lệch tối đa 1/255, alpha/vị trí phải đúng.
+            const savedPixels=before.every((value,index)=>Math.abs(value-restored[index])<=(index%4===3?0:1));
+            const savedState=popupState===JSON.stringify(e.battle.battle.popups[0]);
+            const result=await renderer.draw(e);
+            const source=document.createElement('canvas');source.width=24;source.height=32;source.getContext('2d').drawImage(sheet,24,0,24,32,0,0,24,32);
+            const pixels=source.getContext('2d').getImageData(0,0,24,32).data;
+            const p={...e.battle.battle.popups[0],x:100,y:100,elapsed:0,stack:0,digits:[{digit:1,x:0,y:0,dy:0}]};
+            renderer.context.clearRect(0,0,816,624);renderer.drawDamagePopup(sheet,p);
+            const tint=renderer.context.getImageData(88,68,24,32).data;
+            let alphaError=0;pixels.forEach((value,index)=>{if(index%4===3)alphaError=Math.max(alphaError,Math.abs(value-tint[index]));});
+            return {savedState,savedPixels,enemies:result.enemies,loaded:renderer.images.has('img/system/Damage.png'),alphaError};
+        })()`,true,false);
+        check('popup chí mạng giữ alpha PNG và save tiếp tục đúng vị trí cú nảy',
+            popupVisual.savedState && popupVisual.savedPixels && popupVisual.enemies===7 && popupVisual.loaded && popupVisual.alphaError===0,JSON.stringify(popupVisual));
         check('337 vẽ sprite sheet tại quái, phản chiếu và flash đúng alpha', await evalPage(cdp, `(async () => {
             const original = FNHStandalonePreview.engine;
             const engine = new FNHStandaloneEngine.GameEngine({ dataStore: original.dataStore, onRouteEffect: () => true });

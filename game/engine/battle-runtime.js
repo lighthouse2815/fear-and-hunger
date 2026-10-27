@@ -112,6 +112,7 @@
         this.battle.result = result;
         this.battle.phase = 'finished';
         this.battle.inputActions = [];
+        this.battle.popups = [];
         if (result === 'defeat-continue') {
             this.battle.actors.forEach(function (actor) {
                 this.state.changeActorState(actor.id, 1, false);
@@ -139,6 +140,21 @@
     };
     BattleRuntime.prototype.startMotion = function (battler, type, weaponImageId) {
         if (battler.enemyId == null) battler.spriteMotion = { type: type, elapsed: 0, weaponImageId: weaponImageId || 0 };
+    };
+    BattleRuntime.prototype.addDamagePopup = function (battler, result) {
+        if (battler.hidden || !(result.missed || result.evaded || result.resource === 'hp' || result.resource === 'mp' && result.damage && battler.alive)) return;
+        var popups = this.battle.popups || (this.battle.popups = []), enemy = battler.enemyId != null;
+        var index = enemy ? battler.index : this.battle.actors.findIndex(function (actor) { return actor.id === battler.id; });
+        var miss = result.missed || result.evaded, text = miss ? '' : String(Math.abs(result.damage));
+        var popup = { type: enemy ? 'enemy' : 'actor', targetId: enemy ? battler.index : battler.id,
+            x: enemy ? battler.x : 102 + 204 * index - 32, y: enemy ? battler.y - 8 : 444,
+            elapsed: 0, fraction: 0, stack: 0, critical: !!result.critical,
+            row: miss ? 4 : (result.resource === 'mp' ? 2 : 0) + (result.damage < 0 ? 1 : 0),
+            digits: miss ? [{digit:0,x:0,y:-40,dy:0,miss:true}] : Array.from(text).map(function (digit,i) {
+                return {digit:Number(digit),x:(i-(text.length-1)/2)*24,y:-40,dy:-i};
+            }) };
+        popups.push(popup);
+        popups.filter(function (entry) { return entry.type === popup.type && entry.targetId === popup.targetId; }).forEach(function (entry) { entry.stack += 0.9; });
     };
     BattleRuntime.prototype.performAction = function (battler, skill, item, counter) {
         if (battler.enemyId != null) return;
@@ -168,6 +184,17 @@
     };
     BattleRuntime.prototype.advanceSprites = function (frames) {
         if (!this.battle) return;
+        (this.battle.popups || []).forEach(function (popup) {
+            popup.fraction += Math.min(frames,Math.max(0,128-popup.elapsed)); popup.elapsed += frames;
+            while (popup.fraction >= 1) {
+                popup.fraction--;
+                popup.digits.forEach(function (digit) {
+                    digit.dy += 0.5; digit.y += digit.dy;
+                    if (digit.y >= 0) { digit.y = 0; digit.dy *= -0.6; }
+                });
+            }
+        });
+        if (this.battle.popups) this.battle.popups = this.battle.popups.filter(function (popup) { return popup.elapsed < 128; });
         this.battle.spriteFrames = (this.battle.spriteFrames || 0) + frames;
         this.battle.actors.concat(this.battle.enemies).forEach(function (battler) {
             if (battler.spriteMotion) {
@@ -730,7 +757,11 @@
                             });
                             if (resource === 'hp' && value > 0) runtime.gainTp(target,
                                 Math.floor(50 * value / runtime.battlerParam(target, 0) * runtime.traitRate(target, 23, 5)));
-                            if (damage.type === 5 || damage.type === 6) runtime.changeResource(reflected ? intendedTarget : subject, resource, value);
+                            if (damage.type === 5 || damage.type === 6) {
+                                var recipient = reflected ? intendedTarget : subject;
+                                runtime.changeResource(recipient, resource, value);
+                                if (!menu && value && recipient !== target) runtime.addDamagePopup(recipient,{resource:resource,damage:-value});
+                            }
                             hit.damage = value; hit.resource = resource; report.damage += value;
                             if (!menu && resource === 'hp' && value > 0 && damage.type !== 5) {
                                 if (target.enemyId != null) target.spriteEffect = { type: 'blink', remaining: 20 };
@@ -750,6 +781,7 @@
                         runtime.gainTp(subject, Math.floor((skill.tpGain || 0) * runtime.traitRate(subject, 23, 5)));
                     }
                     if (!menu && hit.evaded) runtime.startMotion(target, 'evade');
+                    if (!menu) runtime.addDamagePopup(target,hit);
                     hit.defeated = !target.alive; report.hits.push(hit);
                     if (counter && runtime.canCounter(intendedTarget)) {
                         hit.counter = runtime.useAction(intendedTarget, runtime.database.Skills[runtime.attackSkillId(intendedTarget)], 0, false, true, null, subject, deferred);
@@ -841,6 +873,10 @@
         hpGain = Math.max(-maxLoss, hpGain);
         if (hpGain) this.changeResource(battler, 'hp', hpGain);
         if (mpGain) this.changeResource(battler, 'mp', mpGain);
+        if (this.state.scene === 'battle' && this.battle && !this.battle.result) {
+            if (hpGain) this.addDamagePopup(battler,{resource:'hp',damage:-hpGain});
+            if (mpGain) this.addDamagePopup(battler,{resource:'mp',damage:-mpGain});
+        }
         data = this.battlerState(battler);
         data.tp = Math.max(0, Math.min(100, (data.tp || 0) + tpGain));
         var effect = { subject: battler.enemyId != null ? 'enemy' : 'actor',

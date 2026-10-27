@@ -15,7 +15,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: đối chiếu popup damage/state icon và chuyển cảnh mở/kết thúc trận.
+1. Combat: đối chiếu state icon/overlay và chuyển cảnh mở/kết thúc trận.
    Thứ tự playback và số effect trong từng phase đã đối chiếu với 560 skill/item.
 2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
@@ -27,6 +27,12 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Popup dùng Damage.png thật cho HP/MP/hồi/0/Miss/né, đỏ chí mạng 60 frame,
+  thời lượng 128 frame và fade cuối 10 frame; xếp chồng 0.9 chiều cao, popup
+  cũ dời lên. Cú nảy so với hàm runtime gốc; giữ frame lẻ/tốc độ/vị trí qua save.
+  Hit/Counter/phản phép/drain và regen cuối lượt tạo số trên đúng battler;
+  state-only/menu/map không tạo popup giả, hủy trước effect không hiện số muộn,
+  rời trận dọn popup. Chrome so pixel sheet, fade, alpha chí mạng và save.
 - SE combat đọc System.sounds: Attack quái front view, HP trúng theo phe,
   physical miss, né vật lý/phép, hồi HP/MP, Counter, phản phép và actor chết.
   Mỗi effect phát một lần; MP damage/drain không phát SE HP hoặc blink; tiếng
