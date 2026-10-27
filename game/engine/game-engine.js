@@ -1069,6 +1069,7 @@
         var context = this.battleContext = { handlers: handlers, signal: interpreter && interpreter.signal };
         this.state.scene = 'battle';
         try {
+            if (handlers && handlers.battleAudio) handlers.battleAudio('start', runtime.battle);
             await this.runBattlePages(false, handlers, context.signal);
             if (!runtime.battle.result) runtime.battle.phase = 'input';
             var result = await runtime.wait(context.signal);
@@ -1078,6 +1079,7 @@
         finally {
             if (this.battleContext === context) this.battleContext = null;
             if (this.state.scene === 'battle') this.state.scene = 'map';
+            if (handlers && handlers.battleAudio) handlers.battleAudio('end', runtime.battle);
         }
     };
 

@@ -162,6 +162,14 @@
         document.getElementById('fnh-battle-escape').disabled = !battle.canEscape || battle.phase !== 'input';
     }
     var endScene = null;
+    function syncBattleAudio() {
+        var battle = engine.battle.battle;
+        if (engine.state.scene === 'battle' && battle && !battle.result) {
+            audioMap = engine.map;
+            audio.beginBattle(battle, engine.state, engine.database.System);
+            battle.audio.bgm = audio.snapshot('bgm'); battle.audio.bgs = audio.snapshot('bgs');
+        } else if (audio.battle) audio.endBattle(audio.battle.result || 'abort', engine.database.System, engine.state.scene === 'map');
+    }
     function renderEndScreen() {
         var scene = engine.state.scene, panel = document.getElementById('fnh-end-screen');
         var visible = scene === 'gameover' || scene === 'title';
@@ -190,6 +198,7 @@
         document.getElementById('fnh-new-game').focus({ preventScroll: true });
     }
     async function draw() {
+        syncBattleAudio();
         await renderer.draw(engine);
         renderBattleUi();
         renderEndScreen();
@@ -402,6 +411,10 @@
         }, interpreter);
     }
     var eventHandlers = {
+        battleAudio: function (phase, battle) {
+            if (phase === 'start') { audioMap = engine.map; audio.beginBattle(battle, engine.state, engine.database.System); }
+            else audio.endBattle(battle.result || 'abort', engine.database.System, engine.state.scene === 'map');
+        },
         message: showMessage,
         choice: showChoices,
         scrollText: showScrollingText,
@@ -431,6 +444,7 @@
         previousFrame = now;
         if (ready) {
             try {
+                syncBattleAudio();
                 if (scrollAnimation) scrollAnimation.playbackRate = !scrollNoFast &&
                     (scrollFastHeld || engine.buttons.has('ok') || engine.buttons.has('cancel') || engine.buttons.has('shift')) ? 3 : 1;
                 var sceneChanged = lastBattle !== engine.battle.battle || lastScene !== engine.state.scene ||

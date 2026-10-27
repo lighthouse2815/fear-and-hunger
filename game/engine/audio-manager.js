@@ -89,7 +89,8 @@
         this.tracks.set(audio, track);
         this.applyPan(audio, track);
         audio.loop = category === 'bgm' || category === 'bgs';
-        audio.playbackRate = Math.max(0.01, Number(sound.pitch == null ? 100 : sound.pitch) / 100);
+        audio.defaultPlaybackRate = Math.max(0.01, Number(sound.pitch == null ? 100 : sound.pitch) / 100);
+        audio.playbackRate = audio.defaultPlaybackRate;
         audio.preservesPitch = false;
         this.updateVolume(audio);
         if (category !== 'se') this.buffers[category] = audio;
@@ -160,14 +161,45 @@
         this.tracks.forEach(function (track, audio) { this.updateVolume(audio); }, this);
     };
 
+    AudioManager.prototype.snapshot = function (category) {
+        var audio = this.buffers[category], track = audio && this.tracks.get(audio);
+        return track ? { sound: Object.assign({}, track.sound), position: audio.currentTime } : null;
+    };
+
+    AudioManager.prototype.beginBattle = function (battle, state, system) {
+        if (this.battle === battle) return;
+        this.battle = battle;
+        if (!battle.audio) battle.audio = { mapBgm: this.snapshot('bgm'), mapBgs: this.snapshot('bgs') };
+        this.stop('bgs'); this.stop('me');
+        var playing = battle.audio.bgm;
+        var music = Object.prototype.hasOwnProperty.call(battle.audio, 'bgm') ? playing && playing.sound : state.battleBgm || system.battleBgm;
+        this.play('bgm', music, playing ? playing.position : undefined);
+        if (battle.audio.bgs) this.play('bgs', battle.audio.bgs.sound, battle.audio.bgs.position);
+    };
+
+    AudioManager.prototype.endBattle = function (result, system, replayMap) {
+        if (!this.battle) return;
+        var saved = this.battle.audio;
+        this.battle = null;
+        this.stop('me');
+        if (replayMap && result !== 'defeat' && saved) {
+            ['bgm', 'bgs'].forEach(function (category) {
+                var previous = saved[category === 'bgm' ? 'mapBgm' : 'mapBgs'], current = this.snapshot(category);
+                if (previous) this.play(category, previous.sound, current && current.sound.name === previous.sound.name ? undefined : previous.position);
+                else this.stop(category);
+            }, this);
+        } else { this.stop('bgm'); this.stop('bgs'); }
+        var music = result === 'victory' ? system.victoryMe : /^defeat/.test(result) ? system.defeatMe : null;
+        if (music && music.name) this.play('me', music);
+    };
+
     AudioManager.prototype.handleEffect = function (code, parameters) {
         var category = { 241: 'bgm', 245: 'bgs', 249: 'me', 250: 'se' }[code];
         if (category) this.play(category, parameters[0]);
         else if (code === 242) this.fadeOut('bgm', parameters[0]);
         else if (code === 246) this.fadeOut('bgs', parameters[0]);
         else if (code === 243) {
-            var audio = this.buffers.bgm;
-            this.savedBgm = audio ? { sound: Object.assign({}, this.tracks.get(audio).sound), position: audio.currentTime } : null;
+            this.savedBgm = this.snapshot('bgm');
         } else if (code === 244) {
             if (this.savedBgm) this.play('bgm', this.savedBgm.sound, this.savedBgm.position);
             else this.stop('bgm');

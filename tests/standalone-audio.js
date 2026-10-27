@@ -28,6 +28,7 @@ class FakeAudio extends EventTarget {
         assert.equal(bgm.src, './subpath/audio/bgm/nh%E1%BA%A1c%20n%E1%BB%81n.ogg');
         assert.equal(bgm.loop, true);
         assert.equal(bgm.playbackRate, 0.7);
+        assert.equal(bgm.defaultPlaybackRate, 0.7, 'tải src không trả pitch về tốc độ mặc định 1');
         assert.equal(bgm.volume, 0.8);
         bgm.currentTime = 12;
         manager.setVolume('master', 0.5);

@@ -277,6 +277,13 @@ Tải map/save lỗi giữ map và trạng thái hiện tại nhất quán.
 Audio dùng API trình duyệt có sẵn, đọc OGG với volume, pitch, stereo pan, fade, nhớ/phát tiếp
 BGM và tạm dừng BGM khi phát ME. Cần tương tác bàn phím/chuột để mở âm thanh.
 Thanh âm lượng cập nhật các âm đang phát, giữ volume của từng file.
+Vào trận nhớ BGM/BGS và vị trí phát của bản đồ, dừng BGS rồi dùng nhạc từ lệnh
+132 hoặc System.json; tên rỗng giữ im lặng. Khi thắng, thoát hoặc thua được phép
+tiếp tục, nhạc map trở về đúng vị trí/pitch/pan trước khi event map chạy tiếp; thua bắt buộc
+dừng nhạc. ME thắng/thua dùng dữ liệu hệ thống, tạm dừng BGM đến khi phát xong.
+Nếu nhạc map và nhạc trận cùng tên, bài đang phát tiếp tục qua chuyển cảnh.
+Save trong trận giữ snapshot nhạc map và nhạc trận; tải lại không nhớ nhầm nhạc
+trận thành nhạc map. Snapshot này tách khỏi lệnh nhớ/phát tiếp BGM 243/244.
 Mỗi bước thành công phát SE theo region, terrain rồi mặc định; 122 note trong
 Tilesets.json được giữ nguyên tên, volume và pitch. Quái/follower/guest giảm âm
 theo khoảng cách và có pan; follower ẩn, event `<No Footsteps>` và người chơi

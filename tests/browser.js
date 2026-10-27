@@ -1700,17 +1700,53 @@ async function main() {
             e.state.setSwitch(6150,true);e.state.setSwitch(6152,false);e.state.setVariable(6151,0);
             window.endphaseItems=e.state.itemCount('items',8);window.endphasePage=e.map.eventPage(e.map.eventById(39));
             window.endphaseOriginalList=window.endphasePage.list;
-            window.endphasePage.list=[c(301,[0,troopId,true,true]),c(121,[6152,6152,0])];
+            window.endphasePage.list=[c(132,[{name:'the_four_apostles',volume:90,pitch:100,pan:20}]),c(301,[0,troopId,true,true]),c(121,[6152,6152,0])];
+            const audio=FNHStandalonePreview.audio;
+            audio.play('bgm',{name:'fear_and_hunger',volume:80,pitch:90,pan:-20},3);
+            audio.play('bgs',{name:'eastern_wind',volume:60,pitch:100,pan:35},2);
         })()`,false,false);
         await clickElement(cdp,'#fnh-controls [data-direction="0"]');
         await waitFor(cdp,'!document.querySelector("#fnh-next").hidden && document.querySelector("#fnh-message").textContent.includes("Sự kiện trước khi kết thúc trận")',
             5000,'page 0 HP mở thoại trước khi chốt thắng');
         check('troop đã bị hạ vẫn giữ thoại, khóa battle và chưa chạy event map',await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.aliveEnemies().length===0 && !FNHStandalonePreview.engine.battle.battle.result && FNHStandalonePreview.engine.state.scene==="battle" && document.querySelector("#fnh-battle-attack").disabled && !FNHStandalonePreview.engine.state.switchValue(6152) && FNHStandalonePreview.engine.state.itemCount("items",8)===window.endphaseItems',false,false));
+        await waitFor(cdp,'FNHStandalonePreview.audio.buffers.bgm && !FNHStandalonePreview.audio.buffers.bgm.paused && FNHStandalonePreview.audio.buffers.bgm.currentTime>0',
+            10000,'OGG nhạc trận từ lệnh 132 phát thật trong lúc page chờ thoại');
+        check('vào trận phát nhạc 132, dừng BGS và lưu vị trí nhạc map',await evalPage(cdp,`(() => {
+            const app=FNHStandalonePreview,audio=app.audio,saved=app.engine.save().battle.audio;
+            return audio.buffers.bgm.src.endsWith('/audio/bgm/the_four_apostles.ogg') && !audio.buffers.bgs &&
+                saved.mapBgm.sound.name==='fear_and_hunger' && saved.mapBgm.position>=3 && saved.mapBgs.position>=2 &&
+                audio.tracks.get(audio.buffers.bgm).panGraph.panner.pan.value>0;
+        })()`,false,false));
         await clickElement(cdp,'#fnh-next');
         await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.scene==="map"',5000,'hoàn tất tất cả page rồi trở về map');
         check('page sau thoại phát thưởng một lần rồi mới trả kết quả thắng',await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.battle.result==="victory" && FNHStandalonePreview.engine.state.switchValue(6152) && FNHStandalonePreview.engine.state.variableValue(6151)===1 && FNHStandalonePreview.engine.state.itemCount("items",8)===window.endphaseItems+1',false,false));
+        await waitFor(cdp,'FNHStandalonePreview.audio.buffers.bgs && !FNHStandalonePreview.audio.buffers.bgs.paused && FNHStandalonePreview.audio.buffers.bgm && !FNHStandalonePreview.audio.buffers.bgm.paused',
+            10000,'phát tiếp cả BGM và BGS sau trận');
+        const resumedAudio = await evalPage(cdp,`(() => {
+            const app=FNHStandalonePreview,a=app.audio;
+            return {bgm:a.snapshot('bgm'),bgs:a.snapshot('bgs'),rate:a.buffers.bgm && a.buffers.bgm.playbackRate,saved:app.engine.battle.battle.audio};
+        })()`,false,false);
+        check('rời trận trả đúng BGM/BGS, vị trí, pitch và pan của bản đồ',await evalPage(cdp,`(() => {
+            const app=FNHStandalonePreview,a=app.audio,saved=app.engine.battle.battle.audio;
+            return a.buffers.bgm.src.endsWith('/audio/bgm/fear_and_hunger.ogg') && a.buffers.bgs.src.endsWith('/audio/bgs/eastern_wind.ogg') &&
+                a.buffers.bgm.currentTime>=saved.mapBgm.position && a.buffers.bgm.currentTime<saved.mapBgm.position+3 &&
+                a.buffers.bgs.currentTime>=saved.mapBgs.position && a.buffers.bgs.currentTime<saved.mapBgs.position+3 &&
+                a.buffers.bgm.playbackRate===0.9 && a.tracks.get(a.buffers.bgm).panGraph.panner.pan.value<0;
+        })()`,false,false),JSON.stringify(resumedAudio));
+        await evalPage(cdp, `(() => {
+            const e=FNHStandalonePreview.engine;window.audioResumeSnapshot=e.save();
+            e.battle.setup(1,true,true);e.state.scene='battle';
+        })()`,false,false);
+        await waitFor(cdp,'FNHStandalonePreview.audio.battle===FNHStandalonePreview.engine.battle.battle',5000,'nhạc vào trận được đồng bộ');
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(FNHStandalonePreview.engine.save()).then(()=>true)',true,false);
+        await waitFor(cdp,'FNHStandalonePreview.audio.battle===FNHStandalonePreview.engine.battle.battle',5000,'nhạc theo snapshot trận sau tải save');
+        await evalPage(cdp,'FNHStandalonePreview.engine.battle.random=()=>0;FNHStandalonePreview.engine.battleEscape()',true,false);
+        await waitFor(cdp,'!FNHStandalonePreview.audio.battle && FNHStandalonePreview.audio.buffers.bgs && !FNHStandalonePreview.audio.buffers.bgs.paused',10000,'tải trận rồi thoát phát lại BGS map');
+        check('tải save giữa trận giữ BGS cũ, không bị autoplay map ghi đè',await evalPage(cdp,
+            'FNHStandalonePreview.audio.buffers.bgs.src.endsWith("/audio/bgs/eastern_wind.ogg") && FNHStandalonePreview.audio.buffers.bgs.currentTime>=2 && FNHStandalonePreview.audio.buffers.bgm.src.endsWith("/audio/bgm/fear_and_hunger.ogg")',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.audioResumeSnapshot).then(()=>{delete window.audioResumeSnapshot;return true;})',true,false);
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(FNHStandalonePreview.engine.save()).then(()=>true)',true,false);
         check('tải save sau end phase không phát thưởng hay chạy page lần hai',await evalPage(cdp,
             'FNHStandalonePreview.engine.state.variableValue(6151)===1 && FNHStandalonePreview.engine.state.itemCount("items",8)===window.endphaseItems+1',false,false));
