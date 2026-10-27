@@ -891,6 +891,10 @@
         var traits = this.battle.battlerTraits({id:actorId});
         return { className: classData.name, exp: actor.exp, nextExp: next == null ? null : next - actor.exp,
             hunger: next == null || next === base ? 0 : Math.max(0,Math.min(1,(next - actor.exp) / (next - base))),
+            stateIcons: actor.states.map(function (id) { return this.database.States[id]; },this)
+                .sort(function (a,b) { return b.priority - a.priority || a.id - b.id; })
+                .filter(function (state) { return state.iconIndex > 0; })
+                .map(function (state) { return {id:state.id,name:state.name,iconIndex:state.iconIndex}; }),
             stateRates: [1,4,5,6,7,8,9,10].map(function (id) {
                 return {id:id,rate:traits.some(function (trait) { return trait.code === 14 && trait.dataId === id; }) ? 0 : this.battle.traitRate({id:actorId},13,id)};
             },this) };

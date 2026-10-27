@@ -25,6 +25,10 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Thẻ từng đồng đội có icon trạng thái theo GALV_BustMenu (States=12), đọc
+  IconSet.png 16 cột/ô 32px, sắp priority/ID và bỏ icon 0. Có tên truy cập,
+  cập nhật thêm/xóa riêng từng actor; không đưa guest vào thẻ. Unit kiểm tra
+  thứ tự/tên/save, Chrome kiểm tra vị trí sheet/kích thước/asset và hai actor.
 - Nền trận không có battleback chụp map với sprite nhân vật/follower/NPC ẩn
   như startEncounterEffect gốc; giữ tile/sương/lớp map. Snapshot cache theo trận,
   không đổi transparent/followersVisible và rời trận vẽ sprite bình thường.

@@ -18,6 +18,12 @@ const { GameDataStore } = require('../game/engine/data-store');
         assert.deepEqual(info.stateRates.map(x=>x.id),[1,4,5,6,7,8,9,10],'đọc đúng các cột States của cấu hình gốc');
     }
     assert.equal(e.menuActorStatus(5),null,'guest không xuất hiện trong menu đội');assert.equal(e.menuActorStatus(999),null);
+    for(const id of [4,5,8,17,94])e.state.changeActorState(1,id,true);
+    let icons=e.menuActorStatus(1).stateIcons;
+    assert.deepEqual(icons.map(x=>x.id),[8,5,17,4],'sắp độ ưu tiên/ID, bỏ state không có icon');
+    assert.deepEqual(icons.map(x=>x.iconIndex),[6,160,161,163]);
+    assert.deepEqual(icons.map(x=>x.name),[8,5,17,4].map(id=>db.States[id].name));
+    e.state.changeActorState(1,5,false);assert.deepEqual(e.menuActorStatus(1).stateIcons.map(x=>x.id),[8,17,4]);
     const stateId=db.States.length,baseline=e.battle.traitRate({id:1},13,5);
     db.States.push({...db.States[2],id:stateId,traits:[{code:13,dataId:5,value:0.5},{code:14,dataId:6,value:1}]});
     e.state.changeActorState(1,stateId,true);

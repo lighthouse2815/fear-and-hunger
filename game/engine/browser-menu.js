@@ -84,6 +84,12 @@
                     bust.src='./img/pictures/'+encodeURIComponent(member.faceName+'_'+(member.faceIndex+1))+'.png';card.appendChild(bust);
                 }
                 card.appendChild(node('p',member.nickname));
+                var icons=node('div');icons.className='fnh-menu-state-icons';icons.setAttribute('aria-label','Trạng thái '+member.name);
+                status.stateIcons.forEach(function (state) {
+                    var icon=node('span');icon.className='fnh-menu-state-icon';icon.dataset.state=state.id;
+                    icon.title=state.name;icon.setAttribute('role','img');icon.setAttribute('aria-label',state.name);
+                    icon.style.backgroundPosition=(-(state.iconIndex%16)*32)+'px '+(-Math.floor(state.iconIndex/16)*32)+'px';icons.appendChild(icon);
+                });card.appendChild(icons);
                 [['HP',member.hp,state.actorParam(id,0)],['MP',member.mp,state.actorParam(id,1)]].forEach(function (entry) {
                     var label=node('label',entry[0]+': '+entry[1]+'/'+entry[2]),bar=node('meter');
                     bar.min=0;bar.max=Math.max(1,entry[2]);bar.value=entry[1];bar.setAttribute('aria-label',entry[0]+' '+member.name);

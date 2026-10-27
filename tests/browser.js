@@ -1345,6 +1345,25 @@ async function main() {
             return document.querySelector('#fnh-menu-actor').value==='3' && document.querySelector('[data-party-actor="3"] button').getAttribute('aria-pressed')==='true' &&
                 panel.scrollWidth<=panel.clientWidth+1;
         })()`,false,false));
+        await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;e.state.actor(1).states=[];e.state.actor(3).states=[];
+            [4,5,8,17,94].forEach(id=>e.state.changeActorState(1,id,true));e.state.changeActorState(3,11,true);
+        })()`,false,false);
+        await clickElement(cdp,'[data-menu-tab="status"]');
+        check('thẻ cả đội hiện icon trạng thái PNG theo ưu tiên và có tên truy cập',await evalPage(cdp,`(async()=>{
+            const first=document.querySelector('[data-party-actor="1"]'),second=document.querySelector('[data-party-actor="3"]');
+            const icons=Array.from(first.querySelectorAll('.fnh-menu-state-icon'));
+            if(icons.map(icon=>icon.dataset.state).join(',')!=='8,5,17,4' || second.querySelectorAll('.fnh-menu-state-icon').length!==1)return false;
+            if(!icons.every(icon=>icon.getAttribute('role')==='img' && icon.getAttribute('aria-label')===FNHStandalonePreview.engine.database.States[Number(icon.dataset.state)].name))return false;
+            const styles=icons.map(icon=>getComputedStyle(icon));
+            if(styles.map(style=>style.backgroundPosition).join('|')!=='-192px 0px|0px -320px|-32px -320px|-96px -320px')return false;
+            if(!styles.every(style=>style.width==='32px' && style.height==='32px' && style.backgroundImage.includes('/img/system/IconSet.png')))return false;
+            const image=new Image();image.src='img/system/IconSet.png';await image.decode();return image.width===512 && image.height>320;
+        })()`,true,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.state.changeActorState(1,5,false)',false,false);
+        await clickElement(cdp,'[data-menu-tab="status"]');
+        check('xóa state cập nhật icon đúng actor mà không đổi đồng đội khác',await evalPage(cdp,
+            'Array.from(document.querySelectorAll(\'[data-party-actor="1"] .fnh-menu-state-icon\')).map(icon=>icon.dataset.state).join(",")==="8,17,4" && document.querySelector(\'[data-party-actor="3"] .fnh-menu-state-icon\').dataset.state==="11"',false,false));
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.statusBefore).then(()=>{delete window.statusBefore;return true;})',true,false);
         await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine;window.menuSkillBefore=e.save();e.state.addActor(3);

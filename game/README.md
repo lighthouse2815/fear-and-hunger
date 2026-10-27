@@ -34,6 +34,9 @@ Giữ nút hướng trên điện thoại để đi liên tục; thả tay, hủ
 hoặc rời trang dừng hướng. Nhiều ngón và bàn phím giữ cùng hướng không xóa
 trạng thái của nhau. Chạm nhanh vẫn điều khiển được màn chọn nhân vật bằng JSON;
 mở menu dọn phím/chạm đang giữ.
+Thẻ mỗi đồng đội hiện icon trạng thái từ IconSet.png, theo độ ưu tiên rồi ID;
+state không có icon không chiếm chỗ. Icon có tên để xem bằng chuột hoặc trình
+đọc màn hình, và cập nhật riêng theo từng nhân vật khi thêm/xóa state.
 Các lựa chọn hiển thị bằng nút trong trang, không mở hộp thoại `prompt`.
 Phím T đốt đuốc qua common event 289, C dùng Phase qua common event 257. Các
 nút **Đốt đuốc**/**Kỹ năng** gọi cùng luồng trên điện thoại. Z xác nhận/tương tác,
