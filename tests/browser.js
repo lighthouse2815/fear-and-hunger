@@ -3493,6 +3493,16 @@ async function main() {
         })()`,false,false));
         await clickElement(cdp,'#fnh-choices button:nth-child(4)');
         await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'rời cửa phía sau quầy');
+        check('CURSE WEAPONS nhận Short sword đang trang bị thay vì khóa lựa chọn',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine,snapshot=e.save(),list=e.database.CommonEvents[193].list.slice(0,7);
+            try{
+                e.state.addActor(4);e.state.actor(4).equips[0]=1;e.state.gainItem('weapons',1,-99);
+                e.state.pendingChoices={text:{},disabled:[]};await e.createInterpreter(list,0).run();
+                if(e.state.pendingChoices.disabled.includes(0) || e.state.itemCount('weapons',1)!==0)return false;
+                e.state.removeActor(4);e.state.pendingChoices={text:{},disabled:[]};await e.createInterpreter(list,0).run();
+                return e.state.pendingChoices.disabled.includes(0) && e.state.pendingChoices.text[0]==='????';
+            }finally{await e.restore(snapshot);}
+        })()`,true,false));
         check('ba map lặp vẽ tile, nhân vật và follower liền mạch qua mép',await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine;
             for(const id of [157,160,185]){

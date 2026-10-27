@@ -563,8 +563,16 @@
             if (parameters[2] === 6) return actor.states.includes(parameters[3]);
         }
         if (type === 8) return this.state.itemCount('items', parameters[1]) > 0;
-        if (type === 9) return this.state.itemCount('weapons', parameters[1]) > 0;
-        if (type === 10) return this.state.itemCount('armors', parameters[1]) > 0;
+        if (type === 9 || type === 10) {
+            var state = this.state, kind = type === 9 ? 'weapons' : 'armors', itemId = parameters[1];
+            if (state.itemCount(kind, itemId) > 0) return true;
+            if (!parameters[2]) return false;
+            var members = state.scene === 'battle' ? state.battleActorIds() : state.party;
+            return members.some(function (actorId) {
+                var actor = state.actor(actorId);
+                return actor && (type === 9 ? actor.equips[0] === itemId : actor.equips.slice(1).includes(itemId));
+            });
+        }
         if (type === 12) {
             var guest = /^\$gameParty\.hasGuestActor\(\s*(\d+)\s*\)\s*;?$/.exec(parameters[1]);
             if (guest) return this.state.hasGuestActor(Number(guest[1]));

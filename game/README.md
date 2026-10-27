@@ -75,6 +75,8 @@ Preview hiện hỗ trợ di chuyển, một phần lệnh sự kiện, lưu/t�
 Interpreter chạy được common event lồng nhau, vòng lặp có giới hạn thực thi,
 điều kiện, biến ngẫu nhiên và self-switch. Test dùng thùng đồ event 39 trên Map074
 để xác nhận nhận vật phẩm từ common event 52 và không nhận lại sau khi đã mở.
+Điều kiện vũ khí/giáp có cờ tính trang bị kiểm tra cả đồ đang đeo của party;
+trong trận chỉ tính bốn người tham chiến, guest không tính là thành viên party.
 Lệnh hoặc loại điều kiện chưa triển khai sẽ báo lỗi cụ thể thay vì tự bỏ qua.
 `engine/script-runtime.js` chuyển 1.082 biến thể script hiện có trong JSON thành
 thao tác dữ liệu: đổi hình character/face/battler, đặt giới hạn HP, cấu hình chase

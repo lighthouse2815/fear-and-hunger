@@ -25,6 +25,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Điều kiện 111 vũ khí/giáp với cờ tính trang bị đọc cả party: 159 điều kiện
+  vũ khí và 36 điều kiện giáp thật. Common 193 không khóa Short sword đang đeo;
+  battle chỉ tính thành viên tham chiến, guest/dự bị ngoài trận giữ quy tắc gốc.
 - Chrome chơi liên tục từ entry chính qua lựa chọn, video, Map074, cửa Map051
   rồi gặp và thắng Guard thật; ngẫu nhiên cố định và tên lighthouse bật cheat.
   Nhánh thắng chạy xong, switch 23 được bật và điều khiển trở lại map.
