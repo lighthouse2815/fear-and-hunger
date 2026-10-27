@@ -27,6 +27,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- MP damage của tám skill thật giới hạn theo MP hiện có như executeMpDamage
+  gốc; báo cáo từng hit/tổng và popup không ghi dư sau khi cạn. Hồi MP vẫn
+  hoạt động từ 0; Chrome kiểm tra skill 181 lặp đòn, 320 toàn đội và save.
 - Popup dùng Damage.png thật cho HP/MP/hồi/0/Miss/né, đỏ chí mạng 60 frame,
   thời lượng 128 frame và fade cuối 10 frame; xếp chồng 0.9 chiều cao, popup
   cũ dời lên. Cú nảy so với hàm runtime gốc; giữ frame lẻ/tốc độ/vị trí qua save.

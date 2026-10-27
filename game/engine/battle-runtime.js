@@ -636,7 +636,7 @@
         }, this);
         var resource = [2, 4, 6].includes(damage.type) ? 'mp' : 'hp';
         if (subject.enemyId == null && target.enemyId != null && [1, 5].includes(damage.type) && this.state.hasNameCheat(subject.id)) value = Math.max(9999, value);
-        if (damage.type === 5 || damage.type === 6) value = Math.min(value, this.battlerState(target)[resource]);
+        if ([2, 5, 6].includes(damage.type)) value = Math.min(value, this.battlerState(target)[resource]);
         return { damage: value, resource: resource, critical: !!hit.critical };
     };
     BattleRuntime.prototype.useSkill = function (subject, skillId, index, forced, deferred) {

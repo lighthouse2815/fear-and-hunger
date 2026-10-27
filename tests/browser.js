@@ -2208,6 +2208,22 @@ async function main() {
         })()`,true,false);
         check('popup chí mạng giữ alpha PNG và save tiếp tục đúng vị trí cú nảy',
             popupVisual.savedState && popupVisual.savedPixels && popupVisual.enemies===7 && popupVisual.loaded && popupVisual.alphaError===0,JSON.stringify(popupVisual));
+        check('MP damage thật chỉ báo lượng còn lại, lặp/toàn đội và save không tạo số dư',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
+            await e.boot({mapId:74,x:8,y:8,party:[1,3]});
+            for(const skillId of [181,320]) {
+                e.state.party.forEach(id=>e.state.recoverActor(id));e.battle.setup(1);e.state.scene='battle';
+                for(const id of [1,3])e.state.changeActorMp(id,(id===1?3:0)-e.state.actor(id).mp);
+                const report=e.battle.useSkill(e.battle.enemy(0),skillId,0,true);
+                if(report.damage!==3 || report.hits.reduce((sum,hit)=>sum+hit.damage,0)!==3)return false;
+                const popups=e.battle.battle.popups;
+                if(popups.length!==1 || popups[0].row!==2 || popups[0].digits[0].digit!==3 || e.state.actor(1).mp!==0)return false;
+                await e.restore(e.save());
+                if(e.state.actor(1).mp!==0 || e.battle.battle.popups.length!==1)return false;
+                e.battle.finish('escape');
+            }
+            return true;
+        })()`,true,false));
         check('337 vẽ sprite sheet tại quái, phản chiếu và flash đúng alpha', await evalPage(cdp, `(async () => {
             const original = FNHStandalonePreview.engine;
             const engine = new FNHStandaloneEngine.GameEngine({ dataStore: original.dataStore, onRouteEffect: () => true });
