@@ -51,6 +51,31 @@
         return Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < this.width && y < this.height;
     };
 
+    GameMap.prototype.loopX = function () { return this.data.scrollType === 2 || this.data.scrollType === 3; };
+    GameMap.prototype.loopY = function () { return this.data.scrollType === 1 || this.data.scrollType === 3; };
+    GameMap.prototype.roundX = function (x) { return this.loopX() ? ((x % this.width) + this.width) % this.width : x; };
+    GameMap.prototype.roundY = function (y) { return this.loopY() ? ((y % this.height) + this.height) % this.height : y; };
+    GameMap.prototype.deltaX = function (x, other) {
+        var delta = x - other;
+        if (this.loopX()) { delta %= this.width; if (Math.abs(delta) > this.width / 2) delta -= Math.sign(delta) * this.width; }
+        return delta;
+    };
+    GameMap.prototype.deltaY = function (y, other) {
+        var delta = y - other;
+        if (this.loopY()) { delta %= this.height; if (Math.abs(delta) > this.height / 2) delta -= Math.sign(delta) * this.height; }
+        return delta;
+    };
+    GameMap.prototype.screenX = function (x, start) {
+        var relative = x - start;
+        if (this.loopX()) { relative = ((relative % this.width) + this.width) % this.width; if (relative > this.width / 2) relative -= this.width; }
+        return relative;
+    };
+    GameMap.prototype.screenY = function (y, start) {
+        var relative = y - start;
+        if (this.loopY()) { relative = ((relative % this.height) + this.height) % this.height; if (relative > this.height / 2) relative -= this.height; }
+        return relative;
+    };
+
     GameMap.prototype.tileIndex = function (x, y, z) {
         if (!this.isValid(x, y)) return -1;
         return (z * this.height + y) * this.width + x;
@@ -86,14 +111,14 @@
         var position = displayPosition(player);
         var camera = this.state && this.state.screen && this.state.screen.mapCamera;
         return {
-            startX: Math.max(0, Math.min(this.width - cols, camera && camera.mapId === this.id ? camera.x : position.x - Math.floor(cols / 2))),
-            startY: Math.max(0, Math.min(this.height - rows, camera && camera.mapId === this.id ? camera.y : position.y - Math.floor(rows / 2)))
+            startX: this.loopX() ? (camera && camera.mapId === this.id ? camera.x : position.x - Math.floor(cols / 2)) : Math.max(0, Math.min(this.width - cols, camera && camera.mapId === this.id ? camera.x : position.x - Math.floor(cols / 2))),
+            startY: this.loopY() ? (camera && camera.mapId === this.id ? camera.y : position.y - Math.floor(rows / 2)) : Math.max(0, Math.min(this.height - rows, camera && camera.mapId === this.id ? camera.y : position.y - Math.floor(rows / 2)))
         };
     };
 
     GameMap.prototype.findDirection = function (character, target, limit) {
         var queue = [{ x: character.x, y: character.y, depth: 0, direction: 0 }], visited = new Set();
-        var distance = function (point) { return Math.abs(point.x - target.x) + Math.abs(point.y - target.y); };
+        var map = this, distance = function (point) { return Math.abs(map.deltaX(point.x, target.x)) + Math.abs(map.deltaY(point.y, target.y)); };
         var best = queue[0], directions = [2, 4, 6, 8];
         visited.add(character.x + ',' + character.y);
         for (var index = 0; index < queue.length; index++) {
@@ -102,8 +127,8 @@
             if (distance(point) < distance(best)) best = point;
             if (point.depth >= (limit || 12)) continue;
             for (var direction of directions) {
-                var x = point.x + (direction === 4 ? -1 : direction === 6 ? 1 : 0);
-                var y = point.y + (direction === 8 ? -1 : direction === 2 ? 1 : 0);
+                var x = this.roundX(point.x + (direction === 4 ? -1 : direction === 6 ? 1 : 0));
+                var y = this.roundY(point.y + (direction === 8 ? -1 : direction === 2 ? 1 : 0));
                 var key = x + ',' + y;
                 if (visited.has(key) || !this.isValid(x, y)) continue;
                 if (!character.through && (!this.isPassable(point.x, point.y, direction) || this.eventBlocks(x, y, character.id))) continue;
@@ -182,8 +207,8 @@
         if (!this.isValid(x, y)) return false;
         var bit = DIRECTION_BITS[direction];
         if (!bit) return false;
-        var nx = x + (direction === 4 ? -1 : direction === 6 ? 1 : 0);
-        var ny = y + (direction === 8 ? -1 : direction === 2 ? 1 : 0);
+        var nx = this.roundX(x + (direction === 4 ? -1 : direction === 6 ? 1 : 0));
+        var ny = this.roundY(y + (direction === 8 ? -1 : direction === 2 ? 1 : 0));
         if (!this.isValid(nx, ny)) return false;
         return this.tilePassable(x, y, bit) && this.tilePassable(nx, ny, bit === 1 ? 8 : bit === 8 ? 1 : bit === 2 ? 4 : 2);
     };

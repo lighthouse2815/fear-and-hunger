@@ -102,7 +102,8 @@
 
     MovementRuntime.prototype.toward = function (character, away) {
         var target = this.environment.player;
-        var dx = target.x - character.x, dy = target.y - character.y;
+        var dx = this.environment.deltaX ? this.environment.deltaX(target.x, character.x) : target.x - character.x;
+        var dy = this.environment.deltaY ? this.environment.deltaY(target.y, character.y) : target.y - character.y;
         if (dx === 0 && dy === 0) return [];
         var first = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 6 : 4) : (dy > 0 ? 2 : 8);
         var second = Math.abs(dx) > Math.abs(dy) ? (dy > 0 ? 2 : 8) : (dx > 0 ? 6 : 4);
@@ -133,7 +134,9 @@
         if (code === 14) {
             var from = mapApi.displayPosition(character), peak = 10 + Math.round(Math.hypot(p[0], p[1])) - speed;
             var jumpFrames = Math.max(1, peak * 2);
-            environment.locate(character, character.x + p[0], character.y + p[1], jumpFrames, peak);
+            var jumpX = character.x + p[0], jumpY = character.y + p[1];
+            environment.locate(character, jumpX, jumpY, jumpFrames, peak);
+            if (environment.motionOrigin) from = environment.motionOrigin(from, character, jumpX, jumpY);
             startMotion(character, from, jumpFrames, peak);
             if (!character.directionFixed && (p[0] || p[1])) {
                 character.direction = Math.abs(p[0]) > Math.abs(p[1]) ? (p[0] > 0 ? 6 : 4) : (p[1] > 0 ? 2 : 8);

@@ -19,8 +19,8 @@
             }
             var progress = event.autonomous;
             if (progress.failed || event.locked || engine.movement.jobs.has(event)) return;
-            if (!progress.chasing && !progress.returning && (Math.abs(event.x - engine.state.x) > engine.width / 96 + 12 ||
-                Math.abs(event.y - engine.state.y) > engine.height / 96 + 12)) return;
+            if (!progress.chasing && !progress.returning && (Math.abs(engine.map.deltaX(event.x, engine.state.x)) > engine.width / 96 + 12 ||
+                Math.abs(engine.map.deltaY(event.y, engine.state.y)) > engine.height / 96 + 12)) return;
             try {
                 if (!progress.validated) {
                     if (page.moveType === 3) movementApi.validateRoute(page.moveRoute);
@@ -34,7 +34,7 @@
 
     AutonomousMovement.prototype.advanceEvent = function (event, page, progress, frames) {
         var engine = this.engine, player = engine.state;
-        var dx = player.x - event.x, dy = player.y - event.y;
+        var dx = engine.map.deltaX(player.x, event.x), dy = engine.map.deltaY(player.y, event.y);
         var facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 6 : 4) : (dy > 0 ? 2 : 8);
         progress.lock = Math.max(0, progress.lock - frames);
         if (event.chaseRange > 0 && Math.abs(dx) + Math.abs(dy) <= event.chaseRange &&

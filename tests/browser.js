@@ -3493,6 +3493,40 @@ async function main() {
         })()`,false,false));
         await clickElement(cdp,'#fnh-choices button:nth-child(4)');
         await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'rời cửa phía sau quầy');
+        check('ba map lặp vẽ tile, nhân vật và follower liền mạch qua mép',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine;
+            for(const id of [157,160,185]){
+                await e.restore({mapId:id,x:1,y:1,direction:6,party:[1,3],alwaysDash:false});
+                const m=e.map,y=Array.from({length:m.height},(_,i)=>i).find(i=>m.isPassable(m.width-1,i,6) && !m.eventBlocks(0,i,-1));
+                if(y===undefined)return false;
+                e.state.x=m.width-1;e.state.y=y;e.resetCamera();const follower=e.state.followers()[0];follower.x=m.width-3;follower.y=y;
+                if(!e.move(6) || e.state.x!==0)return false;
+                e.state.scene='menu'; // Dừng frame trong lúc đợi PNG để so đúng vị trí.
+                const renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas'));
+                const tiles=[],actors=[],drawTile=renderer.drawTile,drawActor=renderer.drawActor;
+                renderer.drawTile=function(sheets,tile,x,y){tiles.push({tile,x,y});return drawTile.call(this,sheets,tile,x,y);};
+                renderer.drawActor=function(sheets,actor,x,y){actors.push({id:actor.id,x:actor.x-x,y:actor.y-y});return drawActor.call(this,sheets,actor,x,y);};
+                const view=m.viewport(e.state,816,624),row=Math.floor(view.startY);
+                await renderer.drawMap(e,++renderer.frame);
+                if(!actors.some(actor=>actor.id===Infinity && actor.x===8) ||
+                    !actors.some(actor=>actor.id===100003 && actor.x===6) ||
+                    !tiles.some(tile=>tile.tile===m.tileId(m.roundX(Math.floor(view.startX)+8),m.roundY(row),0) && tile.x===8 && tile.y===row-view.startY))return false;
+                e.state.scene='map';e.advanceRoutes(e.state.moveFrames/2);e.state.scene='menu';const before=e.save();await e.restore(before);
+                const position=FNHStandaloneMap.displayPosition(e.state),next=e.map.viewport(e.state,816,624);
+                if(position.x!==-0.5 || e.map.screenX(position.x,next.startX)!==8)return false;
+                e.state.scene='map';e.state.moveFrames=0;delete e.state.motion;
+                const vertical=Array.from({length:e.map.width},(_,i)=>i).find(i=>e.map.isPassable(i,e.map.height-1,2) && !e.map.eventBlocks(i,0,-1));
+                if(vertical===undefined)return false;
+                e.state.x=vertical;e.state.y=e.map.height-1;e.resetCamera();
+                if(!e.move(2) || e.state.y!==0)return false;
+                e.state.scene='menu';tiles.length=0;actors.length=0;
+                const verticalView=e.map.viewport(e.state,816,624),column=Math.floor(verticalView.startX);
+                await renderer.drawMap(e,++renderer.frame);
+                if(!actors.some(actor=>actor.id===Infinity && actor.y===6) ||
+                    !tiles.some(tile=>tile.tile===e.map.tileId(e.map.roundX(column),e.map.roundY(Math.floor(verticalView.startY)+6),0) && tile.x===column-verticalView.startX && tile.y===6))return false;
+            }
+            return true;
+        })()`,true,false));
 
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;

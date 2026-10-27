@@ -137,6 +137,10 @@
             if (track.path[0] === 'mapCamera') screen.finish(track);
         });
         delete screen.screen.mapCamera;
+        if (this.map && this.state && (this.map.loopX() || this.map.loopY())) {
+            var viewport = this.map.viewport(this.state, this.width, this.height);
+            screen.screen.mapCamera = { mapId: this.map.id, x: viewport.startX, y: viewport.startY };
+        }
         screen.revision++;
     };
 
@@ -155,8 +159,8 @@
         var camera = screen.screen.mapCamera = { mapId: map.id, x: viewport.startX, y: viewport.startY };
         var dx = direction === 4 ? -distance : direction === 6 ? distance : 0;
         var dy = direction === 8 ? -distance : direction === 2 ? distance : 0;
-        var goal = { x: Math.max(0, Math.min(Math.max(0, map.width - Math.ceil(this.width / 48)), camera.x + dx)),
-            y: Math.max(0, Math.min(Math.max(0, map.height - Math.ceil(this.height / 48)), camera.y + dy)) };
+        var goal = { x: map.loopX() ? camera.x + dx : Math.max(0, Math.min(Math.max(0, map.width - Math.ceil(this.width / 48)), camera.x + dx)),
+            y: map.loopY() ? camera.y + dy : Math.max(0, Math.min(Math.max(0, map.height - Math.ceil(this.height / 48)), camera.y + dy)) };
         var frames = (Math.abs(goal.x - camera.x) + Math.abs(goal.y - camera.y)) * 256 / Math.pow(2, speed);
         var done = screen.tween(['mapCamera'], goal, frames);
         screen.revision++;
@@ -166,12 +170,12 @@
     GameEngine.prototype.followCamera = function (dx, dy) {
         var camera = this.screen.screen.mapCamera;
         if (!camera || camera.mapId !== this.map.id) return;
-        var position = mapApi.displayPosition(this.state), x = position.x - camera.x, y = position.y - camera.y;
+        var position = mapApi.displayPosition(this.state), x = this.map.screenX(position.x, camera.x), y = this.map.screenY(position.y, camera.y);
         var centerX = Math.floor(Math.ceil(this.width / 48) / 2), centerY = Math.floor(Math.ceil(this.height / 48) / 2);
         var shiftX = (dx > 0 && x > centerX) || (dx < 0 && x < centerX) ? dx : 0;
         var shiftY = (dy > 0 && y > centerY) || (dy < 0 && y < centerY) ? dy : 0;
-        var nextX = Math.max(0, Math.min(Math.max(0, this.map.width - Math.ceil(this.width / 48)), camera.x + shiftX));
-        var nextY = Math.max(0, Math.min(Math.max(0, this.map.height - Math.ceil(this.height / 48)), camera.y + shiftY));
+        var nextX = this.map.loopX() ? camera.x + shiftX : Math.max(0, Math.min(Math.max(0, this.map.width - Math.ceil(this.width / 48)), camera.x + shiftX));
+        var nextY = this.map.loopY() ? camera.y + shiftY : Math.max(0, Math.min(Math.max(0, this.map.height - Math.ceil(this.height / 48)), camera.y + shiftY));
         shiftX = nextX - camera.x; shiftY = nextY - camera.y;
         camera.x = nextX; camera.y = nextY;
         this.screen.screen.tweens.forEach(function (track) {
@@ -240,13 +244,19 @@
             move: this.moveCharacter.bind(this),
             locate: function (character, x, y, frames, peak) {
                 var followers = character === engine.state ? engine.state.followers().map(function (entry) { return mapApi.displayPosition(entry); }) : [];
-                character.x = x; character.y = y;
+                character.x = engine.map.roundX(x); character.y = engine.map.roundY(y);
                 if (character === engine.state) engine.state.followers(true).forEach(function (entry, index) {
-                    var distance = Math.round(Math.hypot(entry.x - followers[index].x, entry.y - followers[index].y));
+                    var distance = Math.round(Math.hypot(engine.map.deltaX(entry.x, followers[index].x), engine.map.deltaY(entry.y, followers[index].y)));
                     var followerPeak = 10 + distance - (engine.state.moveSpeed == null ? 4 : engine.state.moveSpeed);
-                    movementApi.startMotion(entry, followers[index], Math.max(1, followerPeak * 2), followerPeak);
+                    var origin = { x: entry.x + engine.map.deltaX(followers[index].x, entry.x), y: entry.y + engine.map.deltaY(followers[index].y, entry.y) };
+                    movementApi.startMotion(entry, origin, Math.max(1, followerPeak * 2), followerPeak);
                 });
             },
+            motionOrigin: function (from, character, x, y) {
+                return { x: from.x + character.x - x, y: from.y + character.y - y };
+            },
+            deltaX: function (x, y) { return engine.map.deltaX(x, y); },
+            deltaY: function (x, y) { return engine.map.deltaY(x, y); },
             changed: function (character) {
                 if (character !== engine.state) engine.map.locateEvent(character.id, character.x, character.y, character.direction, true);
             },
@@ -325,9 +335,9 @@
             }
         }
         if (this.autonomous && this.autonomousEnabled) this.autonomous.advance(frames);
-        if (before) {
+        if (before && this.map) {
             var after = mapApi.displayPosition(this.state);
-            this.followCamera(after.x - before.x, after.y - before.y);
+            this.followCamera(this.map.deltaX(after.x, before.x), this.map.deltaY(after.y, before.y));
         }
         if (this.screen) this.screen.advance(frames);
         if (this.lighting) this.lighting.advance(frames);
@@ -340,8 +350,9 @@
         var delta = movementApi.DELTAS[direction];
         if (!delta) return false;
         if (!character.directionFixed && !backward) character.direction = vertical || direction;
-        var x = character.x + delta[0], y = character.y + delta[1];
-        if (vertical) y += movementApi.DELTAS[vertical][1];
+        var rawX = character.x + delta[0], rawY = character.y + delta[1];
+        if (vertical) rawY += movementApi.DELTAS[vertical][1];
+        var x = this.map.roundX(rawX), y = this.map.roundY(rawY);
         if (!this.map.isValid(x, y)) return false;
         if (!character.through) {
             var passable = vertical ?
@@ -363,6 +374,7 @@
             if (!passable || this.map.eventBlocks(x, y, character.id)) return false;
         }
         var from = mapApi.displayPosition(character);
+        from.x += x - rawX; from.y += y - rawY;
         frames = frames || (character === this.state ? this.playerStepFrames() : Math.pow(2, 8 - (character.moveSpeed == null ? 4 : character.moveSpeed)));
         if (character === this.state) this.followPlayer(frames);
         character.x = x; character.y = y;
@@ -374,7 +386,7 @@
     GameEngine.prototype.footstepSound = function (character) {
         var player = character === this.state;
         if (!this.state.footstepsEnabled || player && this.state.vehicleId !== -1 || /<No Footsteps>/i.test(character.note || '')) return null;
-        var distance = Math.abs(character.x - this.state.x) + Math.abs(character.y - this.state.y);
+        var distance = Math.abs(this.map.deltaX(character.x, this.state.x)) + Math.abs(this.map.deltaY(character.y, this.state.y));
         // Thiết lập nội dung gốc: SE mặc định 20/70, player 1.20, event 1.50
         // và giảm volume 0.10 mỗi ô. Pan giữ quy tắc khoảng cách của game.
         var volume = player ? 1.2 : 1.5 - distance * 0.1;
@@ -388,7 +400,7 @@
         var sound = region && find(map.data.note, 'Region', region) ||
             terrain && find(map.tileset.note, 'Terrain Tag', terrain) || find(map.data.note, 'Region', 0) || ['footstep_tile', 20, 70];
         return { name: sound[0], volume: Number(sound[1] || 20) * volume,
-            pitch: Number(sound[2] || 70), pan: player ? 0 : Math.max(-100, Math.min(100, this.state.x - character.x)) };
+            pitch: Number(sound[2] || 70), pan: player ? 0 : Math.max(-100, Math.min(100, this.map.deltaX(this.state.x, character.x))) };
     };
 
     GameEngine.prototype.playFootstep = function (character) {
@@ -401,9 +413,11 @@
         var followers = this.state.followers();
         for (var i = followers.length - 1; i >= 0; i--) {
             var follower = followers[i], ahead = i ? followers[i - 1] : this.state;
-            var dx = Math.sign(ahead.x - follower.x), dy = Math.sign(ahead.y - follower.y);
+            var dx = Math.sign(this.map.deltaX(ahead.x, follower.x)), dy = Math.sign(this.map.deltaY(ahead.y, follower.y));
             var from = mapApi.displayPosition(follower);
-            follower.x += dx; follower.y += dy;
+            var rawX = follower.x + dx, rawY = follower.y + dy;
+            follower.x = this.map.roundX(rawX); follower.y = this.map.roundY(rawY);
+            from.x += follower.x - rawX; from.y += follower.y - rawY;
             if (dx || dy) movementApi.startMotion(follower, from, frames || this.playerStepFrames());
             if ((dx || dy) && this.state.followersVisible) this.playFootstep(follower);
             if (!this.state.directionFixed) {
@@ -435,8 +449,8 @@
             var sourceMap = this.map;
             var moved = this.move(direction);
             if (this.state.scene !== 'map') return moved;
-            var x = this.state.x + (!moved ? direction === 4 ? -1 : direction === 6 ? 1 : 0 : 0);
-            var y = this.state.y + (!moved ? direction === 8 ? -1 : direction === 2 ? 1 : 0 : 0);
+            var x = this.map.roundX(this.state.x + (!moved ? direction === 4 ? -1 : direction === 6 ? 1 : 0 : 0));
+            var y = this.map.roundY(this.state.y + (!moved ? direction === 8 ? -1 : direction === 2 ? 1 : 0 : 0));
             if (moved) {
                 var waitId = this.screen.screen.nextId;
                 var finished = this.screen.tween([], {}, this.state.moveFrames);
@@ -464,16 +478,16 @@
         if (this.state.scene !== 'map') return null;
         if (this.eventRunning || this.messageRunning || this.stepRunning) return null;
         var direction = this.state.direction;
-        var x = this.state.x + (direction === 4 ? -1 : direction === 6 ? 1 : 0);
-        var y = this.state.y + (direction === 8 ? -1 : direction === 2 ? 1 : 0);
+        var x = this.map.roundX(this.state.x + (direction === 4 ? -1 : direction === 6 ? 1 : 0));
+        var y = this.map.roundY(this.state.y + (direction === 8 ? -1 : direction === 2 ? 1 : 0));
         var candidates = this.map.eventAt(this.state.x, this.state.y).map(function (event) {
             return { event: event, sameTile: true };
         }).concat(this.map.eventAt(x, y).map(function (event) {
             return { event: event, sameTile: false };
         }));
         if (this.map.isCounter(x, y)) {
-            var behindX = x + (direction === 4 ? -1 : direction === 6 ? 1 : 0);
-            var behindY = y + (direction === 8 ? -1 : direction === 2 ? 1 : 0);
+            var behindX = this.map.roundX(x + (direction === 4 ? -1 : direction === 6 ? 1 : 0));
+            var behindY = this.map.roundY(y + (direction === 8 ? -1 : direction === 2 ? 1 : 0));
             candidates = candidates.concat(this.map.eventAt(behindX, behindY).map(function (event) {
                 return { event: event, sameTile: false };
             }));
@@ -541,11 +555,11 @@
                 if (field === 2) return character.direction;
                 var viewport = engine.map.viewport(engine.state, engine.width, engine.height);
                 var position = mapApi.displayPosition(character);
-                if (field === 3) return Math.round((position.x - viewport.startX + 0.5) * 48);
+                if (field === 3) return Math.round((engine.map.screenX(position.x, viewport.startX) + 0.5) * 48);
                 var actor = character === engine.state && engine.state.actor(engine.state.party[0] || 1);
                 var name = character.characterName == null && actor ? actor.characterName : character.characterName;
                 var prefix = /^[!$]+/.exec(name || '');
-                return Math.round((position.y - viewport.startY + 1) * 48 - position.lift) - (prefix && prefix[0].includes('!') ? 0 : 6);
+                return Math.round((engine.map.screenY(position.y, viewport.startY) + 1) * 48 - position.lift) - (prefix && prefix[0].includes('!') ? 0 : 6);
             }
             if (gameData) return gameData(type, id, field, interpreter);
             throw new Error('Chưa hỗ trợ dữ liệu sự kiện: ' + [type, id, field].join(','));
@@ -1470,6 +1484,7 @@
         this.lighting.sources(map);
         this.pendingTouchEvents = [];
         this.resetMovement(state.routeSnapshots);
+        if ((map.loopX() || map.loopY()) && (!state.screen.mapCamera || state.screen.mapCamera.mapId !== map.id)) this.resetCamera();
         if (this.audio) {
             this.audio.restoreState(state.audio);
             if (!state.audio) this.playMapAudio();

@@ -346,6 +346,10 @@
         var rows = Math.ceil(this.canvas.height / TILE_SIZE);
         var viewport = map.viewport(state, this.canvas.width, this.canvas.height);
         var startX = viewport.startX, startY = viewport.startY;
+        actors.forEach(function (entry) {
+            entry.x = startX + map.screenX(entry.x, startX);
+            entry.y = startY + map.screenY(entry.y, startY);
+        });
         var context = this.context;
         context.fillStyle = '#080706';
         context.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -367,10 +371,10 @@
             }
             try {
                 var upper = [], renderer = this;
-                for (var y = Math.floor(startY); y < Math.min(map.height, startY + rows); y += 1) {
-                    for (var x = Math.floor(startX); x < Math.min(map.width, startX + cols); x += 1) {
+                for (var y = Math.floor(startY); y < (map.loopY() ? startY + rows : Math.min(map.height, startY + rows)); y += 1) {
+                    for (var x = Math.floor(startX); x < (map.loopX() ? startX + cols : Math.min(map.width, startX + cols)); x += 1) {
                         for (var z = 0; z < 4; z += 1) {
-                            var tileId = map.tileId(x, y, z);
+                            var tileId = map.tileId(map.roundX(x), map.roundY(y), z);
                             if ((map.tileset.flags[tileId] & 0x10) !== 0) upper.push([tileId, x - startX, y - startY]);
                             else this.drawTile(sheets, tileId, x - startX, y - startY);
                         }
@@ -402,7 +406,7 @@
                 context.clearRect(0,0,this.canvas.width,this.canvas.height);
                 context.drawImage(filtered,0,0); context.restore();
             }
-            if (engine.lighting) this.drawLighting(engine.lighting, lightSources, state, viewport);
+            if (engine.lighting) this.drawLighting(engine.lighting, lightSources, state, viewport, map);
             animationBitmaps.forEach(function (animation) { renderer.drawAnimation(animation, state, map, startX, startY); });
             this.drawFogs(fogs, 1, startX, startY); this.drawFogs(fogs, 0, startX, startY);
             if (state.regionCover && state.regionCover.enabled) this.drawRegionCover(map, state.regionCover, startX, startY, cols, rows);
@@ -431,7 +435,7 @@
         }
     };
 
-    CanvasRenderer.prototype.drawLighting = function (runtime, sources, player, viewport) {
+    CanvasRenderer.prototype.drawLighting = function (runtime, sources, player, viewport, map) {
         if (!runtime.definitions.length) return;
         if (!this.lightCanvas) this.lightCanvas = document.createElement('canvas');
         var mask = this.lightCanvas;
@@ -442,7 +446,8 @@
         context.fillStyle = '#000'; context.fillRect(0, 0, mask.width, mask.height);
         context.globalCompositeOperation = 'lighter';
         var position = mapApi.displayPosition(player);
-        var x = (position.x - viewport.startX + 0.5) * 48, y = (position.y - viewport.startY + 0.5) * 48;
+        var x = ((map ? map.screenX(position.x, viewport.startX) : position.x - viewport.startX) + 0.5) * 48;
+        var y = ((map ? map.screenY(position.y, viewport.startY) : position.y - viewport.startY) + 0.5) * 48;
         if (light.flashlight) {
             this.drawLight(context, x, y, { radius: 40, color: '#999999', brightness: 0 }, light.time, 0);
             var beam = light.flashlight, delta = { 2: [0,1], 4: [-1,0], 6: [1,0], 8: [0,-1] }[player.direction] || [0,1];
@@ -455,8 +460,8 @@
             brightness: light.radius > 0 ? Math.min(0.99, 20 / light.radius) : 0 }, light.time, 0);
         sources.forEach(function (source) {
             var position = mapApi.displayPosition(source.event);
-            renderer.drawLight(context, (position.x - viewport.startX + 0.5) * 48,
-                (position.y - viewport.startY + 0.5) * 48, source, light.time, source.event.id);
+            renderer.drawLight(context, ((map ? map.screenX(position.x, viewport.startX) : position.x - viewport.startX) + 0.5) * 48,
+                ((map ? map.screenY(position.y, viewport.startY) : position.y - viewport.startY) + 0.5) * 48, source, light.time, source.event.id);
         });
         this.context.save(); this.context.globalCompositeOperation = 'multiply';
         this.context.drawImage(mask, 0, 0); this.context.restore();
@@ -500,8 +505,10 @@
         var target = entry.targetId === -1 ? state : map.eventById(entry.targetId);
         if (!target) return;
         var position = mapApi.displayPosition(target);
-        this.drawAnimationCells(animation, (position.x - startX + 0.5) * TILE_SIZE,
-            (position.y - startY + (data.position === 2 ? 1 : data.position === 0 ? 0.35 : 0.5)) * TILE_SIZE - position.lift);
+        var x = map.screenX ? map.screenX(position.x, startX) : position.x - startX;
+        var y = map.screenY ? map.screenY(position.y, startY) : position.y - startY;
+        this.drawAnimationCells(animation, (x + 0.5) * TILE_SIZE,
+            (y + (data.position === 2 ? 1 : data.position === 0 ? 0.35 : 0.5)) * TILE_SIZE - position.lift);
     };
 
     CanvasRenderer.prototype.drawAnimationCells = function (animation, x, y) {
@@ -541,9 +548,9 @@
     CanvasRenderer.prototype.drawRegionCover = function (map, cover, startX, startY, cols, rows) {
         var context = this.context;
         context.save(); context.fillStyle = '#000';
-        for (var y = Math.floor(startY); y < Math.min(map.height, startY + rows); y += 1) {
-            for (var x = Math.floor(startX); x < Math.min(map.width, startX + cols); x += 1) {
-                if (!cover.open.includes(map.regionId(x, y))) context.fillRect((x - startX) * TILE_SIZE, (y - startY) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        for (var y = Math.floor(startY); y < (map.loopY() ? startY + rows : Math.min(map.height, startY + rows)); y += 1) {
+            for (var x = Math.floor(startX); x < (map.loopX() ? startX + cols : Math.min(map.width, startX + cols)); x += 1) {
+                if (!cover.open.includes(map.regionId(map.roundX(x), map.roundY(y)))) context.fillRect((x - startX) * TILE_SIZE, (y - startY) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
         }
         context.restore();

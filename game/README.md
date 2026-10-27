@@ -100,6 +100,10 @@ Movement route hỗ trợ lệnh 0–45: đi/quay/nhảy/chờ, công tắc, t�
 đổi hình, opacity/blend, SE và script. Route chạy theo frame, chờ va chạm hoặc bỏ
 qua theo `skippable`, có thể lặp/thay/hủy; save giữ vị trí, hình và tiến trình route.
 Test kiểm tra từng nhóm lệnh và quét hơn 100.000 route hiện có trong JSON.
+Ba map lặp hai chiều Map157/160/185 cho đi qua mép theo passability của tileset;
+tile, sprite, follower, animation, đèn và camera bám vị trí lặp. Nội suy và
+camera tiếp tục qua mép, save giữa bước giữ tiến trình; event và tìm đường dùng
+khoảng cách ngắn qua mép. Các map thường vẫn chặn biên.
 Tọa độ gameplay giữ theo ô; sprite nội suy theo frame cho bước thường, chạy,
 chéo, bước lùi, route cưỡng chế, AI và follower/guest. Nhảy giữ quỹ đạo parabol;
 camera, đèn, balloon và animation bám vị trí hiển thị giữa hai ô. Lưu/tải giữ
