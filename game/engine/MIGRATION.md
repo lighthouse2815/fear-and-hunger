@@ -18,7 +18,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 1. Combat: đối chiếu thêm phần thiết lập/kết thúc action và hiệu ứng kết liễu.
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
-2. Menu: đối chiếu đội hình, trang bị và các lựa chọn theo cấu hình gốc;
+2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
 3. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
 4. Luồng chính: đối chiếu tiếp nội dung kết thúc
@@ -28,6 +28,11 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Menu trang bị lọc quyền dùng/loại/ô và món trong túi; ô bị lock/seal vô hiệu
+  hóa. Vũ khí hai tay trả khiên về túi, tháo vũ khí mở lại ô; vòng nguyền giữ
+  khóa. Tối ưu/tháo hết theo thứ tự ô, tổng tám params và ID khi hòa, không tháo
+  ô khóa; chọn lại món đang dùng không cần bản sao. Unit quét 18 món lock/seal
+  thật; Chrome thao tác Crude sword/khiên/Ring of the still-blood và hai nút.
 - Sprite actor front view theo cấu hình gốc: bốn vị trí (102 + 204 × index,
   444), anchor 0.5/0.7, sheet 9×6 và frame 0/1/2/1 mỗi 12 frame. Motion
   Attack/skill/phép/item/Guard/trúng đòn/né và trạng thái/HP/chết đọc dữ liệu;

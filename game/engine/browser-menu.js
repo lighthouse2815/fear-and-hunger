@@ -139,20 +139,25 @@
                 });
             });
         } else if (this.tab === 'equipment' && actor) {
+            [['optimize','Tối ưu trang bị','optimizeMenuEquipment'],['clear','Tháo hết','clearMenuEquipment']].forEach(function (entry) {
+                var button=node('button',entry[1]);button.type='button';button.dataset.equipmentAction=entry[0];button.disabled=ui.busy;
+                button.onclick=function () { ui.act(function () { engine[entry[2]](actorId); }); };content.appendChild(button);
+            });
             actor.equips.forEach(function (equipped, slot) {
-                var kind = slot === 0 ? 'weapons' : 'armors';
                 var table = engine.database[slot === 0 ? 'Weapons' : 'Armors'];
                 var label = node('label', engine.database.System.equipTypes[slot + 1] + ': ');
                 var select = node('select'); select.dataset.slot = slot;
                 var empty = node('option', 'Tháo'); empty.value = 0; select.appendChild(empty);
-                table.filter(function (item) { return item && item.etypeId === slot + 1 && (item.id === equipped || state.itemCount(kind, item.id) > 0); }).forEach(function (item) {
+                table.filter(function (item) { return item && (item.id === equipped || engine.canEquipMenuActor(actorId,slot,item.id)); }).forEach(function (item) {
                     var option = node('option', item.name); option.value = item.id; select.appendChild(option);
                 });
-                select.value = equipped; select.disabled = ui.busy;
+                select.value = equipped; select.disabled = ui.busy || !engine.canChangeMenuEquipment(actorId,slot);
                 select.onchange = function () { ui.act(function () {
                     if (!engine.equipMenuActor(actorId, slot, Number(select.value))) throw new Error('Không thể đổi trang bị này.');
                 }); };
                 label.appendChild(select); content.appendChild(label);
+                if (equipped && table[equipped]) content.appendChild(node('p',table[equipped].description));
+                if (!engine.canChangeMenuEquipment(actorId,slot)) content.appendChild(node('p','Ô trang bị bị khóa hoặc bị phong ấn.'));
             });
         } else if (this.tab === 'options') {
             var settings = this.options.settings;

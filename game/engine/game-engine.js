@@ -787,15 +787,63 @@
         }
         return saveStore.save(slot, snapshot);
     };
-    GameEngine.prototype.equipMenuActor = function (actorId, slot, itemId) {
-        if (this.state.scene !== 'menu' || !this.state.party.includes(actorId)) return false;
+    GameEngine.prototype.canChangeMenuEquipment = function (actorId, slot) {
+        var actor = this.state.actor(actorId);
+        if (this.state.scene !== 'menu' || !this.state.party.includes(actorId) || !actor ||
+            !Number.isInteger(slot) || slot < 0 || slot >= actor.equips.length) return false;
         var traits = this.battle.battlerTraits({ id: actorId });
-        if (traits.some(function (trait) { return [53, 54].includes(trait.code) && trait.dataId === slot + 1; })) return false;
+        return !traits.some(function (trait) { return [53, 54].includes(trait.code) && trait.dataId === slot + 1; });
+    };
+    GameEngine.prototype.canEquipMenuActor = function (actorId, slot, itemId) {
+        if (!this.canChangeMenuEquipment(actorId, slot)) return false;
+        if (!Number.isInteger(itemId) || itemId < 0) return false;
+        if (!itemId) return true;
+        var actor = this.state.actor(actorId), traits = this.battle.battlerTraits({ id: actorId });
         var item = (slot === 0 ? this.database.Weapons : this.database.Armors)[itemId];
-        if (itemId && (!item || !traits.some(function (trait) {
+        return !!item && item.etypeId === slot + 1 && (actor.equips[slot] === itemId ||
+            this.state.itemCount(slot === 0 ? 'weapons' : 'armors',itemId) > 0) && traits.some(function (trait) {
             return trait.code === (slot === 0 ? 51 : 52) && trait.dataId === (slot === 0 ? item.wtypeId : item.atypeId);
-        }))) return false;
-        return this.state.equipActor(actorId, slot, itemId);
+        });
+    };
+    GameEngine.prototype.equipMenuActor = function (actorId, slot, itemId) {
+        if (!this.canEquipMenuActor(actorId, slot, itemId)) return false;
+        if (this.state.actor(actorId).equips[slot] === itemId) return true;
+        if (!this.state.equipActor(actorId, slot, itemId)) return false;
+        // Vũ khí hai tay có thể seal ô khiên; trả món vừa mất quyền dùng về túi.
+        var changed;
+        do {
+            changed = false;
+            this.state.actor(actorId).equips.slice().forEach(function (equipped,index) {
+                if (!equipped) return;
+                var traits = this.battle.battlerTraits({ id: actorId });
+                var item = (index === 0 ? this.database.Weapons : this.database.Armors)[equipped];
+                if (!item || traits.some(function (trait) { return trait.code === 54 && trait.dataId === index + 1; }) ||
+                    !traits.some(function (trait) { return trait.code === (index === 0 ? 51 : 52) && trait.dataId === (index === 0 ? item.wtypeId : item.atypeId); })) {
+                    this.state.equipActor(actorId,index,0); changed = true;
+                }
+            },this);
+        } while (changed);
+        return true;
+    };
+    GameEngine.prototype.clearMenuEquipment = function (actorId) {
+        if (this.state.scene !== 'menu' || !this.state.party.includes(actorId)) return false;
+        this.state.actor(actorId).equips.forEach(function (_,slot) {
+            if (this.canChangeMenuEquipment(actorId,slot)) this.equipMenuActor(actorId,slot,0);
+        },this);
+        return true;
+    };
+    GameEngine.prototype.optimizeMenuEquipment = function (actorId) {
+        if (!this.clearMenuEquipment(actorId)) return false;
+        this.state.actor(actorId).equips.forEach(function (_,slot) {
+            var table = slot === 0 ? this.database.Weapons : this.database.Armors, best = null, performance = -1000;
+            table.forEach(function (item) {
+                if (!item || !this.canEquipMenuActor(actorId,slot,item.id)) return;
+                var value = item.params.reduce(function (sum,param) { return sum + param; },0);
+                if (value > performance) { performance = value; best = item; }
+            },this);
+            if (best) this.equipMenuActor(actorId,slot,best.id);
+        },this);
+        return true;
     };
     GameEngine.prototype.synthesisIngredients = function (kind, id) {
         var table = this.database[{ item: 'Items', weapon: 'Weapons', armor: 'Armors' }[kind]], target = table && table[id];

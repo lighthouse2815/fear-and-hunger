@@ -203,7 +203,11 @@ thể bị hạ. Lệnh 339 cùng luồng lượt đều chờ animation phản 
 kết quả và save giữ báo cáo mà không áp dụng sát thương lại.
 Preview có nút **Menu** (hoặc Escape trên bản đồ): chọn nhân vật để xem chỉ số,
 trạng thái, kỹ năng, túi đồ và đổi trang bị. Trang bị trao đổi với túi đồ và tôn
-trọng loại trang bị/ô bị khóa. Vật phẩm dùng ngoài trận đọc công thức hồi HP/MP,
+trọng loại trang bị/ô bị khóa. Danh sách chỉ hiện món có thể dùng; ô bị khóa hoặc
+phong ấn không cho chọn. Vũ khí hai tay trả khiên về túi và khóa ô Shield, tháo
+vũ khí thì mở lại. **Tối ưu trang bị** chọn theo tổng tám chỉ số và thứ tự ID;
+**Tháo hết** chỉ tháo các ô được phép, giữ vòng nguyền và giáp khóa. Chọn lại
+món đang dùng không cần một bản sao trong túi. Vật phẩm dùng ngoài trận đọc công thức hồi HP/MP,
 state, học skill và common event từ JSON; Blue vial trả vỏ chai và scroll dạy
 đúng nhân vật được chọn. Khi menu mở, map/di chuyển/timer được tạm dừng.
 Trong trận có thể chọn nhân vật, kỹ năng đã học hoặc Guard, mục tiêu quái/đồng đội.

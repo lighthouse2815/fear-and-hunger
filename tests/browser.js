@@ -1275,6 +1275,47 @@ async function main() {
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.menuBefore).then(()=>true)',true,false);
         await evalPage(cdp,'delete window.menuBefore;delete window.menuEvent',false,false);
         await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;window.equipmentBefore=e.save();e.openMenu();e.clearMenuEquipment(1);
+            const traits=e.battle.battlerTraits({id:1}),wrong=e.database.Weapons.find(item=>item&&!traits.some(t=>t.code===51&&t.dataId===item.wtypeId));
+            window.equipmentWrong=wrong.id;e.state.gainItem('weapons',wrong.id,1);e.state.gainItem('weapons',4,1);e.state.gainItem('armors',28,1);
+            const shield=e.database.Armors.find(item=>item&&item.etypeId===2&&traits.some(t=>t.code===52&&t.dataId===item.atypeId));
+            window.equipmentShield=shield.id;window.equipmentShieldCount=e.state.itemCount('armors',shield.id);e.state.gainItem('armors',shield.id,1);
+            e.closeMenu();
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-menu');await clickElement(cdp,'[data-menu-tab="equipment"]');
+        await evalPage(cdp,`(() => {
+            const select=document.querySelector('#fnh-menu-actor');select.value='1';select.dispatchEvent(new Event('change'));
+        })()`,false,false);
+        check('menu trang bị lọc món không dùng được và có tối ưu/tháo hết',await evalPage(cdp,`(() => {
+            const select=document.querySelector('select[data-slot="0"]');
+            return !Array.from(select.options).some(option=>Number(option.value)===window.equipmentWrong) &&
+                !!document.querySelector('[data-equipment-action="optimize"]') && !!document.querySelector('[data-equipment-action="clear"]');
+        })()`,false,false));
+        await evalPage(cdp,`(() => {
+            const select=document.querySelector('select[data-slot="1"]');select.value=window.equipmentShield;select.dispatchEvent(new Event('change'));
+        })()`,false,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.actor(1).equips[1]===window.equipmentShield && !document.querySelector("select[data-slot=\\"0\\"]").disabled',5000,'đeo khiên trước vũ khí hai tay');
+        await evalPage(cdp,`(() => {
+            const select=document.querySelector('select[data-slot="0"]');select.value=4;select.dispatchEvent(new Event('change'));
+        })()`,false,false);
+        await waitFor(cdp,'document.querySelector("select[data-slot=\\"1\\"]").disabled',5000,'vũ khí hai tay khóa ô khiên');
+        check('Crude sword trả khiên về túi và UI khóa ô Shield',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.actor(1).equips[1]===0 && FNHStandalonePreview.engine.state.itemCount("armors",window.equipmentShield)===window.equipmentShieldCount+1',false,false));
+        await evalPage(cdp,`(() => {
+            const select=document.querySelector('select[data-slot="4"]');select.value=28;select.dispatchEvent(new Event('change'));
+        })()`,false,false);
+        await waitFor(cdp,'document.querySelector("select[data-slot=\\"4\\"]").disabled',5000,'vòng nguyền khóa ô phụ kiện');
+        await clickElement(cdp,'[data-equipment-action="clear"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.actor(1).equips[0]===0 && !document.querySelector("[data-equipment-action=\\"optimize\\"]").disabled',5000,'tháo các ô thay được');
+        await clickElement(cdp,'[data-equipment-action="optimize"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.actor(1).equips[0]>0 && !document.querySelector("[data-equipment-action=\\"clear\\"]").disabled',5000,'tối ưu trang bị dùng được');
+        check('tháo hết và tối ưu giữ Ring of the still-blood bị khóa',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.actor(1).equips[4]===28 && document.querySelector("select[data-slot=\\"4\\"]").disabled && document.querySelector("#fnh-menu-content").textContent.includes("Ô trang bị bị khóa")',false,false));
+        await evalPage(cdp,`(async()=>{
+            await FNHStandalonePreview.engine.restore(window.equipmentBefore);
+            for(const key of ['equipmentBefore','equipmentWrong','equipmentShield','equipmentShieldCount'])delete window[key];
+        })()`,true,false);
+        await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine;window.menuSkillBefore=e.save();e.state.addActor(3);
             [1,3].forEach(id=>{e.state.recoverActor(id);e.state.changeActorHp(id,-80,true);});
             [151,238,189,218].forEach(id=>e.state.changeActorSkill(1,id,true));
