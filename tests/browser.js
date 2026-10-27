@@ -2089,6 +2089,27 @@ async function main() {
             return result.enemies === 5 && !renderer.images.has('img/enemies/khong-ton-tai.png');
         })()`, true, false));
         await evalPage(cdp, 'delete window.battleExpectedPixels', false, false);
+        check('ảnh nền trận từ map ẩn nhân vật/NPC nhưng giữ map và không đổi cờ gameplay',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
+            await e.boot({mapId:74,x:8,y:8,party:[1,3]});e.state.followersVisible=true;
+            const canvas=document.createElement('canvas'),renderer=new FNHStandaloneCanvas.CanvasRenderer(canvas);
+            const api=FNHStandaloneCanvas.CanvasRenderer.prototype,original=api.drawActor,draws=[];
+            api.drawActor=function(...args){if(this===renderer || this.hideCharacters)draws.push({hidden:this.hideCharacters,id:args[1].id});return original.apply(this,args);};
+            try{
+                await renderer.draw(e);if(!draws.length || draws.every(entry=>!Number.isFinite(entry.id)))return false;
+                const snapshot=e.save();draws.length=0;e.battle.setup(1);e.state.scene='battle';e.screen.screen.battlebacks=['',''];
+                const result=await renderer.draw(e),background=await renderer.battleSnapshot;
+                const first=background.getContext('2d').getImageData(0,0,816,624).data;
+                if(result.enemies!==7 || draws.length || e.state.transparent!==snapshot.transparent || e.state.followersVisible!==snapshot.followersVisible)return false;
+                const ref=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas'),{hideCharacters:true});await ref.drawMap(e,++ref.frame);
+                const expected=ref.context.getImageData(0,0,816,624).data;
+                if(!first.every((value,index)=>value===expected[index]))return false;
+                const cached=renderer.battleSnapshot;e.state.x++;await renderer.draw(e);
+                if(renderer.battleSnapshot!==cached)return false;
+                e.battle.finish('escape');e.leaveBattle('escape');draws.length=0;await renderer.draw(e);
+                return draws.length>0 && draws.every(entry=>!entry.hidden);
+            }finally{api.drawActor=original;}
+        })()`,true,false));
         check('sprite actor front view cắt đúng PNG, anchor, motion và frame vũ khí qua save',await evalPage(cdp,`(async()=>{
             const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
             await e.boot({mapId:74,x:8,y:8,party:[1,2,3,4]});e.battle.setup(1);e.state.scene='battle';

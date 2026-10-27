@@ -25,6 +25,10 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Nền trận không có battleback chụp map với sprite nhân vật/follower/NPC ẩn
+  như startEncounterEffect gốc; giữ tile/sương/lớp map. Snapshot cache theo trận,
+  không đổi transparent/followersVisible và rời trận vẽ sprite bình thường.
+  Chrome so pixel ảnh map ẩn sprite, kiểm tra không gọi drawActor lúc chụp.
 - MainMenuManager thật bật item/equip/synthesis/skill/options/gameEnd; không
   bật Formation hoặc Save, Hide Gold Window=true. Luồng có sự kiện giữ cấu
   hình này, bỏ nút lưu/tải nhanh; preview mặc định giữ công cụ kiểm tra.

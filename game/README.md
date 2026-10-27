@@ -114,6 +114,9 @@ này bắt đầu tại trang kết thúc, chưa thay thế kiểm thử cả h�
 Trận đấu vẽ nền battleback và sprite quái từ PNG, đặt từng bộ phận theo Troops.json
 và xếp lớp theo tọa độ. Bộ phận ẩn hoặc đã chết không được vẽ. Khi không có nền
 chỉ định, renderer làm mờ ảnh bản đồ hiện tại. Giao diện hiển thị HP/MP trong đội.
+Ảnh nền này ẩn sprite nhân vật, follower và NPC trước khi chụp, giữ tile/sương
+và các lớp map. Ảnh được giữ riêng cho trận; rời trận vẽ lại nhân vật bình thường,
+không thay cờ ẩn của gameplay để tạo snapshot.
 Luồng 301 chờ kết quả rồi chỉ chạy nhánh 601/602/603 tương ứng; trận thua bắt buộc
 dừng event và mở màn game over. Combat còn thiếu cơ chế plugin mở rộng để thay entry chính.
 Lệnh 337 phát animation trên quái bằng sprite sheet PNG hiện có: chọn một hoặc

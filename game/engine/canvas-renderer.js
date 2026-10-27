@@ -18,6 +18,7 @@
         this.canvas.height = options.height || 624;
         this.context.imageSmoothingEnabled = false;
         this.frame = 0;
+        this.hideCharacters = options.hideCharacters === true;
     }
 
     CanvasRenderer.prototype.loadImage = function (relative) {
@@ -146,7 +147,7 @@
             this.battleSnapshot = (async function () {
                 var snapshot = document.createElement('canvas');
                 var mapRenderer = new CanvasRenderer(snapshot, { baseUrl: renderer.baseUrl,
-                    width: renderer.canvas.width, height: renderer.canvas.height });
+                    width: renderer.canvas.width, height: renderer.canvas.height, hideCharacters: true });
                 mapRenderer.images = renderer.images;
                 await mapRenderer.drawMap(engine, ++mapRenderer.frame);
                 return snapshot;
@@ -332,6 +333,7 @@
                 }, transparent: state.transparent, opacity: state.opacity, blendMode: state.blendMode, balloon: null }));
             });
         }
+        if (this.hideCharacters) actors = [];
         await Promise.all(actors.map(async function (entry) {
             var name = entry.image.characterName;
             if (name) entry.bitmap = await this.loadImage('img/characters/' + name + '.png');
