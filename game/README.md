@@ -79,6 +79,7 @@ Interpreter chạy được common event lồng nhau, vòng lặp có giới h�
 trong trận chỉ tính bốn người tham chiến, guest không tính là thành viên party.
 Lệnh trừ vũ khí/giáp có cùng cờ lấy trong túi trước rồi tháo đồ đang đeo nếu
 thiếu; common event nguyền Short sword nhận đúng kiếm và không nhân đôi đồ.
+Số lượng mỗi loại vật phẩm, vũ khí hoặc giáp trong túi giới hạn ở 99 như game gốc.
 Lệnh hoặc loại điều kiện chưa triển khai sẽ báo lỗi cụ thể thay vì tự bỏ qua.
 `engine/script-runtime.js` chuyển 1.082 biến thể script hiện có trong JSON thành
 thao tác dữ liệu: đổi hình character/face/battler, đặt giới hạn HP, cấu hình chase

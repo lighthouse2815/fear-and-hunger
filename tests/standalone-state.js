@@ -18,6 +18,12 @@ assert.equal(state.variableValue(4), 12.5);
 assert.equal(state.selfSwitchValue(74, 8, 'A'), true);
 assert.equal(state.itemCount('items', 7), 2);
 assert.equal(state.itemCount('weapons', 2), 1);
+for (const kind of ['items', 'weapons', 'armors']) {
+    state.gainItem(kind, 90, 98); state.gainItem(kind, 90, 2);
+    assert.equal(state.itemCount(kind, 90), 99, kind + ' không cộng quá giới hạn gốc');
+    state.gainItem(kind, 90, -1); assert.equal(state.itemCount(kind, 90), 98);
+    state.gainItem(kind, 90, -1000); assert.equal(state.itemCount(kind, 90), 0);
+}
 
 const saved = state.toJSON();
 saved.switches[10] = false;

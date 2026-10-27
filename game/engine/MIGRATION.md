@@ -25,6 +25,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Túi giới hạn 99 mỗi loại item/vũ khí/giáp khi cộng qua sự kiện hoặc gameplay;
+  unit và Chrome kiểm tra phần thưởng hai trứng từ common 52, giảm và save.
 - Lệnh 127/128 có cờ lấy trang bị: trừ túi trước, thiếu mới tháo theo thứ tự
   party/ô, kể cả đồ khóa; battle chỉ tính người tham chiến, không lấy của guest.
   Common 193 biến Short sword đang đeo thành Cursed short sword đúng một lần;

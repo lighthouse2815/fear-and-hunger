@@ -320,7 +320,7 @@
         if (!Number.isFinite(quantity)) throw new TypeError('Số lượng vật phẩm không hợp lệ: ' + amount);
         var key = String(id);
         var next = (this.inventory[kind][key] || 0) + quantity;
-        if (next > 0) this.inventory[kind][key] = Math.floor(next);
+        if (next > 0) this.inventory[kind][key] = Math.min(99, Math.floor(next));
         else delete this.inventory[kind][key];
     };
 

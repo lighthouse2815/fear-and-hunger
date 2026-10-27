@@ -3513,6 +3513,16 @@ async function main() {
                 return e.state.actor(4).equips[0]===0 && e.state.itemCount('weapons',13)===1;
             }finally{await e.restore(snapshot);}
         })()`,true,false));
+        check('phần thưởng trứng thật không cộng vượt 99 và giữ đúng qua save',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine,snapshot=e.save();
+            try{
+                const command=e.database.CommonEvents[52].list.find(entry=>entry.code===126 && entry.parameters[0]===15 && entry.parameters[1]===0 && entry.parameters[3]===2);
+                if(!command)return false;
+                e.state.gainItem('items',15,-99);e.state.gainItem('items',15,98);
+                await e.createInterpreter([command],0).run();if(e.state.itemCount('items',15)!==99)return false;
+                await e.restore(e.save());return e.state.itemCount('items',15)===99;
+            }finally{await e.restore(snapshot);}
+        })()`,true,false));
         check('ba map lặp vẽ tile, nhân vật và follower liền mạch qua mép',await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine;
             for(const id of [157,160,185]){
