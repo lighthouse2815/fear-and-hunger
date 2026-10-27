@@ -42,6 +42,17 @@ function step(engine, direction) {
     await walk.interact();
     assert.equal(walk.state.switchValue(6), true);
 
+    for (const trigger of [0, 1, 2]) {
+        const facing = await fixture({ 1: map([event(1, trigger, 1, [{ code: 121, parameters: [40 + trigger, 40 + trigger, 0] }, { code: 0 }])]) });
+        await facing.interact();
+        assert.equal(facing.state.switchValue(40 + trigger), true, 'xác nhận trước mặt kích hoạt cả event chạm ' + trigger);
+        assert.equal(facing.state.x, 0, 'tương tác không tự bước vào event');
+    }
+    const beneath = await fixture({ 1: map([event(1, 2, 0, [{ code: 121, parameters: [49, 49, 0] }, { code: 0 }])]) });
+    beneath.state.x = 1;
+    assert.equal(await beneath.interact(), null, 'event chạm dưới chân không chạy bằng nút xác nhận');
+    assert.equal(beneath.state.switchValue(49), false);
+
     const bump = await fixture({ 1: map([event(1, 2, 1, [
         { code: 101, parameters: [] }, { code: 401, parameters: ['Bị chặn'] },
         { code: 121, parameters: [5, 5, 0] }

@@ -33,6 +33,8 @@ bấm **Tiếp tục** để đọc hội thoại. Dùng mũi tên hoặc các n
 khi hội thoại/sự kiện đang chạy, engine khóa di chuyển và các sự kiện khác.
 Tương tác bỏ trang chỉ có lệnh kết thúc, để event rỗng dưới chân không che cửa
 phía trước; cửa đôi ở Map051 mở được bằng lựa chọn và route JSON thật.
+Nút tương tác cũng kích hoạt event chạm ở ô trước mặt, gồm Guard thật, như nút
+xác nhận của game gốc; event chạm dưới chân vẫn chờ người chơi bước tới.
 Giữ nút hướng trên điện thoại để đi liên tục; thả tay, hủy chạm, mất capture
 hoặc rời trang dừng hướng. Nhiều ngón và bàn phím giữ cùng hướng không xóa
 trạng thái của nhau. Chạm nhanh vẫn điều khiển được màn chọn nhân vật bằng JSON;

@@ -3473,6 +3473,16 @@ async function main() {
         })()`,false,false));
         await evalPage(cdp,'__realAutorunScheduler.stop();delete window.__realAutorunScheduler',false,false);
         await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'hủy autorun kiểm tra');
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore({mapId:51,x:63,y:46,direction:6,party:[1]}).then(()=>true)',true,false);
+        await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle && FNHStandalonePreview.engine.battle.battle.phase==="input"',10000,'xác nhận trước Guard thật');
+        check('nút tương tác kích hoạt Guard chạm ở ô phía trước',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine,p=e.map.eventPage(e.map.eventById(9));
+            return p.trigger===2 && e.map.eventById(9).locked && e.battle.battle.troopId===1 &&
+                e.state.x===63 && e.state.y===46 && e.state.scene==='battle';
+        })()`,false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.battle.finish("escape")',false,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="map" && !FNHStandalonePreview.engine.eventRunning',10000,'kết thúc ca Guard chạm');
 
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;

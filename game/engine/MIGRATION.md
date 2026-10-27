@@ -25,6 +25,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Nút xác nhận kích hoạt event priority thường phía trước với trigger 0/1/2;
+  dưới chân chỉ trigger 0. Chrome gọi Guard trigger 2 thật ở Map051, chờ trận
+  troop 1 rồi thoát; unit đối chiếu cả ba trigger và không tự bước.
 - Scheduler bỏ autorun map và touch được xếp hàng nếu trang chỉ có lệnh kết thúc,
   như Game_Event.start gốc; parallel và common event giữ hành vi riêng. Map001
   có event 3/4 luôn rỗng: Chrome và unit xác nhận event 84 thật vẫn chạy và bật

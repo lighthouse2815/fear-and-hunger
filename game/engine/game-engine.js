@@ -474,7 +474,8 @@
         for (var i = 0; i < candidates.length; i += 1) {
             var candidate = candidates[i];
             var page = this.map.eventPage(candidate.event);
-            if (page && page.trigger === 0 && page.list && page.list.some(function (command) { return command.code !== 0; }) &&
+            var triggerMatches = candidate.sameTile ? page && page.trigger === 0 : page && [0, 1, 2].includes(page.trigger);
+            if (triggerMatches && page.list && page.list.some(function (command) { return command.code !== 0; }) &&
                 candidate.sameTile === (page.priorityType !== 1)) {
                 return this.runEvent(candidate.event.id, handlers);
             }
