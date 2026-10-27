@@ -773,8 +773,8 @@
         return reports;
     };
     BattleRuntime.prototype.checkResult = function () {
-        if (!this.aliveEnemies().length) this.finish('victory');
-        else if (!this.aliveActors().length) this.finish(this.battle.canLose ? 'defeat-continue' : 'defeat');
+        if (!this.aliveActors().length) this.finish(this.battle.canLose ? 'defeat-continue' : 'defeat');
+        else if (!this.aliveEnemies().length) this.finish('victory');
         return this.battle.result;
     };
     BattleRuntime.prototype.unitAgility = function (members) {

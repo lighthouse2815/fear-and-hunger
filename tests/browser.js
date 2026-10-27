@@ -1689,6 +1689,38 @@ async function main() {
         await waitFor(cdp, 'document.querySelector("#fnh-battle").hidden && !document.querySelector("#fnh-menu-dialog").open',
             5000, 'UI khôi phục bản đồ trước khi tương tác sự kiện kế tiếp');
         await evalPage(cdp, `(() => {
+            const e=FNHStandalonePreview.engine,db=e.database;window.endphaseBefore=e.save();
+            const c=(code,parameters=[])=>({code,parameters,indent:0}),enemyId=db.Enemies.length,troopId=db.Troops.length;
+            db.Enemies.push({...db.Enemies[1],id:enemyId,params:[100,100,1,1,1,1,10,1],traits:[],actions:[]});
+            db.Troops.push({id:troopId,members:[{enemyId,x:408,y:400}],pages:[
+                {span:0,conditions:{switchValid:true,switchId:6150},list:[c(331,[-1,1,0,99999,true])]},
+                {span:0,conditions:{enemyValid:true,enemyIndex:0,enemyHp:0},list:[c(101,['',0,0,2]),c(401,['Sự kiện trước khi kết thúc trận.'])]},
+                {span:0,conditions:{enemyValid:true,enemyIndex:0,enemyHp:0},list:[c(126,[8,0,0,1]),c(122,[6151,6151,1,0,1])]}
+            ]});
+            e.state.setSwitch(6150,true);e.state.setSwitch(6152,false);e.state.setVariable(6151,0);
+            window.endphaseItems=e.state.itemCount('items',8);window.endphasePage=e.map.eventPage(e.map.eventById(39));
+            window.endphaseOriginalList=window.endphasePage.list;
+            window.endphasePage.list=[c(301,[0,troopId,true,true]),c(121,[6152,6152,0])];
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+        await waitFor(cdp,'!document.querySelector("#fnh-next").hidden && document.querySelector("#fnh-message").textContent.includes("Sự kiện trước khi kết thúc trận")',
+            5000,'page 0 HP mở thoại trước khi chốt thắng');
+        check('troop đã bị hạ vẫn giữ thoại, khóa battle và chưa chạy event map',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.aliveEnemies().length===0 && !FNHStandalonePreview.engine.battle.battle.result && FNHStandalonePreview.engine.state.scene==="battle" && document.querySelector("#fnh-battle-attack").disabled && !FNHStandalonePreview.engine.state.switchValue(6152) && FNHStandalonePreview.engine.state.itemCount("items",8)===window.endphaseItems',false,false));
+        await clickElement(cdp,'#fnh-next');
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.scene==="map"',5000,'hoàn tất tất cả page rồi trở về map');
+        check('page sau thoại phát thưởng một lần rồi mới trả kết quả thắng',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.result==="victory" && FNHStandalonePreview.engine.state.switchValue(6152) && FNHStandalonePreview.engine.state.variableValue(6151)===1 && FNHStandalonePreview.engine.state.itemCount("items",8)===window.endphaseItems+1',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(FNHStandalonePreview.engine.save()).then(()=>true)',true,false);
+        check('tải save sau end phase không phát thưởng hay chạy page lần hai',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.variableValue(6151)===1 && FNHStandalonePreview.engine.state.itemCount("items",8)===window.endphaseItems+1',false,false));
+        await evalPage(cdp, `(async()=>{
+            window.endphasePage.list=window.endphaseOriginalList;
+            await FNHStandalonePreview.engine.restore(window.endphaseBefore);
+            delete window.endphaseBefore;delete window.endphaseItems;delete window.endphasePage;delete window.endphaseOriginalList;
+        })()`,true,false);
+        await waitFor(cdp,'document.querySelector("#fnh-battle").hidden',5000,'khôi phục map sau kiểm tra end phase');
+        await evalPage(cdp, `(() => {
             const engine = FNHStandalonePreview.engine;
             const page = engine.map.eventPage(engine.map.eventById(39));
             window.battleOriginalPage = { page, list: page.list };

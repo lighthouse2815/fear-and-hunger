@@ -669,7 +669,6 @@
                 var ending = runtime.pendingResult; runtime.pendingResult = null;
                 runtime.finish(ending); return;
             }
-            runtime.checkResult();
         }
         if (!battle.result) runtime.checkResult();
     };

@@ -143,6 +143,86 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
     assert.equal(guard.state.switchValue(6009), true);
     assert.equal(guard.state.scene, 'map');
 
+    // EndPhaseTriggers phải xử lý cả các page vừa được mở bởi page trước,
+    // dù troop hoặc party đã bị hạ. Chỉ chốt kết quả khi không còn page hợp lệ.
+    const ending = await boot(); let finishMessage;
+    const messageDone = new Promise(resolve => { finishMessage = resolve; });
+    ending.state.setSwitch(6150, true);
+    const endingItems = ending.state.itemCount('items', 8);
+    const endingId = troop([
+        page({ switchValid: true, switchId: 6150 }, [command(331, [-1, 1, 0, 99999, true]), variable(6150)]),
+        page({ enemyValid: true, enemyIndex: 0, enemyHp: 0 }, [command(101, ['', 0, 0, 2]),
+            command(401, ['Sự kiện sau khi quái bị hạ']), command(126, [8, 0, 0, 1]), variable(6151)]),
+        page({ enemyValid: true, enemyIndex: 0, enemyHp: 0 }, [variable(6152)])
+    ], ending);
+    running = start(ending, endingId, { message: () => messageDone }); await flush();
+    assert.equal(ending.battle.battle.result, null, 'chưa chốt thắng trước thoại của page 0 HP');
+    assert.equal(ending.state.scene, 'battle'); assert.equal(ending.state.switchValue(6009), false);
+    assert.equal(ending.state.itemCount('items', 8), endingItems);
+    await assert.rejects(ending.battleAttack(1, 0), /Chưa đến lượt/);
+    finishMessage(); await running;
+    assert.equal(ending.battle.battle.result, 'victory'); assert.equal(ending.state.variableValue(6150), 1);
+    assert.equal(ending.state.variableValue(6151), 1); assert.equal(ending.state.variableValue(6152), 1);
+    assert.equal(ending.state.itemCount('items', 8), endingItems + 1, 'phần thưởng sự kiện trước khi trả kết quả trận');
+    assert.equal(ending.state.switchValue(6009), true); assert.equal(ending.state.scene, 'map');
+    await ending.restore(ending.save());
+    assert.equal(ending.state.itemCount('items', 8), endingItems + 1); assert.equal(ending.state.variableValue(6151), 1, 'save không phát thưởng lại');
+
+    const revival = await boot(); revival.state.setSwitch(6153, true);
+    const revivalId = troop([
+        page({ switchValid: true, switchId: 6153 }, [command(331, [-1, 1, 0, 99999, true])]),
+        page({ enemyValid: true, enemyIndex: 0, enemyHp: 0 }, [command(334, [0]), variable(6153)])
+    ], revival);
+    running = start(revival, revivalId); await flush();
+    assert.equal(revival.battle.battle.result, null, 'hồi sinh quái ở page cuối ngăn chốt thắng');
+    assert.equal(revival.battle.enemy(0).hp, revival.battle.enemy(0).mhp); assert.equal(revival.battle.battle.phase, 'input');
+    assert.equal(revival.state.variableValue(6153), 1); revival.battle.random = () => 0;
+    await revival.battleEscape(); await running;
+
+    const rescue = await boot(); rescue.state.setSwitch(6154, true);
+    const rescueId = troop([
+        page({ switchValid: true, switchId: 6154 }, [command(311, [0, 1, 1, 0, 99999, true])]),
+        page({ actorValid: true, actorId: 1, actorHp: 0 }, [command(314, [0, 1]), variable(6154)])
+    ], rescue);
+    running = start(rescue, rescueId); await flush();
+    assert.equal(rescue.battle.battle.result, null, 'page hồi phục đội ngăn chốt thua');
+    assert.equal(rescue.state.actor(1).hp, rescue.state.actorParam(1, 0)); assert.equal(rescue.state.variableValue(6154), 1);
+    rescue.battle.random = () => 0; await rescue.battleEscape(); await running;
+
+    const tie = await boot(); tie.state.setSwitch(6155, true);
+    const tieId = troop([page({ switchValid: true, switchId: 6155 }, [
+        command(311, [0, 1, 1, 0, 99999, true]), command(331, [-1, 1, 0, 99999, true])
+    ])], tie);
+    await start(tie, tieId); assert.equal(tie.battle.battle.result, 'defeat-continue', 'hai phe cùng bị hạ ưu tiên thua');
+
+    const butterfly = await boot();
+    running = start(butterfly, 9, handlers); await flush();
+    butterfly.battle.handleEffect(333, [1, 0, 1]); await butterfly.runBattlePages(false, handlers); await running;
+    assert.equal(butterfly.battle.battle.result, 'victory');
+    assert.equal(butterfly.battle.battle.eventFlags.turns[5], butterfly.battle.battle.turn, 'Butterfly chạy page HEAD DESTROYED thật');
+    assert.ok(butterfly.battle.battle.eventFlags.once[9], 'page BODY DESTROYED thật vẫn chạy sau khi head page hạ cả troop');
+    assert.equal(butterfly.state.switchValue(737), true); assert.equal(butterfly.state.switchValue(230), true);
+
+    const endError = await boot(); endError.state.setSwitch(6156, true);
+    const endErrorId = troop([
+        page({ switchValid: true, switchId: 6156 }, [command(331, [-1, 1, 0, 99999, true])]),
+        page({ enemyValid: true, enemyIndex: 0, enemyHp: 0 }, [command(999)])
+    ], endError);
+    await assert.rejects(start(endError, endErrorId), /Chưa hỗ trợ lệnh 999/);
+    assert.equal(endError.battle.battle.result, 'abort'); assert.equal(endError.state.switchValue(6009), false);
+
+    const endCancel = await boot(), endController = new AbortController(); endCancel.state.setSwitch(6157, true);
+    const endCancelId = troop([
+        page({ switchValid: true, switchId: 6157 }, [command(331, [-1, 1, 0, 99999, true])]),
+        page({ enemyValid: true, enemyIndex: 0, enemyHp: 0 }, [command(230, [600]), variable(6157)])
+    ], endCancel);
+    running = start(endCancel, endCancelId, {}, endController.signal);
+    const endAborted = assert.rejects(running, { name: 'AbortError' }); await flush();
+    assert.equal(endCancel.battle.battle.result, null); endController.abort(); await endAborted;
+    endCancel.advanceRoutes(600); await flush();
+    assert.equal(endCancel.state.variableValue(6157), 0); assert.equal(endCancel.state.switchValue(6009), false);
+    assert.equal(endCancel.state.scene, 'map'); assert.equal(endCancel.battle.waiters.size, 0);
+
     const broken = await boot();
     const brokenId = troop([page({ turnEnding: true }, [command(999)], 1)], broken);
     running = start(broken, brokenId);
@@ -160,5 +240,7 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
     controller.abort(); await aborted; cancelled.advanceRoutes(60); await flush();
     assert.equal(cancelled.state.variableValue(6112), 0);
     assert.equal(cancelled.state.scene, 'map'); assert.equal(cancelled.battle.waiters.size, 0);
-    console.log('ĐẠT: điều kiện/span/đầu-cuối lượt/save/wait/hủy/lỗi troop; Guard thật nhớ chân bị chặt và thắng khi hạ đầu.');
+    assert.ok(engine.database.Enemies.filter(Boolean).every(enemy => enemy.exp === 0 && enemy.gold === 0 &&
+        enemy.dropItems.every(drop => drop.kind === 0)), 'dữ liệu thật không cấp phần thưởng tự động ngoài sự kiện');
+    console.log('ĐẠT: điều kiện/span/lượt/save/wait/hủy/lỗi; EndPhaseTriggers hết chuỗi page trước thắng/thua, hồi sinh/phần thưởng/hai phe bị hạ và Guard/Butterfly thật.');
 })().then(() => { clearTimeout(watchdog); clearInterval(ticker); }).catch(error => { clearTimeout(watchdog); clearInterval(ticker); console.error(error); process.exitCode = 1; });

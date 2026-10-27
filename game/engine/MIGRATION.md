@@ -15,9 +15,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: hiển thị motion/animation vũ khí,
-   phản phép và
-   trigger cuối trận. Đối chiếu phần thưởng.
+1. Combat: hiển thị motion/animation vũ khí và phản phép.
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
 2. Menu: đối chiếu đội hình, trang bị và các lựa chọn theo cấu hình gốc;
@@ -66,6 +64,10 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   hit, người đỡ đầu tiên còn sống/hiện/cử động được trong đội tham chiến. Mỗi effect
   chọn lại người đỡ; damage/state/TP đi theo người nhận, phản công theo đích gốc;
   kiểm tra Taunt, phe địch, dự bị, 339/animation/hủy, UI và save không đánh lại.
+- EndPhaseTriggers chạy hết các page hợp lệ, gồm page vừa mở ở 0 HP, trước khi
+  chốt thắng/thua. Đợi thoại/phần thưởng, cho hồi sinh tiếp trận, ưu tiên thất bại
+  khi hai phe cùng bị hạ; kiểm tra hủy/lỗi và Guard/Butterfly thật. Phần thưởng tự
+  động của toàn bộ Enemies.json bằng 0; phần thưởng sự kiện không phát lại qua save.
 - State 15/22 có modifier `b.hp - 1`; state 22 có animation thêm 22.
 - Follower/guest lưu vị trí, đuổi người phía trước, chặn event khi đang hiện;
   lệnh 217 chờ tập hợp, chuyển map/nhảy đặt lại vị trí. Không đưa guest vào combat.

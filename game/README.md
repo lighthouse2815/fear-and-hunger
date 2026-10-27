@@ -108,6 +108,11 @@ event, khóa nút đánh/chạy trong lúc chờ. Hiệu ứng, Gab và picture 
 trong trận; wait bản đồ được tạm dừng. Guard thật có thể thắng bằng page hạ đầu
 và nhớ chân đã bị chặt. Lệnh chưa hỗ trợ trong page báo lỗi và dừng trận; không
 tự bỏ qua. Sự kiện lặp liên tục có giới hạn để tránh treo trình duyệt.
+EndPhaseTriggers chạy hết chuỗi troop page đang đủ điều kiện trước khi chốt
+thắng/thua, kể cả page 0 HP vừa được mở bởi page trước. Thoại, phần thưởng và
+common event của page hoàn tất trước khi event map nhận kết quả. Hồi sinh quái
+hoặc đội có thể giữ trận tiếp tục; nếu hai phe cùng bị hạ thì ưu tiên thất bại.
+Hủy/lỗi trong end phase không tự đổi thành thắng hay chạy phần event map còn lại.
 Kỹ năng đọc công thức, phạm vi, lặp đòn, MP/TP, tỉ lệ trúng/né/chí mạng, nguyên tố,
 Guard và hiệu ứng thêm state/common event từ JSON. Số đòn lấy từ phase action
 sequence sau khi note ghi đè mặc định: Attack chạy một effect, Pummel hai effect
