@@ -2413,7 +2413,8 @@ async function main() {
         check('màn tiêu đề có hình, nhạc và nút chơi mới', await evalPage(cdp,
             'document.querySelector("#fnh-end-title").textContent === FNHStandalonePreview.engine.database.System.gameTitle && document.querySelector("#fnh-new-game").getBoundingClientRect().width > 0', false, false));
         await evalPage(cdp, `(() => {
-            const snapshot=FNHStandalonePreview.engine.save();snapshot.scene='map';snapshot.pendingEventStack=[];snapshot.variables[8235]=72;
+            const state=new FNHStandaloneState.GameState({mapId:74,x:8,y:8,direction:8,party:[1],switches:{246:true},variables:{121:1,8235:72}},FNHStandalonePreview.engine.database);
+            state.actor(1);const snapshot=state.toJSON();
             new FNHStandaloneSave.SaveStore({prefix:'FNH_STANDALONE_PREVIEW:'}).save(20,snapshot);
         })()`,false,false);
         await cdp.send('Page.navigate',{url:running.url+'standalone.html?title=1'});
@@ -2444,6 +2445,42 @@ async function main() {
             10000,'tiếp tục ô lưu từ title sau splash');
         check('Continue tải đúng ô, trả điều khiển và scheduler sang map đã lưu',await evalPage(cdp,
             'FNHStandalonePreview.engine.state.variableValue(8235)===72 && !document.querySelector("#fnh-controls").hidden && FNHStandalonePreview.scheduler.enabled',false,false));
+        await evalPage(cdp, `(() => {
+            const e=FNHStandalonePreview.engine;window.cheatNamePage=e.map.eventPage(e.map.eventById(39));window.cheatNameList=window.cheatNamePage.list;
+            e.state.setActorName(1,'Mercenary');e.state.changeActorHp(1,-99999,true);e.state.setSwitch(7388,false);
+            window.cheatNamePage.list=[{code:303,parameters:[1,10]},{code:121,parameters:[7388,7388,0]}];
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+        await waitFor(cdp,'document.querySelector("#fnh-name-dialog").open',5000,'mở hộp nhập tên cheat độc lập');
+        await evalPage(cdp,'document.querySelector("#fnh-name-input").value="LiGhThOuSe";document.querySelector("#fnh-name-form").requestSubmit()',false,false);
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.switchValue(7388)',5000,'nhập tên cheat hoàn tất qua UI');
+        check('nhập lighthouse trong engine mới hồi đầy HP và miễn death qua sự kiện',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine;
+            await e.createInterpreter([{code:311,parameters:[0,1,1,0,99999,true]},{code:313,parameters:[0,1,0,1]},{code:317,parameters:[0,1,0,0,0,50]}],0).run();
+            return e.state.hasNameCheat(1) && e.state.actor(1).hp===e.state.actorParam(1,0) && !e.state.actor(1).states.includes(1);
+        })()`,true,false));
+        check('cheat tăng đòn HP lên quái và giữ kết quả sau save',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine,db=e.database,enemyId=db.Enemies.length,troopId=db.Troops.length,id=db.Skills.length;
+            db.Enemies.push({...db.Enemies[1],id:enemyId,name:'lighthouse',params:[20000,100,1,1,1,1,10,1],traits:[],actions:[]});
+            db.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400}]});
+            db.Skills.push({...db.Skills[3],id,note:'',animationId:0,scope:1,repeats:1,hitType:0,effects:[],mpCost:0,tpCost:0,
+                damage:{type:1,formula:'10',critical:false,variance:0,elementId:0}});
+            e.battle.setup(troopId,true,true);e.state.scene='battle';e.battle.random=()=>0.5;
+            e.battle.useSkill(e.battle.actor(1),id,0,true);
+            await e.restore(e.save());
+            const hp=e.state.actor(1).hp;e.battle.useSkill(e.battle.enemy(0),id,0,true);
+            const passed=e.battle.enemy(0).hp===10001 && e.state.actor(1).hp===hp && e.state.hasNameCheat(1);
+            e.battle.finish('escape');e.leaveBattle('escape');return passed;
+        })()`,true,false));
+        check('đổi tên tắt cheat và game over cốt truyện vẫn kết thúc',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine;
+            await e.createInterpreter([{code:320,parameters:[1,'Mercenary']},{code:311,parameters:[0,1,1,0,99999,true]}],0).run();
+            if(e.state.actor(1).hp!==0||e.state.hasNameCheat(1))return false;
+            e.state.setActorName(1,'lighthouse');
+            await e.createInterpreter([{code:353},{code:121,parameters:[7389,7389,0]}],0).run();
+            window.cheatNamePage.list=window.cheatNameList;delete window.cheatNamePage;delete window.cheatNameList;
+            return e.state.scene==='gameover' && !e.state.switchValue(7389) && e.state.hasNameCheat(1);
+        })()`,true,false));
         await evalPage(cdp,'FNHStandalonePreview.engine.createInterpreter([{code:354}],0).run()',true,false);
         await waitFor(cdp,'!document.querySelector("#fnh-end-screen").hidden && FNHStandalonePreview.engine.state.scene==="title"',5000,'trở lại tiêu đề không phát splash lần hai');
         check('về title trong cùng phiên không chuyển lại Map072',await evalPage(cdp,

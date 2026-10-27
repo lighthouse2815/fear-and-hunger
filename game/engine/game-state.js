@@ -94,6 +94,9 @@
         this.synthesis = {
             crafted: Object.assign({ items: {}, weapons: {}, armors: {} }, source.synthesis && source.synthesis.crafted)
         };
+        Object.keys(this.actors).forEach(function (id) {
+            if (actorApi.hasNameCheat(this.actors[id])) this.updateActor(Number(id), function () {});
+        }, this);
     }
 
     GameState.prototype.switchValue = function (id) {
@@ -188,8 +191,18 @@
         var classData = this.database.Classes && this.database.Classes[actor.classId || data.classId];
         var model = new actorApi.ActorState(data, classData, actor, this.database);
         change(model, data, classData);
+        model.refreshNameCheat(data, classData);
         this.actors[id] = model.toJSON();
         return true;
+    };
+
+    GameState.prototype.hasNameCheat = function (id) {
+        var actor = this.actor(id);
+        return !!actor && actorApi.hasNameCheat(actor);
+    };
+
+    GameState.prototype.setActorName = function (id, name) {
+        return this.updateActor(id, function (actor) { actor.name = String(name); });
     };
 
     GameState.prototype.actorParam = function (id, paramId) {
@@ -258,6 +271,7 @@
     GameState.prototype.changeActorState = function (id, stateId, add) {
         var actor = this.actor(id);
         if (!actor) return false;
+        if (stateId === 1 && add && this.hasNameCheat(id)) return false;
         var hadState = actor.states.includes(stateId);
         var states = actor.states.slice();
         if (add && states.indexOf(stateId) < 0) states.push(stateId);
@@ -269,6 +283,7 @@
         if (add && definition) actor.stateSteps[stateId] = definition.stepsToRemove || 0;
         else delete actor.stateSteps[stateId];
         if (stateId === 1) actor.hp = add ? 0 : Math.max(1, actor.hp);
+        if (this.hasNameCheat(id)) this.updateActor(id, function () {});
         if (hadState !== actor.states.includes(stateId) && this.onStateChange) this.onStateChange({ id: id }, stateId, add);
         return true;
     };

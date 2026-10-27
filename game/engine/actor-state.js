@@ -4,6 +4,7 @@
     if (typeof module === 'object' && module.exports) module.exports = factory();
     else root.FNHStandaloneActors = factory();
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+    function hasNameCheat(actor) { return String(actor.name || '').trim().toLowerCase() === 'lighthouse'; }
     function ActorState(data, classData, snapshot, database) {
         if (!data || !Number.isInteger(data.id)) throw new TypeError('Dữ liệu actor không hợp lệ.');
         classData = classData || {};
@@ -32,7 +33,15 @@
         this.profile = snapshot && snapshot.profile != null ? snapshot.profile : data.profile || '';
         this.hp = snapshot && snapshot.hp != null ? snapshot.hp : this.maxHp(data, classData);
         this.mp = snapshot && snapshot.mp != null ? snapshot.mp : this.maxMp(data, classData);
+        this.refreshNameCheat(data, classData);
     }
+
+    ActorState.prototype.refreshNameCheat = function (data, classData) {
+        if (!hasNameCheat(this)) return;
+        this.states = this.states.filter(function (id) { return id !== 1; });
+        delete this.stateTurns[1]; delete this.stateSteps[1];
+        this.hp = this.maxHp(data, classData);
+    };
 
     ActorState.prototype.maxParam = function (data, classData, paramId) {
         if (paramId === 0 && this.maxHpOverride != null) return this.maxHpOverride;
@@ -83,6 +92,7 @@
     ActorState.prototype.maxMp = function (data, classData) { return this.maxParam(data, classData, 1); };
     ActorState.prototype.isAlive = function () { return this.hp > 0; };
     ActorState.prototype.changeHp = function (data, classData, amount, allowDeath) {
+        if (hasNameCheat(this)) { this.refreshNameCheat(data, classData); return this.hp; }
         if (this.hp <= 0) return this.hp;
         var next = this.hp + Number(amount || 0);
         this.hp = Math.max(allowDeath ? 0 : 1, Math.min(this.maxHp(data, classData), next));
@@ -103,5 +113,5 @@
             tp: this.tp, states: this.states.slice(), stateTurns: Object.assign({}, this.stateTurns), stateSteps: Object.assign({}, this.stateSteps), skills: this.skills.slice(), equips: this.equips.slice() };
     };
 
-    return { ActorState: ActorState, expForLevel: expForLevel };
+    return { ActorState: ActorState, expForLevel: expForLevel, hasNameCheat: hasNameCheat };
 }));

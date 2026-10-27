@@ -25,13 +25,18 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 3. Bản đồ: di chuyển mượt.
    Chỉ đánh dấu xong sau khi xác minh.
 4. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
-5. Luồng chính: đối chiếu tiếp âm thanh khi tải save và nội dung kết thúc,
-   cheat theo tên và cập nhật server/build/check khi chuyển entry chính.
+5. Luồng chính: đối chiếu tiếp âm thanh khi tải save, nội dung kết thúc
+   và cập nhật server/build/check khi chuyển entry chính.
 6. Quét nội dung toàn bộ, kiểm tra các nhánh đại diện và loại các giả định chỉ
    đúng trong fixture. Cập nhật README để chỉ rõ kết quả và giới hạn còn lại.
 
 ## Đã đối chiếu
 
+- Cheat tên `lighthouse` đọc tên đã trim/không phân biệt hoa thường, luôn đầy HP,
+  miễn death state và tăng đòn gây mất/hút HP trúng quái lên tối thiểu 9.999 sau
+  modifier. Không tăng hồi phục/MP/đòn đồng đội hay cho quái cùng tên; đổi tên tắt.
+  UI đặt tên/lệnh 320/chỉ số/state/save/339/tick đều kiểm tra; 353 kết thúc truyện
+  vẫn chạy và dừng event như bình thường, không nạp FNH_NameCheat gốc.
 - `standalone.html?title=1` chạy autorun Map072 thật: chờ/fade/giữ splash theo
   frame, 354 về title, khóa gameplay. Chrome so pixel PNG, Continue tải ô được
   chọn và New Game mở chọn nhân vật; về title không lặp splash trong cùng phiên.

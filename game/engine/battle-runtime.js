@@ -29,6 +29,9 @@
         this.waiters = new Set();
         this.immortal = new Map();
         state.battle = this.battle;
+        if (this.battle) this.battle.actors.forEach(function (actor) {
+            if (state.hasNameCheat(actor.id)) this.refreshActor(actor);
+        }, this);
     }
     BattleRuntime.prototype.setup = function (troopId, canEscape, canLose) {
         if (this.battle && !this.battle.result) throw new Error('Một trận chiến khác đang chạy.');
@@ -266,6 +269,7 @@
         }, additive ? 0 : 1);
     };
     BattleRuntime.prototype.refreshActor = function (actor) {
+        if (this.state.hasNameCheat(actor.id)) this.state.updateActor(actor.id, function () {});
         var data = this.state.actor(actor.id);
         if (this.isImmortal(actor)) data.states = data.states.filter(function (id) { return id !== 1; });
         actor.hp = data.hp; actor.mp = data.mp; actor.alive = data.hp > 0 || this.isImmortal(actor);
@@ -484,7 +488,7 @@
     };
     BattleRuntime.prototype.addState = function (target, id, chance, certain) {
         if (!this.database.States[id]) throw new Error('Không tìm thấy state ' + id);
-        if (!target.alive || id === 1 && this.isImmortal(target) || this.battlerTraits(target).some(function (trait) { return trait.code === 14 && trait.dataId === id; })) return;
+        if (!target.alive || id === 1 && (this.isImmortal(target) || target.enemyId == null && this.state.hasNameCheat(target.id)) || this.battlerTraits(target).some(function (trait) { return trait.code === 14 && trait.dataId === id; })) return;
         if (this.random() >= chance * (certain ? 1 : this.traitRate(target, 13, id))) return;
         if (target.enemyId != null) this.handleEffect(333, [target.index, 0, id]);
         else this.state.changeActorState(target.id, id, true);
@@ -526,6 +530,7 @@
             }, this);
         }, this);
         var resource = [2, 4, 6].includes(damage.type) ? 'mp' : 'hp';
+        if (subject.enemyId == null && target.enemyId != null && [1, 5].includes(damage.type) && this.state.hasNameCheat(subject.id)) value = Math.max(9999, value);
         if (damage.type === 5 || damage.type === 6) value = Math.min(value, this.battlerState(target)[resource]);
         return { damage: value, resource: resource, critical: !!hit.critical };
     };

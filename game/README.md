@@ -308,6 +308,8 @@ miễn trạng thái chết và gây ít nhất 9.999 sát thương mỗi đòn 
 quái. Tên không phân biệt hoa thường; đổi sang tên khác sẽ tắt cheat. Cheat đi
 theo tên trong save, không tăng sát thương hồi máu hay đòn đánh đồng đội và không
 thay đổi các kết thúc do sự kiện cốt truyện gọi trực tiếp.
+Cheat này cũng đã được triển khai trong engine độc lập, không cần plugin gốc;
+đổi tên bằng lệnh 320, tăng HP tối đa, state và tải save đều giữ cùng quy tắc.
 
 ## Muốn sửa gì thì mở đâu?
 

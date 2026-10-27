@@ -331,7 +331,7 @@
                 event.preventDefault();
                 var name = Array.from(input.value.trim()).slice(0, parameters[1]).join('');
                 if (!name) return;
-                actor.name = name; close(); resolve();
+                engine.state.setActorName(parameters[0], name); close(); resolve();
             };
             if (signal) {
                 signal.addEventListener('abort', abort, { once: true });

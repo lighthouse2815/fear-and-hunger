@@ -294,7 +294,7 @@
             else if (code === 317) state.changeActorParam(id, p[2], this.operateSigned(p[3], p[4], p[5]));
             else if (code === 318) state.changeActorSkill(id, p[3], p[2] === 0);
             else if (code === 319) state.equipActor(id, p[1] - 1, p[2]);
-            else if (code === 320) actor.name = p[1];
+            else if (code === 320) state.setActorName(id, p[1]);
             else if (code === 321) {
                 if (!state.database.Classes[p[1]]) throw new Error('Không tìm thấy class ' + p[1]);
                 actor.expByClass = Object.assign({}, actor.expByClass, { [actor.classId]: actor.exp });
