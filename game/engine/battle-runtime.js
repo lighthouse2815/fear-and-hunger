@@ -175,6 +175,7 @@
                 battler.spriteEffect.remaining -= frames;
                 if (battler.spriteEffect.remaining <= 0) delete battler.spriteEffect;
             }
+            if (battler.collapse && battler.collapse.duration != null) battler.collapse.elapsed = Math.min(battler.collapse.duration,battler.collapse.elapsed + frames);
         }, this);
     };
     BattleRuntime.prototype.enemy = function (index) {
@@ -189,12 +190,22 @@
         return Math.max(id === 1 ? 0 : 1, Math.round(base * rate));
     };
     BattleRuntime.prototype.refreshEnemy = function (enemy) {
+        var wasAlive = enemy.alive;
         enemy.mhp = this.enemyParam(enemy, 0); enemy.mmp = this.enemyParam(enemy, 1);
         enemy.hp = Math.max(0, Math.min(enemy.mhp, enemy.hp));
         enemy.mp = Math.max(0, Math.min(enemy.mmp, enemy.mp));
         enemy.alive = enemy.hp > 0 || this.isImmortal(enemy);
         if (!enemy.alive && !enemy.states.includes(1)) enemy.states.push(1);
         if (enemy.alive) enemy.states = enemy.states.filter(function (id) { return id !== 1; });
+        if (wasAlive && !enemy.alive) {
+            var types = this.enemyTraits(enemy).filter(function (trait) { return trait.code === 63; }).map(function (trait) { return trait.dataId; });
+            var type = types.length ? Math.max.apply(null,types) : 0;
+            enemy.collapse = {type:type,elapsed:0,duration:type === 1 ? null : type === 3 ? 0 : type === 2 ? 16 : 32};
+            if (type!==3) delete enemy.spriteEffect;
+        } else if (enemy.alive && enemy.collapse) {
+            if (enemy.collapse.type!==3) enemy.spriteEffect={type:'appear',remaining:16};
+            delete enemy.collapse;
+        }
     };
     BattleRuntime.prototype.handleEffect = function (code, p) {
         if (![331, 332, 333, 334, 335, 336, 340, 342].includes(code)) return false;
@@ -232,7 +243,10 @@
                 if (hadState !== enemy.states.includes(stateId) && this.onStateChange) this.onStateChange(enemy, stateId, p[1] === 0);
             }
             if (code === 334) { enemy.states = []; enemy.stateTurns = {}; enemy.hp = this.enemyParam(enemy, 0); enemy.mp = this.enemyParam(enemy, 1); }
-            if (code === 335) enemy.hidden = false;
+            if (code === 335) {
+                if (enemy.hidden && enemy.alive) enemy.spriteEffect={type:'appear',remaining:16};
+                enemy.hidden = false;
+            }
             if (code === 336) {
                 enemy.enemyId = p[1];
                 var data = this.database.Enemies[p[1]];

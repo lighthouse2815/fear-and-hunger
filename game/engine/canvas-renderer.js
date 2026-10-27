@@ -120,7 +120,9 @@
             return name ? renderer.loadImage('img/battlebacks' + (index + 1) + '/' + name + '.png') : null;
         }));
         var enemies = await Promise.all(battle.enemies.filter(function (enemy) {
-            return enemy.alive && !enemy.hidden && enemy.battlerName;
+            var collapse = enemy.collapse;
+            return !enemy.hidden && enemy.battlerName && (enemy.alive || collapse &&
+                (collapse.type === 3 || collapse.duration == null || collapse.elapsed < collapse.duration));
         }).map(async function (enemy) {
             var folder = engine.database.System.optSideView ? 'sv_enemies' : 'enemies';
             return { enemy: enemy, bitmap: await renderer.loadImage('img/' + folder + '/' + enemy.battlerName + '.png') };
@@ -164,17 +166,7 @@
             });
             context.scale(width / 816, height / 624);
             enemies.sort(function (a, b) { return a.enemy.y - b.enemy.y || a.enemy.index - b.enemy.index; });
-            enemies.forEach(function (entry) {
-                var enemy = entry.enemy, bitmap = entry.bitmap;
-                var flash = engine.animations && engine.animations.targetEffect(enemy.index, null, 'enemy');
-                if (!flash || !flash.hide) {
-                    var effect = enemy.spriteEffect;
-                    if (!effect || effect.type !== 'blink' || effect.remaining % 10 < 5) context.drawImage(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height);
-                    if (effect && effect.type === 'whiten') renderer.drawBattlerFlash(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height,
-                        { color: [255,255,255,Math.max(0,128 - (16 - effect.remaining) * 10)], remaining: 1, duration: 1 });
-                    if (flash) renderer.drawBattlerFlash(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height, flash);
-                }
-            });
+            enemies.forEach(function (entry) { renderer.drawBattleEnemy(entry,engine); });
             actors.forEach(function (entry) { renderer.drawBattleActor(entry, engine); });
             animations.forEach(function (animation) {
                 var entry = animation.entry, data = animation.data;
@@ -195,6 +187,38 @@
         pictures.forEach(function (entry) { renderer.drawPicture(entry); });
         this.drawScreenEffects(screen, engine.state);
         return { battle: battle.troopId, enemies: enemies.length, actors: actors.filter(function (entry) { return entry.bitmap; }).length };
+    };
+
+    CanvasRenderer.prototype.drawBattleEnemy = function (entry, engine) {
+        var enemy = entry.enemy, bitmap = entry.bitmap, collapse = enemy.collapse, height = bitmap.height;
+        if (collapse && collapse.duration == null) collapse.duration = bitmap.height;
+        var flash = engine.animations && engine.animations.targetEffect(enemy.index,null,'enemy');
+        var effect = enemy.spriteEffect, color = null, opacity = 1, shake = 0, additive = false;
+        if (flash && flash.hide || effect && effect.type === 'blink' && effect.remaining % 10 >= 5 && (!collapse || collapse.type===3)) return;
+        if (collapse && collapse.type !== 3) {
+            if (collapse.type === 2) return;
+            var duration = collapse.duration == null ? height : collapse.duration, remaining = Math.max(0,duration - collapse.elapsed);
+            opacity = remaining / duration; additive = true;
+            if (collapse.type === 1) {
+                height = Math.floor(remaining); shake = Math.floor(remaining) % 2 * 4 - 2;
+                color = [255,255,255,255 * (1 - opacity)];
+            } else color = [255,128,128,128];
+        } else if (effect && effect.type === 'whiten') color = [255,255,255,Math.max(0,128 - (16 - effect.remaining) * 10)];
+        else if (effect && effect.type === 'appear') opacity = 1 - effect.remaining / 16;
+        if (flash) color = flash.color.slice(0,3).concat(flash.color[3] * flash.remaining / Math.max(1,flash.duration));
+        if (!height || !opacity) return;
+        var image = bitmap;
+        if (color) {
+            if (!this.enemyEffectCanvas) this.enemyEffectCanvas = document.createElement('canvas');
+            image = this.enemyEffectCanvas; image.width = bitmap.width; image.height = height;
+            var tint = image.getContext('2d'); tint.drawImage(bitmap,0,0,bitmap.width,height,0,0,bitmap.width,height);
+            tint.globalCompositeOperation = 'source-atop'; tint.fillStyle = 'rgba(' + color.slice(0,3).concat(color[3]/255).join(',') + ')';
+            tint.fillRect(0,0,image.width,image.height);
+        }
+        this.context.save(); this.context.globalAlpha = opacity;
+        if (additive) this.context.globalCompositeOperation = 'lighter';
+        this.context.drawImage(image,0,0,bitmap.width,height,enemy.x - bitmap.width / 2 + shake,enemy.y - height,bitmap.width,height);
+        this.context.restore();
     };
 
     CanvasRenderer.prototype.drawBattleActor = function (entry, engine) {

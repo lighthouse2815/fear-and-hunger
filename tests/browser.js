@@ -2064,6 +2064,46 @@ async function main() {
             renderer.drawBattleActor({actor:e.battle.actor(3),index:1,bitmap,motion:e.battle.spriteFrame(e.battle.actor(3))},e);
             return renderer.context.getImageData(0,0,816,624).data.every(value=>value===0);
         })()`,true,false));
+        check('collapse thường nhuộm đỏ và mờ đúng alpha trên PNG thật',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore});
+            await e.boot({mapId:74,x:8,y:8,party:[1]});e.battle.setup(1);e.state.scene='battle';
+            e.battle.handleEffect(331,[0,1,0,99999,true]);e.advanceRoutes(16);
+            const enemy=e.battle.enemy(0),renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas'));
+            const bitmap=await renderer.loadImage('img/enemies/'+enemy.battlerName+'.png');
+            const source=document.createElement('canvas');source.width=bitmap.width;source.height=bitmap.height;
+            source.getContext('2d').drawImage(bitmap,0,0);const pixels=source.getContext('2d').getImageData(0,0,bitmap.width,bitmap.height).data;
+            enemy.x=bitmap.width/2+20;enemy.y=bitmap.height+20;renderer.context.fillStyle='#000';renderer.context.fillRect(0,0,816,624);
+            renderer.drawBattleEnemy({enemy,bitmap},e);
+            let checked=0;
+            for(let y=0;y<Math.min(bitmap.height,604);y++)for(let x=0;x<Math.min(bitmap.width,796);x++){
+                const i=(y*bitmap.width+x)*4;if(pixels[i+3]!==255)continue;
+                const actual=renderer.context.getImageData(x+20,y+20,1,1).data;
+                const expected=[255,128,128].map((color,c)=>Math.round((pixels[i+c]*127/255+color*128/255)*0.5));
+                if(expected.some((value,c)=>Math.abs(value-actual[c])>1))return false;checked++;
+            }
+            if(checked<=100 || enemy.collapse.elapsed!==16 || enemy.alive)return false;
+            e.battle.handleEffect(334,[0]);e.advanceRoutes(8);renderer.context.fillRect(0,0,816,624);renderer.drawBattleEnemy({enemy,bitmap},e);
+            for(let i=0;i<pixels.length;i+=4){
+                if(pixels[i+3]!==255)continue;const x=(i/4)%bitmap.width,y=Math.floor(i/4/bitmap.width);if(x>=796 || y>=604)continue;
+                const actual=renderer.context.getImageData(x+20,y+20,1,1).data;
+                return [0,1,2].every(c=>Math.abs(Math.round(pixels[i+c]*0.5)-actual[c])<=1) && !enemy.collapse && enemy.spriteEffect.remaining===8;
+            }
+            return false;
+        })()`,true,false));
+        check('boss tan theo chiều cao PNG, giữ frame qua save và xác loại 3 còn hiện',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore});
+            await e.boot({mapId:74,x:8,y:8,party:[1]});const db=e.database,id=db.Troops.length;
+            db.Troops.push({id,pages:[],members:[{enemyId:256,x:400,y:450},{enemyId:23,x:550,y:450},{enemyId:1,x:200,y:450}]});
+            e.battle.setup(id);e.state.scene='battle';e.battle.handleEffect(331,[0,1,0,99999,true]);e.battle.handleEffect(331,[1,1,0,99999,true]);
+            const renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas'));
+            const first=await renderer.draw(e);if(first.enemies!==3 || e.battle.enemy(0).collapse.duration!==391)return false;
+            e.advanceRoutes(100);await e.restore(e.save());
+            const calls=[],draw=renderer.context.drawImage.bind(renderer.context);renderer.context.drawImage=(...args)=>{calls.push(args);draw(...args);};
+            const enemy=e.battle.enemy(0),bitmap=await renderer.loadImage('img/enemies/'+enemy.battlerName+'.png');renderer.drawBattleEnemy({enemy,bitmap},e);
+            if(enemy.collapse.elapsed!==100 || !calls.some(args=>args[4]===291 && args[6]===159))return false;
+            e.advanceRoutes(1000);const after=await renderer.draw(e);
+            return after.enemies===2 && e.battle.enemy(1).collapse.type===3 && !e.battle.enemy(1).alive && e.battle.aliveEnemies().length===1;
+        })()`,true,false));
         check('337 vẽ sprite sheet tại quái, phản chiếu và flash đúng alpha', await evalPage(cdp, `(async () => {
             const original = FNHStandalonePreview.engine;
             const engine = new FNHStandaloneEngine.GameEngine({ dataStore: original.dataStore, onRouteEffect: () => true });

@@ -42,6 +42,7 @@
         if (!this.fetchImpl) throw new Error('GameDataStore cần fetch hoặc fetchImpl.');
         this.database = null;
         this.mapCache = new Map();
+        this.imageSizes = new Map();
     }
 
     GameDataStore.prototype.loadJson = async function (relativePath) {
@@ -73,6 +74,23 @@
             self.database[entry[0]] = entry[1];
         });
         return cloneDatabase(this.database);
+    };
+
+    GameDataStore.prototype.loadImageSize = function (relativePath) {
+        if (!this.imageSizes.has(relativePath)) {
+            var store = this;
+            var loading = (async function () {
+                var response = await store.fetchImpl(joinUrl(store.baseUrl,relativePath));
+                if (!response || !response.ok) throw new Error('Không tải được ' + relativePath);
+                var data = new DataView(await response.arrayBuffer());
+                if (data.byteLength < 24 || data.getUint32(0) !== 0x89504e47 || data.getUint32(4) !== 0x0d0a1a0a ||
+                    data.getUint32(12) !== 0x49484452 || !data.getUint32(16) || !data.getUint32(20)) throw new Error('PNG không hợp lệ: ' + relativePath);
+                return {width:data.getUint32(16),height:data.getUint32(20)};
+            }());
+            this.imageSizes.set(relativePath,loading);
+            loading.catch(function () { store.imageSizes.delete(relativePath); });
+        }
+        return this.imageSizes.get(relativePath);
     };
 
     GameDataStore.prototype.loadMap = async function (mapId) {

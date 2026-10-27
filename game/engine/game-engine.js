@@ -252,10 +252,31 @@
 
     GameEngine.prototype.advanceRoutes = function (frames) {
         if (this.stepWait && !['map', 'menu', 'save'].includes(this.state.scene)) this.screen.finish(this.stepWait);
+        if (this.enemyEffectWaiters && (this.state.scene !== 'battle' || this.battle.battle.result)) {
+            this.enemyEffectWaiters.forEach(function (track) { this.screen.finish(track); },this);
+        }
         if (this.state && ['gameover', 'title', 'menu', 'save'].includes(this.state.scene)) return;
         if (this.state && this.state.scene === 'battle') {
             if (this.routeErrors.length) throw this.routeErrors.shift();
+            this.battle.battle.enemies.forEach(function (enemy) {
+                var collapse=enemy.collapse;if (!collapse) return;
+                var sounds=[];
+                if (!collapse.soundStarted) { collapse.soundStarted=true;if (collapse.type===0 || collapse.type===1) sounds.push(collapse.type===0?11:12); }
+                if (collapse.type===1 && collapse.duration!=null) {
+                    var from=Math.ceil(collapse.duration-collapse.elapsed)-1,to=Math.max(0,Math.ceil(collapse.duration-collapse.elapsed-frames));
+                    for (var remaining=from;remaining>=to;remaining--) if (remaining%20===19) sounds.push(13);
+                }
+                sounds.forEach(function (index) {
+                    var sound=this.database.System.sounds[index];if (!sound || !sound.name) return;
+                    if (!this.onRouteEffect) throw new Error('Chưa có bộ phát âm thanh cho hiệu ứng kết liễu.');
+                    var engine=this;Promise.resolve(this.onRouteEffect(250,[sound])).catch(function (error) { engine.routeErrors.push(error); });
+                },this);
+            },this);
             this.battle.advanceSprites(frames);
+            if (this.enemyEffectWaiters && !this.battle.battle.enemies.some(function (enemy) {
+                return !enemy.hidden && (enemy.collapse && (enemy.collapse.duration == null || enemy.collapse.elapsed < enemy.collapse.duration) ||
+                    enemy.spriteEffect && enemy.spriteEffect.remaining>0);
+            })) this.enemyEffectWaiters.forEach(function (track) { this.screen.finish(track); },this);
             this.screen.advance(frames, 'battle');
             this.filters.advance(frames);
             this.animations.advance(frames);
@@ -675,6 +696,7 @@
                 hit.defeated = target ? !target.alive : hit.defeated;
             });
             report.defeated = !!(report.hits.length && report.hits[report.hits.length - 1].defeated);
+            await this.waitEnemyEffects(handlers,signal);
             for (var index = 0; index < report.commonEvents.length; index++) {
                 if (signal && signal.aborted) throw signal.reason;
                 if (this.state.scene !== 'battle' || this.battle.battle.result) return;
@@ -692,6 +714,32 @@
     };
 
     GameEngine.prototype.completeBattleSkill = GameEngine.prototype.completeBattleAction;
+
+    GameEngine.prototype.waitEnemyEffects = async function (handlers, signal) {
+        var engine = this, runtime = this.battle, battle = runtime.battle, waiter = this.createInterpreter([],0,handlers,signal);
+        while (this.battle===runtime && this.state.scene==='battle' && !battle.result) {
+            await waiter.awaitCommand(Promise.all(battle.enemies.map(async function (enemy) {
+                var collapse = enemy.collapse;
+                if (enemy.hidden || !collapse || collapse.duration != null) return;
+                var folder = engine.database.System.optSideView ? 'sv_enemies' : 'enemies';
+                var size = await engine.dataStore.loadImageSize('img/' + folder + '/' + enemy.battlerName + '.png');
+                collapse.duration = size.height;
+            })));
+            if (this.battle!==runtime || this.state.scene!=='battle' || battle.result) return;
+            var remaining = battle.enemies.reduce(function (frames,enemy) {
+                if (enemy.hidden) return frames;
+                return Math.max(frames,enemy.collapse ? enemy.collapse.duration - enemy.collapse.elapsed : 0,enemy.spriteEffect ? enemy.spriteEffect.remaining : 0);
+            },0);
+            if (!remaining) return;
+            var id = this.screen.screen.nextId, waiting = this.screen.tween([],{},remaining);
+            var track = this.screen.screen.tweens.find(function (entry) { return entry.id === id; });
+            track.enemyEffects = true;
+            if (!this.enemyEffectWaiters) this.enemyEffectWaiters = new Set();
+            this.enemyEffectWaiters.add(track);
+            try { await waiter.awaitCommand(waiting); }
+            finally { this.screen.finish(track); this.enemyEffectWaiters.delete(track); }
+        }
+    };
 
     GameEngine.prototype.forceBattleAction = async function (parameters, handlers, signal) {
         var runtime = this.battle, battle = runtime.battle;
@@ -739,15 +787,20 @@
                 runtime.finish(ending); return;
             }
         }
-        if (!battle.result) runtime.checkResult();
+        if (!battle.result) {
+            await this.waitEnemyEffects(handlers,signal);
+            if (this.state.scene!=='battle') runtime.finish('abort');
+            else if (!battle.result) runtime.checkResult();
+        }
     };
 
     GameEngine.prototype.syncBattleActors = function () {
         var state = this.state;
         this.battle.battle.actors = state.battleActorIds().map(function (id) {
             var actor = state.actor(id);
-            return { id: id, name: actor.name, hp: actor.hp, mp: actor.mp, alive: actor.hp > 0 };
-        });
+            var previous = this.battle.battle.actors.find(function (entry) { return entry.id === id; });
+            return Object.assign(previous || {}, { id: id, name: actor.name, hp: actor.hp, mp: actor.mp, alive: actor.hp > 0 });
+        },this);
     };
 
     GameEngine.prototype.openMenu = function () {
@@ -1288,7 +1341,9 @@
         this.state.eventSnapshots = this.map.snapshotEvents();
         this.state.routeSnapshots = this.movement.snapshot();
         if (this.audio) this.state.audio = this.audio.saveState();
-        return this.state.toJSON();
+        var snapshot = this.state.toJSON();
+        snapshot.screen.tweens = snapshot.screen.tweens.filter(function (track) { return !track.enemyEffects; });
+        return snapshot;
     };
 
     GameEngine.prototype.saveTo = function (saveStore, slot) {

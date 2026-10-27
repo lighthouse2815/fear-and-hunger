@@ -15,7 +15,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: đối chiếu thêm phần thiết lập/kết thúc action và hiệu ứng kết liễu.
+1. Combat: đối chiếu cast animation, animation Attack của quái và SE trúng đòn.
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
 2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
@@ -28,6 +28,13 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Kết liễu theo trait collapse: thường mờ/nhuộm đỏ 32 frame, 26 enemy giữ xác
+  (loại 3), sáu boss tan/cắt ảnh/rung theo chiều cao PNG thật. Cache kích thước
+  không ghi cứng vào nội dung; lỗi PNG báo rõ. IMMORTAL xác nhận chết mới bắt
+  đầu; hồi sinh hủy kết liễu, 335/hồi sinh hiện hình 16 frame và chờ hiệu ứng
+  mới xong; hủy/title giải phóng wait. Save giữ tiến độ và không phát lại
+  SE mở đầu; frame dài giữ đủ nhịp SE boss. Common event/trả quyền nhập lệnh
+  chờ hiệu ứng xong. Chrome kiểm tra pixel và crop PNG; xác không tính là sống.
 - Menu nhân vật dùng bust PNG theo faceName/faceIndex, HP/MP và Hunger theo
   `(EXP cấp sau - EXP hiện tại) / (EXP cấp sau - EXP đầu cấp)` của GALV_BustMenu.
   Chọn thẻ đổi actor chi tiết; không đưa guest vào menu. Hiện nickname/class,

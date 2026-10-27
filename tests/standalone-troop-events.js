@@ -137,6 +137,8 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
     assert.ok(guard.battle.enemy(0).states.includes(91));
     assert.equal(guard.battle.enemy(4).alive, false, 'Guard nhớ chân đã bị chặt ở lần gặp trước');
     assert.equal(sounds.length, 1); assert.match(guard.state.screen.gab.text, /guard/i);
+    for (let i=0;i<100 && guard.battle.battle.phase!=='input';i++) { guard.advanceRoutes(12);await flush(); }
+    assert.equal(guard.battle.battle.phase,'input','đợi hiệu ứng chân đã chặt xong trước khi nhập lệnh');
     await guard.battleAttack(1, 1); await running;
     assert.equal(guard.battle.battle.result, 'victory', 'page HEAD DESTROYED hạ cả troop');
     assert.equal(guard.state.switchValue(23), true);
@@ -175,6 +177,7 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
     ], revival);
     running = start(revival, revivalId); await flush();
     assert.equal(revival.battle.battle.result, null, 'hồi sinh quái ở page cuối ngăn chốt thắng');
+    for (let i=0;i<100 && revival.battle.battle.phase!=='input';i++) { revival.advanceRoutes(4);await flush(); }
     assert.equal(revival.battle.enemy(0).hp, revival.battle.enemy(0).mhp); assert.equal(revival.battle.battle.phase, 'input');
     assert.equal(revival.state.variableValue(6153), 1); revival.battle.random = () => 0;
     await revival.battleEscape(); await running;
