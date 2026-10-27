@@ -102,6 +102,7 @@
             this.state.y = destination.y;
             if (destination.direction && !this.state.directionFixed) this.state.direction = destination.direction;
         }
+        delete this.state.motion; this.state.moveFrames = 0;
         this.state.followers(true);
         this.state.followersGathering = false;
         this.resetCamera();
@@ -143,7 +144,7 @@
     GameEngine.prototype.followCamera = function (dx, dy) {
         var camera = this.screen.screen.mapCamera;
         if (!camera || camera.mapId !== this.map.id) return;
-        var x = this.state.x - camera.x, y = this.state.y - camera.y;
+        var position = mapApi.displayPosition(this.state), x = position.x - camera.x, y = position.y - camera.y;
         var centerX = Math.floor(Math.ceil(this.width / 48) / 2), centerY = Math.floor(Math.ceil(this.height / 48) / 2);
         var shiftX = (dx > 0 && x > centerX) || (dx < 0 && x < centerX) ? dx : 0;
         var shiftY = (dy > 0 && y > centerY) || (dy < 0 && y < centerY) ? dy : 0;
@@ -163,7 +164,7 @@
         if (this.state.scene !== 'map') return false;
         if (this.eventRunning || this.messageRunning || this.state.followersGathering || (this.movement && this.movement.jobs.has(this.state))) return false;
         var moved = this.moveCharacter(this.state, direction);
-        if (moved) { this.state.moveFrames = this.playerStepFrames(); this.onPlayerWalk(); }
+        if (moved) this.onPlayerWalk();
         return moved;
     };
 
@@ -213,12 +214,17 @@
         this.movement = new movementApi.MovementRuntime({
             player: this.state, state: this.state, random: function () { return engine.random(); },
             move: this.moveCharacter.bind(this),
-            locate: function (character, x, y) {
+            locate: function (character, x, y, frames, peak) {
+                var followers = character === engine.state ? engine.state.followers().map(function (entry) { return mapApi.displayPosition(entry); }) : [];
                 character.x = x; character.y = y;
-                if (character === engine.state) engine.state.followers(true);
+                if (character === engine.state) engine.state.followers(true).forEach(function (entry, index) {
+                    var distance = Math.round(Math.hypot(entry.x - followers[index].x, entry.y - followers[index].y));
+                    var followerPeak = 10 + distance - (engine.state.moveSpeed == null ? 4 : engine.state.moveSpeed);
+                    movementApi.startMotion(entry, followers[index], Math.max(1, followerPeak * 2), followerPeak);
+                });
             },
             changed: function (character) {
-                if (character !== engine.state) engine.map.locateEvent(character.id, character.x, character.y, character.direction);
+                if (character !== engine.state) engine.map.locateEvent(character.id, character.x, character.y, character.direction, true);
             },
             sound: function (sound) {
                 if (!engine.onRouteEffect) throw new Error('Chưa có bộ phát âm thanh cho movement route.');
@@ -243,12 +249,18 @@
             return;
         }
         if (this.routeErrors.length) throw this.routeErrors.shift();
+        var before = this.state && mapApi.displayPosition(this.state);
+        var state = this.state, followers = state ? state.followers() : [];
+        followers.forEach(function (entry) {
+            entry.walkAnime = state.walkAnime; entry.stepAnime = state.stepAnime; entry.moveSpeed = state.moveSpeed;
+        });
         if (this.state && this.state.timer.active) this.state.timer.frames = Math.max(0, this.state.timer.frames - frames);
-        if (this.map && this.state) [this.state].concat(this.map.events).forEach(function (character) {
+        if (this.map && this.state) [this.state].concat(this.map.events, followers).forEach(function (character) {
             if (character.stepAnime || (character.moveFrames > 0 && character.walkAnime !== false)) {
                 character.animationFrames = (character.animationFrames || 0) + frames;
             } else character.animationFrames = 0;
             character.moveFrames = Math.max(0, (character.moveFrames || 0) - frames);
+            if (!character.moveFrames) delete character.motion;
             if (character.balloon) character.balloon.remaining = Math.max(0, character.balloon.remaining - frames);
         });
         if (this.movement) this.movement.advance(frames);
@@ -259,18 +271,22 @@
                 this.state.followerFrames -= this.playerStepFrames();
                 this.followPlayer();
                 this.state.followersGathering = this.state.followers().some(function (entry) {
-                    return entry.x !== this.state.x || entry.y !== this.state.y;
+                    return entry.x !== this.state.x || entry.y !== this.state.y || entry.moveFrames > 0;
                 }, this);
             }
         }
         if (this.autonomous && this.autonomousEnabled) this.autonomous.advance(frames);
+        if (before) {
+            var after = mapApi.displayPosition(this.state);
+            this.followCamera(after.x - before.x, after.y - before.y);
+        }
         if (this.screen) this.screen.advance(frames);
         if (this.lighting) this.lighting.advance(frames);
         if (this.filters) this.filters.advance(frames);
         if (this.animations) this.animations.advance(frames);
     };
 
-    GameEngine.prototype.moveCharacter = function (character, direction, vertical, backward) {
+    GameEngine.prototype.moveCharacter = function (character, direction, vertical, backward, frames) {
         var delta = movementApi.DELTAS[direction];
         if (!delta) return false;
         if (!character.directionFixed && !backward) character.direction = vertical || direction;
@@ -296,10 +312,11 @@
             }
             if (!passable || this.map.eventBlocks(x, y, character.id)) return false;
         }
-        var dx = x - character.x, dy = y - character.y;
-        if (character === this.state) this.followPlayer();
+        var from = mapApi.displayPosition(character);
+        frames = frames || (character === this.state ? this.playerStepFrames() : Math.pow(2, 8 - (character.moveSpeed == null ? 4 : character.moveSpeed)));
+        if (character === this.state) this.followPlayer(frames);
         character.x = x; character.y = y;
-        if (character === this.state) this.followCamera(dx, dy);
+        movementApi.startMotion(character, from, frames);
         this.playFootstep(character);
         return true;
     };
@@ -330,12 +347,14 @@
         if (sound && sound.name) Promise.resolve(this.onRouteEffect(250, [sound])).catch(function (error) { engine.routeErrors.push(error); });
     };
 
-    GameEngine.prototype.followPlayer = function () {
+    GameEngine.prototype.followPlayer = function (frames) {
         var followers = this.state.followers();
         for (var i = followers.length - 1; i >= 0; i--) {
             var follower = followers[i], ahead = i ? followers[i - 1] : this.state;
             var dx = Math.sign(ahead.x - follower.x), dy = Math.sign(ahead.y - follower.y);
+            var from = mapApi.displayPosition(follower);
             follower.x += dx; follower.y += dy;
+            if (dx || dy) movementApi.startMotion(follower, from, frames || this.playerStepFrames());
             if ((dx || dy) && this.state.followersVisible) this.playFootstep(follower);
             if (!this.state.directionFixed) {
                 if (dy) follower.direction = dy > 0 ? 2 : 8;
@@ -346,7 +365,7 @@
 
     GameEngine.prototype.gatherFollowers = async function (interpreter) {
         this.state.followersGathering = this.state.followersVisible && this.state.followers().some(function (entry) {
-            return entry.x !== this.state.x || entry.y !== this.state.y;
+            return entry.x !== this.state.x || entry.y !== this.state.y || entry.moveFrames > 0;
         }, this);
         this.state.followerFrames = 0;
         while (this.state.followersGathering) {
@@ -443,11 +462,12 @@
                 if (field === 1) return character.y;
                 if (field === 2) return character.direction;
                 var viewport = engine.map.viewport(engine.state, engine.width, engine.height);
-                if (field === 3) return Math.round((character.x - viewport.startX + 0.5) * 48);
+                var position = mapApi.displayPosition(character);
+                if (field === 3) return Math.round((position.x - viewport.startX + 0.5) * 48);
                 var actor = character === engine.state && engine.state.actor(engine.state.party[0] || 1);
                 var name = character.characterName == null && actor ? actor.characterName : character.characterName;
                 var prefix = /^[!$]+/.exec(name || '');
-                return Math.round((character.y - viewport.startY + 1) * 48) - (prefix && prefix[0].includes('!') ? 0 : 6);
+                return Math.round((position.y - viewport.startY + 1) * 48 - position.lift) - (prefix && prefix[0].includes('!') ? 0 : 6);
             }
             if (gameData) return gameData(type, id, field, interpreter);
             throw new Error('Chưa hỗ trợ dữ liệu sự kiện: ' + [type, id, field].join(','));
@@ -1127,6 +1147,7 @@
             if (!Number.isInteger(x) || !Number.isInteger(y)) throw new Error('Tọa độ nhân vật không hợp lệ.');
             if (targetId < 0) {
                 engine.state.x = x; engine.state.y = y;
+                delete engine.state.motion; engine.state.moveFrames = 0;
                 if (direction && !engine.state.directionFixed) engine.state.direction = direction;
                 engine.state.followers(true);
                 engine.resetCamera();

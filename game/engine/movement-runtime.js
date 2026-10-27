@@ -1,9 +1,9 @@
 'use strict';
 
 (function (root, factory) {
-    if (typeof module === 'object' && module.exports) module.exports = factory(require('./script-runtime'));
-    else root.FNHStandaloneMovement = factory(root.FNHStandaloneScripts);
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (scriptApi) {
+    if (typeof module === 'object' && module.exports) module.exports = factory(require('./script-runtime'), require('./map-model'));
+    else root.FNHStandaloneMovement = factory(root.FNHStandaloneScripts, root.FNHStandaloneMap);
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (scriptApi, mapApi) {
     var DIRECTIONS = [2, 4, 6, 8];
     var DELTAS = { 2: [0, 1], 4: [-1, 0], 6: [1, 0], 8: [0, -1] };
     var RIGHT = { 2: 4, 4: 8, 8: 6, 6: 2 };
@@ -12,6 +12,11 @@
     var FLAGS = { 31: ['walkAnime', true], 32: ['walkAnime', false], 33: ['stepAnime', true],
         34: ['stepAnime', false], 35: ['directionFixed', true], 36: ['directionFixed', false],
         37: ['through', true], 38: ['through', false], 39: ['transparent', true], 40: ['transparent', false] };
+
+    function startMotion(character, from, frames, jumpPeak) {
+        character.moveFrames = frames;
+        character.motion = { fromX: from.x, fromY: from.y, x: character.x, y: character.y, frames: frames, jumpPeak: jumpPeak || 0 };
+    }
 
     function validateRoute(route) {
         if (!route || !Array.isArray(route.list)) throw new TypeError('Movement route cần danh sách lệnh.');
@@ -120,17 +125,20 @@
         if (directions) {
             if (!directions.length) return { frames: duration };
             var diagonal = code >= 5 && code <= 8;
-            var moved = environment.move(character, directions[0], diagonal ? directions[1] : null, code === 13);
-            if (!moved && !diagonal && directions.length > 1 && (code === 10 || code === 11)) moved = environment.move(character, directions[1]);
+            var moved = environment.move(character, directions[0], diagonal ? directions[1] : null, code === 13, duration);
+            if (!moved && !diagonal && directions.length > 1 && (code === 10 || code === 11)) moved = environment.move(character, directions[1], null, false, duration);
             if (moved) character.moveFrames = duration;
             return { moved: moved, frames: moved ? duration : 0 };
         }
         if (code === 14) {
-            environment.locate(character, character.x + p[0], character.y + p[1]);
+            var from = mapApi.displayPosition(character), peak = 10 + Math.round(Math.hypot(p[0], p[1])) - speed;
+            var jumpFrames = Math.max(1, peak * 2);
+            environment.locate(character, character.x + p[0], character.y + p[1], jumpFrames, peak);
+            startMotion(character, from, jumpFrames, peak);
             if (!character.directionFixed && (p[0] || p[1])) {
                 character.direction = Math.abs(p[0]) > Math.abs(p[1]) ? (p[0] > 0 ? 6 : 4) : (p[1] > 0 ? 2 : 8);
             }
-            return { frames: Math.max(1, (10 + Math.round(Math.hypot(p[0], p[1])) - speed) * 2) };
+            return { frames: jumpFrames };
         }
         if (code === 15) return { frames: Math.max(1, Number(p[0]) || 0) };
         if (code >= 16 && code <= 26) {
@@ -154,5 +162,5 @@
         return { frames: 0 };
     };
 
-    return { MovementRuntime: MovementRuntime, validateRoute: validateRoute, DELTAS: DELTAS };
+    return { MovementRuntime: MovementRuntime, validateRoute: validateRoute, DELTAS: DELTAS, startMotion: startMotion };
 }));

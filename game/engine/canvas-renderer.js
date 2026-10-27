@@ -2,9 +2,9 @@
 
 // Renderer Canvas của engine độc lập, đọc trực tiếp bố cục ảnh và tile JSON.
 (function (root, factory) {
-    if (typeof module === 'object' && module.exports) module.exports = factory(require('./text-format'));
-    else root.FNHStandaloneCanvas = factory(root.FNHStandaloneText);
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (textApi) {
+    if (typeof module === 'object' && module.exports) module.exports = factory(require('./text-format'), require('./map-model'));
+    else root.FNHStandaloneCanvas = factory(root.FNHStandaloneText, root.FNHStandaloneMap);
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (textApi, mapApi) {
     var TILE_SIZE = 48;
 
     function CanvasRenderer(canvas, options) {
@@ -202,23 +202,23 @@
             if (!page) return null;
             var image = { characterName: event.characterName, characterIndex: event.characterIndex,
                 direction: event.direction, pattern: animationPattern(event, event.pattern), tileId: event.tileId };
-            return { x: event.x, y: event.y, image: image, priority: page.priorityType, id: event.id,
-                transparent: event.transparent, opacity: event.opacity, blendMode: event.blendMode, balloon: event.balloon };
+            return Object.assign(mapApi.displayPosition(event), { image: image, priority: page.priorityType, id: event.id,
+                transparent: event.transparent, opacity: event.opacity, blendMode: event.blendMode, balloon: event.balloon });
         }).filter(Boolean);
         var actor = state.actor(state.party[0] || 1);
-        if (actor) actors.push({ x: state.x, y: state.y, priority: 1, id: Infinity, image: {
+        if (actor) actors.push(Object.assign(mapApi.displayPosition(state), { priority: 1, id: Infinity, image: {
             characterName: state.characterName == null ? actor.characterName : state.characterName,
             characterIndex: state.characterIndex == null ? actor.characterIndex : state.characterIndex,
             direction: state.direction, pattern: animationPattern(state, 1)
-        }, transparent: state.transparent, opacity: state.opacity, blendMode: state.blendMode, balloon: state.balloon });
+        }, transparent: state.transparent, opacity: state.opacity, blendMode: state.blendMode, balloon: state.balloon }));
         if (state.followersVisible) {
             state.followers().forEach(function (position) {
                 var follower = state.actor(position.id);
                 if (!follower) return;
-                actors.push({ x: position.x, y: position.y, priority: 1, id: 100000 + position.id, image: {
+                actors.push(Object.assign(mapApi.displayPosition(position), { priority: 1, id: 100000 + position.id, image: {
                     characterName: follower.characterName, characterIndex: follower.characterIndex,
-                    direction: position.direction, pattern: animationPattern(state, 1)
-                }, transparent: state.transparent, opacity: state.opacity, blendMode: state.blendMode, balloon: null });
+                    direction: position.direction, pattern: animationPattern(position, 1)
+                }, transparent: state.transparent, opacity: state.opacity, blendMode: state.blendMode, balloon: null }));
             });
         }
         await Promise.all(actors.map(async function (entry) {
@@ -328,7 +328,8 @@
         context.globalCompositeOperation = 'source-over';
         context.fillStyle = '#000'; context.fillRect(0, 0, mask.width, mask.height);
         context.globalCompositeOperation = 'lighter';
-        var x = (player.x - viewport.startX + 0.5) * 48, y = (player.y - viewport.startY + 0.5) * 48;
+        var position = mapApi.displayPosition(player);
+        var x = (position.x - viewport.startX + 0.5) * 48, y = (position.y - viewport.startY + 0.5) * 48;
         if (light.flashlight) {
             this.drawLight(context, x, y, { radius: 40, color: '#999999', brightness: 0 }, light.time, 0);
             var beam = light.flashlight, delta = { 2: [0,1], 4: [-1,0], 6: [1,0], 8: [0,-1] }[player.direction] || [0,1];
@@ -340,8 +341,9 @@
         } else this.drawLight(context, x, y, { radius: light.radius, color: light.color, fire: light.fire,
             brightness: light.radius > 0 ? Math.min(0.99, 20 / light.radius) : 0 }, light.time, 0);
         sources.forEach(function (source) {
-            renderer.drawLight(context, (source.event.x - viewport.startX + 0.5) * 48,
-                (source.event.y - viewport.startY + 0.5) * 48, source, light.time, source.event.id);
+            var position = mapApi.displayPosition(source.event);
+            renderer.drawLight(context, (position.x - viewport.startX + 0.5) * 48,
+                (position.y - viewport.startY + 0.5) * 48, source, light.time, source.event.id);
         });
         this.context.save(); this.context.globalCompositeOperation = 'multiply';
         this.context.drawImage(mask, 0, 0); this.context.restore();
@@ -375,7 +377,7 @@
         var height = actor.bitmap ? actor.bitmap.height / (single ? 4 : 8) : TILE_SIZE;
         var frame = Math.min(7, Math.floor((76 - balloon.remaining) / 8));
         this.context.drawImage(bitmap, frame * 48, (balloon.id - 1) * 48, 48, 48,
-            (actor.x - startX) * 48, (actor.y - startY + 1) * 48 - height - 48 - (object ? 0 : 6), 48, 48);
+            (actor.x - startX) * 48, (actor.y - startY + 1) * 48 - height - 48 - (object ? 0 : 6) - (actor.lift || 0), 48, 48);
     };
 
     CanvasRenderer.prototype.drawAnimation = function (animation, state, map, startX, startY) {
@@ -384,8 +386,9 @@
         if (frame < 0 || frame >= data.frames.length) return;
         var target = entry.targetId === -1 ? state : map.eventById(entry.targetId);
         if (!target) return;
-        this.drawAnimationCells(animation, (target.x - startX + 0.5) * TILE_SIZE,
-            (target.y - startY + (data.position === 2 ? 1 : data.position === 0 ? 0.35 : 0.5)) * TILE_SIZE);
+        var position = mapApi.displayPosition(target);
+        this.drawAnimationCells(animation, (position.x - startX + 0.5) * TILE_SIZE,
+            (position.y - startY + (data.position === 2 ? 1 : data.position === 0 ? 0.35 : 0.5)) * TILE_SIZE - position.lift);
     };
 
     CanvasRenderer.prototype.drawAnimationCells = function (animation, x, y) {
@@ -542,7 +545,7 @@
 
     CanvasRenderer.prototype.drawActorImage = function (sheets, actor, startX, startY) {
         var image = actor.image;
-        if (image.tileId) return this.drawTile(sheets, image.tileId, actor.x - startX, actor.y - startY);
+        if (image.tileId) return this.drawTile(sheets, image.tileId, actor.x - startX, actor.y - startY - (actor.lift || 0) / TILE_SIZE);
         if (!actor.bitmap) return;
         var prefix = /^[!$]+/.exec(image.characterName);
         var single = prefix && prefix[0].includes('$');
@@ -554,7 +557,7 @@
         var row = (single ? 0 : Math.floor(index / 4) * 4) + ({ 2: 0, 4: 1, 6: 2, 8: 3 }[image.direction] || 0);
         this.context.drawImage(actor.bitmap, column * width, row * height, width, height,
             (actor.x - startX + 0.5) * TILE_SIZE - width / 2,
-            (actor.y - startY + 1) * TILE_SIZE - height - (object ? 0 : 6), width, height);
+            (actor.y - startY + 1) * TILE_SIZE - height - (object ? 0 : 6) - (actor.lift || 0), width, height);
     };
 
     return { CanvasRenderer: CanvasRenderer, TILE_SIZE: TILE_SIZE };

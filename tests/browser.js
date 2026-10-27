@@ -997,6 +997,56 @@ async function main() {
         })()`,false,false);
         await evalPage(cdp,'FNHStandalonePreview.engine.restore('+JSON.stringify(settingsState)+').then(()=>true)',true,false);
         await waitFor(cdp,'!document.querySelector("#fnh-menu-dialog").open',5000,'khôi phục bản đồ sau kiểm tra tùy chọn');
+        check('Canvas vẽ sprite giữa bước và giữ đúng pixel sau tải save',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
+            await e.boot({mapId:74,x:2,y:2,party:[1],alwaysDash:false,characterName:'$guard1',characterIndex:0});
+            const blank=()=>new FNHStandaloneMap.GameMap({id:74,width:40,height:30,data:Array(7200).fill(0),events:[]},{flags:[16],tilesetNames:[]},e.state);
+            e.map=blank();e.state.through=true;e.move(6);e.advanceRoutes(8);
+            const canvas=document.createElement('canvas'),renderer=new FNHStandaloneCanvas.CanvasRenderer(canvas);
+            await renderer.draw({state:e.state,map:e.map});
+            const actual=canvas.getContext('2d').getImageData(0,0,816,624).data;
+            const image=new Image();image.src='img/characters/%24guard1.png';await image.decode();
+            const expected=document.createElement('canvas');expected.width=816;expected.height=624;
+            const ctx=expected.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.fillStyle='#080706';ctx.fillRect(0,0,816,624);
+            const w=image.width/3,h=image.height/4;
+            ctx.drawImage(image,0,2*h,w,h,144-w/2,138-h,w,h);
+            const pixels=ctx.getImageData(0,0,816,624).data;
+            if(!pixels.every((value,index)=>value===actual[index]))return false;
+            const saved=e.save();e.advanceRoutes(8);await e.restore(saved);e.map=blank();
+            await renderer.draw({state:e.state,map:e.map});
+            const restored=canvas.getContext('2d').getImageData(0,0,816,624).data;
+            return e.state.x===3 && e.state.moveFrames===8 && pixels.every((value,index)=>value===restored[index]);
+        })()`,true,false));
+        check('renderer nội suy đồng đội, guest và quái dùng route',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
+            await e.boot({mapId:74,x:5,y:5,party:[1,3],guests:[2],alwaysDash:false});e.state.through=true;
+            e.map=new FNHStandaloneMap.GameMap({id:74,width:40,height:30,data:Array(7200).fill(0),events:[null,{id:1,x:12,y:5,pages:[{
+                conditions:{},trigger:0,priorityType:1,moveSpeed:4,through:true,image:{characterName:'$guard1',direction:6,pattern:1},list:[]
+            }]}]},{flags:[16],tilesetNames:[]},e.state);
+            e.move(6);e.advanceRoutes(16);e.move(2);
+            e.movement.start(e.map.eventById(1),{list:[{code:3},{code:0}]});e.advanceRoutes(8);
+            const renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas')),positions=[];
+            const draw=renderer.drawActor;renderer.drawActor=function(sheets,entry,x,y){positions.push(entry);return draw.call(this,sheets,entry,x,y);};
+            await renderer.draw({state:e.state,map:e.map});
+            return positions.some(p=>p.id===Infinity&&p.x===6&&p.y===5.5) && positions.some(p=>p.id===100003&&p.x===5.5&&p.y===5) &&
+                positions.some(p=>p.id===100002&&p.x===5&&p.y===5) && positions.some(p=>p.id===1&&p.x===12.5&&p.y===5);
+        })()`,true,false));
+        check('nhảy nâng sprite, balloon và animation cùng vị trí nội suy',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
+            await e.boot({mapId:74,x:2,y:2,party:[1],alwaysDash:false,characterName:'$guard1',characterIndex:0});
+            e.map=new FNHStandaloneMap.GameMap({id:74,width:40,height:30,data:Array(7200).fill(0),events:[]},{flags:[16],tilesetNames:[]},e.state);
+            e.movement.start(e.state,{list:[{code:14,parameters:[2,0]},{code:0}]});e.advanceRoutes(8);
+            const renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas')),drawn=[];
+            const draw=renderer.drawActor;renderer.drawActor=function(sheets,entry,x,y){drawn.push(entry);return draw.call(this,sheets,entry,x,y);};
+            await renderer.draw({state:e.state,map:e.map});
+            const actor=drawn[0];if(actor.x!==3||actor.y!==2||actor.lift!==32)return false;
+            const calls=[];renderer.context.drawImage=(...args)=>calls.push(args);
+            actor.balloon={id:1,remaining:76};renderer.drawBalloon({},actor,0,0);
+            const h=actor.bitmap.height/4;if(calls[0][5]!==144||calls[0][6]!==144-h-48-6-32)return false;
+            let location;renderer.drawAnimationCells=(animation,x,y)=>{location=[x,y];};
+            renderer.drawAnimation({entry:{targetId:-1,elapsed:0},data:{position:2,frames:[[]]}},e.state,e.map,0,0);
+            return location[0]===168&&location[1]===112;
+        })()`,true,false));
         check('Canvas vẽ follower và guest ở vị trí lưu, ẩn cả hai đúng lệnh', await evalPage(cdp, `(async () => {
             const source = FNHStandalonePreview.engine;
             const state = new FNHStandaloneState.GameState({ mapId: 74, x: 15, y: 15, party: [1, 2], guests: [3],

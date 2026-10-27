@@ -76,7 +76,11 @@ Movement route hỗ trợ lệnh 0–45: đi/quay/nhảy/chờ, công tắc, t�
 đổi hình, opacity/blend, SE và script. Route chạy theo frame, chờ va chạm hoặc bỏ
 qua theo `skippable`, có thể lặp/thay/hủy; save giữ vị trí, hình và tiến trình route.
 Test kiểm tra từng nhóm lệnh và quét hơn 100.000 route hiện có trong JSON.
-Hiện bước đi đổi tọa độ theo ô, chưa nội suy chuyển động/sprite giữa hai ô.
+Tọa độ gameplay giữ theo ô; sprite nội suy theo frame cho bước thường, chạy,
+chéo, bước lùi, route cưỡng chế, AI và follower/guest. Nhảy giữ quỹ đạo parabol;
+camera, đèn, balloon và animation bám vị trí hiển thị giữa hai ô. Lưu/tải giữ
+tiến độ chuyển động, menu/trận tạm dừng; lệnh đặt vị trí/chuyển map dọn đường
+di chuyển cũ. Follower tập hợp bằng lệnh 217 chờ hình đi hết bước cuối.
 Lệnh cuộn bản đồ 204 điều khiển camera theo hướng, khoảng cách và tốc độ trong JSON.
 Camera cuộn theo frame, giữ tiến trình qua save, dừng ở mép map và tiếp tục theo
 nhân vật khi di chuyển. Hai lệnh cuộn nối tiếp chạy lần lượt; cờ chờ giữ event

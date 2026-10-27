@@ -466,7 +466,7 @@
                     perform(async function () { await engine.runCommonEvent(commonBindings[key], eventHandlers); await draw(); });
                 });
                 var active = sceneChanged || !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
-                    lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events).some(function (character) {
+                    lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events, engine.state.followers()).some(function (character) {
                     return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0);
                 });
                 active = active || filterRevision !== engine.filters.revision || engine.filters.active();

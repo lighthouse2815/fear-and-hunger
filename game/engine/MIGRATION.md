@@ -20,8 +20,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
 2. Menu: đối chiếu đội hình, trang bị và các lựa chọn theo cấu hình gốc;
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
-3. Bản đồ: di chuyển mượt.
-   Chỉ đánh dấu xong sau khi xác minh.
+3. Bản đồ: đối chiếu thêm thời điểm sự kiện chạm theo bước di chuyển.
 4. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
 5. Luồng chính: đối chiếu tiếp âm thanh khi tải save, nội dung kết thúc
    và cập nhật server/build/check khi chuyển entry chính.
@@ -30,6 +29,10 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Nội suy sprite bước/chạy/chéo/lùi/route/AI/follower/guest; nhảy parabol, camera,
+  ánh sáng/balloon/animation và toán hạng tọa độ màn hình dùng vị trí hiển thị.
+  Collision giữ tọa độ ô, pause menu/trận, 203/chuyển map dọn motion; save giữa
+  bước/nhảy giữ tiến độ. Chrome so pixel PNG giữa bước và sau tải save.
 - Chế tạo che tên chưa biết bằng `?`, mở tên theo crafted/save, SE `fnh_choice2`,
   sắp ID và khóa ở 99 sản phẩm. Kiểm tra nguồn cùng loại, mất sách và đọc nguyên
   liệu chuẩn từ JSON khi craft. Toàn bộ 28 khối nguyên liệu thật dùng ID, không

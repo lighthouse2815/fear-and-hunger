@@ -10,6 +10,17 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     var DIRECTION_BITS = { 2: 1, 4: 2, 6: 4, 8: 8 };
 
+    function displayPosition(character) {
+        var motion = character.motion;
+        if (!motion || motion.x !== character.x || motion.y !== character.y || !(character.moveFrames > 0) || !(motion.frames > 0)) {
+            return { x: character.x, y: character.y, lift: 0 };
+        }
+        var progress = 1 - Math.min(1, character.moveFrames / motion.frames);
+        return { x: motion.fromX + (character.x - motion.fromX) * progress,
+            y: motion.fromY + (character.y - motion.fromY) * progress,
+            lift: motion.jumpPeak ? 2 * motion.jumpPeak * motion.jumpPeak * progress * (1 - progress) : 0 };
+    }
+
     function GameMap(data, tileset, state) {
         if (!data || !Number.isInteger(data.width) || !Number.isInteger(data.height)) {
             throw new TypeError('Dữ liệu bản đồ không hợp lệ.');
@@ -64,10 +75,11 @@
 
     GameMap.prototype.viewport = function (player, width, height) {
         var cols = Math.ceil(width / 48), rows = Math.ceil(height / 48);
+        var position = displayPosition(player);
         var camera = this.state && this.state.screen && this.state.screen.mapCamera;
         return {
-            startX: Math.max(0, Math.min(this.width - cols, camera && camera.mapId === this.id ? camera.x : player.x - Math.floor(cols / 2))),
-            startY: Math.max(0, Math.min(this.height - rows, camera && camera.mapId === this.id ? camera.y : player.y - Math.floor(rows / 2)))
+            startX: Math.max(0, Math.min(this.width - cols, camera && camera.mapId === this.id ? camera.x : position.x - Math.floor(cols / 2))),
+            startY: Math.max(0, Math.min(this.height - rows, camera && camera.mapId === this.id ? camera.y : position.y - Math.floor(rows / 2)))
         };
     };
 
@@ -102,12 +114,13 @@
         return this.events.find(function (event) { return event.id === id; }) || null;
     };
 
-    GameMap.prototype.locateEvent = function (id, x, y, direction) {
+    GameMap.prototype.locateEvent = function (id, x, y, direction, moving) {
         var event = this.eventById(id);
         if (!event) return;
         if (!Number.isInteger(x) || !Number.isInteger(y)) throw new Error('Tọa độ sự kiện không hợp lệ.');
         event.x = x;
         event.y = y;
+        if (!moving) { delete event.motion; event.moveFrames = 0; }
         if (direction) event.direction = direction;
         if (this.state) this.state.eventLocations[this.id + ',' + id] = {
             x: x, y: y, direction: event.direction,
@@ -190,7 +203,7 @@
             var page = map.eventPage(event), properties = {};
             ['x', 'y', 'direction', 'pattern', 'characterName', 'characterIndex', 'tileId', 'moveSpeed',
                 'moveFrequency', 'directionFixed', 'through', 'transparent', 'opacity', 'blendMode',
-                'walkAnime', 'stepAnime', 'chaseRange', 'seePlayer', 'alertSound', 'moveFrames', 'animationFrames', 'erased', 'autonomous', 'balloon'].forEach(function (key) {
+                'walkAnime', 'stepAnime', 'chaseRange', 'seePlayer', 'alertSound', 'moveFrames', 'motion', 'animationFrames', 'erased', 'autonomous', 'balloon'].forEach(function (key) {
                 if (event[key] !== undefined) properties[key] = event[key];
             });
             snapshot[event.id] = { mapId: map.id, pageIndex: event.pages.indexOf(page), properties: properties };
@@ -198,5 +211,5 @@
         return snapshot;
     };
 
-    return { GameMap: GameMap, DIRECTION_BITS: Object.assign({}, DIRECTION_BITS) };
+    return { GameMap: GameMap, DIRECTION_BITS: Object.assign({}, DIRECTION_BITS), displayPosition: displayPosition };
 }));
