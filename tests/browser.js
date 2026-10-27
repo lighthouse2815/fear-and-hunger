@@ -3430,6 +3430,17 @@ async function main() {
                 e.state.party.join(',')==='1' && e.state.actor(1).name==='Mercenary' &&
                 e.state.menuEnabled && FNHStandalonePreview.errors.length===0;
         })()`,false,false));
+        for(let step=0;step<35 && await evalPage(cdp,'FNHStandalonePreview.engine.state.mapId===74',false,false);step++){
+            await evalPage(cdp,`document.querySelector('#fnh-controls [data-direction="8"]').click()`,false,true);
+            await sleep(250);
+        }
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.mapId!==74 && !FNHStandalonePreview.engine.eventRunning',10000,'đi qua cửa ngục thật');
+        check('đi từ cổng qua cửa vào layout ngục theo biến JSON',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine,layout=e.state.variableValue(121);
+            const map=layout===1?1:layout===2?29:layout===3?51:183;
+            return e.state.mapId===map && e.state.x===(layout===1||layout===2?27:layout===3?26:91) &&
+                e.state.y===(layout===1||layout===2||layout===3?68:73) && FNHStandalonePreview.errors.length===0;
+        })()`,false,false));
 
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;

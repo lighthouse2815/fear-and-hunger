@@ -26,8 +26,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 ## Đã đối chiếu
 
 - Chrome chơi liên tục từ entry chính: chọn Mercenary, đặt tên, phát hết video
-  intro, chọn Fear & Hunger và bỏ qua hồi tưởng, tới Map074. Không sửa switch
-  hay chạy lại event; đây chưa phải kiểm thử cả hành trình tới kết thúc.
+  intro, chọn Fear & Hunger và bỏ qua hồi tưởng, tới Map074 rồi đi qua cửa vào
+  layout ngục theo biến 121. Không sửa switch hay chạy lại event; đây chưa phải
+  kiểm thử cả hành trình tới kết thúc.
 - Entry chính mở luồng khởi động engine độc lập; trang legacy giữ riêng để
   đối chiếu và mở save RPG Maker. Server/build nhận engine mới không cần runtime
   cũ, không chèn compat vào entry mới và vẫn đóng gói trang legacy.
