@@ -25,6 +25,10 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Scheduler bỏ autorun map và touch được xếp hàng nếu trang chỉ có lệnh kết thúc,
+  như Game_Event.start gốc; parallel và common event giữ hành vi riêng. Map001
+  có event 3/4 luôn rỗng: Chrome và unit xác nhận event 84 thật vẫn chạy và bật
+  switch 410/202 khi đủ điều kiện.
 - Tương tác bỏ trang event chỉ có lệnh kết thúc như Game_Event.start gốc: ô
   Map051 (36,63) có event 6 rỗng không che event 7 mở cửa, chọn Open chạy route
   của hai cánh và bật switch 22; chọn Leave giữ cửa. Unit và Chrome dùng JSON thật.

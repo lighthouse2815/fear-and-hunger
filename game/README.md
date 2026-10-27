@@ -78,7 +78,9 @@ và vô hiệu hóa click trên bản đồ. Không dùng `eval`, không nạp r
 Test quét và thực thi từng biến thể; hình và giới hạn HP được giữ khi sửa chỉ số
 và qua save. Hệ di chuyển tự động dùng cấu hình chase để đuổi, tìm đường và quay
 về vị trí ban đầu; chế độ `events=1` bật cả scheduler autorun/parallel của map
-và common event.
+và common event. Autorun của event map chỉ có lệnh kết thúc được bỏ qua như
+runtime gốc, để không chặn autorun thật phía sau; parallel và common event giữ
+luồng riêng.
 Interpreter cũng chạy các lệnh EXP/level, chỉ số, học/quên kỹ năng, đổi trang bị,
 tên/biệt danh/hồ sơ, hình và TP. Chỉ số lấy từ class, trang bị và trait trạng thái;
 đổi trang bị trao đổi với túi đồ. EXP được nhớ riêng theo class. Lệnh nhảy nhãn

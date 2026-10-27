@@ -3459,6 +3459,20 @@ async function main() {
             return e.map.eventPage(e.map.eventById(8)).priorityType===0 && !e.messageRunning &&
                 FNHStandalonePreview.errors.length===0;
         })()`,false,false));
+        await evalPage(cdp,`(async()=>{
+            const app=FNHStandalonePreview,e=app.engine;
+            await e.restore({mapId:1,x:27,y:68,party:[1],switches:{153:true,246:true}});
+            window.__realAutorunScheduler=new FNHStandaloneScheduler.EventScheduler(e,app.scheduler.handlers,error=>app.errors.push(error.message));
+            __realAutorunScheduler.tick();
+        })()`,true,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.switchValue(410) && FNHStandalonePreview.engine.state.switchValue(202)',5000,'autorun Map001 thật sau trang rỗng');
+        check('autorun rỗng Map001 không chặn sự kiện 84 thật',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;
+            return __realAutorunScheduler.autorun.page===e.map.eventPage(e.map.eventById(84)) &&
+                !e.map.eventById(3).locked && !e.map.eventById(4).locked && FNHStandalonePreview.errors.length===0;
+        })()`,false,false));
+        await evalPage(cdp,'__realAutorunScheduler.stop();delete window.__realAutorunScheduler',false,false);
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'hủy autorun kiểm tra');
 
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;

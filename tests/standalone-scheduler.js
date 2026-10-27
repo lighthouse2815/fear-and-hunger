@@ -1,6 +1,9 @@
 'use strict';
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const path = require('node:path');
 const { GameEngine } = require('../game/engine/game-engine');
+const { GameDataStore } = require('../game/engine/data-store');
 const { EventScheduler } = require('../game/engine/event-scheduler');
 const delay = () => new Promise(resolve => setImmediate(resolve));
 const page = (trigger, list, conditions = {}) => ({ trigger, list, conditions, image: {}, priorityType: 0 });
@@ -39,6 +42,28 @@ async function fixture(events, commonEvents = []) {
     assert.equal(engine.state.switchValue(8), false, 'parallel bị đổi page không được tiếp tục sau wait');
     assert.equal(errors.length, 0);
     scheduler.stop();
+
+    const emptyFirst = await fixture([null,
+        { id: 1, x: 0, y: 1, pages: [page(3, [{ code: 0 }])] },
+        { id: 2, x: 1, y: 1, pages: [page(3, [{ code: 121, parameters: [20, 20, 0] }, { code: 0 }])] }
+    ]);
+    const emptyScheduler = new EventScheduler(emptyFirst, {}, error => errors.push(error));
+    emptyScheduler.tick(); await delay();
+    assert.equal(emptyFirst.state.switchValue(20), true, 'autorun rỗng không chặn autorun có lệnh phía sau');
+    assert.equal(emptyFirst.map.eventById(1).locked, undefined, 'autorun rỗng không khóa event');
+    emptyScheduler.stop();
+
+    const realStore = new GameDataStore({ fetchImpl: async url => ({ ok: true, json: async () =>
+        JSON.parse(await fs.readFile(path.join(__dirname, '../game', url), 'utf8')) }) });
+    const real = new GameEngine({ dataStore: realStore });
+    await real.boot({ mapId: 1, x: 27, y: 68, party: [1], switches: { 153: true, 246: true } });
+    assert.deepEqual(real.map.eventPage(real.map.eventById(3)).list.map(command => command.code), [0]);
+    assert.deepEqual(real.map.eventPage(real.map.eventById(4)).list.map(command => command.code), [0]);
+    const realScheduler = new EventScheduler(real, {}, error => errors.push(error));
+    realScheduler.tick(); await delay();
+    assert.equal(realScheduler.autorun.page, real.map.eventPage(real.map.eventById(84)), 'bỏ hai autorun rỗng để chạy event 84 thật');
+    assert.equal(real.state.switchValue(410), true); assert.equal(real.state.switchValue(202), true);
+    realScheduler.stop(); await delay();
 
     // Parallel không còn thuộc map mới phải dừng, không áp dụng công tắc muộn.
     const moving = await fixture([null, { id: 1, x: 0, y: 1, pages: [page(4, [

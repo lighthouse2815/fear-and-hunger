@@ -50,6 +50,8 @@
         function start(event, page, common, touched) {
             if (!page || scheduler.failedPages.has(page)) return;
             var trigger = touched ? 3 : common ? (event.trigger === 1 ? 3 : 4) : page.trigger;
+            // Game_Event.start không khởi chạy trang map chỉ có lệnh kết thúc.
+            if (trigger === 3 && !common && (!page.list || !page.list.some(function (command) { return command.code !== 0; }))) return;
             if (trigger === 3 && !engine.eventRunning && !engine.stepRunning && !scheduler.autorun) {
                 var foreground = { page: page, controller: new AbortController() };
                 scheduler.autorun = foreground;
