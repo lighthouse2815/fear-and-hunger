@@ -127,11 +127,14 @@
                         var table = engine.database[{ item: 'Items', weapon: 'Weapons', armor: 'Armors' }[ingredient.kind]];
                         return (table[ingredient.id] && table[ingredient.id].name || ingredient.kind + ' ' + ingredient.id) + ' × ' + ingredient.amount;
                     }).join(', ');
-                    row.appendChild(node('strong', recipe.item.name));
+                    row.appendChild(node('strong', recipe.name));
                     row.appendChild(node('p', 'Nguyên liệu: ' + ingredients));
                     var craft = node('button', 'Chế tạo'); craft.type = 'button'; craft.dataset.synthesis = recipe.kind + ':' + recipe.id;
                     craft.disabled = ui.busy || !engine.canSynthesize(recipe);
-                    craft.onclick = function () { ui.act(function () { engine.synthesize(recipe); }); };
+                    craft.onclick = function () { ui.act(async function () {
+                        engine.synthesize(recipe);
+                        if (ui.handlers.effect) await ui.handlers.effect(250, [{ name: 'fnh_choice2', volume: 100, pitch: 100, pan: 0 }]);
+                    }); };
                     row.appendChild(craft); content.appendChild(row);
                 });
             });

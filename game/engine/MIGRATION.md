@@ -19,9 +19,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
 2. Menu: đối chiếu đội hình, trang bị và các lựa chọn theo cấu hình gốc;
-   Chế tạo item/weapon/armor theo recipe và
-   ingredient note đã chạy trong menu, kiểm tra bạc/nguyên liệu và save số lần
-   chế tạo; cần đối chiếu thêm recipe dùng tên thay vì ID và custom synthesis effect.
+   đối chiếu đầy đủ bố cục và thông tin của các màn menu.
 3. Bản đồ: di chuyển mượt.
    Chỉ đánh dấu xong sau khi xác minh.
 4. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
@@ -32,6 +30,10 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Chế tạo che tên chưa biết bằng `?`, mở tên theo crafted/save, SE `fnh_choice2`,
+  sắp ID và khóa ở 99 sản phẩm. Kiểm tra nguồn cùng loại, mất sách và đọc nguyên
+  liệu chuẩn từ JSON khi craft. Toàn bộ 28 khối nguyên liệu thật dùng ID, không
+  có recipe tên hoặc custom synthesis effect trong dữ liệu hiện tại.
 - Cheat tên `lighthouse` đọc tên đã trim/không phân biệt hoa thường, luôn đầy HP,
   miễn death state và tăng đòn gây mất/hút HP trúng quái lên tối thiểu 9.999 sau
   modifier. Không tăng hồi phục/MP/đòn đồng đội hay cho quái cùng tên; đổi tên tắt.

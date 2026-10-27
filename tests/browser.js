@@ -1247,12 +1247,14 @@ async function main() {
         await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine;window.synthesisBefore=e.save();
             e.state.gainItem('items',7,1);e.state.gainItem('items',27,1);e.state.gainItem('items',8,1);
+            const audio=FNHStandalonePreview.audio;window.synthesisFactory=audio.audioFactory;window.synthesisSounds=[];
+            audio.audioFactory=function(){const element=window.synthesisFactory();window.synthesisSounds.push(element);return element;};
         })()`,false,false);
         await clickElement(cdp,'#fnh-menu'); await clickElement(cdp,'[data-menu-tab="synthesis"]');
         await waitFor(cdp,'document.querySelector("button[data-synthesis=\\"item:5\\"]") && !document.querySelector("button[data-synthesis=\\"item:5\\"]").disabled',5000,'mở công thức Torch');
         check('menu chế tạo đọc công thức và đủ nguyên liệu',await evalPage(cdp,`(() => {
             const row=document.querySelector('button[data-synthesis="item:5"]').parentElement;
-            return row.textContent.includes('Torch') && row.textContent.includes('Tinderbox') && row.textContent.includes('Stick');
+            return row.querySelector('strong').textContent==='?????' && !row.querySelector('strong').textContent.includes('Torch') && row.textContent.includes('Tinderbox') && row.textContent.includes('Stick');
         })()`,false,false));
         await clickElement(cdp,'button[data-synthesis="item:5"]');
         await waitFor(cdp,'FNHStandalonePreview.engine.state.itemCount("items",5)===1',5000,'chế tạo Torch');
@@ -1260,9 +1262,21 @@ async function main() {
             const e=FNHStandalonePreview.engine;
             return e.state.itemCount('items',7)===0 && e.state.itemCount('items',27)===0 && e.state.itemCount('items',8)===0 && e.state.synthesis.crafted.items[5]===1;
         })()`,false,false));
+        await waitFor(cdp,'window.synthesisSounds.some(audio=>audio.src.endsWith("/audio/se/fnh_choice2.ogg") && audio.duration>0 && audio.currentTime>0)',
+            10000,'chế tạo phát SE OGG thật theo cấu hình gốc');
+        check('chế tạo phát fnh_choice2 và giữ âm lượng người chơi',await evalPage(cdp,
+            'window.synthesisSounds.some(audio=>audio.src.endsWith("/audio/se/fnh_choice2.ogg") && Math.abs(audio.volume-FNHStandalonePreview.audio.masterVolume*FNHStandalonePreview.audio.volumes.se)<0.000001)',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.state.gainItem("items",7,1);FNHStandalonePreview.engine.state.gainItem("items",27,1);FNHStandalonePreview.engine.state.gainItem("items",8,1)',false,false);
+        await clickElement(cdp,'[data-menu-tab="synthesis"]');
+        check('đã chế tạo mở tên Torch thật trong menu',await evalPage(cdp,
+            'document.querySelector(\'button[data-synthesis="item:5"]\').parentElement.querySelector("strong").textContent==="Torch"',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.state.gainItem("items",5,98)',false,false);
+        await clickElement(cdp,'[data-menu-tab="synthesis"]');
+        check('đủ 99 Torch khóa nút chế tạo và giữ nguyên nguyên liệu',await evalPage(cdp,
+            'document.querySelector(\'button[data-synthesis="item:5"]\').disabled && FNHStandalonePreview.engine.state.itemCount("items",7)===1 && FNHStandalonePreview.engine.state.itemCount("items",27)===1 && FNHStandalonePreview.engine.state.itemCount("items",8)===1',false,false));
         await clickElement(cdp,'#fnh-menu-close');
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.synthesisBefore).then(()=>true)',true,false);
-        await evalPage(cdp,'delete window.synthesisBefore',false,false);
+        await evalPage(cdp,'FNHStandalonePreview.audio.audioFactory=window.synthesisFactory;delete window.synthesisFactory;delete window.synthesisSounds;delete window.synthesisBefore',false,false);
         await evalPage(cdp,`(() => {
             const engine=FNHStandalonePreview.engine;window.bookBefore=engine.save();engine.state.gainItem('items',40,1);
         })()`,false,false);

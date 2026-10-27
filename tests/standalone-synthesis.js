@@ -13,6 +13,7 @@ const { GameDataStore } = require('../game/engine/data-store');
     engine.openMenu();
     const recipes = engine.synthesisRecipes('item'), torch = recipes.find(recipe => recipe.id === 5);
     assert.ok(torch, 'Tinderbox mở công thức Torch');
+    assert.equal(torch.name, '?????'); assert.equal(torch.known, false, 'chưa chế tạo thì tên bị che theo cấu hình gốc');
     assert.deepEqual(torch.ingredients, [{ kind: 'item', id: 7, amount: 1 }, { kind: 'item', id: 27, amount: 1 }, { kind: 'item', id: 8, amount: 1 }]);
     assert.equal(engine.canSynthesize(torch), true);
     const before = { seven: state.itemCount('items', 7), stick: state.itemCount('items', 27), cloth: state.itemCount('items', 8) };
@@ -22,6 +23,9 @@ const { GameDataStore } = require('../game/engine/data-store');
     assert.equal(state.itemCount('items', 27), before.stick - 1);
     assert.equal(state.itemCount('items', 8), before.cloth - 1);
     assert.equal(state.synthesis.crafted.items[5], 1);
+    state.gainItem('items', 7, 1);
+    assert.equal(engine.synthesisRecipes('item').find(recipe => recipe.id === 5).name, 'Torch', 'chế tạo một lần mở tên thật');
+    state.gainItem('items', 7, -1);
     assert.equal(engine.canSynthesize(torch), false);
     await engine.restore(engine.save());
     assert.equal(engine.state.itemCount('items', 5), 1, 'save giữ vật phẩm đã chế tạo');
@@ -30,10 +34,29 @@ const { GameDataStore } = require('../game/engine/data-store');
     engine.state.gainItem('items', 47, 1);
     const book = engine.synthesisRecipes('item').find(recipe => recipe.id === 5);
     assert.equal(engine.canSynthesize(book), true, 'sách công thức vẫn mở công thức sau save');
+    assert.equal(book.name, 'Torch');
+    const full = engine.state.itemCount('items', 5);
+    engine.state.gainItem('items', 5, 99 - full);
+    const atLimit = engine.save();
+    assert.equal(engine.canSynthesize(book), false, '99 vật phẩm ngăn chế tạo như plugin gốc');
+    assert.throws(() => engine.synthesize(book), /Chưa đủ nguyên liệu/);
+    assert.deepEqual(engine.save(), atLimit, 'không trừ nguyên liệu khi đã đầy');
+    engine.state.gainItem('items', 5, full - 99);
     engine.state.gainItem('items', 26, 1); engine.state.gainItem('items', 27, 1); engine.state.gainItem('items', 170, 1);
     const armor = engine.synthesisRecipes('armor').find(recipe => recipe.id === 32);
     assert.ok(armor); assert.equal(engine.canSynthesize(armor), true);
     engine.synthesize(armor); assert.equal(engine.state.itemCount('armors', 32), 1);
+    engine.state.gainItem('items', 26, 1); engine.state.gainItem('items', 27, 1);
+    const stale = engine.synthesisRecipes('armor').find(recipe => recipe.id === 32);
+    engine.state.gainItem('items', 170, -engine.state.itemCount('items', 170));
+    assert.equal(engine.canSynthesize(stale), false, 'mất nguồn công thức không dùng được đối tượng cũ');
+    assert.throws(() => engine.synthesize(stale), /Chưa đủ nguyên liệu/);
+    engine.state.gainItem('items', 170, 1);
+    const forged = { ...engine.synthesisRecipes('armor').find(recipe => recipe.id === 32), ingredients: [], item: engine.database.Items[1] };
+    const branches = engine.state.itemCount('items', 27);
+    engine.synthesize(forged); assert.equal(engine.state.itemCount('items', 27), branches - 1, 'nguyên liệu luôn đọc từ JSON thay vì đối tượng truyền vào');
+    engine.state.actor(1).equips[0] = 3; engine.state.inventory.items[3] = 0;
+    assert.ok(!engine.synthesisRecipes('item').some(recipe => recipe.id === 14), 'Iron mace ID 3 không được xem như sách công thức item ID 3');
     const goldId = engine.database.Armors.length;
     engine.database.Armors.push({ id: goldId, name: 'Gold armor', etypeId: 2, params: [0,0,0,0,0,0,0,0], note: '<Synthesis Ingredients>\ngold: 12\n</Synthesis Ingredients>' });
     engine.database.Items[47].note += '\n<Armor Recipe: ' + goldId + '>';
@@ -43,5 +66,19 @@ const { GameDataStore } = require('../game/engine/data-store');
     assert.equal(engine.state.gold, 0); assert.equal(engine.state.itemCount('armors', goldId), 1);
     engine.closeMenu();
     assert.throws(() => engine.synthesize(goldRecipe), /Chưa đủ nguyên liệu/);
-    console.log('ĐẠT: recipe/ingredient item-vũ khí-giáp, sách mở công thức, trừ nguyên liệu/bạc, crafted và save.');
+    let actualBlocks = 0;
+    for (const [table, kind] of [['Items','item'],['Weapons','weapon'],['Armors','armor']]) {
+        const records = JSON.parse(await fs.readFile(path.join(__dirname, '../game/data', table + '.json'), 'utf8'));
+        for (const item of records.filter(Boolean)) {
+            assert.doesNotMatch(item.note || '', /<Custom Synthesis/i, 'dữ liệu thật chưa dùng custom effect');
+            const block = /<Synthesis Ingredients>([\s\S]*?)<\/Synthesis Ingredients>/i.exec(item.note || '');
+            if (!block) continue; actualBlocks++;
+            assert.ok(block[1].split(/\r?\n/).map(line => line.trim()).filter(Boolean).every(line => /^(item|weapon|armor)\s+\d+(?:\s*:\s*\d+)?$/i.test(line)), 'nguyên liệu thật dùng ID');
+            for (const ingredient of engine.synthesisIngredients(kind, item.id)) {
+                assert.ok(engine.database[{item:'Items',weapon:'Weapons',armor:'Armors'}[ingredient.kind]][ingredient.id]);
+            }
+        }
+    }
+    assert.equal(actualBlocks, 28);
+    console.log('ĐẠT: recipe/ingredient item-vũ khí-giáp, tên ẩn/mở/crafted/save, giới hạn 99, nguồn cùng loại/mất sách, trừ nguyên liệu JSON/bạc và không dùng recipe giả.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

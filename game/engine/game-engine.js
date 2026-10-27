@@ -752,7 +752,9 @@
             var table = engine.database[{ items: 'Items', weapons: 'Weapons', armors: 'Armors' }[sourceKind]];
             if (!table[key]) return;
             if (engine.state.itemCount(sourceKind, Number(key)) <= 0 && !engine.state.party.some(function (actorId) {
-                return engine.state.actor(actorId).equips.includes(Number(key));
+                return engine.state.actor(actorId).equips.some(function (id, slot) {
+                    return sourceKind === (slot === 0 ? 'weapons' : 'armors') && id === Number(key);
+                });
             })) return;
                 var source = table[key], note = source && source.note || '';
                 ['Item', 'Weapon', 'Armor'].forEach(function (label) {
@@ -765,7 +767,9 @@
                         var ingredients = engine.synthesisIngredients(targetKind, targetId);
                         if (!ingredients.length) return;
                         seen[targetKind + ':' + targetId] = true;
-                        recipes.push({ kind: targetKind, id: targetId, item: targetTable[targetId], ingredients: ingredients });
+                        var item = targetTable[targetId], known = (engine.state.synthesis.crafted[targetKind + 's'][targetId] || 0) > 0;
+                        recipes.push({ kind: targetKind, id: targetId, item: item, ingredients: ingredients,
+                            name: known ? item.name : '?'.repeat(item.name.length), known: known });
                     });
                 });
         }
@@ -777,10 +781,12 @@
                 if (key) scanSource(slot === 0 ? 'weapons' : 'armors', String(key));
             });
         });
-        return recipes;
+        return recipes.sort(function (a, b) { return a.id - b.id; });
     };
     GameEngine.prototype.canSynthesize = function (recipe) {
         if (this.state.scene !== 'menu' || !recipe) return false;
+        recipe = this.synthesisRecipes(recipe.kind).find(function (entry) { return entry.kind === recipe.kind && entry.id === recipe.id; });
+        if (!recipe || this.state.itemCount({ item: 'items', weapon: 'weapons', armor: 'armors' }[recipe.kind], recipe.id) >= 99) return false;
         return recipe.ingredients.every(function (ingredient) {
             return ingredient.kind === 'gold' ? this.state.gold >= ingredient.amount :
                 this.state.itemCount({ item: 'items', weapon: 'weapons', armor: 'armors' }[ingredient.kind], ingredient.id) >= ingredient.amount;
@@ -788,6 +794,7 @@
     };
     GameEngine.prototype.synthesize = function (recipe) {
         if (!this.canSynthesize(recipe)) throw new Error('Chưa đủ nguyên liệu chế tạo.');
+        recipe = this.synthesisRecipes(recipe.kind).find(function (entry) { return entry.kind === recipe.kind && entry.id === recipe.id; });
         recipe.ingredients.forEach(function (ingredient) {
             if (ingredient.kind === 'gold') this.state.gold -= ingredient.amount;
             else this.state.gainItem({ item: 'items', weapon: 'weapons', armor: 'armors' }[ingredient.kind], ingredient.id, -ingredient.amount);

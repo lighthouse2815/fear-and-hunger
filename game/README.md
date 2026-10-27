@@ -265,6 +265,10 @@ Tab **Chế tạo** đọc recipe/ingredient từ note JSON của vật phẩm, 
 sách công thức phải có trong túi để mở công thức. Engine kiểm tra số lượng nguyên
 liệu, bạc, trừ đúng một lần, cộng vật phẩm tạo ra và lưu số lần chế tạo. Công thức
 và nguyên liệu bằng ID được giữ nguyên; dòng tên chưa có trong dữ liệu sẽ báo lỗi.
+Tên công thức chưa từng chế tạo bị che bằng `?`, sau lần đầu hiện tên thật và
+giữ qua save. Chế tạo phát `fnh_choice2` theo cấu hình gốc. Có đủ 99 sản phẩm thì
+khóa chế tạo trước khi trừ nguyên liệu; công thức phải còn nguồn mở hợp lệ và
+nguyên liệu luôn được đọc lại từ JSON. Sách/vũ khí/giáp trùng ID không mở nhầm công thức.
 Lệnh game over/về tiêu đề dừng cả chuỗi common event đang gọi và hủy các sự kiện
 nền đang chờ. Hai màn này dùng ảnh/nhạc có sẵn, cho chọn tải một trong 20 ô lưu
 hoặc chơi mới. Tab **Hệ thống** của menu cũng lưu/tải 20 ô, hiển thị thời điểm,
