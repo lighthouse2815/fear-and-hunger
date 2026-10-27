@@ -166,6 +166,25 @@
         return track ? { sound: Object.assign({}, track.sound), position: audio.currentTime } : null;
     };
 
+    AudioManager.prototype.saveState = function () {
+        var state = { bgm: this.snapshot('bgm'), bgs: this.snapshot('bgs'), savedBgm: this.savedBgm };
+        if (this.battle && this.battle.audio) {
+            this.battle.audio.bgm = state.bgm; this.battle.audio.bgs = state.bgs;
+        }
+        return JSON.parse(JSON.stringify(state));
+    };
+
+    AudioManager.prototype.restoreState = function (state) {
+        // Dọn nhạc/ME/SE của phiên cũ trước khi khôi phục, kể cả save im lặng.
+        ['bgm', 'bgs', 'se', 'me'].forEach(this.stop.bind(this));
+        this.battle = null;
+        this.savedBgm = state && state.savedBgm ? JSON.parse(JSON.stringify(state.savedBgm)) : null;
+        ['bgm', 'bgs'].forEach(function (category) {
+            var track = state && state[category];
+            if (track) this.play(category, track.sound, track.position);
+        }, this);
+    };
+
     AudioManager.prototype.beginBattle = function (battle, state, system) {
         if (this.battle === battle) return;
         this.battle = battle;

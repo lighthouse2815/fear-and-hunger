@@ -57,6 +57,7 @@
         this.followerPositions = source.followerPositions || [];
         this.followerFrames = Math.max(0, Number(source.followerFrames) || 0);
         this.vehicleBgm = source.vehicleBgm || null;
+        this.audio = source.audio || null;
         this.scene = source.scene || 'map';
         this.pendingEventStack = source.pendingEventStack || [];
         this.mapNameDisplay = source.mapNameDisplay !== false;
@@ -340,6 +341,7 @@
             followersVisible: this.followersVisible, followersGathering: this.followersGathering,
             footstepsEnabled: this.footstepsEnabled,
             followerPositions: this.followerPositions, followerFrames: this.followerFrames, vehicleBgm: this.vehicleBgm,
+            audio: this.audio,
             scene: this.scene, pendingEventStack: this.pendingEventStack,
             mapNameDisplay: this.mapNameDisplay,
             battle: this.battle, walkSteps: this.walkSteps, walkEffects: this.walkEffects,

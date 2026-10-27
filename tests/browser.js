@@ -2439,6 +2439,50 @@ async function main() {
         await waitFor(cdp, 'FNHStandalonePreview.audio.buffers.bgm === null', 3000, 'BGM fade và dừng');
         await screenshot('standalone-preview');
 
+        await evalPage(cdp, `(() => {
+            const e=FNHStandalonePreview.engine,a=FNHStandalonePreview.audio;window.beforeMapAudioSave=e.save();
+            a.play('bgm',{name:'fear_and_hunger',volume:80,pitch:90,pan:-20},1);a.handleEffect(243,[]);
+            a.buffers.bgm.currentTime=4;a.play('bgs',{name:'eastern_wind',volume:60,pitch:110,pan:35},2);
+        })()`,false,false);
+        await waitFor(cdp,'FNHStandalonePreview.audio.buffers.bgm.currentTime>=4 && !FNHStandalonePreview.audio.buffers.bgm.paused && FNHStandalonePreview.audio.buffers.bgs.currentTime>=2 && !FNHStandalonePreview.audio.buffers.bgs.paused',
+            10000,'OGG map phát thật trước khi lưu âm thanh');
+        await evalPage(cdp, `(async()=>{
+            const e=FNHStandalonePreview.engine,s=new FNHStandaloneSave.SaveStore({prefix:'FNH_STANDALONE_PREVIEW:'});
+            e.saveTo(s,19);window.savedMapAudio=s.load(19).audio;
+            await e.createInterpreter([{code:354}],0).run();
+        })()`,true,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="title" && !document.querySelector("#fnh-end-screen").hidden',5000,'về title trước khi tải save âm thanh');
+        await evalPage(cdp,'document.querySelector("#fnh-end-save-slot").value=19',false,false);
+        await clickElement(cdp,'#fnh-end-load');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="map" && FNHStandalonePreview.audio.buffers.bgm && !FNHStandalonePreview.audio.buffers.bgm.paused && FNHStandalonePreview.audio.buffers.bgs && !FNHStandalonePreview.audio.buffers.bgs.paused',
+            10000,'tải từ title phát lại BGM và BGS đã lưu');
+        check('tải từ title khôi phục OGG map, vị trí, pitch, pan và nhạc nhớ 243',await evalPage(cdp,`(() => {
+            const a=FNHStandalonePreview.audio,s=window.savedMapAudio;
+            return a.buffers.bgm.src.endsWith('/audio/bgm/fear_and_hunger.ogg') && a.buffers.bgs.src.endsWith('/audio/bgs/eastern_wind.ogg') &&
+                a.buffers.bgm.currentTime>=s.bgm.position && a.buffers.bgm.currentTime<s.bgm.position+3 &&
+                a.buffers.bgs.currentTime>=s.bgs.position && a.buffers.bgs.currentTime<s.bgs.position+3 &&
+                a.buffers.bgm.playbackRate===0.9 && a.buffers.bgs.playbackRate===1.1 &&
+                a.tracks.get(a.buffers.bgm).panGraph.panner.pan.value<0 && a.tracks.get(a.buffers.bgs).panGraph.panner.pan.value>0 &&
+                JSON.stringify(a.savedBgm)===JSON.stringify(s.savedBgm) && a.masterVolume===0.05;
+        })()`,false,false));
+        await evalPage(cdp,`FNHStandalonePreview.engine.createInterpreter([{code:244}],0,{effect:FNHStandalonePreview.audio.handleEffect.bind(FNHStandalonePreview.audio)}).run()`,true,false);
+        check('lệnh 244 sau tải đọc bookmark riêng của 243',await evalPage(cdp,
+            'FNHStandalonePreview.audio.buffers.bgm.currentTime>=window.savedMapAudio.savedBgm.position && FNHStandalonePreview.audio.buffers.bgm.currentTime<window.savedMapAudio.savedBgm.position+2',false,false));
+        await evalPage(cdp, `(async()=>{
+            const e=FNHStandalonePreview.engine,a=FNHStandalonePreview.audio,s=new FNHStandaloneSave.SaveStore({prefix:'FNH_STANDALONE_PREVIEW:'});
+            a.stop('bgm');a.stop('bgs');e.saveTo(s,19);await e.createInterpreter([{code:354}],0).run();
+        })()`,true,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="title" && !document.querySelector("#fnh-end-screen").hidden',5000,'title phát nhạc trước tải save im lặng');
+        await evalPage(cdp,'document.querySelector("#fnh-end-save-slot").value=19',false,false);
+        await clickElement(cdp,'#fnh-end-load');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="map" && document.querySelector("#fnh-end-screen").hidden',5000,'tải save im lặng từ title');
+        check('save im lặng dừng nhạc title, không phát autoplay đè snapshot',await evalPage(cdp,
+            '!FNHStandalonePreview.audio.buffers.bgm && !FNHStandalonePreview.audio.buffers.bgs',false,false));
+        await evalPage(cdp,`(async()=>{
+            await FNHStandalonePreview.engine.restore(window.beforeMapAudioSave);
+            localStorage.removeItem('FNH_STANDALONE_PREVIEW:19');delete window.beforeMapAudioSave;delete window.savedMapAudio;
+        })()`,true,false);
+
         await evalPage(cdp, `(async () => {
             const engine = FNHStandalonePreview.engine;
             const store = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });

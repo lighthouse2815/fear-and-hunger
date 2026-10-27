@@ -27,6 +27,7 @@
         this.movement = null;
         this.routeErrors = [];
         this.onRouteEffect = options.onRouteEffect || null;
+        this.audio = options.audio || null;
         this.screen = null;
         this.buttons = new Set();
         this.width = options.width || 816;
@@ -106,7 +107,14 @@
         this.state.followers(true);
         this.state.followersGathering = false;
         this.resetCamera();
+        this.playMapAudio();
         return this.map;
+    };
+
+    GameEngine.prototype.playMapAudio = function () {
+        if (!this.audio) return;
+        if (this.map.data.autoplayBgm) this.audio.play('bgm', this.map.data.bgm);
+        if (this.map.data.autoplayBgs) this.audio.play('bgs', this.map.data.bgs);
     };
 
     GameEngine.prototype.resetCamera = function () {
@@ -1178,6 +1186,7 @@
         if (!this.state) throw new Error('Engine chưa boot.');
         this.state.eventSnapshots = this.map.snapshotEvents();
         this.state.routeSnapshots = this.movement.snapshot();
+        if (this.audio) this.state.audio = this.audio.saveState();
         return this.state.toJSON();
     };
 
@@ -1247,6 +1256,13 @@
         this.lighting.sources(map);
         this.pendingTouchEvents = [];
         this.resetMovement(state.routeSnapshots);
+        if (this.audio) {
+            this.audio.restoreState(state.audio);
+            if (!state.audio) this.playMapAudio();
+            if (state.scene === 'battle' && this.battle.battle && !this.battle.battle.result) {
+                this.audio.beginBattle(this.battle.battle, state, this.database.System);
+            }
+        }
         return this;
     };
 

@@ -15,11 +15,11 @@
     var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
     var settings = new FNHStandaloneSettings.PlayerSettings({ key: 'FNH_STANDALONE_PREVIEW_SETTINGS' });
     var audio = new FNHStandaloneAudio.AudioManager({ baseUrl: '.', onError: function (error) { setStatus(error.message); } });
+    engine.audio = audio;
     FNHStandaloneSettings.categories.forEach(function (category) { audio.setVolume(category, settings.volumes[category] / 100); });
     document.getElementById('fnh-volume').value = settings.volumes.master;
     var ready = false;
     var busy = false;
-    var audioMap = null;
     var scheduler = null;
     var errors = [];
     var inputPulses = new Map();
@@ -169,7 +169,6 @@
     function syncBattleAudio() {
         var battle = engine.battle.battle;
         if (engine.state.scene === 'battle' && battle && !battle.result) {
-            audioMap = engine.map;
             audio.beginBattle(battle, engine.state, engine.database.System);
             battle.audio.bgm = audio.snapshot('bgm'); battle.audio.bgs = audio.snapshot('bgs');
         } else if (audio.battle) audio.endBattle(audio.battle.result || 'abort', engine.database.System, engine.state.scene === 'map');
@@ -211,11 +210,6 @@
         renderEndScreen();
         if (menuUi) menuUi.render();
         document.getElementById('fnh-always-dash').checked = engine.state.alwaysDash;
-        if (audioMap !== engine.map && engine.state.scene === 'map') {
-            audioMap = engine.map;
-            if (audioMap.data.autoplayBgm) audio.play('bgm', audioMap.data.bgm);
-            if (audioMap.data.autoplayBgs) audio.play('bgs', audioMap.data.bgs);
-        }
         var walkEffects = engine.state.scene === 'map' ? engine.state.walkEffects.map(formatResourceChanges) : [];
         setStatus('Map ' + engine.state.mapId + ' · ô ' + engine.state.x + ',' + engine.state.y + ' · Mũi tên: di chuyển · Enter: tương tác' +
             (walkEffects.length ? ' · ' + walkEffects.join(' | ') : ''));
@@ -419,7 +413,7 @@
     }
     var eventHandlers = {
         battleAudio: function (phase, battle) {
-            if (phase === 'start') { audioMap = engine.map; audio.beginBattle(battle, engine.state, engine.database.System); }
+            if (phase === 'start') audio.beginBattle(battle, engine.state, engine.database.System);
             else audio.endBattle(battle.result || 'abort', engine.database.System, engine.state.scene === 'map');
         },
         message: showMessage,
@@ -657,7 +651,6 @@
         perform(async function () {
             var slot = Number(document.getElementById('fnh-end-save-slot').value);
             if (!await engine.loadFrom(saveStore, slot, eventHandlers)) { setStatus('Ô ' + slot + ' chưa có dữ liệu lưu.'); return; }
-            audioMap = null;
             await draw();
         });
     });

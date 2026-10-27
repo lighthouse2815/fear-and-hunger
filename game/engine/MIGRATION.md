@@ -22,13 +22,17 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
 3. Bản đồ: đối chiếu thêm thời điểm sự kiện chạm theo bước di chuyển.
 4. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
-5. Luồng chính: đối chiếu tiếp âm thanh khi tải save, nội dung kết thúc
+5. Luồng chính: đối chiếu tiếp nội dung kết thúc
    và cập nhật server/build/check khi chuyển entry chính.
 6. Quét nội dung toàn bộ, kiểm tra các nhánh đại diện và loại các giả định chỉ
    đúng trong fixture. Cập nhật README để chỉ rõ kết quả và giới hạn còn lại.
 
 ## Đã đối chiếu
 
+- Save ngoài trận giữ BGM/BGS, vị trí, volume/pitch/pan và bookmark 243/244;
+  tải dọn ME/SE/nhạc phiên cũ và khôi phục trước khi tiếp tục common event.
+  Save im lặng không phát autoplay, save cũ dùng autoplay map, tải lỗi giữ nhạc
+  hiện tại. Chrome tải từ title và phát OGG thật, không đổi âm lượng người chơi.
 - Nội suy sprite bước/chạy/chéo/lùi/route/AI/follower/guest; nhảy parabol, camera,
   ánh sáng/balloon/animation và toán hạng tọa độ màn hình dùng vị trí hiển thị.
   Collision giữ tọa độ ô, pause menu/trận, 203/chuyển map dọn motion; save giữa

@@ -297,6 +297,11 @@ dừng nhạc. ME thắng/thua dùng dữ liệu hệ thống, tạm dừng BGM 
 Nếu nhạc map và nhạc trận cùng tên, bài đang phát tiếp tục qua chuyển cảnh.
 Save trong trận giữ snapshot nhạc map và nhạc trận; tải lại không nhớ nhầm nhạc
 trận thành nhạc map. Snapshot này tách khỏi lệnh nhớ/phát tiếp BGM 243/244.
+Save ngoài trận cũng giữ BGM/BGS và vị trí phát, volume/pitch/pan cùng nhạc nhớ
+của 243/244. Tải từ menu, title hoặc game over dọn ME/SE của phiên trước, khôi
+phục nhạc trước khi chạy tiếp event và không dùng autoplay đè snapshot. Save
+im lặng giữ im lặng; save cũ chưa có snapshot dùng autoplay map. Âm lượng tổng
+và từng nhóm vẫn theo cấu hình hiện tại của người chơi, không bị save thay đổi.
 Mỗi bước thành công phát SE theo region, terrain rồi mặc định; 122 note trong
 Tilesets.json được giữ nguyên tên, volume và pitch. Quái/follower/guest giảm âm
 theo khoảng cách và có pan; follower ẩn, event `<No Footsteps>` và người chơi
