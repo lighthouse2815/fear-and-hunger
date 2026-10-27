@@ -2265,6 +2265,38 @@ async function main() {
             }
             return true;
         })()`,true,false));
+        check('Weak cắt đúng Damage.png, vị trí theo PNG quái và nhịp mờ của OctoBattle',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true,random:()=>0.5});
+            await e.boot({mapId:74,x:8,y:8,party:[1]});e.battle.setup(1);e.state.scene='battle';
+            const report=e.battle.useSkill(e.battle.actor(1),3,0,true),popup=e.battle.battle.popups[0];
+            if(!report.hits[0].weak || !popup.weak || popup.digits || popup.bitmap!=='guard1_torso')return false;
+            const canvas=document.createElement('canvas');canvas.getContext('2d',{willReadFrequently:true});
+            const renderer=new FNHStandaloneCanvas.CanvasRenderer(canvas),sheet=await renderer.loadImage('img/system/Damage.png');
+            const target=await renderer.loadImage('img/enemies/guard1_torso.png'),ref=document.createElement('canvas');ref.width=816;ref.height=624;
+            const ctx=ref.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=false;
+            for(const elapsed of [0,1,61,62.5,63]){
+                popup.elapsed=elapsed;renderer.context.clearRect(0,0,816,624);ctx.clearRect(0,0,816,624);
+                renderer.drawDamagePopup(sheet,popup,target);ctx.globalAlpha=Math.max(0,Math.min(1,(128-2*Math.floor(elapsed))/10));
+                ctx.drawImage(sheet,96,128,72,32,popup.x-Math.round(target.width*0.25)-(elapsed>=1?0.04:0)-36,popup.y-Math.round(target.height*0.6)-56,72,32);
+                const actual=renderer.context.getImageData(0,0,816,624).data,expected=ctx.getImageData(0,0,816,624).data;
+                if(!actual.some((value,index)=>index%4===3 && value>0) || !actual.every((value,index)=>value===expected[index]))return false;
+            }
+            popup.elapsed=32.5;e.battle.handleEffect(331,[0,1,0,99999,true]);e.battle.enemy(0).collapse.elapsed=32;
+            const before=JSON.stringify(popup);await e.restore(e.save());const result=await renderer.draw(e);
+            if(result.enemies!==6 || JSON.stringify(e.battle.battle.popups[0])!==before)return false;
+            e.advanceRoutes(31.5);return e.battle.battle.popups.length===0;
+        })()`,true,false));
+        check('Weak phía actor dùng kích thước một frame của sheet và giữ sau save',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true,random:()=>0.5});
+            await e.boot({mapId:74,x:8,y:8,party:[1]});e.battle.setup(1);e.state.scene='battle';e.state.actor(1).equips[3]=12;
+            const skill={...e.database.Skills[3],hitType:0,damage:{type:1,formula:'10',elementId:4,critical:false,variance:0}};
+            const report=e.battle.useAction(e.battle.enemy(0),skill,0,false,true);await e.restore(e.save());
+            const popup=e.battle.battle.popups[0],renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas'));
+            await renderer.draw(e);const calls=[],draw=renderer.context.drawImage.bind(renderer.context);renderer.context.drawImage=(...args)=>{calls.push(args);draw(...args);};
+            const sheet=await renderer.loadImage('img/system/Damage.png'),target=await renderer.loadImage('img/sv_actors/Actor1_1.png');
+            renderer.drawDamagePopup(sheet,popup,target);
+            return report.hits[0].weak && popup.type==='actor' && calls.some(args=>args[1]===96 && args[3]===72 && args[5]===102-Math.round(target.width/9*0.25)-36 && args[6]===444-Math.round(target.height/6*0.6)-56);
+        })()`,true,false));
         check('337 vẽ sprite sheet tại quái, phản chiếu và flash đúng alpha', await evalPage(cdp, `(async () => {
             const original = FNHStandalonePreview.engine;
             const engine = new FNHStandaloneEngine.GameEngine({ dataStore: original.dataStore, onRouteEffect: () => true });

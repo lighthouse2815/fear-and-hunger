@@ -145,6 +145,12 @@
         if (battler.hidden || !(result.missed || result.evaded || result.resource === 'hp' || result.resource === 'mp' && result.damage && battler.alive)) return;
         var popups = this.battle.popups || (this.battle.popups = []), enemy = battler.enemyId != null;
         var index = enemy ? battler.index : this.battle.actors.findIndex(function (actor) { return actor.id === battler.id; });
+        if (result.weak) {
+            popups.push({type:enemy?'enemy':'actor',targetId:enemy?battler.index:battler.id,weak:true,
+                x:enemy?battler.x:102+204*index,y:enemy?battler.y:444,elapsed:0,
+                bitmap:this.battlerState(battler).battlerName || ''});
+            return;
+        }
         var miss = result.missed || result.evaded, text = miss ? '' : String(Math.abs(result.damage));
         var popup = { type: enemy ? 'enemy' : 'actor', targetId: enemy ? battler.index : battler.id,
             x: enemy ? battler.x : 102 + 204 * index - 32, y: enemy ? battler.y - 8 : 444,
@@ -154,7 +160,7 @@
                 return {digit:Number(digit),x:(i-(text.length-1)/2)*24,y:-40,dy:-i};
             }) };
         popups.push(popup);
-        popups.filter(function (entry) { return entry.type === popup.type && entry.targetId === popup.targetId; }).forEach(function (entry) { entry.stack += 0.9; });
+        popups.filter(function (entry) { return !entry.weak && entry.type === popup.type && entry.targetId === popup.targetId; }).forEach(function (entry) { entry.stack += 0.9; });
     };
     BattleRuntime.prototype.performAction = function (battler, skill, item, counter) {
         if (battler.enemyId != null) return;
@@ -185,6 +191,7 @@
     BattleRuntime.prototype.advanceSprites = function (frames) {
         if (!this.battle) return;
         (this.battle.popups || []).forEach(function (popup) {
+            if (popup.weak) { popup.elapsed += frames; return; }
             popup.fraction += Math.min(frames,Math.max(0,128-popup.elapsed)); popup.elapsed += frames;
             while (popup.fraction >= 1) {
                 popup.fraction--;
@@ -194,7 +201,7 @@
                 });
             }
         });
-        if (this.battle.popups) this.battle.popups = this.battle.popups.filter(function (popup) { return popup.elapsed < 128; });
+        if (this.battle.popups) this.battle.popups = this.battle.popups.filter(function (popup) { return popup.elapsed < (popup.weak ? 64 : 128); });
         this.battle.spriteFrames = (this.battle.spriteFrames || 0) + frames;
         var elapsed = this.battle.spriteFrames;
         var iconTicks = Math.floor(elapsed / 40) - Math.floor((elapsed - frames) / 40);
@@ -615,14 +622,18 @@
         if (target.enemyId == null) this.refreshActor(target);
         this.syncActors();
     };
+    BattleRuntime.prototype.elementRate = function (subject,target,skill) {
+        var element = skill.damage.elementId;
+        if (element < 0) {
+            var elements = this.battlerTraits(subject).filter(function (trait) { return trait.code === 31; });
+            return elements.length ? Math.max.apply(null, elements.map(function (trait) { return this.traitRate(target, 11, trait.dataId); }, this)) : 1;
+        }
+        return element > 0 ? this.traitRate(target,11,element) : 1;
+    };
     BattleRuntime.prototype.damageValue = function (subject, target, skill, allowCritical) {
         var damage = skill.damage, value = 0, hit = {};
         value = Math.max(0, formulaValue(damage.formula, { a: this.values(subject), b: this.values(target) }));
-        var element = damage.elementId;
-        if (element < 0) {
-            var elements = this.battlerTraits(subject).filter(function (trait) { return trait.code === 31; });
-            value *= elements.length ? Math.max.apply(null, elements.map(function (trait) { return this.traitRate(target, 11, trait.dataId); }, this)) : 1;
-        } else if (element > 0) value *= this.traitRate(target, 11, element);
+        value *= this.elementRate(subject,target,skill);
         if (skill.hitType === 1) value *= this.traitRate(target, 23, 6);
         if (skill.hitType === 2) value *= this.traitRate(target, 23, 7);
         var vulnerable = this.battlerState(target).states.some(function (id) {
@@ -771,6 +782,8 @@
                             });
                             if (resource === 'hp' && value > 0) runtime.gainTp(target,
                                 Math.floor(50 * value / runtime.battlerParam(target, 0) * runtime.traitRate(target, 23, 5)));
+                            if (resource === 'hp' && value > 0 && runtime.elementRate(subject,target,skill) >= 1.1 &&
+                                !runtime.battlerState(target).states.some(function (id) { return /<No Weak Popup>/i.test(runtime.database.States[id].note || ''); })) hit.weak = true;
                             if (damage.type === 5 || damage.type === 6) {
                                 var recipient = reflected ? intendedTarget : subject;
                                 runtime.changeResource(recipient, resource, value);

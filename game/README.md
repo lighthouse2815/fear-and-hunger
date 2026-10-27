@@ -196,6 +196,10 @@ Popup nảy, xếp chồng và tồn tại 128 frame; chí mạng nhuộm đỏ 
 10 frame mờ dần. Lưu/tải giữ vị trí, tốc độ nảy và phần frame lẻ; nhiều hit
 không gộp mất số. Hút tài nguyên và regen cuối lượt cũng tạo popup đúng phía,
 menu và trạng thái trên bản đồ không tạo số trong trận. Rời trận dọn popup.
+Đòn HP gặp tỷ lệ nguyên tố từ 1.1 hiện chữ Weak trong Damage.png thay số, theo
+OctoBattle đang bật. Vị trí tính từ kích thước PNG/frame actor; nhiều hit không
+xếp chồng như số thường. Plugin gốc trừ duration hai lần nên chữ hết sau 64
+frame, mờ theo duration còn lại. Save và quái đã tan vẫn giữ đúng vị trí chữ.
 MP damage giới hạn theo MP hiện có: log và popup chỉ ghi lượng thực sự bị
 trừ; cạn MP không tạo số dư khi lặp đòn hoặc đánh toàn đội. Hồi MP từ 0 vẫn
 theo công thức và giới hạn MP tối đa.

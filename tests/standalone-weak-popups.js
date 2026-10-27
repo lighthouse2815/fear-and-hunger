@@ -1,0 +1,62 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+const {GameEngine}=require('../game/engine/game-engine');
+const {GameDataStore}=require('../game/engine/data-store');
+(async()=>{
+    const store=new GameDataStore({fetchImpl:async url=>({ok:true,json:async()=>JSON.parse(fs.readFileSync(path.join(__dirname,'../game',url),'utf8'))})});
+    const e=new GameEngine({dataStore:store,random:()=>0.5,onRouteEffect:()=>true});
+    await e.boot({mapId:74,x:8,y:8,party:[1]});let r=e.battle;
+    const skillId=e.database.Skills.length;
+    const skill={...e.database.Skills[3],id:skillId,hitType:0,successRate:100,note:'',animationId:0,effects:[],repeats:1,mpCost:0,tpCost:0,
+        damage:{type:1,formula:'35',elementId:2,critical:false,variance:0}};
+    e.database.Skills.push(skill);
+    function reset(){r.finish('escape');e.state.recoverActor(1);r.setup(1);e.state.scene='battle';
+        Object.assign(skill,{successRate:100,repeats:1});skill.damage={type:1,formula:'35',elementId:2,critical:false,variance:0};}
+    const strike=()=>r.useSkill(r.actor(1),skillId,0,true);
+    reset();const report=strike(),popup=r.battle.popups[0];
+    assert.equal(report.damage,40);assert.equal(report.hits[0].weak,true);
+    assert.equal(r.battle.popups.length,1);assert.equal(popup.weak,true);assert.equal(popup.digits,undefined,'Weak thay popup số theo OctoBattle');
+    assert.equal(popup.bitmap,'guard1_torso');assert.equal(popup.x,r.enemy(0).x);assert.equal(popup.y,r.enemy(0).y);
+    e.advanceRoutes(12.5);const save=e.save();e.advanceRoutes(12.5);const continued=JSON.stringify(r.battle.popups);
+    await e.restore(save);r=e.battle;e.advanceRoutes(12.5);assert.equal(JSON.stringify(r.battle.popups),continued);
+    e.advanceRoutes(38);assert.equal(r.battle.popups.length,1);e.advanceRoutes(1);assert.equal(r.battle.popups.length,0,'plugin trừ duration hai lần mỗi frame nên hết ở frame 64');
+    reset();skill.repeats=3;strike();assert.equal(r.battle.popups.length,3);assert.ok(r.battle.popups.every(p=>p.weak && p.stack===undefined));
+    const weakness=e.database.Enemies[1].traits.find(t=>t.code===11&&t.dataId===2),originalRate=weakness.value;
+    reset();weakness.value=1.09;strike();assert.equal(r.battle.popups[0].weak,undefined,'dưới 1.1 giữ số thường');
+    reset();weakness.value=1.1;strike();assert.equal(r.battle.popups[0].weak,true,'đúng ngưỡng 1.1 hiện Weak');weakness.value=originalRate;
+    reset();skill.damage.elementId=0;assert.equal(strike().hits[0].weak,undefined);assert.equal(r.battle.popups[0].weak,undefined);
+    reset();skill.damage.elementId=-1;assert.equal(r.elementRate(r.actor(1),r.enemy(0),skill),1.15);assert.equal(strike().hits[0].weak,true,'nguyên tố Attack đọc trait vũ khí');
+    reset();skill.damage.formula='0';strike();assert.equal(r.battle.popups[0].weak,undefined);
+    reset();skill.successRate=0;strike();assert.equal(r.battle.popups[0].row,4);
+    reset();skill.damage.type=2;strike();assert.equal(r.battle.popups,undefined,'MP không tạo Weak');
+    reset();skill.damage.type=3;strike();assert.equal(r.battle.popups[0].weak,undefined,'hồi HP không tạo Weak');
+    reset();skill.damage.type=5;strike();assert.equal(r.battle.popups.length,2);
+    assert.equal(r.battle.popups[0].row,1);assert.equal(r.battle.popups[1].weak,true,'drain vẫn hồi bằng số trên caster và Weak trên đích');
+    reset();const stateId=e.database.States.length;
+    e.database.States.push({...e.database.States[17],id:stateId,note:'<No Weak Popup>'});
+    r.addState(r.enemy(0),stateId,1,true);strike();assert.equal(r.battle.popups[0].weak,undefined);
+    reset();r.enemy(0).hp=1;strike();assert.equal(r.enemy(0).alive,false);assert.equal(r.battle.popups[0].bitmap,'guard1_torso','quái chết giữ asset hình học popup');
+    reset();e.state.actor(1).equips[3]=12;skill.damage.elementId=4;const actorRate=r.elementRate(r.enemy(0),r.actor(1),skill);
+    const actorReport=r.useSkill(r.enemy(0),skillId,0,true);
+    assert.equal(actorRate,1.6);assert.equal(actorReport.hits[0].weak,true);assert.equal(r.battle.popups[0].type,'actor');
+    const original=fs.readFileSync(path.join(__dirname,'../game/js/plugins/Olivia_OctoBattle.js'),'utf8');
+    const legacy=fs.readFileSync(path.join(__dirname,'../game/js/rpg_sprites.js'),'utf8');
+    const context={Sprite:function(){},Sprite_Damage:function(){},Olivia:{OctoBattle:{BattleEffects:{}}}};
+    context.Sprite.prototype.update=function(){};vm.createContext(context);
+    vm.runInContext(legacy.slice(legacy.indexOf('Sprite_Damage.prototype.update ='),legacy.indexOf('Sprite_Damage.prototype.updateChild =')),context);
+    vm.runInContext(original.slice(original.indexOf('Sprite_Damage.prototype.updateBreakPopup ='),original.indexOf('// Window_BattleSkill',original.indexOf('Sprite_Damage.prototype.updateBreakPopup ='))),context);
+    const reference=Object.assign(new context.Sprite_Damage(),{_duration:128,children:[{}],x:0,y:0,_moveXBase:-0.04,_moveXRate:0,_moveYBase:0,_moveYRate:0,
+        updateChild(child){this.updateBreakPopup(child);},updateFlash(){},updateOpacity(){}});
+    for(let i=0;i<64;i++)reference.update();assert.equal(reference._duration,0);assert.equal(reference.x,-0.04);
+    const config={};vm.createContext(config);vm.runInContext(fs.readFileSync(path.join(__dirname,'../game/js/plugins.js'),'utf8'),config);
+    const p=config.$plugins.find(p=>p.status&&p.name==='Olivia_OctoBattle').parameters;
+    assert.equal(p['Battle Effects Weak Popups'],'true');assert.equal(p['Battle Effects Weak Popup Require Rate'],'1.1');
+    assert.equal(p['Battle Effects Weak Popup Cell X'],'4');assert.equal(p['Battle Effects Weak Popup Cell Width'],'3');
+    for(const [key,value] of [['Cell X Factor','0.25'],['Cell Y Factor','0.60'],['Move X Base','-0.04'],['Move X Rate','0'],['Move Y Base','0'],['Move Y Rate','0']])
+        assert.equal(p['Battle Effects Weak Popup '+key],value);
+    assert.equal(e.database.Enemies.filter(s=>s&&(s.traits||[]).some(t=>t.code===11&&t.value>=1.1)).length,425);
+    console.log('ĐẠT: Weak từ Guard/Hack thật và 425 enemy có điểm yếu, ngưỡng/nguyên tố/0/MP/hồi/Miss/note, thay popup số/lặp/save/chết và duration/chuyển động so plugin gốc.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

@@ -116,6 +116,10 @@
         var damageSheet = battle.popups && battle.popups.length ? await this.loadImage('img/system/Damage.png') : null;
         var iconSheet = battle.enemies.some(function (enemy) { return enemy.spriteIcon && enemy.spriteIcon.iconIndex; }) ? await this.loadImage('img/system/IconSet.png') : null;
         var overlaySheet = battle.actors.some(function (actor) { return actor.spriteOverlay && actor.spriteOverlay.index; }) ? await this.loadImage('img/system/States.png') : null;
+        var weakPopups = await Promise.all((battle.popups || []).filter(function (popup) { return popup.weak; }).map(async function (popup) {
+            var folder = popup.type === 'actor' ? 'sv_actors' : engine.database.System.optSideView ? 'sv_enemies' : 'enemies';
+            return {popup:popup,bitmap:popup.bitmap ? await renderer.loadImage('img/'+folder+'/'+popup.bitmap+'.png') : null};
+        }));
         var fogView = engine.map.viewport(engine.state, this.canvas.width, this.canvas.height);
         var names = screen && screen.battlebacks || (engine.map.data.specifyBattleback ?
             [engine.map.data.battleback1Name, engine.map.data.battleback2Name] : ['', '']);
@@ -185,7 +189,10 @@
                     (data.position === 0 ? target.bitmap.height : data.position === 1 ? target.bitmap.height / 2 : 0));
             });
             [4, 3, 2, 1, 0].forEach(function (depth) { renderer.drawFogs(fogs, depth, fogView.startX, fogView.startY); });
-            if (damageSheet) (battle.popups || []).forEach(function (popup) { renderer.drawDamagePopup(damageSheet,popup); });
+            if (damageSheet) (battle.popups || []).forEach(function (popup) {
+                var target = weakPopups.find(function (entry) { return entry.popup === popup; });
+                renderer.drawDamagePopup(damageSheet,popup,target && target.bitmap);
+            });
         } finally { context.restore(); }
         if (screen) this.applyTone(context, width, height, screen.tone);
         pictures.forEach(function (entry) { renderer.drawPicture(entry); });
@@ -193,8 +200,17 @@
         return { battle: battle.troopId, enemies: enemies.length, actors: actors.filter(function (entry) { return entry.bitmap; }).length };
     };
 
-    CanvasRenderer.prototype.drawDamagePopup = function (bitmap,popup) {
+    CanvasRenderer.prototype.drawDamagePopup = function (bitmap,popup,targetBitmap) {
         var width = bitmap.width / 10, height = bitmap.height / 5, renderer = this;
+        if (popup.weak) {
+            var targetWidth = targetBitmap ? targetBitmap.width / (popup.type === 'actor' ? 9 : 1) : 0;
+            var targetHeight = targetBitmap ? targetBitmap.height / (popup.type === 'actor' ? 6 : 1) : 0;
+            this.context.save(); this.context.globalAlpha = Math.max(0,Math.min(1,(128-2*Math.floor(popup.elapsed))/10));
+            this.context.drawImage(bitmap,4*width,4*height,3*width,height,
+                popup.x-Math.round(targetWidth*0.25)-(popup.elapsed>=1?0.04:0)-1.5*width,
+                popup.y-Math.round(targetHeight*0.6)-40-height/2,3*width,height);
+            this.context.restore(); return;
+        }
         this.context.save(); this.context.globalAlpha = Math.max(0,Math.min(1,(128-popup.elapsed)/10));
         popup.digits.forEach(function (digit) {
             var w = digit.miss ? width * 4 : width, sx = digit.digit * width, sy = popup.row * height;

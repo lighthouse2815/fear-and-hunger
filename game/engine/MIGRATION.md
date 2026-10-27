@@ -15,8 +15,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: bổ sung popup Weak đang bật trong OctoBattle và đối chiếu chuyển
-   cảnh mở/kết thúc trận.
+1. Combat: đối chiếu chuyển cảnh mở/kết thúc trận.
    Thứ tự playback và số effect trong từng phase đã đối chiếu với 560 skill/item.
 2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
@@ -27,6 +26,12 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Weak của OctoBattle: đòn HP dương có rate nguyên tố >=1.1 thay popup số bằng
+  chữ sheet Damage.png (ô 4, hàng 4, rộng ba ô). Theo trait thường/Attack và
+  No Weak Popup; không tạo cho MP/hồi/0/Miss. Vị trí đọc PNG quái/frame actor,
+  không stack/nảy; plugin trừ duration hai lần, hết frame 64, dịch X -0.04 ở
+  tick đầu rồi đứng. Giữ asset/vị trí khi quái tan và qua save. Đối chiếu hàm
+  gốc và 425 enemy có điểm yếu; Chrome so pixel/fade/hình học ở cả hai phe.
 - Sau mỗi lệnh interpreter, actor combat được đồng bộ HP/MP/tên/đội trước lệnh
   tiếp theo, kể cả common event lồng nhau và lệnh cuối. Giữ object/motion,
   cập nhật UI khi page đang chờ thoại; 311/313 chết và 314 hồi ngay, không chốt
