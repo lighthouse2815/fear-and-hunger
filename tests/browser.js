@@ -3528,7 +3528,8 @@ async function main() {
             return true;
         })()`,true,false));
 
-        // Hành trình thật trên layout 3; cố định ngẫu nhiên và dùng cheat tên đã có trong game.
+        // Hai hành trình thật trên layout 3: thắng bằng cheat và nhân vật thường.
+        async function guardJourney(cheat) {
         await evalPage(cdp,'FNHStandalonePreview.settings.setVolume("master",5)',false,false);
         const seeded = await cdp.send('Page.addScriptToEvaluateOnNewDocument',{source:'Math.random = () => 0.5;'});
         await cdp.send('Page.navigate',{url:running.url});
@@ -3537,7 +3538,7 @@ async function main() {
         await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.engine.state && FNHStandalonePreview.engine.state.switchValue(296)',30000,'chọn nhân vật hành trình Guard');
         await clickElement(cdp,'#fnh-controls [data-direction="0"]');
         await waitFor(cdp,'document.querySelector("#fnh-name-dialog").open',10000,'đặt tên hành trình Guard');
-        await evalPage(cdp,`document.querySelector('#fnh-name-input').value='lighthouse';document.querySelector('#fnh-name-form').requestSubmit()`,false,false);
+        await evalPage(cdp,`document.querySelector('#fnh-name-input').value=${JSON.stringify(cheat ? 'lighthouse' : 'Mercenary')};document.querySelector('#fnh-name-form').requestSubmit()`,false,false);
         let reachedGate=false;
         for(let attempt=0;attempt<600 && !reachedGate;attempt++){
             reachedGate=await evalPage(cdp,`(()=>{
@@ -3550,8 +3551,8 @@ async function main() {
             })()`,false,true);
             if(!reachedGate)await sleep(250);
         }
-        check('bắt đầu hành trình Guard bằng chọn nhân vật và intro thật',reachedGate && await evalPage(cdp,
-            'FNHStandalonePreview.engine.state.variableValue(121)===3 && FNHStandalonePreview.engine.state.hasNameCheat(1)',false,false));
+        check('bắt đầu hành trình Guard '+(cheat?'với cheat':'bình thường'),reachedGate && await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.variableValue(121)===3 && FNHStandalonePreview.engine.state.hasNameCheat(1)==='+cheat,false,false));
         for(let step=0;step<35 && await evalPage(cdp,'FNHStandalonePreview.engine.state.mapId===74',false,false);step++){
             await evalPage(cdp,`document.querySelector('#fnh-controls [data-direction="8"]').click()`,false,true);await sleep(250);
         }
@@ -3577,9 +3578,9 @@ async function main() {
         check('đi qua cửa và gặp Guard thật bằng điều khiển gameplay',metGuard && await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.battle.troopId===1 && FNHStandalonePreview.engine.state.switchValue(22)',false,false));
         await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.phase==="input"',20000,'Guard nhận lệnh');
-        let wonGuard=false;
-        for(let frame=0;frame<200 && !wonGuard;frame++){
-            wonGuard=await evalPage(cdp,`(()=>{
+        let completedGuard=false;
+        for(let frame=0;frame<400 && !completedGuard;frame++){
+            completedGuard=await evalPage(cdp,`(()=>{
                 const e=FNHStandalonePreview.engine,next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
                 const choice=document.querySelector('#fnh-choices button:not(:disabled)');if(choice)choice.click();
                 if(e.state.scene==='battle' && e.battle.battle.phase==='input' && !document.querySelector('#fnh-battle-attack').disabled){
@@ -3588,11 +3589,20 @@ async function main() {
                 }
                 return e.state.scene==='map' && !e.eventRunning && e.battle.battle && e.battle.battle.result==='victory';
             })()`,false,true);
-            if(!wonGuard)await sleep(200);
+            if(!completedGuard)await sleep(200);
         }
-        check('thắng Guard và hoàn tất nhánh sự kiện thật khi dùng tên lighthouse',wonGuard && await evalPage(cdp,
-            'FNHStandalonePreview.engine.state.switchValue(23) && FNHStandalonePreview.engine.state.actor(1).hp>0 && FNHStandalonePreview.errors.length===0',false,false));
+        if(!completedGuard)throw new Error('Hành trình Guard chưa hoàn tất: '+JSON.stringify(await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;return {scene:e.state.scene,map:e.state.mapId,event:e.eventRunning,
+                result:e.battle.battle && e.battle.battle.result,phase:e.battle.battle && e.battle.battle.phase,hp:e.state.actor(1).hp,
+                message:document.querySelector('#fnh-message-text').textContent,next:document.querySelector('#fnh-next').hidden,
+                choices:[...document.querySelectorAll('#fnh-choices button')].map(button=>button.textContent),errors:FNHStandalonePreview.errors};
+        })()`,false,false)));
+        check(cheat?'thắng Guard và hoàn tất nhánh sự kiện thật khi dùng tên lighthouse':'thắng Guard và hoàn tất nhánh sự kiện bằng nhân vật thường',completedGuard && await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.switchValue(23) && FNHStandalonePreview.engine.state.actor(1).hp>0 && FNHStandalonePreview.engine.state.hasNameCheat(1)==='+cheat+' && FNHStandalonePreview.errors.length===0',false,false));
         await cdp.send('Page.removeScriptToEvaluateOnNewDocument',{identifier:seeded.identifier});
+        }
+        await guardJourney(true);
+        await guardJourney(false);
 
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;
