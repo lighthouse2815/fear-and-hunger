@@ -25,6 +25,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Chrome chơi liên tục từ entry chính qua lựa chọn, video, Map074, cửa Map051
+  rồi gặp và thắng Guard thật; ngẫu nhiên cố định và tên lighthouse bật cheat.
+  Nhánh thắng chạy xong, switch 23 được bật và điều khiển trở lại map.
 - Map157/160/185 có scrollType 3: đi qua cả bốn mép theo passability, camera
   liên tục và lệnh 204 không bị chặn ở biên; tile, sprite/follower, đèn,
   balloon/animation và vùng tối dùng vị trí lặp. Event chạm, tương tác/quầy,
