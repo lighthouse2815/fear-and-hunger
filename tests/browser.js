@@ -3400,6 +3400,37 @@ async function main() {
                 !e.eventRunning && !window.__endingError && document.querySelector('#fnh-end-title').textContent==='Game Over';
         })()`,true,false));
 
+        // Chạy liên tục qua UI thật; không sửa switch hoặc gọi lại event mở đầu.
+        await evalPage(cdp,'FNHStandalonePreview.settings.setVolume("master",5)',false,false);
+        await cdp.send('Page.navigate',{url:running.url});
+        await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.engine.state && FNHStandalonePreview.engine.state.scene==="title"',30000,'khởi động hành trình thật');
+        await clickElement(cdp,'#fnh-new-game');
+        await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.engine.state && FNHStandalonePreview.engine.state.switchValue(296)',30000,'chọn Mercenary');
+        await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+        await waitFor(cdp,'document.querySelector("#fnh-name-dialog").open',10000,'đặt tên Mercenary');
+        await evalPage(cdp,`document.querySelector('#fnh-name-input').value='Mercenary';
+            document.querySelector('#fnh-name-form').requestSubmit();window.__journeyVideoEnded=false;
+            document.querySelector('#fnh-video').addEventListener('ended',()=>window.__journeyVideoEnded=true,{once:true})`,false,false);
+        let journeyFinished=false;
+        for(let attempt=0;attempt<600 && !journeyFinished;attempt++){
+            journeyFinished=await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine,video=document.querySelector('#fnh-video');
+                const choices=[...document.querySelectorAll('#fnh-choices button')].filter(button=>!button.disabled);
+                if(!video.hidden){video.playbackRate=8;if(video.paused)document.querySelector('#fnh-video-play').click();}
+                else if(choices.length){const intro=document.querySelector('#fnh-message-text').textContent.includes('Play intro?');
+                    (intro ? choices[1] : choices[0]).click();}
+                else if(!document.querySelector('#fnh-next').hidden)document.querySelector('#fnh-next').click();
+                return e.state.mapId===74 && e.state.scene==='map' && !e.eventRunning;
+            })()`,false,true);
+            if(!journeyFinished)await sleep(250);
+        }
+        check('chơi liên tục từ entry chính qua video và lựa chọn tới cổng ngục',journeyFinished && await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;
+            return window.__journeyVideoEnded && e.state.switchValue(295) && e.state.switchValue(79) &&
+                e.state.party.join(',')==='1' && e.state.actor(1).name==='Mercenary' &&
+                e.state.menuEnabled && FNHStandalonePreview.errors.length===0;
+        })()`,false,false));
+
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;
         check('không có lỗi runtime mới', relevantErrors.length === 0, JSON.stringify(relevantErrors.map((item) => ({
