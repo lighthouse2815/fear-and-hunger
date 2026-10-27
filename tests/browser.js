@@ -2636,6 +2636,58 @@ async function main() {
         await sleep(400);
         check('giữ phím di chuyển theo frame và thả phím dừng lại', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.x === ' + stoppedAt + ' && !FNHStandalonePreview.engine.buttons.has("right")', false, false));
+        await evalPage(cdp,`(()=>{
+            // Hàng 0, x >= 4 không có event chạm; hàng 20 có event 139–142.
+            const e=FNHStandalonePreview.engine;e.state.x=4;e.state.y=0;e.state.moveFrames=0;
+            document.querySelector('#fnh-canvas').focus();
+        })()`,false,false);
+        await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:2});
+        const heldTouchPoint=await evalPage(cdp,`(async()=>{
+            const button=document.querySelector('#fnh-controls [data-direction="6"]');button.scrollIntoView({block:'center',behavior:'instant'});
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            const rect=button.getBoundingClientRect();return {x:rect.x+rect.width/2,y:rect.y+rect.height/2,id:1};
+        })()`,true,false);
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[heldTouchPoint]});
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.x>=6',5000,'giữ chạm đi nhiều ô');
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await waitFor(cdp,'!FNHStandalonePreview.engine.buttons.has("right") && !FNHStandalonePreview.engine.state.moveFrames',5000,'thả chạm dừng hướng');
+        const stoppedTouchAt=await evalPage(cdp,'FNHStandalonePreview.engine.state.x',false,false);
+        await sleep(350);
+        check('giữ/thả nút cảm ứng đi nhiều ô rồi dừng, không thêm bước từ click cuối',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.x==='+stoppedTouchAt+' && getComputedStyle(document.querySelector(\'#fnh-controls [data-direction="6"]\')).touchAction==="none"',false,false));
+        await evalPage(cdp,'document.querySelector("#fnh-canvas").focus({preventScroll:true})',false,false);
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[heldTouchPoint]});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+        check('thả phím không xóa hướng đang được giữ bằng chạm',await evalPage(cdp,'FNHStandalonePreview.engine.buttons.has("right")',false,false));
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+        check('hủy chạm không xóa hướng bàn phím còn giữ',await evalPage(cdp,'FNHStandalonePreview.engine.buttons.has("right")',false,false));
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[heldTouchPoint]});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+        check('pointercancel giải phóng hướng khi không còn phím giữ',await evalPage(cdp,'!FNHStandalonePreview.engine.buttons.has("right")',false,false));
+        const secondTouchPoint={...heldTouchPoint,x:heldTouchPoint.x+8,id:2};
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[heldTouchPoint,secondTouchPoint]});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[secondTouchPoint]});
+        check('thả một ngón giữ hướng của ngón còn lại trên cùng nút',await evalPage(cdp,'FNHStandalonePreview.engine.buttons.has("right")',false,false));
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[heldTouchPoint]});
+        await evalPage(cdp,'window.dispatchEvent(new Event("blur"))',false,false);
+        check('mất focus dọn hướng chạm đang giữ',await evalPage(cdp,'FNHStandalonePreview.engine.buttons.size===0',false,false));
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await evalPage(cdp,`document.querySelector('#fnh-controls [data-direction="6"]').addEventListener('pointerdown',event=>{window.__heldPointerId=event.pointerId;},{once:true})`,false,false);
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[heldTouchPoint]});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...heldTouchPoint,x:heldTouchPoint.x+1}]});
+        await evalPage(cdp,`(()=>{
+            const button=document.querySelector('#fnh-controls [data-direction="6"]');button.releasePointerCapture(window.__heldPointerId);
+        })()`,false,false);
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...heldTouchPoint,x:heldTouchPoint.x+2}]});
+        await waitFor(cdp,'!FNHStandalonePreview.engine.buttons.has("right")',5000,'mất capture dọn hướng');
+        check('lostpointercapture dừng hướng và không kẹt sau chạm',await evalPage(cdp,'!FNHStandalonePreview.engine.buttons.has("right")',false,false));
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:false});
+        await waitFor(cdp,'!FNHStandalonePreview.engine.stepRunning && !FNHStandalonePreview.engine.state.moveFrames',5000,'bước cuối kết thúc trước khi tải checkpoint');
         check('lệnh chạy nhanh thay đổi thời gian bước đi và giữ sau lưu/tải', await evalPage(cdp, `(async () => {
             const engine = FNHStandalonePreview.engine;
             await engine.createInterpreter([{code:356,parameters:['EnableDashing']}],39).run();
@@ -2971,9 +3023,17 @@ async function main() {
             for (let i = 0; i < pixels.length; i += 4) if (pixels[i] + pixels[i+1] + pixels[i+2] > 60) colored++;
             return engine.state.screen.pictures[7].name === 'text_mercenary' && colored > 10000 && !window.SceneManager;
         })()`, false, false));
-        await clickElement(cdp, '#fnh-controls [data-direction="6"]');
-        await waitFor(cdp, 'FNHStandalonePreview.engine.state.variableValue(9) === 2', 5000, 'chọn knight bằng nút phải');
-        check('sự kiện JSON đổi ảnh và vị trí khung chọn', await evalPage(cdp,
+        await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:2});
+        const selectTouchPoint=await evalPage(cdp,`(async()=>{
+            const button=document.querySelector('#fnh-controls [data-direction="6"]');button.scrollIntoView({block:'center',behavior:'instant'});
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            const rect=button.getBoundingClientRect();return {x:rect.x+rect.width/2,y:rect.y+rect.height/2,id:1};
+        })()`,true,false);
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[selectTouchPoint]});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:false});
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.variableValue(9) === 2', 5000, 'chạm nhanh chọn knight bằng nút phải');
+        check('chạm nhanh điều khiển JSON đổi ảnh và vị trí khung chọn', await evalPage(cdp,
             'FNHStandalonePreview.engine.state.screen.pictures[8].x === 225 && FNHStandalonePreview.engine.state.screen.pictures[7].name === "text_knight"', false, false));
         await sleep(250);
         await clickElement(cdp, '#fnh-controls [data-direction="0"]');

@@ -23,6 +23,7 @@
     var scheduler = null;
     var errors = [];
     var inputPulses = new Map();
+    var heldPointers = new Map(), heldKeys = new Map(), pointerClicks = new WeakSet();
     var commonKeys = new Map(), commonBindings = { torch: 289, skill: 257 };
     var video = document.getElementById('fnh-video');
     video.volume = audio.masterVolume;
@@ -442,7 +443,7 @@
     }
     menuUi = new FNHStandaloneMenu.MenuUi(engine, saveStore, eventHandlers, draw, {
         settings: settings, updateVolume: updateVolume,
-        clearInput: function () { engine.buttons.clear(); commonKeys.clear(); inputPulses.clear(); }
+        clearInput: clearInput
     });
     var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;
     function animate(now) {
@@ -484,7 +485,7 @@
                         // Interpreter đọc điều kiện qua microtask sau scheduler.tick().
                         // Giữ xung đến hết task để frame dài không làm mất lần bấm.
                         if (inputPulses.get(button) === pulse) {
-                            inputPulses.delete(button); engine.buttons.delete(button);
+                            inputPulses.delete(button); releaseButton(button);
                         }
                     }, 0);
                 });
@@ -519,10 +520,18 @@
     function pictureInput() {
         return automaticEvents && (!video.hidden || engine.state.mapId === 10);
     }
+    function clearInput() {
+        engine.buttons.clear(); inputPulses.clear(); commonKeys.clear(); heldPointers.clear(); heldKeys.clear();
+    }
+    function releaseButton(name) {
+        if (!inputPulses.has(name) && !Array.from(heldPointers.values()).includes(name) && !Array.from(heldKeys.values()).includes(name)) engine.buttons.delete(name);
+    }
     document.addEventListener('keyup', function (event) {
-        engine.buttons.delete(inputName(event.key)); commonKeys.delete(inputName(event.key));
+        var key = event.code || event.key.toLowerCase(), name = heldKeys.get(key) || inputName(event.key);
+        heldKeys.delete(key); releaseButton(name); commonKeys.delete(name);
     });
-    window.addEventListener('blur', function () { engine.buttons.clear(); inputPulses.clear(); commonKeys.clear(); });
+    window.addEventListener('blur', clearInput);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) clearInput(); });
     document.addEventListener('keydown', function (event) {
         audio.unlock();
         if (presentationInput()) return;
@@ -542,7 +551,7 @@
             }
             return;
         }
-        if (buttonName) engine.buttons.add(buttonName);
+        if (buttonName) { heldKeys.set(event.code || event.key.toLowerCase(), buttonName); engine.buttons.add(buttonName); }
         if (!next.hidden && buttonName === 'ok') {
             event.preventDefault();
             if (!event.repeat) next.click();
@@ -558,7 +567,22 @@
             if (!event.repeat) perform(interact);
         }
     });
-    document.getElementById('fnh-controls').addEventListener('click', function (event) {
+    var controls = document.getElementById('fnh-controls');
+    controls.addEventListener('pointerdown', function (event) {
+        var button = event.target.closest('button[data-direction]'), direction = button && Number(button.dataset.direction);
+        if (!direction || presentationInput() || document.querySelector('dialog[open]') || event.button !== 0) return;
+        event.preventDefault(); button.setPointerCapture(event.pointerId); pointerClicks.add(button);
+        var name = { 2:'down',4:'left',6:'right',8:'up' }[direction];
+        heldPointers.set(event.pointerId,name); engine.buttons.add(name);
+        if (pictureInput()) inputPulses.set(name,{remaining:3});
+        else perform(function () { return step(direction); });
+    });
+    function releasePointer(event) {
+        var name = heldPointers.get(event.pointerId);
+        heldPointers.delete(event.pointerId); if (name) releaseButton(name);
+    }
+    ['pointerup','pointercancel','lostpointercapture'].forEach(function (type) { controls.addEventListener(type,releasePointer); });
+    controls.addEventListener('click', function (event) {
         if (presentationInput()) return;
         var shortcut = event.target.closest('button[data-common-event]');
         if (shortcut) {
@@ -567,6 +591,7 @@
         }
         var button = event.target.closest('button[data-direction]');
         if (!button) return;
+        if (event.detail > 0 && pointerClicks.has(button)) { pointerClicks.delete(button); return; }
         var direction = Number(button.dataset.direction);
         if (pictureInput()) {
             var name = { 0: 'ok', 2: 'down', 4: 'left', 6: 'right', 8: 'up' }[direction];

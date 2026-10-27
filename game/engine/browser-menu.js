@@ -54,7 +54,7 @@
         if (!visible) { if (this.dialog.open) this.dialog.close(); return; }
         if (!this.dialog.open) {
             this.message.textContent = ''; this.tab = state.scene === 'save' ? 'system' : 'status';
-            this.dialog.showModal(); engine.buttons.clear();
+            this.dialog.showModal(); if (this.options && this.options.clearInput) this.options.clearInput(); else engine.buttons.clear();
         }
         var actorId = Number(this.actorSelect.value);
         if (!state.party.includes(actorId)) actorId = state.party[0];

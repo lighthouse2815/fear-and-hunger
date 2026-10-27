@@ -19,13 +19,18 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    Thứ tự playback và số effect trong từng phase đã đối chiếu với 560 skill/item.
 2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
-3. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
+3. Điều khiển: kiểm tra thêm thao tác điện thoại xuyên suốt luồng chơi chính.
 4. Luồng chính: cập nhật server/build/check khi chuyển entry chính.
 5. Quét nội dung toàn bộ, kiểm tra các nhánh đại diện và loại các giả định chỉ
    đúng trong fixture. Cập nhật README để chỉ rõ kết quả và giới hạn còn lại.
 
 ## Đã đối chiếu
 
+- Nút hướng dùng Pointer Events/capture để giữ/thả, hủy chạm và mất capture;
+  hỗ trợ nhiều ngón cùng hướng và bàn phím đồng thời. Blur/trang ẩn/mở menu
+  dọn input. Giữ xung bấm nhanh cho sự kiện picture, không thêm bước từ click
+  sau pointerup. Chrome phát touch thật ở viewport điện thoại, kiểm tra đi nhiều
+  ô/dừng, nhiều ngón, phối hợp phím và chạm nhanh chọn Knight trong Map010.
 - Chạy nguyên 11 trang kết thúc Map086 bằng điều kiện switch thật (A/B/C/D/E,
   C thứ hai, bốn S và nhánh S dự phòng); hình/thoại/Common310/achievement rồi
   game over, save giữ kết quả. Chạy Happy Map161, bốn Prom Map181 và đoạn sáu

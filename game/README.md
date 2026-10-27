@@ -30,6 +30,10 @@ Các module mới nằm trong `engine/`; mở `http://127.0.0.1:8140/standalone.
 Preview mở cạnh thùng đồ trên Map074. Bấm Enter hoặc **Tương tác** để mở thùng,
 bấm **Tiếp tục** để đọc hội thoại. Dùng mũi tên hoặc các nút hướng để di chuyển;
 khi hội thoại/sự kiện đang chạy, engine khóa di chuyển và các sự kiện khác.
+Giữ nút hướng trên điện thoại để đi liên tục; thả tay, hủy chạm, mất capture
+hoặc rời trang dừng hướng. Nhiều ngón và bàn phím giữ cùng hướng không xóa
+trạng thái của nhau. Chạm nhanh vẫn điều khiển được màn chọn nhân vật bằng JSON;
+mở menu dọn phím/chạm đang giữ.
 Các lựa chọn hiển thị bằng nút trong trang, không mở hộp thoại `prompt`.
 Phím T đốt đuốc qua common event 289, C dùng Phase qua common event 257. Các
 nút **Đốt đuốc**/**Kỹ năng** gọi cùng luồng trên điện thoại. Z xác nhận/tương tác,
