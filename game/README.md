@@ -77,6 +77,8 @@ Interpreter chạy được common event lồng nhau, vòng lặp có giới h�
 để xác nhận nhận vật phẩm từ common event 52 và không nhận lại sau khi đã mở.
 Điều kiện vũ khí/giáp có cờ tính trang bị kiểm tra cả đồ đang đeo của party;
 trong trận chỉ tính bốn người tham chiến, guest không tính là thành viên party.
+Lệnh trừ vũ khí/giáp có cùng cờ lấy trong túi trước rồi tháo đồ đang đeo nếu
+thiếu; common event nguyền Short sword nhận đúng kiếm và không nhân đôi đồ.
 Lệnh hoặc loại điều kiện chưa triển khai sẽ báo lỗi cụ thể thay vì tự bỏ qua.
 `engine/script-runtime.js` chuyển 1.082 biến thể script hiện có trong JSON thành
 thao tác dữ liệu: đổi hình character/face/battler, đặt giới hạn HP, cấu hình chase

@@ -3503,6 +3503,16 @@ async function main() {
                 return e.state.pendingChoices.disabled.includes(0) && e.state.pendingChoices.text[0]==='????';
             }finally{await e.restore(snapshot);}
         })()`,true,false));
+        check('CURSE WEAPONS lấy kiếm đang đeo và cấp kiếm nguyền đúng một lần',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine,snapshot=e.save(),list=e.database.CommonEvents[193].list.slice(135,137);
+            try{
+                e.state.addActor(4);e.state.actor(4).equips[0]=1;e.state.gainItem('weapons',1,-99);e.state.gainItem('weapons',13,-99);
+                await e.createInterpreter(list,0).run();
+                if(e.state.actor(4).equips[0]!==0 || e.state.itemCount('weapons',1)!==0 || e.state.itemCount('weapons',13)!==1)return false;
+                const saved=e.save();await e.restore(saved);
+                return e.state.actor(4).equips[0]===0 && e.state.itemCount('weapons',13)===1;
+            }finally{await e.restore(snapshot);}
+        })()`,true,false));
         check('ba map lặp vẽ tile, nhân vật và follower liền mạch qua mép',await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine;
             for(const id of [157,160,185]){

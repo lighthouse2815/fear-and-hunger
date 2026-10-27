@@ -637,7 +637,19 @@
 
     EventInterpreter.prototype.controlItem = function (kind, parameters) {
         var amount = parameters[2] === 0 ? Number(parameters[3]) : this.state.variableValue(parameters[3]);
-        this.state.gainItem(kind, parameters[0], parameters[1] === 0 ? amount : -amount);
+        var change = parameters[1] === 0 ? amount : -amount, state = this.state, id = parameters[0];
+        var missing = parameters[4] && kind !== 'items' ? Math.max(0, -change - state.itemCount(kind, id)) : 0;
+        state.gainItem(kind, id, change);
+        if (missing > 0) {
+            var members = state.scene === 'battle' ? state.battleActorIds() : state.party;
+            members.forEach(function (actorId) {
+                var actor = state.actor(actorId);
+                if (!actor) return;
+                for (var slot = kind === 'weapons' ? 0 : 1; slot < (kind === 'weapons' ? 1 : actor.equips.length) && missing > 0; slot++) {
+                    if (actor.equips[slot] === id) { actor.equips[slot] = 0; missing--; }
+                }
+            });
+        }
     };
 
     EventInterpreter.prototype.transferPlayer = async function (parameters) {
