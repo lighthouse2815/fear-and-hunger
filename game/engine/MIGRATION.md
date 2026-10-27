@@ -15,9 +15,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: bổ sung zoom/flash chạm trán trước fade mở trận và đối chiếu tiếp
-   chuyển cảnh với runtime gốc.
-   Thứ tự playback và số effect trong từng phase đã đối chiếu với 560 skill/item.
+1. Combat: kiểm tra các trận đại diện xuyên suốt nhánh cốt truyện khi chạy entry mới.
+   Playback/số effect, sprite, popup và chuyển cảnh đã có đối chiếu riêng.
 2. Menu: đối chiếu tiếp bố cục và thông tin các màn so với cấu hình gốc.
 3. Điều khiển: kiểm tra thêm thao tác điện thoại xuyên suốt luồng chơi chính.
 4. Luồng chính: cập nhật server/build/check khi chuyển entry chính.
@@ -26,12 +25,18 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Encounter trình duyệt 60 frame theo q=((p-1)*20*p+5)*p+1, tâm zoom dùng
+  tọa độ màn hình hiện có của nhân vật, snapshot map ẩn sprite. Flash frame
+  2/10, fade đen từ frame 30 tới 54, rồi fade mở trận. Bắt đầu phát SE System
+  số 7, BGM mới chờ 30 frame, BGM trùng bài map tiếp tục phát; giữ snapshot map và khôi phục khi hủy trước/sau
+  mốc nhạc. Chrome dừng animation kiểm tra keyframe/thời lượng/mốc BGM/SE thật,
+  hủy dọn cả zoom/flash/đen và không tiếp tục page hay rò âm thanh.
 - Fade trình duyệt bằng Web Animations API: mở trận 24 frame trước troop page,
   kết thúc fade đen 24 frame (thua bắt buộc 48), hiện map 24 frame/game over
   48 frame trước event tiếp theo. Giữ khóa input, lỗi/hủy mọi pha dọn
   overlay/callback; pagehide dọn
   animation. Unit kiểm tra thứ tự/chờ/hủy, Chrome dừng giữa từng animation để
-  xác nhận thời lượng/scene/khóa và hủy không kẹt đen. Chưa gồm zoom/flash encounter.
+  xác nhận thời lượng/scene/khóa và hủy không kẹt đen.
   Nhạc trận giữ tới lúc rời scene rồi mới khôi phục BGM/BGS map; scheduler chờ
   fade cuối của autorun/parallel ở game over, dừng scheduler chủ động vẫn hủy.
 - Thẻ từng đồng đội có icon trạng thái theo GALV_BustMenu (States=12), đọc

@@ -175,6 +175,7 @@
         var battle = engine.battle.battle;
         // Kết quả có trước fade đóng; chỉ phát lại nhạc map khi thực sự rời scene.
         if (engine.state.scene === 'battle' && battle && !battle.result) {
+            if (battle.audio && battle.audio.pending) return;
             audio.beginBattle(battle, engine.state, engine.database.System);
             battle.audio.bgm = audio.snapshot('bgm'); battle.audio.bgs = audio.snapshot('bgs');
         } else if (audio.battle && engine.state.scene !== 'battle') audio.endBattle(audio.battle.result || 'abort', engine.database.System, engine.state.scene === 'map');
@@ -418,15 +419,57 @@
             });
         }, interpreter);
     }
-    var battleFade = null;
+    var battleFade = null, encounterAnimations = [];
+    async function encounterBattle(battle,signal) {
+        var encounter=document.getElementById('fnh-battle-encounter'),shot=encounter.querySelector('canvas');
+        var flash=document.getElementById('fnh-battle-flash'),black=document.getElementById('fnh-battle-fade');
+        var snapshot=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas'),{hideCharacters:true});
+        snapshot.images=renderer.images;await snapshot.drawMap(engine,++snapshot.frame);
+        if(signal && signal.aborted)throw signal.reason;
+        shot.getContext('2d').drawImage(snapshot.canvas,0,0);encounter.hidden=false;flash.hidden=false;black.hidden=false;black.style.opacity='0';
+        renderer.battleSnapshotFor=battle;renderer.battleSnapshot=Promise.resolve(snapshot.canvas);
+        var interpreter=engine.createInterpreter([],0),data=interpreter.handlers.gameData;
+        var x=data(5,-1,3,interpreter),y=data(5,-1,4,interpreter)-24;
+        shot.style.transformOrigin=(x/816*100)+'% '+(y/624*100)+'%';
+        var zoom=[];
+        for(var frame=0;frame<=60;frame++){
+            var p=frame/60,q=((p-1)*20*p+5)*p+1;
+            zoom.push({offset:p,transform:'scale('+q+')'});
+        }
+        var timing={duration:1000,easing:'linear',fill:'forwards'};
+        var animations=encounterAnimations=[shot.animate(zoom,timing),flash.animate([
+            {offset:0,opacity:0},{offset:1.999/60,opacity:0},{offset:2/60,opacity:1},
+            {offset:9.999/60,opacity:22/30},{offset:10/60,opacity:1},{offset:40/60,opacity:0},{offset:1,opacity:0}
+        ],timing),black.animate([{offset:0,opacity:0},{offset:0.5,opacity:0},{offset:0.9,opacity:1},{offset:1,opacity:1}],timing)];
+        var music=shot.animate([{opacity:1},{opacity:1}],{duration:500});animations.push(music);
+        var complete=Promise.all(animations.map(function(animation){return animation.finished;}));
+        complete.catch(function(){});
+        function abort(){animations.forEach(function(animation){animation.cancel();});}
+        if(signal)signal.addEventListener('abort',abort,{once:true});
+        try{
+            await music.finished;
+            if(signal && signal.aborted)throw signal.reason;
+            audio.beginBattle(battle,engine.state,engine.database.System);
+            await complete;
+        }catch(error){if(signal && signal.aborted)throw signal.reason;throw error;}
+        finally{
+            if(signal)signal.removeEventListener('abort',abort);
+            animations.forEach(function(animation){animation.cancel();});
+            if(encounterAnimations===animations)encounterAnimations=[];
+            encounter.hidden=true;flash.hidden=true;black.style.opacity='1';
+        }
+    }
     async function transitionBattle(phase,battle,signal) {
         var panel = document.getElementById('fnh-battle-fade');
         if (phase === 'cancel') {
             if (battleFade) battleFade.cancel();
+            encounterAnimations.forEach(function(animation){animation.cancel();});encounterAnimations=[];
+            document.getElementById('fnh-battle-encounter').hidden=true;document.getElementById('fnh-battle-flash').hidden=true;
             battleFade = null; panel.hidden = true; return;
         }
         clearInput();
         if (signal && signal.aborted) throw signal.reason;
+        if(phase==='start')await encounterBattle(battle,signal);
         panel.hidden = false; panel.style.opacity = phase === 'out' ? '0' : '1';
         await draw();
         if (signal && signal.aborted) throw signal.reason;
@@ -446,7 +489,10 @@
     var eventHandlers = {
         battleTransition: transitionBattle,
         battleAudio: function (phase, battle) {
-            if (phase === 'start') audio.beginBattle(battle, engine.state, engine.database.System);
+            if (phase === 'start') {
+                audio.beginBattle(battle, engine.state, engine.database.System,true);
+                var sound=engine.database.System.sounds[7];if(sound && sound.name)audio.play('se',sound);
+            }
             else audio.endBattle(battle.result || 'abort', engine.database.System, engine.state.scene === 'map');
         },
         message: showMessage,

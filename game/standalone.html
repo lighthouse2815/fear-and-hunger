@@ -30,6 +30,9 @@
         #fnh-scroll-fast { position: absolute; bottom: 8px; right: 8px; touch-action: none; }
         #fnh-end-screen { position: absolute; inset: 0; background: #000; }
         #fnh-battle-fade { position: absolute; inset: 0; background: #000; z-index: 5; pointer-events: none; }
+        #fnh-battle-encounter { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; z-index: 3; pointer-events: none; }
+        #fnh-battle-encounter canvas { width: 100%; height: 100%; }
+        #fnh-battle-flash { position: absolute; inset: 0; background: #fff; opacity: 0; z-index: 4; pointer-events: none; }
         #fnh-end-screen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
         #fnh-end-actions { position: absolute; inset: auto 0 8%; text-align: center; }
         #fnh-end-title { font: 28px GameFont, serif; text-shadow: 1px 1px #000; }
@@ -56,6 +59,8 @@
 <main>
     <div class="fnh-stage">
         <canvas id="fnh-canvas" width="816" height="624" tabindex="0" aria-label="Bản đồ game"></canvas>
+        <div id="fnh-battle-encounter" hidden aria-hidden="true"><canvas width="816" height="624"></canvas></div>
+        <div id="fnh-battle-flash" hidden aria-hidden="true"></div>
         <div id="fnh-battle-fade" hidden aria-hidden="true"></div>
         <video id="fnh-video" playsinline controls hidden aria-label="Phim trong game"></video>
         <button id="fnh-video-play" type="button" hidden>Phát video</button>

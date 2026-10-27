@@ -106,6 +106,26 @@ class Audio extends EventTarget {
         assert.equal(audio.buffers.bgm, null, 'save giữa trận đã dừng BGM giữ im lặng');
         audio.endBattle('abort', db.System, false);
         assert.equal(audio.buffers.bgm, null); assert.equal(audio.buffers.bgs, null);
+        prepare();const deferred={};audio.beginBattle(deferred,e.state,db.System,true);
+        assert.equal(audio.battle,deferred);assert.equal(deferred.audio.pending,true);
+        assert.equal(audio.buffers.bgm,null);assert.equal(audio.buffers.bgs,null);
+        assert.equal(deferred.audio.mapBgm.position,12);assert.equal(deferred.audio.mapBgs.position,7);
+        audio.beginBattle(deferred,e.state,db.System);assert.equal(deferred.audio.pending,undefined);
+        assert.equal(audio.buffers.bgm.currentTime,0);const started=audio.buffers.bgm;
+        audio.beginBattle(deferred,e.state,db.System);assert.equal(audio.buffers.bgm,started);
+        audio.endBattle('escape',db.System,true);assert.equal(audio.buffers.bgm.currentTime,12);assert.equal(audio.buffers.bgs.currentTime,7);
+        const cancelledEncounter={};audio.beginBattle(cancelledEncounter,e.state,db.System,true);
+        audio.endBattle('abort',db.System,true);assert.equal(audio.buffers.bgm.currentTime,12);assert.equal(audio.buffers.bgs.currentTime,7);
+        assert.equal(cancelledEncounter.audio.pending,undefined,'hủy encounter dọn cờ nhạc đang chờ');
+        prepare();e.state.battleBgm={...bgm,volume:90};
+        const sameTrack={},mapTrack=audio.buffers.bgm;audio.beginBattle(sameTrack,e.state,db.System,true);
+        assert.equal(audio.buffers.bgm,mapTrack,'encounter giữ BGM đang phát khi cùng tên nhạc trận');
+        assert.equal(mapTrack.currentTime,12);assert.equal(mapTrack.paused,false);
+        mapTrack.currentTime=15;audio.beginBattle(sameTrack,e.state,db.System);
+        assert.equal(audio.buffers.bgm,mapTrack);assert.equal(mapTrack.currentTime,15);
+        assert.equal(audio.tracks.get(mapTrack).sound.volume,90);
+        mapTrack.currentTime=20;audio.endBattle('escape',db.System,true);
+        assert.equal(mapTrack.currentTime,20);assert.equal(audio.tracks.get(mapTrack).sound.volume,80);e.state.battleBgm=null;
         console.log('ĐẠT: nhạc trận/lệnh 132 thật, BGM/BGS/vị trí/pitch/pan, thắng/thua/thoát/hủy, ME, save, im lặng và giữ lệnh 243.');
     } finally { audio.dispose(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

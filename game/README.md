@@ -124,7 +124,11 @@ Trình duyệt fade mở trận 24 frame trước khi chạy troop page/nhận l
 thúc fade đen 24 frame (thua bắt buộc 48), rồi fade về map 24 frame (game over
 48) trước khi tiếp tục event. Dùng Web Animations API, hủy sự kiện dọn animation
 và màn đen.
-Hiệu ứng zoom/flash 60 frame lúc chạm trán còn cần đối chiếu riêng.
+Trước fade mở trận là encounter 60 frame: zoom theo công thức gốc, lấy tâm
+ở vị trí hiển thị của nhân vật, flash trắng ở frame 2/10 và fade đen từ frame
+30 tới 54. SE vào trận đọc System.sounds[7]; BGM trận bắt đầu ở frame 30,
+trừ khi trùng bài map đang phát thì tiếp tục bài đó. Snapshot BGM/BGS map được
+giữ riêng để khôi phục cả khi hủy trước lúc nhạc trận phát.
 Luồng 301 chờ kết quả rồi chỉ chạy nhánh 601/602/603 tương ứng; trận thua bắt buộc
 dừng event và mở màn game over. Combat còn thiếu cơ chế plugin mở rộng để thay entry chính.
 Lệnh 337 phát animation trên quái bằng sprite sheet PNG hiện có: chọn một hoặc

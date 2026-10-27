@@ -2508,13 +2508,38 @@ async function main() {
         })()`,true,false);
         await evalPage(cdp,`(()=>{
             const e=FNHStandalonePreview.engine,page=e.map.eventPage(e.map.eventById(39)),id=e.database.Troops.length;
-            window.__fadeFixture={page,list:page.list,snapshot:e.save(),animate:document.querySelector('#fnh-battle-fade').animate};
+            window.__fadeFixture={page,list:page.list,snapshot:e.save(),animate:Element.prototype.animate};
             e.database.Troops.push({id,members:[e.database.Troops[1].members[0]],pages:[]});
             e.state.setSwitch(7320,false);page.list=[{code:301,parameters:[0,id,true,true]},{code:121,parameters:[7320,7320,0]}];
-            document.querySelector('#fnh-battle-fade').animate=function(...args){const animation=__fadeFixture.animate.apply(this,args);animation.pause();window.__battleFadeAnimation=animation;return animation;};
+            Element.prototype.animate=function(...args){const animation=__fadeFixture.animate.apply(this,args);
+                if(this.closest('#fnh-battle-encounter,#fnh-battle-flash,#fnh-battle-fade'))animation.pause();
+                if(this.id==='fnh-battle-fade')window.__battleFadeAnimation=animation;return animation;};
         })()`,false,false);
         await clickElement(cdp,'#fnh-controls [data-direction="0"]');
         await waitFor(cdp,'window.__battleFadeAnimation && !document.querySelector("#fnh-battle-fade").hidden',5000,'fade mở trận');
+        check('encounter 60 frame dùng zoom gốc, flash frame 2/10 và chưa phát BGM trước frame 30',await evalPage(cdp,`(()=>{
+            const app=FNHStandalonePreview,shot=document.querySelector('#fnh-battle-encounter canvas');
+            const zoom=shot.getAnimations().find(animation=>animation.effect.getKeyframes()[0].transform),frames=zoom.effect.getKeyframes();
+            const flash=document.querySelector('#fnh-battle-flash').getAnimations()[0].effect.getKeyframes();
+            const black=__battleFadeAnimation.effect.getKeyframes();
+            return !document.querySelector('#fnh-battle-encounter').hidden && zoom.effect.getTiming().duration===1000 && frames.length===61 &&
+                frames[0].transform==='scale(1)' && frames[30].transform==='scale(1)' && frames[60].transform==='scale(6)' &&
+                flash.some(frame=>Math.abs(frame.offset-2/60)<0.00001 && frame.opacity==='1') &&
+                flash.some(frame=>Math.abs(frame.offset-10/60)<0.00001 && frame.opacity==='1') &&
+                black.some(frame=>frame.offset===0.5 && frame.opacity==='0') && black.some(frame=>frame.offset===0.9 && frame.opacity==='1') &&
+                app.engine.battle.battle.audio.pending && !app.audio.buffers.bgm && !app.audio.buffers.bgs &&
+                shot.getAnimations().some(animation=>animation.effect.getTiming().duration===500) &&
+                app.audio.seBuffers.some(sound=>sound.src.endsWith('/audio/se/into_darkness.ogg') && sound.playbackRate===0.9 && Math.abs(sound.volume-app.audio.masterVolume*app.audio.volumes.se*0.55)<0.000001);
+        })()`,false,false));
+        await evalPage(cdp,`document.querySelector('#fnh-battle-encounter canvas').getAnimations().find(animation=>animation.effect.getTiming().duration===500).finish()`,false,false);
+        await waitFor(cdp,'!FNHStandalonePreview.engine.battle.battle.audio.pending && FNHStandalonePreview.audio.buffers.bgm',5000,'frame 30 phát BGM trận');
+        check('mốc 30 frame mở nhạc trận nhưng vẫn chờ zoom/flash xong trước page',await evalPage(cdp,
+            'FNHStandalonePreview.engine.battle.battle.phase==="transition" && __battleFadeAnimation.playState==="paused" && FNHStandalonePreview.audio.buffers.bgm.src.endsWith("/audio/bgm/"+encodeURIComponent(FNHStandalonePreview.engine.database.System.battleBgm.name)+".ogg")',false,false));
+        async function finishEncounter() {
+            await evalPage(cdp,`document.getAnimations().filter(animation=>animation.effect.target.closest('#fnh-battle-encounter,#fnh-battle-flash,#fnh-battle-fade')).forEach(animation=>animation.finish())`,false,false);
+            await waitFor(cdp,'__battleFadeAnimation.playState==="paused" && __battleFadeAnimation.effect.getTiming().duration===400',5000,'encounter xong mới mở fade battle');
+        }
+        await finishEncounter();
         check('fade mở 24 frame giữ khóa lệnh trước page/input trên Chrome',await evalPage(cdp,`(()=>{
             const e=FNHStandalonePreview.engine,animation=window.__battleFadeAnimation;
             return e.eventRunning && e.battle.battle.phase==='transition' && document.querySelector('#fnh-battle-attack').disabled &&
@@ -2538,6 +2563,7 @@ async function main() {
         await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.switchValue(7320) && document.querySelector("#fnh-battle-fade").hidden',5000,'rời trận sạch sau fade');
         await clickElement(cdp,'#fnh-controls [data-direction="0"]');
         await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.phase==="transition" && __battleFadeAnimation.playState==="paused"',5000,'mở trận kiểm tra fade thua');
+        await finishEncounter();
         await evalPage(cdp,'__battleFadeAnimation.finish()',false,false);
         await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.phase==="input"',5000,'nhận input trước kiểm tra thua');
         await evalPage(cdp,'FNHStandalonePreview.engine.battle.finish("defeat")',false,false);
@@ -2561,9 +2587,9 @@ async function main() {
         await evalPage(cdp,'__fadeController.abort()',false,false);
         await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning && document.querySelector("#fnh-battle-fade").hidden',5000,'hủy dọn màn fade');
         check('hủy fade không kẹt màn đen và không tiếp tục nhánh map',await evalPage(cdp,
-            'FNHStandalonePreview.engine.state.scene==="map" && !FNHStandalonePreview.engine.state.switchValue(7320) && document.querySelector("#fnh-battle-fade").getAnimations().length===0',false,false));
+            'FNHStandalonePreview.engine.state.scene==="map" && !FNHStandalonePreview.engine.state.switchValue(7320) && document.querySelector("#fnh-battle-fade").getAnimations().length===0 && document.querySelector("#fnh-battle-encounter").hidden && document.querySelector("#fnh-battle-flash").hidden && !FNHStandalonePreview.audio.battle',false,false));
         await evalPage(cdp,`(async()=>{
-            __fadeFixture.page.list=__fadeFixture.list;document.querySelector('#fnh-battle-fade').animate=__fadeFixture.animate;
+            __fadeFixture.page.list=__fadeFixture.list;Element.prototype.animate=__fadeFixture.animate;
             FNHStandalonePreview.engine.runEvent=__fadeFixture.runEvent;delete window.__fadeController;
             await FNHStandalonePreview.engine.restore(__fadeFixture.snapshot);delete window.__fadeFixture;delete window.__battleFadeAnimation;
         })()`,true,false);

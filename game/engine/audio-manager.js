@@ -185,13 +185,20 @@
         }, this);
     };
 
-    AudioManager.prototype.beginBattle = function (battle, state, system) {
-        if (this.battle === battle) return;
+    AudioManager.prototype.beginBattle = function (battle, state, system, deferMusic) {
+        if (this.battle === battle && !battle.audio.pending) return;
         this.battle = battle;
         if (!battle.audio) battle.audio = { mapBgm: this.snapshot('bgm'), mapBgs: this.snapshot('bgs') };
         this.stop('bgs'); this.stop('me');
         var playing = battle.audio.bgm;
         var music = Object.prototype.hasOwnProperty.call(battle.audio, 'bgm') ? playing && playing.sound : state.battleBgm || system.battleBgm;
+        if (deferMusic) {
+            battle.audio.pending = true;
+            var current = this.snapshot('bgm');
+            if (!current || !music || current.sound.name !== music.name) this.stop('bgm');
+            this.stop('se'); return;
+        }
+        delete battle.audio.pending;
         this.play('bgm', music, playing ? playing.position : undefined);
         if (battle.audio.bgs) this.play('bgs', battle.audio.bgs.sound, battle.audio.bgs.position);
     };
@@ -199,6 +206,7 @@
     AudioManager.prototype.endBattle = function (result, system, replayMap) {
         if (!this.battle) return;
         var saved = this.battle.audio;
+        if (saved) delete saved.pending;
         this.battle = null;
         this.stop('me');
         if (replayMap && result !== 'defeat' && saved) {
