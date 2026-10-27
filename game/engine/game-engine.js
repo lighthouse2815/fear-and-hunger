@@ -1296,16 +1296,25 @@
         var runtime = this.battle;
         runtime.battle.managed = true;
         var context = this.battleContext = { handlers: handlers, signal: interpreter && interpreter.signal };
+        var transitionWaiter = interpreter || this.createInterpreter([],0,handlers,context.signal);
         this.state.scene = 'battle';
         try {
             if (handlers && handlers.battleAudio) handlers.battleAudio('start', runtime.battle);
+            if (handlers && handlers.battleTransition) {
+                runtime.battle.phase = 'transition';
+                await transitionWaiter.awaitCommand(handlers.battleTransition('start',runtime.battle,context.signal));
+            }
             await this.runBattlePages(false, handlers, context.signal);
             if (!runtime.battle.result) runtime.battle.phase = 'input';
             var result = await runtime.wait(context.signal);
             if (runtime.battle.error) throw new Error(runtime.battle.error);
-            return this.leaveBattle(result, interpreter);
+            if (handlers && handlers.battleTransition) await transitionWaiter.awaitCommand(handlers.battleTransition('out',runtime.battle,context.signal));
+            var branch = this.leaveBattle(result, interpreter);
+            if (handlers && handlers.battleTransition) await transitionWaiter.awaitCommand(handlers.battleTransition('in',runtime.battle,context.signal));
+            return branch;
         } catch (error) { runtime.finish('abort'); throw error; }
         finally {
+            if (handlers && handlers.battleTransition) handlers.battleTransition('cancel',runtime.battle);
             if (this.battleContext === context) this.battleContext = null;
             if (this.state.scene === 'battle') this.state.scene = 'map';
             if (handlers && handlers.battleAudio) handlers.battleAudio('end', runtime.battle);

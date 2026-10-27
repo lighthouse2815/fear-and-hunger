@@ -173,10 +173,11 @@
     }
     function syncBattleAudio() {
         var battle = engine.battle.battle;
+        // Kết quả có trước fade đóng; chỉ phát lại nhạc map khi thực sự rời scene.
         if (engine.state.scene === 'battle' && battle && !battle.result) {
             audio.beginBattle(battle, engine.state, engine.database.System);
             battle.audio.bgm = audio.snapshot('bgm'); battle.audio.bgs = audio.snapshot('bgs');
-        } else if (audio.battle) audio.endBattle(audio.battle.result || 'abort', engine.database.System, engine.state.scene === 'map');
+        } else if (audio.battle && engine.state.scene !== 'battle') audio.endBattle(audio.battle.result || 'abort', engine.database.System, engine.state.scene === 'map');
     }
     function renderEndScreen() {
         var scene = engine.state.scene, panel = document.getElementById('fnh-end-screen');
@@ -417,7 +418,33 @@
             });
         }, interpreter);
     }
+    var battleFade = null;
+    async function transitionBattle(phase,battle,signal) {
+        var panel = document.getElementById('fnh-battle-fade');
+        if (phase === 'cancel') {
+            if (battleFade) battleFade.cancel();
+            battleFade = null; panel.hidden = true; return;
+        }
+        clearInput();
+        if (signal && signal.aborted) throw signal.reason;
+        panel.hidden = false; panel.style.opacity = phase === 'out' ? '0' : '1';
+        await draw();
+        if (signal && signal.aborted) throw signal.reason;
+        var frames = (phase === 'out' && battle.result === 'defeat' || phase === 'in' && engine.state.scene === 'gameover') ? 48 : 24;
+        var animation = battleFade = panel.animate([{opacity:phase === 'out'?0:1},{opacity:phase === 'out'?1:0}],
+            {duration:frames*1000/60,easing:'linear',fill:'forwards'});
+        function abort() { animation.cancel(); }
+        if (signal) signal.addEventListener('abort',abort,{once:true});
+        try { await animation.finished; }
+        catch (error) { if (signal && signal.aborted) throw signal.reason; throw error; }
+        finally {
+            if (signal) signal.removeEventListener('abort',abort);
+            if (battleFade === animation) { panel.style.opacity=phase === 'out'?'1':'0';animation.cancel();battleFade=null; }
+        }
+        if (phase !== 'out') panel.hidden=true;
+    }
     var eventHandlers = {
+        battleTransition: transitionBattle,
         battleAudio: function (phase, battle) {
             if (phase === 'start') audio.beginBattle(battle, engine.state, engine.database.System);
             else audio.endBattle(battle.result || 'abort', engine.database.System, engine.state.scene === 'map');
@@ -688,6 +715,7 @@
         document.getElementById('fnh-end-load').textContent = 'Tải ô ' + event.target.value;
     });
     window.addEventListener('pagehide', function () {
+        transitionBattle('cancel');
         if (scheduler) scheduler.stop();
         if (stopVideo) stopVideo();
         if (stopScrollText) stopScrollText();

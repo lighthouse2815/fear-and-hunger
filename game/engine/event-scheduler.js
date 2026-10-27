@@ -26,6 +26,9 @@
     EventScheduler.prototype.tick = function () {
         if (!this.enabled || !this.engine.map) return;
         if (this.engine.state.scene === 'gameover' || this.engine.state.scene === 'title') {
+            // Trận đang chuyển sang scene cuối vẫn phải hoàn tất fade trước
+            // khi scheduler thu hồi signal của sự kiện autorun/parallel gọi nó.
+            if (this.engine.battleContext) return;
             this.parallel.forEach(function (job) { job.controller.abort(); });
             this.parallel.clear();
             if (this.autorun) this.autorun.controller.abort();

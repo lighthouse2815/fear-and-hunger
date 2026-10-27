@@ -2467,8 +2467,9 @@ async function main() {
         await clickElement(cdp, '#fnh-battle-targets [data-index="1"]');
         await clickElement(cdp, '#fnh-battle-attack');
         await clickElement(cdp, '#fnh-battle-start');
+        // Ngoài animation/action sequence còn hai fade 24 frame khi rời trận.
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.scene === "map" && !FNHStandalonePreview.engine.eventRunning && document.querySelector("#fnh-battle").hidden',
-            5000, 'page hạ đầu Guard kết thúc trận thật');
+            7000, 'page hạ đầu Guard kết thúc trận thật');
         check('hạ đầu Guard chạy troop event và nhánh thắng của map', await evalPage(cdp,
             'FNHStandalonePreview.engine.battle.battle.result === "victory" && FNHStandalonePreview.engine.state.switchValue(23) && FNHStandalonePreview.engine.state.variableValue(999) === 10 && FNHStandalonePreview.engine.battle.battle.enemies.every(enemy => !enemy.alive)', false, false));
         await evalPage(cdp, 'FNHStandalonePreview.engine.screen.clearGabs()', false, false);
@@ -2504,6 +2505,67 @@ async function main() {
         await evalPage(cdp,`(async()=>{
             __actorRefreshFixture.page.list=__actorRefreshFixture.list;
             await FNHStandalonePreview.engine.restore(__actorRefreshFixture.snapshot);delete window.__actorRefreshFixture;
+        })()`,true,false);
+        await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine,page=e.map.eventPage(e.map.eventById(39)),id=e.database.Troops.length;
+            window.__fadeFixture={page,list:page.list,snapshot:e.save(),animate:document.querySelector('#fnh-battle-fade').animate};
+            e.database.Troops.push({id,members:[e.database.Troops[1].members[0]],pages:[]});
+            e.state.setSwitch(7320,false);page.list=[{code:301,parameters:[0,id,true,true]},{code:121,parameters:[7320,7320,0]}];
+            document.querySelector('#fnh-battle-fade').animate=function(...args){const animation=__fadeFixture.animate.apply(this,args);animation.pause();window.__battleFadeAnimation=animation;return animation;};
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+        await waitFor(cdp,'window.__battleFadeAnimation && !document.querySelector("#fnh-battle-fade").hidden',5000,'fade mở trận');
+        check('fade mở 24 frame giữ khóa lệnh trước page/input trên Chrome',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine,animation=window.__battleFadeAnimation;
+            return e.eventRunning && e.battle.battle.phase==='transition' && document.querySelector('#fnh-battle-attack').disabled &&
+                Math.abs(animation.effect.getTiming().duration-400)<0.001 && animation.effect.getKeyframes()[0].opacity==='1' &&
+                !e.state.switchValue(7320) && !e.move(6);
+        })()`,false,false));
+        await evalPage(cdp,'__battleFadeAnimation.finish()',false,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.phase==="input" && document.querySelector("#fnh-battle-fade").hidden',5000,'fade xong nhận input');
+        await evalPage(cdp,'FNHStandalonePreview.engine.battle.finish("escape")',false,false);
+        await waitFor(cdp,'!document.querySelector("#fnh-battle-fade").hidden && __battleFadeAnimation.playState==="paused"',5000,'fade đóng trận');
+        check('fade đóng giữ scene trận và sự kiện chờ, không chạy nhánh map sớm',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;
+            return e.state.scene==='battle' && e.eventRunning && !e.state.switchValue(7320) &&
+                FNHStandalonePreview.audio.battle===e.battle.battle && __battleFadeAnimation.effect.getKeyframes()[1].opacity==='1';
+        })()`,false,false));
+        await evalPage(cdp,'__battleFadeAnimation.finish()',false,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="map" && __battleFadeAnimation.playState==="paused"',5000,'hiện map sau fade đóng');
+        check('map hiện qua fade 24 frame trước khi tiếp tục event',await evalPage(cdp,
+            'FNHStandalonePreview.engine.eventRunning && !FNHStandalonePreview.engine.state.switchValue(7320) && !document.querySelector("#fnh-battle-fade").hidden && __battleFadeAnimation.effect.getKeyframes()[0].opacity==="1"',false,false));
+        await evalPage(cdp,'__battleFadeAnimation.finish()',false,false);
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.switchValue(7320) && document.querySelector("#fnh-battle-fade").hidden',5000,'rời trận sạch sau fade');
+        await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.phase==="transition" && __battleFadeAnimation.playState==="paused"',5000,'mở trận kiểm tra fade thua');
+        await evalPage(cdp,'__battleFadeAnimation.finish()',false,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.phase==="input"',5000,'nhận input trước kiểm tra thua');
+        await evalPage(cdp,'FNHStandalonePreview.engine.battle.finish("defeat")',false,false);
+        await waitFor(cdp,'__battleFadeAnimation.playState==="paused"',5000,'fade thua bắt buộc');
+        check('fade thua bắt buộc đóng 48 frame như slowFadeSpeed gốc',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.scene==="battle" && __battleFadeAnimation.effect.getTiming().duration===800',false,false));
+        await evalPage(cdp,'__battleFadeAnimation.finish()',false,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="gameover" && __battleFadeAnimation.playState==="paused"',5000,'fade vào game over');
+        check('game over hiện qua fade 48 frame và còn giữ event cho tới hết chuyển cảnh',await evalPage(cdp,
+            'FNHStandalonePreview.engine.eventRunning && __battleFadeAnimation.effect.getTiming().duration===800 && !document.querySelector("#fnh-end-screen").hidden',false,false));
+        await evalPage(cdp,'__battleFadeAnimation.finish()',false,false);
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'hết fade game over');
+        await evalPage(cdp,'FNHStandalonePreview.engine.state.scene="map"',false,false);
+        await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;e.state.setSwitch(7320,false);
+            __fadeFixture.runEvent=e.runEvent;window.__fadeController=new AbortController();
+            e.runEvent=function(id,handlers){return __fadeFixture.runEvent.call(this,id,handlers,__fadeController.signal);};
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+        await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.phase==="transition" && __battleFadeAnimation.playState==="paused"',5000,'mở fade để hủy');
+        await evalPage(cdp,'__fadeController.abort()',false,false);
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning && document.querySelector("#fnh-battle-fade").hidden',5000,'hủy dọn màn fade');
+        check('hủy fade không kẹt màn đen và không tiếp tục nhánh map',await evalPage(cdp,
+            'FNHStandalonePreview.engine.state.scene==="map" && !FNHStandalonePreview.engine.state.switchValue(7320) && document.querySelector("#fnh-battle-fade").getAnimations().length===0',false,false));
+        await evalPage(cdp,`(async()=>{
+            __fadeFixture.page.list=__fadeFixture.list;document.querySelector('#fnh-battle-fade').animate=__fadeFixture.animate;
+            FNHStandalonePreview.engine.runEvent=__fadeFixture.runEvent;delete window.__fadeController;
+            await FNHStandalonePreview.engine.restore(__fadeFixture.snapshot);delete window.__fadeFixture;delete window.__battleFadeAnimation;
         })()`,true,false);
         await evalPage(cdp, `(() => {
             const engine = FNHStandalonePreview.engine;

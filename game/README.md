@@ -120,6 +120,11 @@ chỉ định, renderer làm mờ ảnh bản đồ hiện tại. Giao diện hi
 Ảnh nền này ẩn sprite nhân vật, follower và NPC trước khi chụp, giữ tile/sương
 và các lớp map. Ảnh được giữ riêng cho trận; rời trận vẽ lại nhân vật bình thường,
 không thay cờ ẩn của gameplay để tạo snapshot.
+Trình duyệt fade mở trận 24 frame trước khi chạy troop page/nhận lệnh; kết
+thúc fade đen 24 frame (thua bắt buộc 48), rồi fade về map 24 frame (game over
+48) trước khi tiếp tục event. Dùng Web Animations API, hủy sự kiện dọn animation
+và màn đen.
+Hiệu ứng zoom/flash 60 frame lúc chạm trán còn cần đối chiếu riêng.
 Luồng 301 chờ kết quả rồi chỉ chạy nhánh 601/602/603 tương ứng; trận thua bắt buộc
 dừng event và mở màn game over. Combat còn thiếu cơ chế plugin mở rộng để thay entry chính.
 Lệnh 337 phát animation trên quái bằng sprite sheet PNG hiện có: chọn một hoặc
