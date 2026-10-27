@@ -38,7 +38,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 
     reset();e.state.changeActorHp(1,10-e.state.actor(1).hp,true);
     db.Skills[skillId].effects=[];
-    const incoming=e.forceBattleAction([0,0,skillId,0]);await until(()=>e.animations.entries.length>0);
+    const incoming=e.forceBattleAction([0,0,skillId,0]);await until(()=>e.animations.entries.some(entry=>entry.animationId===1&&entry.targetType==='actor'));
     assert.equal(e.state.actor(1).hp,0);assert.equal(e.battle.actor(1).alive,true);assert.equal(e.state.actor(1).states.includes(1),false);
     await finish(incoming);assert.equal(e.battle.actor(1).alive,false);assert.ok(e.state.actor(1).states.includes(1));
     assert.equal(e.battle.battle.lastAction.hits.length,2);

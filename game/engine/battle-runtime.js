@@ -439,6 +439,20 @@
         phases[whole ? 'whole' : 'target'] = lines;
         return Object.assign(phases, this.actionSequence(skill) || {});
     };
+    BattleRuntime.prototype.actionAnimationId = function (subject, skill) {
+        if (skill.animationId >= 0) return skill.animationId;
+        if (subject.enemyId != null) {
+            var note=this.database.Enemies[subject.enemyId].note||'',match=/<attack animation:\s*(\d+)>/i.exec(note);
+            return match?Number(match[1]):39;
+        }
+        var actor=this.battlerState(subject),weapon=this.database.Weapons[actor.equips[0]];
+        return weapon?weapon.animationId:1;
+    };
+    BattleRuntime.prototype.castAnimationId = function (subject, skill, item) {
+        if (item || subject.enemyId==null&&!this.database.System.optSideView || skill.id===2 || skill.id===this.attackSkillId(subject)) return 0;
+        var match=/<cast (?:animation|ani):\s*(\d+)>/i.exec(skill.note||'');
+        return match?Number(match[1]):[120,52,51][skill.hitType||0];
+    };
     BattleRuntime.prototype.skillFor = function (battler, id, forced) {
         return this.database.Skills[id === 1 && !forced ? this.attackSkillId(battler) : id];
     };

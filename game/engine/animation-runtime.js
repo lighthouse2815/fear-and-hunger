@@ -16,21 +16,26 @@
     };
     AnimationRuntime.prototype.startBattle = function (targetId, animationId, mirror, targetType) {
         return this.enqueue({ targetId: targetId, animationId: animationId, scope: 'battle',
-            targetType: targetType || 'enemy', troopId: this.engine.battle.battle.troopId, mirror: !!mirror });
+            targetType: targetType || 'enemy', troopId: this.engine.battle.battle.troopId, mirror: targetType==='actor'?!mirror:!!mirror });
     };
     AnimationRuntime.prototype.enqueue = function (entry) {
         var data = this.engine.database.Animations[entry.animationId];
         if (!data) throw new Error('Không tìm thấy animation ' + entry.animationId);
         Object.assign(entry, { elapsed: -8, lastFrame: -1, flash: null, remaining: data.frames.length * 4 + 9 });
         this.entries.push(entry); this.revision++;
-        var runtime = this;
-        return new Promise(function (resolve) { runtime.waiters.set(entry, resolve); });
+        return this.waitFor(entry);
+    };
+    AnimationRuntime.prototype.waitFor = function (entry) {
+        if (!this.entries.includes(entry)) return Promise.resolve();
+        if (!this.waiters.has(entry)) this.waiters.set(entry,new Set());
+        var waiters=this.waiters.get(entry);
+        return new Promise(function (resolve) { waiters.add(resolve); });
     };
     AnimationRuntime.prototype.finish = function (entry) {
         var index = this.entries.indexOf(entry);
         if (index >= 0) this.entries.splice(index, 1);
-        var resolve = this.waiters.get(entry); this.waiters.delete(entry);
-        if (resolve) resolve();
+        var waiters = this.waiters.get(entry); this.waiters.delete(entry);
+        if (waiters) waiters.forEach(function (resolve) { resolve(); });
         this.revision++;
     };
     AnimationRuntime.prototype.advance = function (frames) {

@@ -15,7 +15,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: đối chiếu cast animation, animation Attack của quái và SE trúng đòn.
+1. Combat: đối chiếu SE Attack, trúng đòn, né và hồi phục theo System.json.
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
 2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
@@ -28,6 +28,13 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Cast quái theo hitType 120/52/51, đợi xong mới chạy phase hành động; bỏ cast
+  cho Attack/Guard/item và actor front view như cấu hình gốc. Note override và
+  setup tùy chỉnh giữ quyền ghi đè. Attack của quái dùng animation 39, actor đọc
+  animation vũ khí kể cả 0. Mirror theo đích actor thay vì phe thi triển, gồm
+  tự đánh/đồng đội/phản phép/state. Wait theo toàn bộ animation trận, kể cả
+  animation mới xuất hiện giữa lúc chờ và sau tải save; nhiều consumer cùng đợi
+  được. Hủy dọn cast/wait; Chrome đối chiếu Pheromone 51 và đòn chính trên actor.
 - Kết liễu theo trait collapse: thường mờ/nhuộm đỏ 32 frame, 26 enemy giữ xác
   (loại 3), sáu boss tan/cắt ảnh/rung theo chiều cao PNG thật. Cache kích thước
   không ghi cứng vào nội dung; lỗi PNG báo rõ. IMMORTAL xác nhận chết mới bắt

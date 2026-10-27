@@ -162,12 +162,18 @@ death break kiểm tra chủ thể. Common event chạy cuối hành động. H�
 và animation còn dở, không áp effect muộn. IMMORTAL mặc định giữ đích sống ở
 0 HP qua các effect, chặn death state rồi xác nhận chết trước common event cuối
 action. Hành động lồng nhau giữ bộ đếm riêng, hủy luôn giải phóng bảo vệ. Phần
-cast animation, animation Attack của quái và SE trúng đòn cần đối chiếu tiếp trước khi
+SE Attack/trúng đòn/né/hồi phục cần đối chiếu tiếp trước khi
 chuyển entry chính. Sprite actor ở front view dùng vị trí và anchor cấu hình
 gốc, sheet 9×6, nhịp 12 frame; hiện motion đánh, phép, kỹ năng, vật phẩm, Guard,
 trúng đòn, né, ít HP và trạng thái/chết. Hình vũ khí đọc System.attackMotions
 và WeaponsN.png, giữ frame qua save; hủy action dọn motion. Quái lóe trắng lúc
 ra đòn và nhấp nháy khi mất HP. Animation, flash và hide bám vị trí actor.
+Quái cast 120/52/51 theo loại đòn, chờ xong mới đánh; Attack/Guard/vật phẩm và
+actor front view bỏ cast theo runtime gốc. Attack của quái dùng animation 39;
+actor dùng animation vũ khí, kể cả giá trị 0. Mirror đọc loại đích actor nên
+đòn lên đồng đội/tự đánh cũng đúng hướng. Lệnh chờ bao quát animation đang chạy
+và animation mới xuất hiện trong lúc đợi, gồm animation phục hồi từ save;
+nhiều consumer cùng chờ không ghi đè nhau. Hủy action dọn cast và wait đang dở.
 Quái bị hạ dùng trait collapse: loại thường nhuộm đỏ/mờ 32 frame, loại 3 giữ
 nguyên xác, boss tan và cắt ảnh theo chiều cao PNG. Hồi sinh dừng kết liễu,
 đợi hiện hình 16 frame; lệnh 335 cũng hiện quái bằng fade. Engine đợi hiệu ứng

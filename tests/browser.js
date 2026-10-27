@@ -1838,6 +1838,32 @@ async function main() {
         // restore đổi state trước frame cập nhật panel; chờ DOM để vị trí click trên điện thoại ổn định.
         await waitFor(cdp, 'document.querySelector("#fnh-battle").hidden && !document.querySelector("#fnh-menu-dialog").open',
             5000, 'UI khôi phục bản đồ trước khi tương tác sự kiện kế tiếp');
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,db=e.database;window.playbackBefore=e.save();const enemyId=db.Enemies.length,troopId=db.Troops.length,skillId=db.Skills.length;
+            db.Enemies.push({...db.Enemies[1],id:enemyId,params:[1000,100,1,1,1,1,10,1],actions:[],traits:[]});
+            db.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400}]});
+            db.Skills.push({...db.Skills[3],id:skillId,hitType:2,animationId:1,note:'',scope:1,repeats:1,mpCost:7,tpCost:0,tpGain:0,effects:[],successRate:100,
+                damage:{type:1,formula:'10',variance:0,critical:false,elementId:0}});
+            e.state.party=[1,3];e.state.party.forEach(id=>e.state.recoverActor(id));e.battle.setup(troopId,true,true);e.state.scene='battle';e.battle.random=()=>0.5;
+            window.playbackHp=e.state.actor(1).hp;window.playbackDone=false;
+            e.forceBattleAction([0,0,skillId,0]).then(()=>{window.playbackDone=true;},error=>{window.playbackFailure=error.message;});
+        })()`,false,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.animations.entries.some(a=>a.animationId===51) && document.querySelector("#fnh-battle-attack").disabled',5000,'quái cast magical bằng Pheromone 51 trước đòn chính');
+        check('cast quái bám chủ thể, chờ hiệu ứng và chỉ trả MP một lần',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,cast=e.animations.entries.find(a=>a.animationId===51);
+            return !!cast && cast.targetType==='enemy' && cast.targetId===0 && !cast.mirror && !window.playbackDone &&
+                e.state.actor(1).hp===window.playbackHp && e.battle.enemy(0).mp===93;
+        })()`,false,false));
+        await waitFor(cdp,'FNHStandalonePreview.engine.animations.entries.some(a=>a.animationId===1 && a.targetType==="actor")',10000,'kết thúc cast rồi mới mở animation đòn chính');
+        check('animation đòn chính trên actor được đảo theo đích',await evalPage(cdp,
+            'FNHStandalonePreview.engine.animations.entries.some(a=>a.animationId===1 && a.targetType==="actor" && a.targetId===1 && a.mirror)',false,false));
+        await waitFor(cdp,'window.playbackDone || window.playbackFailure',10000,'hết playback quái');
+        check('hết cast và animation mới áp damage, không tiêu MP lần hai',await evalPage(cdp,
+            '!window.playbackFailure && FNHStandalonePreview.engine.state.actor(1).hp===window.playbackHp-10 && FNHStandalonePreview.engine.battle.enemy(0).mp===93',false,false));
+        await evalPage(cdp,`(async()=>{
+            await FNHStandalonePreview.engine.restore(window.playbackBefore);
+            for(const key of ['playbackBefore','playbackHp','playbackDone','playbackFailure'])delete window[key];
+        })()`,true,false);
         await evalPage(cdp, `(() => {
             const e=FNHStandalonePreview.engine,db=e.database;window.reflectionBefore=e.save();
             const enemyId=db.Enemies.length,troopId=db.Troops.length,skillId=db.Skills.length;

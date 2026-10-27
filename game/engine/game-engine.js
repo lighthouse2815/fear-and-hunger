@@ -608,12 +608,7 @@
         if (report.pendingAction && report.pendingAction.done()) return;
         var pending = report.pendingAction, subject = pending ? pending.subject :
             report.subject === 'enemy' ? runtime.enemy(report.subjectId) : runtime.actor(report.subjectId);
-        var animationId = skill.animationId;
-        if (animationId < 0) {
-            var actor = report.subject === 'actor' && this.state.actor(report.subjectId);
-            var weapon = actor && this.database.Weapons[actor.equips[0]];
-            animationId = weapon && weapon.animationId || 1;
-        }
+        var animationId = runtime.actionAnimationId(subject,skill);
         var activeAnimations = [], animationWaits = [], waits = [], counterIndex = 0;
         var releaseImmortal = pending && !report.counter ? runtime.protectActionTargets(report.targets.map(function (target) {
             return target.type === 'enemy' ? runtime.enemy(target.id) : runtime.actor(target.id);
@@ -630,7 +625,7 @@
             if (animationId <= 0) return;
             indices.forEach(function (index) {
                 var target = report.targets[index];
-                animationWaits.push(engine.animations.startBattle(target.id, animationId, report.subject === 'enemy', target.type));
+                animationWaits.push(engine.animations.startBattle(target.id, animationId, false, target.type));
                 activeAnimations.push(engine.animations.entries[engine.animations.entries.length - 1]);
             });
         }
@@ -640,13 +635,13 @@
                 if (hit.reflectedBy) {
                     var reflector = hit.reflectedBy.type === 'enemy' ? runtime.enemy(hit.reflectedBy.id) : runtime.actor(hit.reflectedBy.id);
                     var reflectionWaits = [];
-                    function reflectAnimation(id, targetId, type) {
+                    function reflectAnimation(id, targetId, type, mirror) {
                         if (id <= 0) return;
-                        reflectionWaits.push(engine.animations.startBattle(targetId, id, type === 'actor', type));
+                        reflectionWaits.push(engine.animations.startBattle(targetId, id, !!mirror, type));
                         activeAnimations.push(engine.animations.entries[engine.animations.entries.length - 1]);
                     }
                     if (hit.reflectedBy.type === 'enemy' || engine.database.System.optSideView) {
-                        reflectAnimation(runtime.reflectAnimationId(reflector), hit.reflectedBy.id, hit.reflectedBy.type);
+                        reflectAnimation(runtime.reflectAnimationId(reflector), hit.reflectedBy.id, hit.reflectedBy.type, hit.reflectedBy.type==='actor');
                     }
                     reflectAnimation(animationId, hit.target, hit.targetType);
                     await waiter.awaitCommand(Promise.all(reflectionWaits));
@@ -658,6 +653,13 @@
             if (subject.enemyId != null) subject.spriteEffect = { type: 'whiten', remaining: 16 };
             if (report.counter) runtime.performAction(subject, skill, false, true);
             var phases = report.counter ? { target: ['action animation', 'wait for animation', 'action effect'] } : runtime.actionPhases(skill);
+            if (!report.counter && !Object.prototype.hasOwnProperty.call(runtime.actionSequence(skill)||{},'setup')) {
+                var castId=runtime.castAnimationId(subject,skill,!!report.itemId);
+                if (castId>0) {
+                    animationWaits.push(this.animations.startBattle(report.subjectId,castId,false,report.subject));
+                    activeAnimations.push(this.animations.entries[this.animations.entries.length-1]);
+                }
+            }
             var allTargets = report.targets.map(function (_, index) { return index; });
             for (var phase of ['setup', 'whole', 'target', 'follow', 'finish']) {
                 var groups = phase === 'target' ? allTargets.map(function (index) { return [index]; }) : [allTargets];
@@ -668,7 +670,13 @@
                         if (signal && signal.aborted) throw signal.reason;
                         var line = raw.trim().toLowerCase();
                         if (line === 'action animation') startAnimation(indices);
-                        else if (line === 'wait for animation') await waiter.awaitCommand(Promise.all(animationWaits));
+                        else if (line === 'wait for animation') {
+                            do {
+                                await waiter.awaitCommand(Promise.all(engine.animations.entries.filter(function (entry) {
+                                    return entry.scope==='battle';
+                                }).map(function (entry) { return engine.animations.waitFor(entry); })));
+                            } while (engine.animations.entries.some(function (entry) { return entry.scope==='battle'; }));
+                        }
                         else if (line === 'action effect' && pending) {
                             for (var targetIndex of indices) {
                                 if (!subject.alive) break;
