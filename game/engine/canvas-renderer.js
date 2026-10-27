@@ -114,6 +114,8 @@
         var animations = await this.animationImages(engine, true);
         var fogs = await this.fogImages(screen, true);
         var damageSheet = battle.popups && battle.popups.length ? await this.loadImage('img/system/Damage.png') : null;
+        var iconSheet = battle.enemies.some(function (enemy) { return enemy.spriteIcon && enemy.spriteIcon.iconIndex; }) ? await this.loadImage('img/system/IconSet.png') : null;
+        var overlaySheet = battle.actors.some(function (actor) { return actor.spriteOverlay && actor.spriteOverlay.index; }) ? await this.loadImage('img/system/States.png') : null;
         var fogView = engine.map.viewport(engine.state, this.canvas.width, this.canvas.height);
         var names = screen && screen.battlebacks || (engine.map.data.specifyBattleback ?
             [engine.map.data.battleback1Name, engine.map.data.battleback2Name] : ['', '']);
@@ -167,8 +169,8 @@
             });
             context.scale(width / 816, height / 624);
             enemies.sort(function (a, b) { return a.enemy.y - b.enemy.y || a.enemy.index - b.enemy.index; });
-            enemies.forEach(function (entry) { renderer.drawBattleEnemy(entry,engine); });
-            actors.forEach(function (entry) { renderer.drawBattleActor(entry, engine); });
+            enemies.forEach(function (entry) { renderer.drawBattleEnemy(entry,engine,iconSheet); });
+            actors.forEach(function (entry) { renderer.drawBattleActor(entry, engine,overlaySheet); });
             animations.forEach(function (animation) {
                 var entry = animation.entry, data = animation.data;
                 var target = enemies.find(function (item) { return entry.targetType === 'enemy' && item.enemy.index === entry.targetId; });
@@ -208,7 +210,18 @@
         this.context.restore();
     };
 
-    CanvasRenderer.prototype.drawBattleEnemy = function (entry, engine) {
+    CanvasRenderer.prototype.drawBattleStateIcon = function (bitmap, icon, x, y) {
+        var context = this.context, index = icon.iconIndex;
+        context.drawImage(bitmap,index % 16 * 32,Math.floor(index / 16) * 32,32,32,x-16,y-16,32,32);
+        if (icon.turns == null) return;
+        context.save(); context.beginPath(); context.rect(x-16,y-16,32,32); context.clip();
+        context.font = '16px GameFont'; context.textAlign = 'right'; context.textBaseline = 'alphabetic';
+        context.lineWidth = 4; context.lineJoin = 'round'; context.strokeStyle = 'rgba(0,0,0,0.5)'; context.fillStyle = '#ffffff';
+        context.strokeText(String(icon.turns),x+13,y-0.4,32); context.fillText(String(icon.turns),x+13,y-0.4,32);
+        context.restore();
+    };
+
+    CanvasRenderer.prototype.drawBattleEnemy = function (entry, engine, iconSheet) {
         var enemy = entry.enemy, bitmap = entry.bitmap, collapse = enemy.collapse, height = bitmap.height;
         if (collapse && collapse.duration == null) collapse.duration = bitmap.height;
         var flash = engine.animations && engine.animations.targetEffect(enemy.index,null,'enemy');
@@ -237,25 +250,32 @@
         this.context.save(); this.context.globalAlpha = opacity;
         if (additive) this.context.globalCompositeOperation = 'lighter';
         this.context.drawImage(image,0,0,bitmap.width,height,enemy.x - bitmap.width / 2 + shake,enemy.y - height,bitmap.width,height);
+        if (iconSheet && enemy.spriteIcon && enemy.spriteIcon.iconIndex) {
+            this.context.globalCompositeOperation = 'source-over';
+            this.drawBattleStateIcon(iconSheet,enemy.spriteIcon,enemy.x+shake,Math.max(20,enemy.y-Math.round((bitmap.height+40)*0.9)));
+        }
         this.context.restore();
     };
 
-    CanvasRenderer.prototype.drawBattleActor = function (entry, engine) {
+    CanvasRenderer.prototype.drawBattleActor = function (entry, engine, overlaySheet) {
         var bitmap = entry.bitmap;
-        if (!bitmap || entry.actor.hidden) return;
+        if (entry.actor.hidden) return;
         var motion = entry.motion, x = 102 + 204 * entry.index, y = 444;
-        var width = Math.floor(bitmap.width / 9), height = Math.floor(bitmap.height / 6);
-        var sx = Math.floor((Math.floor(motion.index / 6) * 3 + motion.pattern) * bitmap.width / 9);
-        var sy = Math.floor(motion.index % 6 * bitmap.height / 6);
         var flash = engine.animations && engine.animations.targetEffect(entry.actor.id, null, 'actor');
-        if (flash && flash.hide) return;
-        this.context.drawImage(bitmap, sx, sy, width, height, x - width / 2, y - height * 0.7, width, height);
-        if (flash) this.drawBattlerFlash(bitmap, x - width / 2, y - height * 0.7, flash, { x: sx, y: sy, width: width, height: height });
+        if (bitmap && !(flash && flash.hide)) {
+            var width = Math.floor(bitmap.width / 9), height = Math.floor(bitmap.height / 6);
+            var sx = Math.floor((Math.floor(motion.index / 6) * 3 + motion.pattern) * bitmap.width / 9);
+            var sy = Math.floor(motion.index % 6 * bitmap.height / 6);
+            this.context.drawImage(bitmap, sx, sy, width, height, x - width / 2, y - height * 0.7, width, height);
+            if (flash) this.drawBattlerFlash(bitmap, x - width / 2, y - height * 0.7, flash, { x: sx, y: sy, width: width, height: height });
+        }
         if (entry.weapon) {
             var index = (motion.weaponImageId - 1) % 12;
             this.context.drawImage(entry.weapon, (Math.floor(index / 6) * 3 + motion.weaponPattern) * 96, index % 6 * 64,
                 96, 64, x - 16 - 48, y - 64, 96, 64);
         }
+        var overlay = entry.actor.spriteOverlay;
+        if (overlaySheet && overlay && overlay.index > 0) this.context.drawImage(overlaySheet,overlay.pattern*96,(overlay.index-1)*96,96,96,x-48,y-96,96,96);
     };
 
     CanvasRenderer.prototype.drawMap = async function (engine, frame) {

@@ -196,7 +196,22 @@
         });
         if (this.battle.popups) this.battle.popups = this.battle.popups.filter(function (popup) { return popup.elapsed < 128; });
         this.battle.spriteFrames = (this.battle.spriteFrames || 0) + frames;
+        var elapsed = this.battle.spriteFrames;
+        var iconTicks = Math.floor(elapsed / 40) - Math.floor((elapsed - frames) / 40);
+        var overlayTicks = Math.floor(elapsed / 8) - Math.floor((elapsed - frames) / 8);
         this.battle.actors.concat(this.battle.enemies).forEach(function (battler) {
+            if (battler.enemyId != null ? iconTicks : overlayTicks) {
+                var states = this.battlerState(battler).states.map(function (id) { return this.database.States[id]; }, this)
+                    .sort(function (a,b) { return b.priority - a.priority || a.id - b.id; });
+                if (battler.enemyId != null) {
+                    var icons = battler.alive && !battler.hidden ? states.filter(function (state) { return state.iconIndex > 0; }) : [];
+                    var index = battler.spriteIcon ? battler.spriteIcon.index : 0;
+                    index = icons.length ? ((index + 1 >= icons.length ? 0 : index + 1) + iconTicks - 1) % icons.length : 0;
+                    var state = icons[index], turns = (battler.stateTurns || {})[state && state.id];
+                    battler.spriteIcon = { index: index, stateId: state ? state.id : 0, iconIndex: state ? state.iconIndex : 0,
+                        turns: state && state.autoRemovalTiming > 0 && turns != null ? Math.ceil(turns) : null };
+                } else battler.spriteOverlay = { index: states.length ? states[0].overlay || 0 : 0, pattern: Math.floor(elapsed / 8) % 8 };
+            }
             if (battler.spriteMotion) {
                 battler.spriteMotion.elapsed += frames;
                 if (battler.spriteMotion.elapsed >= 36 && battler.spriteMotion.type !== 'guard') delete battler.spriteMotion;
@@ -263,7 +278,7 @@
                 var hadState = enemy.states.includes(stateId);
                 var immune = stateId === 1 && this.isImmortal(enemy) || this.enemyTraits(enemy).some(function (trait) { return trait.code === 14 && trait.dataId === stateId; });
                 if (p[1] === 0 && enemy.alive && !immune) {
-                    if (enemy.stateTurns) delete enemy.stateTurns[stateId];
+                    this.resetStateTurns(enemy, stateId);
                     if (!enemy.states.includes(stateId)) enemy.states.push(stateId);
                     if (stateId === 1) enemy.hp = 0;
                 } else if (p[1] === 1) {
@@ -597,7 +612,6 @@
         if (this.random() >= chance * (certain ? 1 : this.traitRate(target, 13, id))) return;
         if (target.enemyId != null) this.handleEffect(333, [target.index, 0, id]);
         else this.state.changeActorState(target.id, id, true);
-        this.resetStateTurns(target, id);
         if (target.enemyId == null) this.refreshActor(target);
         this.syncActors();
     };

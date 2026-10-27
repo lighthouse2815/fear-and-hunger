@@ -162,7 +162,7 @@ death break kiểm tra chủ thể. Common event chạy cuối hành động. H�
 và animation còn dở, không áp effect muộn. IMMORTAL mặc định giữ đích sống ở
 0 HP qua các effect, chặn death state rồi xác nhận chết trước common event cuối
 action. Hành động lồng nhau giữ bộ đếm riêng, hủy luôn giải phóng bảo vệ. Phần
-State icon/overlay và chuyển cảnh trận cần đối chiếu tiếp trước khi
+Chuyển cảnh trận cần đối chiếu tiếp trước khi
 chuyển entry chính. Sprite actor ở front view dùng vị trí và anchor cấu hình
 gốc, sheet 9×6, nhịp 12 frame; hiện motion đánh, phép, kỹ năng, vật phẩm, Guard,
 trúng đòn, né, ít HP và trạng thái/chết. Hình vũ khí đọc System.attackMotions
@@ -187,6 +187,12 @@ menu và trạng thái trên bản đồ không tạo số trong trận. Rời t
 MP damage giới hạn theo MP hiện có: log và popup chỉ ghi lượng thực sự bị
 trừ; cạn MP không tạo số dư khi lặp đòn hoặc đánh toàn đội. Hồi MP từ 0 vẫn
 theo công thức và giới hạn MP tối đa.
+Icon quái dùng IconSet.png, đổi mỗi 40 frame theo danh sách state đã sắp độ
+ưu tiên; số lượt hiện cho state tự hết hạn. State từ sự kiện hoặc kỹ năng
+khởi tạo thời lượng ngay khi thêm và đặt lại khi thêm lại. Actor dùng States.png
+96×96, tám frame đổi mỗi 8 frame; state ưu tiên cao nhất quyết định overlay,
+kể cả overlay bằng 0. Lưu/tải giữ nhịp và frame đang hiện, menu tạm dừng;
+quái chết/ẩn dọn icon ở nhịp kế tiếp, overlay giữ riêng với hình body.
 Quái bị hạ dùng trait collapse: loại thường nhuộm đỏ/mờ 32 frame, loại 3 giữ
 nguyên xác, boss tan và cắt ảnh theo chiều cao PNG. Hồi sinh dừng kết liễu,
 đợi hiện hình 16 frame; lệnh 335 cũng hiện quái bằng fade. Engine đợi hiệu ứng

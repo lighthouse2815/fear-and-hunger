@@ -2165,6 +2165,47 @@ async function main() {
             e.advanceRoutes(1000);const after=await renderer.draw(e);
             return after.enemies===2 && e.battle.enemy(1).collapse.type===3 && !e.battle.enemy(1).alive && e.battle.aliveEnemies().length===1;
         })()`,true,false));
+        check('icon trạng thái dùng IconSet thật, xoay theo ưu tiên, có số lượt và chặn mép trên',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true,random:()=>0.5});
+            await e.boot({mapId:74,x:8,y:8,party:[1]});e.battle.setup(1);e.state.scene='battle';
+            for(const id of [4,5])e.battle.addState(e.battle.enemy(0),id,1,true);e.advanceRoutes(40);
+            const enemy=e.battle.enemy(0);if(enemy.spriteIcon.iconIndex!==163 || enemy.spriteIcon.turns!==null)return false;
+            enemy.y=10;const renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas'));
+            let position;const draw=renderer.drawBattleStateIcon.bind(renderer);
+            renderer.drawBattleStateIcon=(sheet,icon,x,y)=>{position={x,y};draw(sheet,icon,x,y);};await renderer.draw(e);
+            if(!position || position.y!==20 || position.x!==enemy.x || !renderer.images.has('img/system/IconSet.png'))return false;
+            const sheet=await renderer.loadImage('img/system/IconSet.png'),ref=document.createElement('canvas');ref.width=816;ref.height=624;
+            renderer.context.clearRect(0,0,816,624);draw(sheet,enemy.spriteIcon,120,100);
+            ref.getContext('2d').drawImage(sheet,3*32,10*32,32,32,104,84,32,32);
+            const actual=renderer.context.getImageData(0,0,816,624).data,expected=ref.getContext('2d').getImageData(0,0,816,624).data;
+            if(!actual.some((value,index)=>index%4===3 && value>0) || !actual.every((value,index)=>value===expected[index]))return false;
+            e.battle.handleEffect(334,[0]);e.battle.addState(enemy,8,1,true);e.advanceRoutes(40);
+            let label;const fill=renderer.context.fillText.bind(renderer.context);
+            renderer.context.fillText=(text,x,y,...args)=>{label={text,x,y,font:renderer.context.font,align:renderer.context.textAlign};fill(text,x,y,...args);};
+            draw(sheet,enemy.spriteIcon,120,100);
+            return label && label.text===String(enemy.stateTurns[8]) && label.x===133 && Math.abs(label.y-99.6)<0.001 && label.font==='16px GameFont' && label.align==='right';
+        })()`,true,false));
+        check('overlay States.png giữ ưu tiên, frame/save và vẫn hiện khi body trống hoặc bị animation ẩn',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
+            await e.boot({mapId:74,x:8,y:8,party:[1,3]});e.battle.setup(1);e.state.scene='battle';
+            for(const id of [11,8])e.state.changeActorState(1,id,true);e.state.changeActorState(3,94,true);e.advanceRoutes(16);
+            // Giữ cùng backend cho các lần đọc pixel; Chrome đổi GPU sang CPU
+            // sau readback có thể làm tròn RGB PNG trong suốt khác 1/255.
+            const canvas=document.createElement('canvas');canvas.getContext('2d',{willReadFrequently:true});
+            const renderer=new FNHStandaloneCanvas.CanvasRenderer(canvas);await renderer.draw(e);
+            if(!renderer.images.has('img/system/States.png') || e.battle.actor(1).spriteOverlay.index!==5 || e.battle.actor(3).spriteOverlay.index!==4)return false;
+            const sheet=await renderer.loadImage('img/system/States.png'),ref=document.createElement('canvas');ref.width=816;ref.height=624;
+            const refContext=ref.getContext('2d',{willReadFrequently:true});
+            function draw(){renderer.context.clearRect(0,0,816,624);const actor=e.battle.actor(1);renderer.drawBattleActor({actor,index:0,bitmap:null,motion:e.battle.spriteFrame(actor)},e,sheet);return renderer.context.getImageData(0,0,816,624).data;}
+            const actual=draw();refContext.drawImage(sheet,192,384,96,96,54,348,96,96);
+            const expected=refContext.getImageData(0,0,816,624).data;
+            if(!actual.some((value,index)=>index%4===3 && value>0) || !actual.every((value,index)=>value===expected[index]))return false;
+            e.animations.targetEffect=()=>({hide:true});if(!draw().every((value,index)=>value===actual[index]))return false;
+            e.advanceRoutes(5.5);const save=e.save();e.advanceRoutes(2.5);const advanced=draw();
+            await e.restore(save);e.advanceRoutes(2.5);if(!draw().every((value,index)=>value===advanced[index]))return false;
+            e.state.changeActorState(1,1,true);e.advanceRoutes(8);
+            return e.battle.actor(1).spriteOverlay.index===0 && !draw().some(Boolean);
+        })()`,true,false));
         check('popup Damage.png cắt đúng HP/MP/hồi/Miss, stack và fade theo pixel thật',await evalPage(cdp,`(async()=>{
             const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
             await e.boot({mapId:74,x:8,y:8,party:[1]});e.battle.setup(1);e.state.scene='battle';

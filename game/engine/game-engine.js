@@ -67,7 +67,7 @@
             transparent: system.optTransparent === true,
             party: (system.partyMembers || []).slice()
         };
-        this.state = new stateApi.GameState(state, this.database);
+        this.state = new stateApi.GameState(state, this.database, this.random);
         this.state.onStateChange = this.onStateChange;
         this.screen = new screenApi.ScreenRuntime(this.state);
         this.lighting = new lightingApi.LightingRuntime(this.state);
@@ -1415,7 +1415,7 @@
     GameEngine.prototype.restore = async function (snapshot) {
         if (!this.database) throw new Error('Engine chưa boot database.');
         if (this.eventRunning || this.stepRunning) throw new Error('Không thể tải save khi sự kiện đang chạy.');
-        var state = new stateApi.GameState(snapshot, this.database);
+        var state = new stateApi.GameState(snapshot, this.database, this.random);
         var map = await this.prepareMap(state.mapId, state);
         if (!map.isValid(state.x, state.y) || !mapApi.DIRECTION_BITS[state.direction]) throw new Error('Vị trí trong save không hợp lệ.');
         this.state = state;

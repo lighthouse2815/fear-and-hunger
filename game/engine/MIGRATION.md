@@ -15,7 +15,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: đối chiếu state icon/overlay và chuyển cảnh mở/kết thúc trận.
+1. Combat: đối chiếu chuyển cảnh mở/kết thúc trận.
    Thứ tự playback và số effect trong từng phase đã đối chiếu với 560 skill/item.
 2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
@@ -27,6 +27,13 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- IconSet.png xoay state quái mỗi 40 frame, ưu tiên/ID như runtime gốc,
+  chặn mép trên và hiện số lượt theo BuffsStatesCore. State từ sự kiện/kỹ năng
+  có thời lượng ngay lúc thêm; thêm lại đặt lại, lưu/tải không bốc số lại.
+  Actor dùng States.png 96×96, tám pattern mỗi 8 frame, chọn overlay của state
+  ưu tiên cao nhất (kể cả 0); hoạt động khi body trống/bị animation ẩn.
+  Đối chiếu từng frame với runtime gốc, 50 state có icon/tám state có overlay,
+  chết/ẩn/đổi state/frame lẻ/save/pause. Chrome so pixel sheet và chữ số lượt.
 - MP damage của tám skill thật giới hạn theo MP hiện có như executeMpDamage
   gốc; báo cáo từng hit/tổng và popup không ghi dư sau khi cạn. Hồi MP vẫn
   hoạt động từ 0; Chrome kiểm tra skill 181 lặp đòn, 320 toàn đội và save.

@@ -34,8 +34,9 @@
         };
     }
 
-    function GameState(initial, database) {
+    function GameState(initial, database, random) {
         var source = Object.assign(emptyState(), clone(initial || {}));
+        this.random = random || Math.random;
         this.mapId = Number(source.mapId) || 0;
         this.x = Number(source.x) || 0;
         this.y = Number(source.y) || 0;
@@ -285,6 +286,10 @@
         if (actor.stateTurns) delete actor.stateTurns[stateId];
         if (!actor.stateSteps) actor.stateSteps = {};
         var definition = this.database && this.database.States && this.database.States[stateId];
+        if (add && definition) {
+            if (!actor.stateTurns) actor.stateTurns = {};
+            actor.stateTurns[stateId] = (definition.minTurns || 0) + Math.floor(this.random() * ((definition.maxTurns || 0) - (definition.minTurns || 0) + 1));
+        }
         if (add && definition) actor.stateSteps[stateId] = definition.stepsToRemove || 0;
         else delete actor.stateSteps[stateId];
         if (stateId === 1) actor.hp = add ? 0 : Math.max(1, actor.hp);
