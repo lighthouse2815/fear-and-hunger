@@ -35,7 +35,19 @@
         this.autonomousEnabled = options.autonomousMovement === true;
         this.pendingTouchEvents = [];
         this.onStateChange = this.playStateAnimation.bind(this);
+        this.onBattleSound = this.playBattleSound.bind(this);
     }
+
+    GameEngine.prototype.playBattleSound = function (index) {
+        if (this.state.scene !== 'battle') return;
+        var sound = (this.database.System.sounds || [])[index];
+        if (!sound || !sound.name) return;
+        var effect = this.onRouteEffect || this.battleContext && this.battleContext.handlers && this.battleContext.handlers.effect;
+        if (!effect && this.audio) effect = this.audio.handleEffect.bind(this.audio);
+        if (!effect) throw new Error('Chưa có bộ phát âm thanh chiến đấu.');
+        var engine = this;
+        Promise.resolve(effect(250,[sound])).catch(function (error) { engine.routeErrors.push(error); });
+    };
 
     GameEngine.prototype.playStateAnimation = function (battler, stateId, added) {
         if (this.state.scene !== 'battle' || !this.battle || !this.battle.battle || this.battle.battle.result) return;
@@ -61,7 +73,7 @@
         this.lighting = new lightingApi.LightingRuntime(this.state);
         this.filters = new filterApi.FilterRuntime(this.state);
         this.animations = new animationApi.AnimationRuntime(this);
-        this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange);
+        this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange, this.onBattleSound);
         this.state.party.slice().forEach(function (actorId) {
             if (!this.state.actor(actorId) && this.database.Actors[actorId]) this.state.addActor(actorId);
         }, this);
@@ -88,7 +100,7 @@
         }
         if (this.movement) this.movement.clear();
         if (this.animations) this.animations.dispose();
-        if (this.battle) this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange);
+        if (this.battle) this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange, this.onBattleSound);
         this.state.mapId = mapId;
         this.map = map;
         if (this.stepWait) this.screen.finish(this.stepWait);
@@ -622,6 +634,7 @@
             return waiter.awaitCommand(done);
         }
         function startAnimation(indices) {
+            if (skill.animationId < 0 && report.subject === 'enemy' && !engine.database.System.optSideView) runtime.playSound(9);
             if (animationId <= 0) return;
             indices.forEach(function (index) {
                 var target = report.targets[index];
@@ -805,9 +818,9 @@
     GameEngine.prototype.syncBattleActors = function () {
         var state = this.state;
         this.battle.battle.actors = state.battleActorIds().map(function (id) {
-            var actor = state.actor(id);
-            var previous = this.battle.battle.actors.find(function (entry) { return entry.id === id; });
-            return Object.assign(previous || {}, { id: id, name: actor.name, hp: actor.hp, mp: actor.mp, alive: actor.hp > 0 });
+            var actor = this.battle.battle.actors.find(function (entry) { return entry.id === id; }) || {id:id};
+            this.battle.refreshActor(actor); actor.name = state.actor(id).name;
+            return actor;
         },this);
     };
 
@@ -1414,7 +1427,7 @@
         this.filters = new filterApi.FilterRuntime(state);
         if (this.animations) this.animations.dispose();
         this.animations = new animationApi.AnimationRuntime(this);
-        this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange);
+        this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange, this.onBattleSound);
         if (this.movement) this.movement.clear();
         this.map = map;
         this.lighting.sources(map);

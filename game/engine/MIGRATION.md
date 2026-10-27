@@ -15,9 +15,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: đối chiếu SE Attack, trúng đòn, né và hồi phục theo System.json.
-   Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
-   với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
+1. Combat: đối chiếu popup damage/state icon và chuyển cảnh mở/kết thúc trận.
+   Thứ tự playback và số effect trong từng phase đã đối chiếu với 560 skill/item.
 2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
 3. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
@@ -28,6 +27,12 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- SE combat đọc System.sounds: Attack quái front view, HP trúng theo phe,
+  physical miss, né vật lý/phép, hồi HP/MP, Counter, phản phép và actor chết.
+  Mỗi effect phát một lần; MP damage/drain không phát SE HP hoặc blink; tiếng
+  trúng trước tiếng chết, IMMORTAL đợi xác nhận chết. Chuẩn bị action/tải save
+  không phát lại; scene map/tên rỗng giữ im lặng. Chrome giải mã hit_single,
+  Attack3 và lurch_02 thật, dùng mức âm lượng của người chơi.
 - Cast quái theo hitType 120/52/51, đợi xong mới chạy phase hành động; bỏ cast
   cho Attack/Guard/item và actor front view như cấu hình gốc. Note override và
   setup tùy chỉnh giữ quyền ghi đè. Attack của quái dùng animation 39, actor đọc

@@ -1839,6 +1839,41 @@ async function main() {
         await waitFor(cdp, 'document.querySelector("#fnh-battle").hidden && !document.querySelector("#fnh-menu-dialog").open',
             5000, 'UI khôi phục bản đồ trước khi tương tác sự kiện kế tiếp');
         await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine,db=e.database,a=FNHStandalonePreview.audio;window.battleSoundsBefore=e.save();window.battleSoundsFactory=a.audioFactory;window.battleSoundElements=[];
+            a.audioFactory=function(){const element=window.battleSoundsFactory();window.battleSoundElements.push(element);return element;};
+            const enemyId=db.Enemies.length,troopId=db.Troops.length,skillId=db.Skills.length;
+            db.Enemies.push({...db.Enemies[1],id:enemyId,note:'',params:[1000,100,10,1,1,1,10,1],actions:[],traits:[]});
+            db.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400}]});
+            db.Skills.push({...db.Skills[3],id:skillId,animationId:0,hitType:0,scope:1,repeats:1,mpCost:0,tpCost:0,tpGain:0,effects:[],successRate:100,
+                note:'<target action>'+String.fromCharCode(10)+'action effect'+String.fromCharCode(10)+'</target action>',
+                damage:{type:1,formula:'10',variance:0,critical:false,elementId:0}});
+            e.state.party=[1,3];e.state.party.forEach(id=>e.state.recoverActor(id));e.battle.setup(troopId,true,true);e.state.scene='battle';e.battle.random=()=>0.5;
+            window.battleSoundSkill=skillId;window.battleSoundDone=false;
+            e.forceBattleAction([0,0,skillId,0]).then(()=>{window.battleSoundDone=true;},error=>{window.battleSoundFailure=error.message;});
+        })()`,false,false);
+        await waitFor(cdp,'window.battleSoundDone || window.battleSoundFailure',10000,'SE damage phát trong lệnh 339');
+        await waitFor(cdp,'window.battleSoundElements.some(audio=>audio.src.endsWith("/audio/se/hit_single.ogg") && audio.duration>0)',10000,'SE System trúng đòn giải mã OGG thật');
+        check('339 phát hit_single theo volume System và mức tổng 5% riêng của test',await evalPage(cdp,`(() => {
+            const audio=window.battleSoundElements.find(element=>element.src.endsWith('/audio/se/hit_single.ogg'));
+            return !window.battleSoundFailure && FNHStandalonePreview.engine.state.actor(1).hp===90 &&
+                Math.abs(audio.volume-0.9*FNHStandalonePreview.audio.masterVolume)<1e-8 && audio.playbackRate===1;
+        })()`,false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(FNHStandalonePreview.engine.save()).then(()=>true)',true,false);
+        check('tải save không phát lại âm hit_single của hành động đã xong',await evalPage(cdp,
+            'window.battleSoundElements.filter(audio=>audio.src.endsWith("/audio/se/hit_single.ogg")).length===1',false,false));
+        await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;window.battleSoundDone=false;
+            e.forceBattleAction([0,0,1,0]).then(()=>{window.battleSoundDone=true;},error=>{window.battleSoundFailure=error.message;});
+        })()`,false,false);
+        await waitFor(cdp,'window.battleSoundDone || window.battleSoundFailure',10000,'Attack quái phát animation và SE mặc định');
+        await waitFor(cdp,'window.battleSoundElements.some(audio=>audio.src.endsWith("/audio/se/Attack3.ogg") && audio.duration>0) && window.battleSoundElements.some(audio=>audio.src.endsWith("/audio/se/lurch_02.ogg") && audio.duration>0)',10000,'OGG Attack3 và animation 39 phát thật');
+        check('Attack quái phát một Attack3 cùng SE lurch_02 trong animation 39',await evalPage(cdp,
+            '!window.battleSoundFailure && window.battleSoundElements.filter(audio=>audio.src.endsWith("/audio/se/Attack3.ogg")).length===1',false,false));
+        await evalPage(cdp,`(async()=>{
+            await FNHStandalonePreview.engine.restore(window.battleSoundsBefore);FNHStandalonePreview.audio.audioFactory=window.battleSoundsFactory;
+            for(const key of ['battleSoundsBefore','battleSoundsFactory','battleSoundElements','battleSoundSkill','battleSoundDone','battleSoundFailure'])delete window[key];
+        })()`,true,false);
+        await evalPage(cdp,`(() => {
             const e=FNHStandalonePreview.engine,db=e.database;window.playbackBefore=e.save();const enemyId=db.Enemies.length,troopId=db.Troops.length,skillId=db.Skills.length;
             db.Enemies.push({...db.Enemies[1],id:enemyId,params:[1000,100,1,1,1,1,10,1],actions:[],traits:[]});
             db.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400}]});
@@ -2193,7 +2228,7 @@ async function main() {
             return engine.battle.battle.lastAction.skillId===7 && engine.state.switchValue(16) && engine.state.actor(1).hp===hp;
         })()`,true,false));
         check('TP nhận theo từng hit, giữ qua save và theo trait Baby Demon', await evalPage(cdp, `(async () => {
-            const source=FNHStandalonePreview.engine,e=new FNHStandaloneEngine.GameEngine({dataStore:source.dataStore,random:()=>0.5});
+            const source=FNHStandalonePreview.engine,e=new FNHStandaloneEngine.GameEngine({dataStore:source.dataStore,random:()=>0.5,onRouteEffect:()=>true});
             await e.boot({mapId:74,x:8,y:8,party:[1,12]});const db=e.database,enemyId=db.Enemies.length,troopId=db.Troops.length,id=db.Skills.length;
             db.Enemies.push({...db.Enemies[1],id:enemyId,params:[100,100,1,1,1,1,1,1],traits:[],actions:[]});
             db.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400}]});

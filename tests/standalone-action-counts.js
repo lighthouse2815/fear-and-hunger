@@ -8,7 +8,7 @@ const { GameDataStore } = require('../game/engine/data-store');
 (async () => {
     const store = new GameDataStore({ fetchImpl: async url => ({ ok: true, json: async () =>
         JSON.parse(await fs.readFile(path.join(__dirname, '../game', url), 'utf8')) }) });
-    const engine = new GameEngine({ dataStore: store, random: () => 0.5 });
+    const engine = new GameEngine({ dataStore: store, random: () => 0.5, onRouteEffect: () => true });
     await engine.boot({ mapId: 74, x: 8, y: 8, party: [1] });
     const db = engine.database, r = engine.battle;
     const expected = new Map([[1, 1], [11, 0], [121, 1], [143, 2], [191, 1], [242, 1], [270, 5], [283, 1]]);

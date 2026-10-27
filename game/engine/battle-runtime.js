@@ -22,9 +22,10 @@
         output.forEach(function (token) { if (typeof token === 'number') stack.push(token); else { var right = stack.pop(), left = stack.pop(); stack.push(token === '+' ? left + right : token === '-' ? left - right : token === '*' ? left * right : right === 0 ? 0 : left / right); } });
         return Number(stack[0]) || 0;
     }
-    function BattleRuntime(state, database, random, onStateChange) {
+    function BattleRuntime(state, database, random, onStateChange, onSound) {
         this.state = state; this.database = database; this.random = random || Math.random;
         this.onStateChange = onStateChange;
+        this.onSound = onSound;
         this.battle = state.battle || null;
         this.waiters = new Set();
         this.immortal = new Map();
@@ -132,6 +133,9 @@
     };
     BattleRuntime.prototype.actor = function (id) {
         return this.battle && this.battle.actors.find(function (actor) { return actor.id === id; });
+    };
+    BattleRuntime.prototype.playSound = function (index) {
+        if (this.onSound) this.onSound(index);
     };
     BattleRuntime.prototype.startMotion = function (battler, type, weaponImageId) {
         if (battler.enemyId == null) battler.spriteMotion = { type: type, elapsed: 0, weaponImageId: weaponImageId || 0 };
@@ -327,10 +331,12 @@
         }, additive ? 0 : 1);
     };
     BattleRuntime.prototype.refreshActor = function (actor) {
+        var wasAlive = actor.alive;
         if (this.state.hasNameCheat(actor.id)) this.state.updateActor(actor.id, function () {});
         var data = this.state.actor(actor.id);
         if (this.isImmortal(actor)) data.states = data.states.filter(function (id) { return id !== 1; });
         actor.hp = data.hp; actor.mp = data.mp; actor.alive = data.hp > 0 || this.isImmortal(actor);
+        if (wasAlive && !actor.alive) this.playSound(15);
     };
     BattleRuntime.prototype.syncActors = function () {
         if (this.battle) this.battle.actors.forEach(this.refreshActor, this);
@@ -670,6 +676,7 @@
         });
         if (counterTarget) {
             report.counter = true;
+            this.playSound(18);
         } else if (item) {
             if (skill.consumable) this.state.gainItem('items', skill.id, -1);
         } else {
@@ -697,6 +704,7 @@
                     var counter = counterRate > 0 && runtime.random() < counterRate;
                     var reflectRate = !menu && !counterTarget && skill.hitType === 2 ? runtime.traitRate(intendedTarget, 22, 5, true) : 0;
                     var reflected = reflectRate > 0 && runtime.random() < reflectRate;
+                    if (reflected) runtime.playSound(20);
                     var target = reflected ? subject : !menu && !counterTarget ? runtime.substituteTarget(intendedTarget, skill) : intendedTarget;
                     var hit = { target: target.enemyId != null ? target.index : target.id, targetType: target.enemyId != null ? 'enemy' : 'actor', damage: 0 };
                     if (reflected) hit.reflectedBy = { type: intendedTarget.enemyId != null ? 'enemy' : 'actor', id: intendedTarget.enemyId != null ? intendedTarget.index : intendedTarget.id };
@@ -705,12 +713,16 @@
                     if (skill.hitType === 1) success *= runtime.traitRate(subject, 22, 0, true);
                     hit.missed = runtime.random() >= success;
                     hit.evaded = !hit.missed && skill.hitType !== 0 && runtime.random() < runtime.traitRate(target, 22, skill.hitType === 1 ? 1 : 4, true);
+                    if (!menu && hit.missed && skill.hitType === 1) runtime.playSound(17);
+                    if (!menu && hit.evaded) runtime.playSound(skill.hitType === 1 ? 18 : 19);
                     if (!hit.missed && !hit.evaded) {
                         var damage = skill.damage || { type: 0 }, value = 0;
                         if (damage.type > 0) {
                             var calculated = runtime.damageValue(subject, target, skill);
                             value = calculated.damage; hit.critical = calculated.critical;
                             var resource = calculated.resource;
+                            if (!menu && resource === 'hp' && value > 0 && damage.type !== 5) runtime.playSound(target.enemyId != null ? 10 : 14);
+                            if (!menu && value < 0) runtime.playSound(16);
                             runtime.changeResource(target, resource, -value);
                             if (resource === 'hp' && value > 0) runtime.battlerState(target).states.slice().forEach(function (id) {
                                 var state = runtime.database.States[id];
@@ -720,7 +732,7 @@
                                 Math.floor(50 * value / runtime.battlerParam(target, 0) * runtime.traitRate(target, 23, 5)));
                             if (damage.type === 5 || damage.type === 6) runtime.changeResource(reflected ? intendedTarget : subject, resource, value);
                             hit.damage = value; hit.resource = resource; report.damage += value;
-                            if (!menu && resource === 'hp' && value > 0) {
+                            if (!menu && resource === 'hp' && value > 0 && damage.type !== 5) {
                                 if (target.enemyId != null) target.spriteEffect = { type: 'blink', remaining: 20 };
                                 else runtime.startMotion(target, 'damage');
                             }
