@@ -25,6 +25,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Tương tác bỏ trang event chỉ có lệnh kết thúc như Game_Event.start gốc: ô
+  Map051 (36,63) có event 6 rỗng không che event 7 mở cửa, chọn Open chạy route
+  của hai cánh và bật switch 22; chọn Leave giữ cửa. Unit và Chrome dùng JSON thật.
 - Chrome chơi liên tục từ entry chính: chọn Mercenary, đặt tên, phát hết video
   intro, chọn Fear & Hunger và bỏ qua hồi tưởng, tới Map074 rồi đi qua cửa vào
   layout ngục theo biến 121. Không sửa switch hay chạy lại event; đây chưa phải

@@ -80,5 +80,17 @@ async function fetchFromGame(relativeUrl) {
     await assert.rejects(engine.restore(Object.assign({}, beforeBadTransfer, { x: -1 })), /Vị trí trong save/);
     assert.deepEqual(engine.save(), beforeBadTransfer);
     assert.equal(engine.map, beforeMap, 'lỗi tải hoặc tọa độ không được làm map/state lệch nhau');
+    await engine.restore({ mapId: 51, x: 36, y: 63, direction: 6, party: [1] });
+    assert.deepEqual(engine.map.eventPage(engine.map.eventById(6)).list.map(command => command.code), [0], 'event dưới chân của cửa là trang rỗng thật');
+    const doorMessages = [];
+    const leave = await engine.interact({ message: text => doorMessages.push(text), choice: () => 1 });
+    assert.match(doorMessages[0], /door seems to be open/, 'bỏ trang rỗng dưới chân để mở event cửa phía trước');
+    assert.equal(leave.choices[0].selected, 1); assert.equal(engine.state.switchValue(22), false, 'Leave không mở cửa');
+    engine.onRouteEffect = () => true;
+    let opened = false;
+    const opening = engine.interact({ message: () => {}, choice: () => 0 }).then(() => { opened = true; });
+    for (let frame = 0; frame < 60 && !opened; frame++) { engine.advanceRoutes(1); await new Promise(resolve => setImmediate(resolve)); }
+    await opening;
+    assert.equal(engine.state.switchValue(22), true, 'Open hoàn tất route và mở cả hai cánh cửa thật');
     console.log('ĐẠT: game engine độc lập boot, di chuyển, chạy event và save/restore.');
 })().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });

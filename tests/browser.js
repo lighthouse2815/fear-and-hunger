@@ -3441,6 +3441,24 @@ async function main() {
             return e.state.mapId===map && e.state.x===(layout===1||layout===2?27:layout===3?26:91) &&
                 e.state.y===(layout===1||layout===2||layout===3?68:73) && FNHStandalonePreview.errors.length===0;
         })()`,false,false));
+        await evalPage(cdp,`(async()=>{
+            const app=FNHStandalonePreview;app.scheduler.stop();
+            await app.engine.restore({mapId:51,x:36,y:63,direction:6,party:[1]});
+        })()`,true,false);
+        await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+        await waitFor(cdp,'document.querySelectorAll("#fnh-choices button").length===2',5000,'mở lựa chọn cửa Map051 thật');
+        check('event rỗng dưới chân không che lựa chọn mở cửa phía trước',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;
+            return e.map.eventPage(e.map.eventById(6)).list.length===1 && e.map.eventById(7).locked &&
+                document.querySelector('#fnh-message-text').textContent.includes('door seems to be open');
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-choices button:first-child');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.switchValue(22) && !FNHStandalonePreview.engine.eventRunning',5000,'route mở hai cánh cửa Map051');
+        check('chọn Open mở cửa Map051 và trả quyền điều khiển',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;
+            return e.map.eventPage(e.map.eventById(8)).priorityType===0 && !e.messageRunning &&
+                FNHStandalonePreview.errors.length===0;
+        })()`,false,false));
 
         const relevantErrors = runtimeErrors;
         const relevantLogs = logErrors;

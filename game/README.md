@@ -31,6 +31,8 @@ tách riêng và không tự chuyển đổi save RPG Maker.
 Preview mở cạnh thùng đồ trên Map074. Bấm Enter hoặc **Tương tác** để mở thùng,
 bấm **Tiếp tục** để đọc hội thoại. Dùng mũi tên hoặc các nút hướng để di chuyển;
 khi hội thoại/sự kiện đang chạy, engine khóa di chuyển và các sự kiện khác.
+Tương tác bỏ trang chỉ có lệnh kết thúc, để event rỗng dưới chân không che cửa
+phía trước; cửa đôi ở Map051 mở được bằng lựa chọn và route JSON thật.
 Giữ nút hướng trên điện thoại để đi liên tục; thả tay, hủy chạm, mất capture
 hoặc rời trang dừng hướng. Nhiều ngón và bàn phím giữ cùng hướng không xóa
 trạng thái của nhau. Chạm nhanh vẫn điều khiển được màn chọn nhân vật bằng JSON;
