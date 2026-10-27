@@ -547,6 +547,21 @@
     BattleRuntime.prototype.canCounter = function (battler) {
         return battler.alive && !battler.hidden && this.restriction(battler) < 4;
     };
+    BattleRuntime.prototype.reflectAnimationId = function (battler) {
+        var state = this.battlerState(battler), sources;
+        if (battler.enemyId != null) sources = [this.database.Enemies[battler.enemyId]];
+        else sources = [this.database.Actors[battler.id], this.database.Classes[state.classId]].concat(state.equips.map(function (id, slot) {
+            return (slot === 0 ? this.database.Weapons : this.database.Armors)[id];
+        }, this));
+        sources = sources.concat(state.states.slice().sort(function (a, b) {
+            return (this.database.States[b].priority || 0) - (this.database.States[a].priority || 0) || a - b;
+        }.bind(this)).map(function (id) { return this.database.States[id]; }, this));
+        for (var source of sources) {
+            var match = source && /<reflect (?:animation|ani):\s*(\d+)>/i.exec(source.note || '');
+            if (match && Number(match[1]) > 0) return Number(match[1]);
+        }
+        return 42;
+    };
     BattleRuntime.prototype.substituteTarget = function (target, skill) {
         if (skill.hitType === 0 || !target.alive || this.battlerState(target).hp >= this.battlerParam(target, 0) / 4) return target;
         var members = target.enemyId != null ? this.battle.enemies : this.battle.actors;
@@ -608,9 +623,12 @@
                     if ([9, 10].includes(skill.scope) ? intendedTarget.alive : !intendedTarget.alive) break;
                     var counterRate = !menu && !counterTarget && skill.hitType === 1 && runtime.canCounter(intendedTarget) ? runtime.traitRate(intendedTarget, 22, 6, true) : 0;
                     var counter = counterRate > 0 && runtime.random() < counterRate;
-                    var target = !menu && !counterTarget ? runtime.substituteTarget(intendedTarget, skill) : intendedTarget;
+                    var reflectRate = !menu && !counterTarget && skill.hitType === 2 ? runtime.traitRate(intendedTarget, 22, 5, true) : 0;
+                    var reflected = reflectRate > 0 && runtime.random() < reflectRate;
+                    var target = reflected ? subject : !menu && !counterTarget ? runtime.substituteTarget(intendedTarget, skill) : intendedTarget;
                     var hit = { target: target.enemyId != null ? target.index : target.id, targetType: target.enemyId != null ? 'enemy' : 'actor', damage: 0 };
-                    if (target !== intendedTarget) hit.substituteFor = { type: intendedTarget.enemyId != null ? 'enemy' : 'actor', id: intendedTarget.enemyId != null ? intendedTarget.index : intendedTarget.id };
+                    if (reflected) hit.reflectedBy = { type: intendedTarget.enemyId != null ? 'enemy' : 'actor', id: intendedTarget.enemyId != null ? intendedTarget.index : intendedTarget.id };
+                    else if (target !== intendedTarget) hit.substituteFor = { type: intendedTarget.enemyId != null ? 'enemy' : 'actor', id: intendedTarget.enemyId != null ? intendedTarget.index : intendedTarget.id };
                     var success = (skill.successRate == null ? 100 : skill.successRate) / 100;
                     if (skill.hitType === 1) success *= runtime.traitRate(subject, 22, 0, true);
                     hit.missed = runtime.random() >= success;
@@ -628,7 +646,7 @@
                             });
                             if (resource === 'hp' && value > 0) runtime.gainTp(target,
                                 Math.floor(50 * value / runtime.battlerParam(target, 0) * runtime.traitRate(target, 23, 5)));
-                            if (damage.type === 5 || damage.type === 6) runtime.changeResource(subject, resource, value);
+                            if (damage.type === 5 || damage.type === 6) runtime.changeResource(reflected ? intendedTarget : subject, resource, value);
                             hit.damage = value; hit.resource = resource; report.damage += value;
                             report.critical = report.critical || hit.critical;
                         }

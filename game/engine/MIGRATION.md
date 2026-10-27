@@ -15,7 +15,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: hiển thị motion/animation vũ khí và phản phép.
+1. Combat: hiển thị motion/animation vũ khí.
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
 2. Menu: đối chiếu đội hình, trang bị và các lựa chọn theo cấu hình gốc;
@@ -28,6 +28,12 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Phản phép theo trait MRF 22/5, chỉ magical hit; mỗi effect chọn lại, không
+  phản dây chuyền hay thế thân. Damage/state/né dùng người thi triển làm đích,
+  hút HP/MP trả người phản phép, chi phí/common event một lần. Chờ animation
+  phản 42/note và animation gốc trả về caster; hủy/save/339 và UI đều kiểm tra.
+  Quét actor/class/trang bị/enemy/state hiện tại không có trait MRF khác 0;
+  các tình huống phản phép được kiểm tra bằng fixture rõ ràng.
 - Touch dưới chân chờ sprite đi hết bước rồi mới đọc vị trí/page hiện tại;
   va chạm event ở trước mặt vẫn tức thời. Khóa bước/menu trong thời gian chờ,
   chuyển map/title hủy chờ và bỏ event cũ. Bộ đếm bước tăng khi bắt đầu, hiệu ứng

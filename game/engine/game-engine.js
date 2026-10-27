@@ -615,6 +615,20 @@
         async function counters() {
             while (counterIndex < report.hits.length) {
                 var hit = report.hits[counterIndex++];
+                if (hit.reflectedBy) {
+                    var reflector = hit.reflectedBy.type === 'enemy' ? runtime.enemy(hit.reflectedBy.id) : runtime.actor(hit.reflectedBy.id);
+                    var reflectionWaits = [];
+                    function reflectAnimation(id, targetId, type) {
+                        if (id <= 0) return;
+                        reflectionWaits.push(engine.animations.startBattle(targetId, id, type === 'actor', type));
+                        activeAnimations.push(engine.animations.entries[engine.animations.entries.length - 1]);
+                    }
+                    if (hit.reflectedBy.type === 'enemy' || engine.database.System.optSideView) {
+                        reflectAnimation(runtime.reflectAnimationId(reflector), hit.reflectedBy.id, hit.reflectedBy.type);
+                    }
+                    reflectAnimation(animationId, hit.target, hit.targetType);
+                    await waiter.awaitCommand(Promise.all(reflectionWaits));
+                }
                 if (hit.counter) await engine.completeBattleAction(hit.counter, handlers, signal);
             }
         }

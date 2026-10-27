@@ -1767,6 +1767,33 @@ async function main() {
         await waitFor(cdp, 'document.querySelector("#fnh-battle").hidden && !document.querySelector("#fnh-menu-dialog").open',
             5000, 'UI khôi phục bản đồ trước khi tương tác sự kiện kế tiếp');
         await evalPage(cdp, `(() => {
+            const e=FNHStandalonePreview.engine,db=e.database;window.reflectionBefore=e.save();
+            const enemyId=db.Enemies.length,troopId=db.Troops.length,skillId=db.Skills.length;
+            db.Enemies.push({...db.Enemies[1],id:enemyId,params:[1000,100,1,1,1,1,10,1],actions:[],traits:[{code:22,dataId:5,value:1}]});
+            db.Troops.push({id:troopId,pages:[],members:[{enemyId,x:408,y:400}]});
+            db.Skills.push({...db.Skills[3],id:skillId,animationId:1,hitType:2,scope:1,repeats:1,mpCost:5,tpCost:0,tpGain:0,effects:[],successRate:100,
+                note:'<target action>\\naction effect\\n</target action>',damage:{type:1,formula:'10',variance:0,critical:false,elementId:0}});
+            e.state.party=[1,2,3];e.state.party.forEach(id=>e.state.recoverActor(id));
+            e.battle.setup(troopId,true,true);e.state.scene='battle';e.battle.random=()=>0.5;
+            window.reflectionHp=e.state.actor(1).hp;window.reflectionDone=false;
+            e.forceBattleAction([1,1,skillId,0]).then(()=>{window.reflectionDone=true;},error=>{window.reflectionFailure=error.message;});
+        })()`,false,false);
+        await waitFor(cdp,'FNHStandalonePreview.engine.animations.entries.some(a=>a.animationId===42) && document.querySelector("#fnh-battle-log").textContent.includes("Phản phép")',5000,'phản phép phát animation và hiện log');
+        check('phản phép 339 trả damage về người thi triển, giữ quái và chờ animation',await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;
+            return !window.reflectionDone && !window.reflectionFailure && e.state.actor(1).hp===window.reflectionHp-10 && e.battle.enemy(0).hp===1000 &&
+                e.animations.entries.some(a=>a.animationId===1 && a.targetType==='actor' && a.targetId===1) && document.querySelector('#fnh-battle-attack').disabled;
+        })()`,false,false));
+        await waitFor(cdp,'window.reflectionDone || window.reflectionFailure',10000,'hết animation phản phép');
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(FNHStandalonePreview.engine.save()).then(()=>true)',true,false);
+        check('tải save giữ phản phép và không gây damage hoặc trả chi phí lần hai',await evalPage(cdp,
+            '!window.reflectionFailure && FNHStandalonePreview.engine.state.actor(1).hp===window.reflectionHp-10 && FNHStandalonePreview.engine.battle.battle.lastAction.hits[0].reflectedBy.type==="enemy"',false,false));
+        await evalPage(cdp,`(async()=>{
+            await FNHStandalonePreview.engine.restore(window.reflectionBefore);
+            for(const key of ['reflectionBefore','reflectionHp','reflectionDone','reflectionFailure'])delete window[key];
+        })()`,true,false);
+
+        await evalPage(cdp, `(() => {
             const e=FNHStandalonePreview.engine,db=e.database;window.endphaseBefore=e.save();
             const c=(code,parameters=[])=>({code,parameters,indent:0}),enemyId=db.Enemies.length,troopId=db.Troops.length;
             db.Enemies.push({...db.Enemies[1],id:enemyId,params:[100,100,1,1,1,1,10,1],traits:[],actions:[]});

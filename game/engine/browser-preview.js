@@ -151,6 +151,10 @@
                     var protector = hit.targetType === 'enemy' ? engine.battle.enemy(hit.target) : engine.battle.actor(hit.target);
                     text = 'Thế thân ' + (protector ? protector.name : hit.target) + ': ' + text;
                 }
+                if (hit.reflectedBy) {
+                    var reflector = hit.reflectedBy.type === 'enemy' ? engine.battle.enemy(hit.reflectedBy.id) : engine.battle.actor(hit.reflectedBy.id);
+                    text = 'Phản phép ' + (reflector ? reflector.name : hit.reflectedBy.id) + ': ' + text;
+                }
                 if (hit.counter) text += ' → Phản đòn: ' + hit.counter.hits.map(function (reply) {
                     return reply.missed ? 'Trượt' : reply.evaded ? 'Né' : String(reply.damage);
                 }).join(', ');

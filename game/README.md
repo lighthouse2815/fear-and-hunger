@@ -163,6 +163,12 @@ và animation còn dở, không áp effect muộn. IMMORTAL mặc định giữ 
 0 HP qua các effect, chặn death state rồi xác nhận chết trước common event cuối
 action. Hành động lồng nhau giữ bộ đếm riêng, hủy luôn giải phóng bảo vệ. Phần
 hiển thị motion vẫn cần đối chiếu tiếp trước khi chuyển entry chính.
+Phản phép đọc trait MRF (22/5) cho đòn magical, chọn lại theo mỗi effect và ưu
+tiên hơn thế thân. Người thi triển nhận damage/state và tự né theo chỉ số của
+mình; hút HP/MP trả về người phản phép. Không phản dây chuyền, không trả lại
+chi phí hay chạy common event lần hai. Engine chờ animation phản và animation
+kỹ năng trở về caster; hủy dọn animation, save giữ kết quả. Nội dung hiện tại
+không có trait MRF khác 0; các trường hợp này được kiểm thử bằng fixture.
 Danh sách nghiệm thu toàn bộ được theo dõi tại [engine/MIGRATION.md](engine/MIGRATION.md).
 Modifier của Terror/Critical state đọc công thức số học trong note và chạy sau
 damage/Guard/cap, giữ đích ở 1 HP theo `b.hp - 1`. Nhận damage xóa state theo
