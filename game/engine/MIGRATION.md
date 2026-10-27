@@ -15,7 +15,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: đối chiếu chuyển cảnh mở/kết thúc trận.
+1. Combat: bổ sung popup Weak đang bật trong OctoBattle và đối chiếu chuyển
+   cảnh mở/kết thúc trận.
    Thứ tự playback và số effect trong từng phase đã đối chiếu với 560 skill/item.
 2. Menu: đối chiếu đội hình và các lựa chọn theo cấu hình gốc;
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
@@ -26,6 +27,11 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Sau mỗi lệnh interpreter, actor combat được đồng bộ HP/MP/tên/đội trước lệnh
+  tiếp theo, kể cả common event lồng nhau và lệnh cuối. Giữ object/motion,
+  cập nhật UI khi page đang chờ thoại; 311/313 chết và 314 hồi ngay, không chốt
+  thất bại giữa page. Âm chết một lần, IMMORTAL vẫn đợi xác nhận; save giữ callback.
+  Chrome chạy page hạ actor, chờ thoại, hồi sinh rồi thoát trận.
 - Nút hướng dùng Pointer Events/capture để giữ/thả, hủy chạm và mất capture;
   hỗ trợ nhiều ngón cùng hướng và bàn phím đồng thời. Blur/trang ẩn/mở menu
   dọn input. Giữ xung bấm nhanh cho sự kiện picture, không thêm bước từ click

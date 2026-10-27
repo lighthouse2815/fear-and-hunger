@@ -118,6 +118,9 @@ tiếp tục animation bản đồ đã tạm dừng.
 Các lệnh sự kiện 331–336, 340 và 342 đã đổi được HP/MP/TP, state, hồi phục, hiện
 quái, biến hình và kết thúc trận. Thao tác giữ index thành viên trong troop,
 tôn trọng miễn nhiễm state, đồng bộ trạng thái chết và lưu được qua save.
+Các lệnh đổi actor cũng đồng bộ HP/MP/tên/đội sau từng lệnh, trước khi mở thoại
+hoặc cưỡng chế hành động tiếp theo. Actor chết/hồi sinh và UI cập nhật ngay
+trong page đang chờ; giữ motion/object và không chốt thua trước khi page chạy hết.
 Điều kiện và biến sự kiện đọc được chỉ số/state của quái. Engine tự chọn page
 trong Troops.json theo lượt, cuối lượt, HP nhân vật/quái và công tắc; các điều
 kiện kết hợp bằng AND. Page chạy một lần, mỗi lượt hoặc theo điều kiện liên tục;

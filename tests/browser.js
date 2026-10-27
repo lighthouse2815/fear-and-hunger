@@ -2403,6 +2403,36 @@ async function main() {
         await evalPage(cdp, `battleOriginalPage.page.list = battleOriginalPage.list;
             FNHStandalonePreview.engine.state.actors[1] = window.battleOriginalActor; delete window.battleOriginalActor;
             FNHStandalonePreview.engine.state.recoverActor(1); delete window.battleOriginalPage;`, false, false);
+        await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine,id=e.database.Troops.length,page=e.map.eventPage(e.map.eventById(39));
+            window.__actorRefreshFixture={page,list:page.list,snapshot:e.save()};
+            e.database.Troops.push({id,members:[{enemyId:1,x:400,y:450}],pages:[{span:0,conditions:{turnValid:true,turnA:0,turnB:0},list:[
+                {code:312,parameters:[0,1,1,0,37]},{code:311,parameters:[0,1,1,0,99999,true]},
+                {code:101,parameters:['',0,0,2]},{code:401,parameters:['Kiểm tra actor đã chết']},
+                {code:314,parameters:[0,1]},
+                {code:101,parameters:['',0,0,2]},{code:401,parameters:['Kiểm tra actor hồi sinh']},{code:340,parameters:[]},{code:0}
+            ]}]});page.list=[{code:301,parameters:[0,id,true,true]},{code:0}];
+        })()`,false,false);
+        await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+        await waitFor(cdp,'!document.querySelector("#fnh-next").hidden && document.querySelector("#fnh-message-text").textContent.includes("actor đã chết")',5000,'311 hạ actor rồi chờ thoại trong troop page');
+        check('troop page đồng bộ HP/MP và chết trước thoại, chưa chốt thua giữa page',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine,actor=e.battle.actor(1);
+            return e.state.actor(1).hp===0 && actor.hp===0 && actor.mp===63 && !actor.alive &&
+                e.battle.spriteFrame(actor).index===17 && e.state.scene==='battle' && !e.battle.battle.result &&
+                document.querySelector('#fnh-battle-attack').disabled;
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-next');
+        await waitFor(cdp,'!document.querySelector("#fnh-next").hidden && document.querySelector("#fnh-message-text").textContent.includes("actor hồi sinh")',5000,'314 hồi actor trước thoại tiếp');
+        check('314 hồi sinh ngay trong page đang chạy và UI nhận trạng thái mới',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine,actor=e.battle.actor(1);
+            return actor.hp===100 && actor.mp===100 && actor.alive && !e.state.actor(1).states.includes(1) && !e.battle.battle.result;
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-next');
+        await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.scene==="map"',5000,'page hồi sinh xong mới thoát trận');
+        await evalPage(cdp,`(async()=>{
+            __actorRefreshFixture.page.list=__actorRefreshFixture.list;
+            await FNHStandalonePreview.engine.restore(__actorRefreshFixture.snapshot);delete window.__actorRefreshFixture;
+        })()`,true,false);
         await evalPage(cdp, `(() => {
             const engine = FNHStandalonePreview.engine;
             const list = engine.database.CommonEvents[310].list;

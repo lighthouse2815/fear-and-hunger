@@ -49,6 +49,7 @@
                 if (--this.budget.remaining < 0) throw new Error('Event vượt giới hạn số lệnh thực thi.');
                 var command = this.commands[this.index++];
                 await this.awaitCommand(this.execute(command));
+                if (this.handlers.afterCommand) await this.awaitCommand(this.handlers.afterCommand(command,this));
                 if (this.state.scene === 'gameover' || this.state.scene === 'title') {
                     this.result.terminated = this.state.scene;
                     this.index = this.commands.length;

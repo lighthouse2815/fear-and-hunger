@@ -504,6 +504,14 @@
     GameEngine.prototype.createInterpreter = function (commands, eventId, handlers, signal) {
         var engine = this;
         var eventHandlers = Object.assign({}, handlers || {});
+        var afterCommand = eventHandlers.afterCommand;
+        eventHandlers.afterCommand = function (command, interpreter) {
+            if (engine.state.scene === 'battle' && engine.battle && engine.battle.battle && !engine.battle.battle.result) {
+                engine.syncBattleActors();
+                engine.battle.battle.actionRevision = (engine.battle.battle.actionRevision || 0) + 1;
+            }
+            if (afterCommand) return afterCommand(command,interpreter);
+        };
         eventHandlers.gab = function (text) {
             if (text == null) engine.screen.clearGabs();
             else engine.screen.showGab(text);
