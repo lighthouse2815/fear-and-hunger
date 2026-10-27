@@ -91,6 +91,7 @@
         if (this.battle) this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange);
         this.state.mapId = mapId;
         this.map = map;
+        if (this.stepWait) this.screen.finish(this.stepWait);
         this.screen.setupFogs(map.data.note);
         this.screen.setupParallax(map.data);
         delete this.screen.screen.battlebacks;
@@ -172,14 +173,16 @@
         if (this.state.scene !== 'map') return false;
         if (this.eventRunning || this.messageRunning || this.state.followersGathering || (this.movement && this.movement.jobs.has(this.state))) return false;
         var moved = this.moveCharacter(this.state, direction);
-        if (moved) this.onPlayerWalk();
+        if (moved && this.state.vehicleId === -1) {
+            this.state.walkSteps++;
+            this.state.motion.walk = true;
+        }
         return moved;
     };
 
     GameEngine.prototype.onPlayerWalk = function () {
         if (this.state.vehicleId !== -1) return;
         var state = this.state, runtime = this.battle;
-        state.walkSteps++;
         state.walkEffects = [];
         state.party.forEach(function (id) {
             var actor = state.actor(id), beforeStates = actor.states.slice();
@@ -248,6 +251,7 @@
     };
 
     GameEngine.prototype.advanceRoutes = function (frames) {
+        if (this.stepWait && !['map', 'menu', 'save'].includes(this.state.scene)) this.screen.finish(this.stepWait);
         if (this.state && ['gameover', 'title', 'menu', 'save'].includes(this.state.scene)) return;
         if (this.state && this.state.scene === 'battle') {
             if (this.routeErrors.length) throw this.routeErrors.shift();
@@ -258,6 +262,8 @@
         }
         if (this.routeErrors.length) throw this.routeErrors.shift();
         var before = this.state && mapApi.displayPosition(this.state);
+        var motion = this.state && this.state.motion;
+        var walked = motion && motion.walk && motion.x === this.state.x && motion.y === this.state.y && this.state.moveFrames <= frames;
         var state = this.state, followers = state ? state.followers() : [];
         followers.forEach(function (entry) {
             entry.walkAnime = state.walkAnime; entry.stepAnime = state.stepAnime; entry.moveSpeed = state.moveSpeed;
@@ -292,6 +298,7 @@
         if (this.lighting) this.lighting.advance(frames);
         if (this.filters) this.filters.advance(frames);
         if (this.animations) this.animations.advance(frames);
+        if (walked) this.onPlayerWalk();
     };
 
     GameEngine.prototype.moveCharacter = function (character, direction, vertical, backward, frames) {
@@ -386,7 +393,8 @@
     GameEngine.prototype.step = async function (direction, handlers) {
         if (!this.map || !this.state) throw new Error('Engine chưa boot.');
         if (this.state.scene !== 'map') return false;
-        if (this.eventRunning || this.messageRunning || this.stepRunning || !mapApi.DIRECTION_BITS[direction]) return false;
+        if (this.eventRunning || this.messageRunning || this.stepRunning || this.state.moveFrames > 0 || this.state.followersGathering ||
+            this.movement.jobs.has(this.state) || !mapApi.DIRECTION_BITS[direction]) return false;
         this.stepRunning = true;
         try {
             var sourceMap = this.map;
@@ -394,6 +402,13 @@
             if (this.state.scene !== 'map') return moved;
             var x = this.state.x + (!moved ? direction === 4 ? -1 : direction === 6 ? 1 : 0 : 0);
             var y = this.state.y + (!moved ? direction === 8 ? -1 : direction === 2 ? 1 : 0 : 0);
+            if (moved) {
+                var waitId = this.screen.screen.nextId;
+                var finished = this.screen.tween([], {}, this.state.moveFrames);
+                this.stepWait = this.screen.screen.tweens.find(function (track) { return track.id === waitId; });
+                await finished;
+                if (this.map !== sourceMap || this.state.scene !== 'map' || this.state.x !== x || this.state.y !== y) return moved;
+            }
             var candidates = sourceMap.eventAt(x, y);
             for (var i = 0; i < candidates.length; i++) {
                 if (this.map !== sourceMap) break;
@@ -403,7 +418,10 @@
                 }
             }
             return moved;
-        } finally { this.stepRunning = false; }
+        } finally {
+            if (this.stepWait) this.screen.finish(this.stepWait);
+            this.stepWait = null; this.stepRunning = false;
+        }
     };
 
     GameEngine.prototype.interact = async function (handlers) {

@@ -20,15 +20,19 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
 2. Menu: đối chiếu đội hình, trang bị và các lựa chọn theo cấu hình gốc;
    đối chiếu đầy đủ bố cục và thông tin của các màn menu.
-3. Bản đồ: đối chiếu thêm thời điểm sự kiện chạm theo bước di chuyển.
-4. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
-5. Luồng chính: đối chiếu tiếp nội dung kết thúc
+3. Điều khiển: đối chiếu thêm thao tác trên điện thoại.
+4. Luồng chính: đối chiếu tiếp nội dung kết thúc
    và cập nhật server/build/check khi chuyển entry chính.
-6. Quét nội dung toàn bộ, kiểm tra các nhánh đại diện và loại các giả định chỉ
+5. Quét nội dung toàn bộ, kiểm tra các nhánh đại diện và loại các giả định chỉ
    đúng trong fixture. Cập nhật README để chỉ rõ kết quả và giới hạn còn lại.
 
 ## Đã đối chiếu
 
+- Touch dưới chân chờ sprite đi hết bước rồi mới đọc vị trí/page hiện tại;
+  va chạm event ở trước mặt vẫn tức thời. Khóa bước/menu trong thời gian chờ,
+  chuyển map/title hủy chờ và bỏ event cũ. Bộ đếm bước tăng khi bắt đầu, hiệu ứng
+  trạng thái/flash tick cuối bước trước touch; save giữa bước giữ tick chưa chạy.
+  Chrome kiểm tra frame cuối và cửa Map074 thật với common event Room_CHANGE.
 - Save ngoài trận giữ BGM/BGS, vị trí, volume/pitch/pan và bookmark 243/244;
   tải dọn ME/SE/nhạc phiên cũ và khôi phục trước khi tiếp tục common event.
   Save im lặng không phát autoplay, save cũ dùng autoplay map, tải lỗi giữ nhạc

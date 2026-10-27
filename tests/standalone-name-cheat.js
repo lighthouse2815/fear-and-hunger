@@ -68,7 +68,8 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     const release = r.protectActionTargets([r.actor(1)]); r.changeResource(r.actor(1), 'hp', -99999); release();
     assert.equal(e.state.actor(1).hp, hp, 'IMMORTAL không bỏ qua cheat'); assert.equal(r.actor(1).alive, true);
     r.finish('escape'); e.state.scene = 'map';
-    e.state.walkSteps = 19; e.state.through = true; await e.step(6);
+    e.state.walkSteps = 19; e.state.through = true;
+    const walked = e.step(6); e.advanceRoutes(e.state.moveFrames); await walked;
     assert.equal(e.state.actor(1).hp, hp, 'tick đi bộ không làm mất HP');
 
     reset(); const skill = db.Skills[skillId]; skill.animationId = 1;

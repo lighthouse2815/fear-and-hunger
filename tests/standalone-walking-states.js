@@ -13,14 +13,28 @@ const watchdog = setTimeout(() => { console.error('Trạng thái bước đi ch�
     store.loadMap = id => id === 901 ? Promise.resolve(map) : sourceMap(id);
     const engine = new GameEngine({ dataStore: store, random: () => 0.5 });
     await engine.boot({ mapId: 901, x: 0, y: 0, party: [1, 3], through: true });
-    const walk = async count => { for (let i = 0; i < count; i++) assert.equal(await engine.step(engine.state.x === 0 ? 6 : 4), true); };
+    const step = direction => {
+        const pending = engine.step(direction);
+        engine.advanceRoutes(engine.state.moveFrames || 0);
+        return pending;
+    };
+    const walk = async count => { for (let i = 0; i < count; i++) assert.equal(await step(engine.state.x === 0 ? 6 : 4), true); };
     engine.state.changeActorState(1, 5, true); engine.state.changeActorState(1, 17, true);
     engine.state.changeActorState(3, 90, true);
     await walk(19);
     assert.equal(engine.state.walkSteps, 19); assert.equal(engine.state.actor(1).hp, 100);
-    assert.equal(await engine.step(4), true); // x=1 -> 0, bước 20.
+    const twentieth = engine.step(4), halfStep = engine.state.moveFrames / 2;
+    assert.equal(engine.state.walkSteps, 20, 'bộ đếm tăng lúc bắt đầu bước');
+    assert.equal(engine.state.actor(1).hp, 100, 'trạng thái chưa tick ở đầu bước');
+    engine.advanceRoutes(halfStep); assert.equal(engine.state.actor(1).hp, 100, 'giữa bước vẫn chưa tick');
+    const halfway = engine.save();
+    engine.advanceRoutes(halfStep); assert.equal(await twentieth, true);
+    assert.equal(engine.state.actor(1).hp, 87);
+    await engine.restore(halfway); assert.equal(engine.state.actor(1).hp, 100);
+    engine.advanceRoutes(halfStep);
     assert.equal(engine.state.actor(1).hp, 87); assert.equal(engine.state.actor(3).hp, 80);
     assert.equal(engine.state.walkEffects.length, 2); assert.ok(engine.state.screen.flash.opacity > 0);
+    engine.advanceRoutes(1); assert.equal(engine.state.actor(1).hp, 87, 'save giữa bước tick đúng một lần sau khi tới đích');
     const effects = engine.state.walkEffects;
     assert.equal(await engine.step(4), false, 'va mép map không tính bước');
     assert.equal(engine.state.walkSteps, 20); assert.equal(engine.state.actor(1).hp, 87); assert.equal(engine.state.walkEffects, effects);
@@ -81,11 +95,11 @@ const watchdog = setTimeout(() => { console.error('Trạng thái bước đi ch�
     ] }] }];
     await engine.loadMap(901, { x: 0, y: 0, direction: 6 });
     engine.state.recoverActor(1); engine.state.changeActorState(1, 17, true); engine.state.walkSteps = 19;
-    await engine.step(6); assert.equal(engine.state.variableValue(6290), 90);
+    await step(6); assert.equal(engine.state.variableValue(6290), 90);
     engine.state.setSwitch(6291, false); engine.database.System.optSlipDeath = true;
     engine.state.party.forEach(id => { engine.state.recoverActor(id); engine.state.changeActorHp(id, -95, true); engine.state.changeActorState(id, 17, true); });
     engine.state.x = 0; engine.state.walkSteps = 19;
-    await engine.step(6); assert.equal(engine.state.scene, 'gameover'); assert.equal(engine.state.switchValue(6291), false);
+    await step(6); assert.equal(engine.state.scene, 'gameover'); assert.equal(engine.state.switchValue(6291), false);
     assert.equal(engine.stepRunning, false); assert.equal(await engine.step(4), false);
     console.log('ĐẠT: trạng thái mỗi 20 bước, va chạm/menu/route/vehicle, save cũ-mới, removeByWalking, hồi phục, giải độc và game over trước touch event.');
 })().then(() => clearTimeout(watchdog)).catch(error => { clearTimeout(watchdog); console.error(error); process.exitCode = 1; });

@@ -146,7 +146,12 @@ không tick lại. Ngoài bản đồ, cứ 20 bước đi bộ thành công s�
 và cập nhật thời lượng state như một lượt. Va tường, menu, route cưỡng chế và
 phương tiện không tăng nhịp này. Save giữ tổng bước, tiến trình xóa state theo
 `removeByWalking`/`stepsToRemove` và kết quả tick; dữ liệu save cũ bắt đầu ở 0 bước.
-Flash đỏ và thanh trạng thái báo mất HP khi đi bộ. HP cập nhật trước event chạm;
+Flash đỏ và thanh trạng thái báo mất HP khi đi bộ. Bộ đếm bước tăng lúc bắt đầu;
+hiệu ứng trạng thái và flash chạy khi sprite tới ô đích, trước event chạm.
+Save giữa bước giữ tiến trình để tick đúng một lần khi đi tiếp. Sự kiện dưới
+chân chờ hết bước rồi đọc vị trí/page mới nhất; va vào event chắn đường vẫn chạy
+ngay. Trong lúc chờ khóa bước mới/menu; chuyển map hoặc title hủy chờ và bỏ
+trigger của map cũ. HP cập nhật trước event chạm;
 nếu cả đội bị hạ theo cấu hình slip death thì mở game over và không chạy event
 ở ô đích. Biến sự kiện đọc được tổng bước qua toán hạng dữ liệu 7/3.
 Engine chạy phase setup/whole/target/follow/finish theo thứ tự dữ liệu. Effect

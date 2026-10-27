@@ -58,14 +58,14 @@ async function fetchFromGame(relativeUrl) {
     await engine.restore({ mapId: 74, x: 15, y: 5, direction: 8, directionFixed: true,
         party: [1], switches: { 246: true, 3480: true }, variables: { 121: 1 } });
     const originalEvent = Object.assign({}, engine.map.data.events[102]);
-    await engine.step(8);
+    const enterDoor = engine.step(8); engine.advanceRoutes(engine.state.moveFrames); await enterDoor;
     assert.equal(engine.state.mapId, 1, 'bước vào cửa thật phải chuyển map');
     assert.equal(engine.map.id, 1);
     assert.deepEqual([engine.state.x, engine.state.y, engine.state.direction], [27, 68, 8]);
     assert.equal(engine.state.directionFixed, false, 'Room_CHANGE bỏ khóa hướng bằng route 36');
     assert.equal(engine.state.variableValue(30), 100, 'Room_CHANGE đọc MP thật');
     assert.equal(engine.state.switchValue(775), true, 'các công tắc trong common event phải thực thi');
-    await engine.step(2);
+    const leaveDoor = engine.step(2); engine.advanceRoutes(engine.state.moveFrames); await leaveDoor;
     assert.equal(engine.state.mapId, 74);
     assert.deepEqual([engine.state.x, engine.state.y], [15, 5]);
     assert.deepEqual([engine.map.eventById(102).x, engine.map.eventById(102).y], [14, 25]);

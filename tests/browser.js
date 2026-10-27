@@ -988,6 +988,7 @@ async function main() {
         await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'d',code:'KeyD',windowsVirtualKeyCode:68});
         await waitFor(cdp,'FNHStandalonePreview.engine.state.x===window.settingsX+1',5000,'WASD di chuyển thật');
         check('layout WASD điều khiển được nhân vật',await evalPage(cdp,'FNHStandalonePreview.settings.actionFor("w")==="up" && FNHStandalonePreview.settings.actionFor("d")==="right"',false,false));
+        await waitFor(cdp,'!FNHStandalonePreview.engine.stepRunning && FNHStandalonePreview.engine.state.moveFrames===0',5000,'sprite tới đích trước khi mở menu tùy chọn');
         await clickElement(cdp,'#fnh-menu');await clickElement(cdp,'[data-menu-tab="options"]');await clickElement(cdp,'[data-key-layout="default"]');
         await evalPage(cdp, `(() => {
             for(const [category,value] of [['master',5],['bgm',100],['se',100]]) {
@@ -1046,6 +1047,18 @@ async function main() {
             let location;renderer.drawAnimationCells=(animation,x,y)=>{location=[x,y];};
             renderer.drawAnimation({entry:{targetId:-1,elapsed:0},data:{position:2,frames:[[]]}},e.state,e.map,0,0);
             return location[0]===168&&location[1]===112;
+        })()`,true,false));
+        check('cửa thật Map074 chờ sprite tới hết bước rồi mới chuyển map',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,random:()=>0});
+            await e.boot({mapId:74,x:15,y:5,direction:8,directionFixed:true,party:[1],alwaysDash:false,
+                switches:{246:true,3480:true},variables:{121:1}});
+            const entered=e.step(8),duration=e.state.moveFrames;
+            e.advanceRoutes(duration-1);await Promise.resolve();
+            const position=FNHStandaloneMap.displayPosition(e.state);
+            if(!e.stepRunning || e.state.mapId!==74 || position.y<=4 || position.y>=5 || e.openMenu())return false;
+            e.advanceRoutes(1);await entered;
+            return !e.stepRunning && e.state.mapId===1 && e.state.x===27 && e.state.y===68 &&
+                e.state.variableValue(30)===100 && e.state.switchValue(775);
         })()`,true,false));
         check('Canvas vẽ follower và guest ở vị trí lưu, ẩn cả hai đúng lệnh', await evalPage(cdp, `(async () => {
             const source = FNHStandalonePreview.engine;
@@ -1194,6 +1207,7 @@ async function main() {
         await waitFor(cdp, 'document.querySelector("#fnh-status").textContent.startsWith("Đã lưu")', 5000, 'lưu preview');
         await clickElement(cdp, '#fnh-controls [data-direction="2"]');
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.y === 9', 5000, 'nút di chuyển preview');
+        await waitFor(cdp, '!FNHStandalonePreview.engine.stepRunning && FNHStandalonePreview.engine.state.moveFrames===0', 5000, 'hoàn tất bước trước khi tải save preview');
         await clickElement(cdp, '#fnh-load');
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.y === 8', 5000, 'tải save preview');
 
@@ -2308,7 +2322,7 @@ async function main() {
         await clickElement(cdp,'#fnh-save');
         await waitFor(cdp,'document.querySelector("#fnh-status").textContent.startsWith("Đã lưu")',5000,'lưu nhịp trạng thái bước đi');
         await clickElement(cdp,'#fnh-controls [data-direction="4"]');
-        await waitFor(cdp,'FNHStandalonePreview.engine.state.walkSteps===21',5000,'bước không tick lại trạng thái');
+        await waitFor(cdp,'FNHStandalonePreview.engine.state.walkSteps===21 && !FNHStandalonePreview.engine.stepRunning && FNHStandalonePreview.engine.state.moveFrames===0',5000,'bước không tick lại trạng thái');
         await clickElement(cdp,'#fnh-load');
         await waitFor(cdp,'FNHStandalonePreview.engine.state.walkSteps===20',5000,'tải save giữ nhịp bước');
         check('save bước đi giữ HP và không tick trạng thái lần hai',await evalPage(cdp,
