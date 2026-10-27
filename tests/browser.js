@@ -1813,8 +1813,13 @@ async function main() {
         await clickElement(cdp,'#fnh-controls [data-direction="0"]');
         await waitFor(cdp,'!document.querySelector("#fnh-next").hidden && document.querySelector("#fnh-message").textContent.includes("Sự kiện trước khi kết thúc trận")',
             5000,'page 0 HP mở thoại trước khi chốt thắng');
-        check('troop đã bị hạ vẫn giữ thoại, khóa battle và chưa chạy event map',await evalPage(cdp,
-            'FNHStandalonePreview.engine.battle.aliveEnemies().length===0 && !FNHStandalonePreview.engine.battle.battle.result && FNHStandalonePreview.engine.state.scene==="battle" && document.querySelector("#fnh-battle-attack").disabled && !FNHStandalonePreview.engine.state.switchValue(6152) && FNHStandalonePreview.engine.state.itemCount("items",8)===window.endphaseItems',false,false));
+        const endphaseState=await evalPage(cdp,`(() => {
+            const e=FNHStandalonePreview.engine;
+            return {empty:e.battle.aliveEnemies().length===0,pending:!e.battle.battle.result,battle:e.state.scene==='battle',
+                locked:document.querySelector('#fnh-battle-attack').disabled,waiting:!e.state.switchValue(6152),
+                noReward:e.state.itemCount('items',8)===window.endphaseItems};
+        })()`,false,false);
+        check('troop đã bị hạ vẫn giữ thoại, khóa battle và chưa chạy event map',Object.values(endphaseState).every(Boolean),JSON.stringify(endphaseState));
         await waitFor(cdp,'FNHStandalonePreview.audio.buffers.bgm && !FNHStandalonePreview.audio.buffers.bgm.paused && FNHStandalonePreview.audio.buffers.bgm.currentTime>0',
             10000,'OGG nhạc trận từ lệnh 132 phát thật trong lúc page chờ thoại');
         check('vào trận phát nhạc 132, dừng BGS và lưu vị trí nhạc map',await evalPage(cdp,`(() => {
@@ -1894,6 +1899,8 @@ async function main() {
             const engine = FNHStandalonePreview.engine;
             const canvas = document.createElement('canvas');
             const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas);
+            const actorEntries=[],drawActor=renderer.drawBattleActor;
+            renderer.drawBattleActor=function(entry,engine){actorEntries.push(entry);return drawActor.call(this,entry,engine);};
             await renderer.draw(engine);
             const reference = document.createElement('canvas'); reference.width = 816; reference.height = 624;
             const context = reference.getContext('2d'); context.imageSmoothingEnabled = false;
@@ -1905,6 +1912,15 @@ async function main() {
                 const bitmap = await renderer.loadImage('img/enemies/' + enemy.battlerName + '.png');
                 context.drawImage(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height);
             }
+            const backdrop=context.getImageData(0,0,816,624),variants=[];
+            for(const pattern of [0,1,2]) {
+                context.putImageData(backdrop,0,0);
+                for(const entry of actorEntries) {
+                    const bitmap=entry.bitmap,motion=entry.motion;if(!bitmap)continue;
+                    const w=Math.floor(bitmap.width/9),h=Math.floor(bitmap.height/6);
+                    context.drawImage(bitmap,Math.floor((Math.floor(motion.index/6)*3+pattern)*bitmap.width/9),
+                        Math.floor(motion.index%6*bitmap.height/6),w,h,102+204*entry.index-w/2,444-h*0.7,w,h);
+                }
             const viewport = engine.map.viewport(engine.state,816,624);
             for (const fog of engine.screen.screen.fogs.filter(fog=>fog.name.startsWith('$'))) {
                 const bitmap = await renderer.loadImage('img/fogs/' + fog.name + '.png');
@@ -1914,15 +1930,17 @@ async function main() {
                 context.save(); context.fillStyle=pattern; context.globalAlpha=fog.opacity/255; context.globalCompositeOperation='lighter';
                 context.fillRect(0,0,816,624); context.restore();
             }
-            window.battleExpectedPixels = context.getImageData(0, 0, 816, 624).data;
+                variants.push(context.getImageData(0,0,816,624).data);
+            }
+            window.battleExpectedPixels = variants;
             const actual = canvas.getContext('2d').getImageData(0, 0, 816, 624).data;
             // createPattern và drawImage làm tròn alpha khác nhau tối đa 1/255
             // khi fog có zoom lẻ; bố cục/ảnh quái vẫn so sánh trên toàn bộ pixel.
-            return actual.every((value, index) => Math.abs(value - battleExpectedPixels[index]) <= 1);
+            return variants.some(expected=>actual.every((value, index) => Math.abs(value - expected[index]) <= 1));
         })()`, true, false));
         await waitFor(cdp, `(() => {
             const pixels = document.querySelector('#fnh-canvas').getContext('2d').getImageData(0, 0, 816, 624).data;
-            return pixels.every((value, index) => Math.abs(value - battleExpectedPixels[index]) <= 1);
+            return battleExpectedPixels.some(expected=>pixels.every((value, index) => Math.abs(value - expected[index]) <= 1));
         })()`, 5000, 'chuyển scene tự vẽ battle trên canvas chính');
         check('UI battle hiển thị HP và MP của nhân vật', await evalPage(cdp,
             'document.querySelector("#fnh-battle-party").textContent.includes("HP") && document.querySelector("#fnh-battle-party").textContent.includes("MP")', false, false));
@@ -1931,13 +1949,49 @@ async function main() {
             const battle = JSON.parse(JSON.stringify(original.battle.battle));
             battle.enemies[1].hidden = true; battle.enemies[1].battlerName = 'khong-ton-tai';
             battle.enemies[2].alive = false; battle.enemies[2].battlerName = 'khong-ton-tai';
-            const engine = Object.assign(Object.create(original), { battle: { battle } });
+            const engine = Object.assign(Object.create(original), { battle: Object.assign(Object.create(original.battle),{battle}) });
             const canvas = document.createElement('canvas');
             const renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas);
             const result = await renderer.draw(engine);
             return result.enemies === 5 && !renderer.images.has('img/enemies/khong-ton-tai.png');
         })()`, true, false));
         await evalPage(cdp, 'delete window.battleExpectedPixels', false, false);
+        check('sprite actor front view cắt đúng PNG, anchor, motion và frame vũ khí qua save',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
+            await e.boot({mapId:74,x:8,y:8,party:[1,2,3,4]});e.battle.setup(1);e.state.scene='battle';
+            const canvas=document.createElement('canvas'),renderer=new FNHStandaloneCanvas.CanvasRenderer(canvas);
+            const ref=document.createElement('canvas');ref.width=816;ref.height=624;const ctx=ref.getContext('2d');ctx.imageSmoothingEnabled=false;
+            const bitmap=await renderer.loadImage('img/sv_actors/Actor1_1.png'),weapon=await renderer.loadImage('img/system/Weapons1.png');
+            const w=Math.floor(bitmap.width/9),h=Math.floor(bitmap.height/6);
+            for(const elapsed of [0,12,24]) {
+                e.battle.startMotion(e.battle.actor(1),'swing',5);e.advanceRoutes(elapsed);
+                await e.restore(e.save());
+                const motion=e.battle.spriteFrame(e.battle.actor(1)),pattern=elapsed/12;
+                renderer.context.clearRect(0,0,816,624);ctx.clearRect(0,0,816,624);
+                renderer.drawBattleActor({actor:e.battle.actor(1),index:0,bitmap,weapon,motion},e);
+                ctx.drawImage(bitmap,Math.floor((3+pattern)*bitmap.width/9),Math.floor(bitmap.height/6),w,h,102-w/2,444-h*0.7,w,h);
+                ctx.drawImage(weapon,pattern*96,4*64,96,64,38,380,96,64);
+                const actual=renderer.context.getImageData(0,0,816,624).data,expected=ctx.getImageData(0,0,816,624).data;
+                if(!actual.every((value,index)=>value===expected[index]))return false;
+            }
+            const drawn=[],draw=renderer.drawBattleActor;renderer.drawBattleActor=function(entry,engine){drawn.push(entry);return draw.call(this,entry,engine);};
+            const result=await renderer.draw(e);
+            return result.actors===4 && drawn.map(entry=>entry.actor.id).join(',')==='1,2,3,4';
+        })()`,true,false));
+        check('animation actor bám vị trí front view và hide ẩn đúng sprite',await evalPage(cdp,`(async()=>{
+            const e=new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore,onRouteEffect:()=>true});
+            await e.boot({mapId:74,x:8,y:8,party:[1,3]});e.battle.setup(1);e.state.scene='battle';
+            e.animations.startBattle(3,1,false,'actor');e.advanceRoutes(8);
+            const renderer=new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas')),locations=[];
+            renderer.drawAnimationCells=(animation,x,y)=>locations.push([x,y]);await renderer.draw(e);
+            const bitmap=await renderer.loadImage('img/sv_actors/knight1_1.png'),h=Math.floor(bitmap.height/6);
+            const y=444-(e.database.Animations[1].position===0?h:e.database.Animations[1].position===1?h/2:0);
+            if(!locations.some(p=>p[0]===306&&p[1]===y))return false;
+            e.animations.entries[0].flash={hide:true,color:[0,0,0,0],remaining:4,duration:4};
+            renderer.context.clearRect(0,0,816,624);
+            renderer.drawBattleActor({actor:e.battle.actor(3),index:1,bitmap,motion:e.battle.spriteFrame(e.battle.actor(3))},e);
+            return renderer.context.getImageData(0,0,816,624).data.every(value=>value===0);
+        })()`,true,false));
         check('337 vẽ sprite sheet tại quái, phản chiếu và flash đúng alpha', await evalPage(cdp, `(async () => {
             const original = FNHStandalonePreview.engine;
             const engine = new FNHStandaloneEngine.GameEngine({ dataStore: original.dataStore, onRouteEffect: () => true });

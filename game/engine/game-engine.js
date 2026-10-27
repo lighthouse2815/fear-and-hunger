@@ -255,6 +255,7 @@
         if (this.state && ['gameover', 'title', 'menu', 'save'].includes(this.state.scene)) return;
         if (this.state && this.state.scene === 'battle') {
             if (this.routeErrors.length) throw this.routeErrors.shift();
+            this.battle.advanceSprites(frames);
             this.screen.advance(frames, 'battle');
             this.filters.advance(frames);
             this.animations.advance(frames);
@@ -633,6 +634,8 @@
             }
         }
         try {
+            if (subject.enemyId != null) subject.spriteEffect = { type: 'whiten', remaining: 16 };
+            if (report.counter) runtime.performAction(subject, skill, false, true);
             var phases = report.counter ? { target: ['action animation', 'wait for animation', 'action effect'] } : runtime.actionPhases(skill);
             var allTargets = report.targets.map(function (_, index) { return index; });
             for (var phase of ['setup', 'whole', 'target', 'follow', 'finish']) {
@@ -650,11 +653,15 @@
                                 if (!subject.alive) break;
                                 pending.apply([targetIndex]); await counters();
                             }
-                        } else if (line === 'perform action' && report.subject === 'actor') await waitFrames(20);
-                        else if (line === 'motion wait: user' && report.subject === 'actor' && engine.database.System.optSideView) await waitFrames(12);
+                        } else if (line === 'perform action') {
+                            runtime.performAction(subject, skill, !!report.itemId, report.counter);
+                            if (report.subject === 'actor') await waitFrames(20);
+                        }
+                        else if (line === 'motion wait: user' && report.subject === 'actor') await waitFrames(12);
                         else if (/^wait: \d+$/.test(line)) await waitFrames(Number(line.split(':')[1]));
                         else if (/^motion (swing|evade): user$/.test(line)) {
                             runtime.battle.motion = { subject: report.subject, subjectId: report.subjectId, type: line.split(' ')[1].replace(':', '') };
+                            runtime.startMotion(subject, runtime.battle.motion.type);
                         } else if (line === 'death break' && subject && !subject.alive) { stopTargets = true; break; }
                     }
                 }
@@ -678,6 +685,7 @@
             if (releaseImmortal) releaseImmortal();
             if (pending) pending.cancel();
             delete runtime.battle.motion;
+            if (signal && signal.aborted) { delete subject.spriteMotion; delete subject.spriteEffect; }
             activeAnimations.forEach(function (entry) { engine.animations.finish(entry); });
             waits.forEach(function (track) { engine.screen.finish(track); });
         }

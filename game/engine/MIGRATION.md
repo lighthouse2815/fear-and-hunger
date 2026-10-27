@@ -15,7 +15,7 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Việc cần hoàn tất hoặc đối chiếu tiếp
 
-1. Combat: hiển thị motion/animation vũ khí.
+1. Combat: đối chiếu thêm phần thiết lập/kết thúc action và hiệu ứng kết liễu.
    Hiện thứ tự các lệnh playback và số effect trong từng phase đã được đối chiếu
    với 560 skill/item; vẫn cần kiểm tra trực quan phần thiết lập và kết thúc action.
 2. Menu: đối chiếu đội hình, trang bị và các lựa chọn theo cấu hình gốc;
@@ -28,6 +28,12 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Sprite actor front view theo cấu hình gốc: bốn vị trí (102 + 204 × index,
+  444), anchor 0.5/0.7, sheet 9×6 và frame 0/1/2/1 mỗi 12 frame. Motion
+  Attack/skill/phép/item/Guard/trúng đòn/né và trạng thái/HP/chết đọc dữ liệu;
+  vũ khí dùng System.attackMotions và WeaponsN.png. Save giữ motion/frame,
+  hủy dọn action; quái ra đòn whiten 16 frame, mất HP blink 20 frame. Animation
+  và flash/hide bám actor đúng vị trí/frame. Chrome so pixel PNG và sheet vũ khí.
 - Phản phép theo trait MRF 22/5, chỉ magical hit; mỗi effect chọn lại, không
   phản dây chuyền hay thế thân. Damage/state/né dùng người thi triển làm đích,
   hút HP/MP trả người phản phép, chi phí/common event một lần. Chờ animation

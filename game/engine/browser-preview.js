@@ -235,6 +235,7 @@
     }
     function showMessage(text, parameters, interpreter, options) {
         return queueUi(function () {
+            if (engine.state.scene === 'battle') renderBattleUi();
             message.textContent = FNHStandaloneText.formatText(engine.state.wordWrap ? text.replace(/\n/g, ' ') : text, engine.state);
             if (options && options.choicesFollow) { next.hidden = true; return; }
             return messageDialog(text, interpreter);
@@ -463,7 +464,7 @@
                     held.remaining = 6;
                     perform(async function () { await engine.runCommonEvent(commonBindings[key], eventHandlers); await draw(); });
                 });
-                var active = sceneChanged || !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
+                var active = engine.state.scene === 'battle' || sceneChanged || !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
                     lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events, engine.state.followers()).some(function (character) {
                     return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0);
                 });

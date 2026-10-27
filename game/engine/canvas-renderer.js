@@ -125,6 +125,12 @@
             var folder = engine.database.System.optSideView ? 'sv_enemies' : 'enemies';
             return { enemy: enemy, bitmap: await renderer.loadImage('img/' + folder + '/' + enemy.battlerName + '.png') };
         }));
+        var actors = await Promise.all(battle.actors.map(async function (actor, index) {
+            var data = engine.state.actor(actor.id), motion = engine.battle.spriteFrame(actor);
+            return { actor: actor, index: index, motion: motion,
+                bitmap: data.battlerName ? await renderer.loadImage('img/sv_actors/' + data.battlerName + '.png') : null,
+                weapon: motion.weaponImageId ? await renderer.loadImage('img/system/Weapons' + (Math.floor((motion.weaponImageId - 1) / 12) + 1) + '.png') : null };
+        }));
         if (frame !== this.frame || engine.state.scene !== 'battle' || engine.battle.battle !== battle) return;
         if (!backgrounds.some(Boolean) && this.battleSnapshotFor !== battle) {
             this.battleSnapshotFor = battle;
@@ -162,16 +168,24 @@
                 var enemy = entry.enemy, bitmap = entry.bitmap;
                 var flash = engine.animations && engine.animations.targetEffect(enemy.index, null, 'enemy');
                 if (!flash || !flash.hide) {
-                    context.drawImage(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height);
+                    var effect = enemy.spriteEffect;
+                    if (!effect || effect.type !== 'blink' || effect.remaining % 10 < 5) context.drawImage(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height);
+                    if (effect && effect.type === 'whiten') renderer.drawBattlerFlash(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height,
+                        { color: [255,255,255,Math.max(0,128 - (16 - effect.remaining) * 10)], remaining: 1, duration: 1 });
                     if (flash) renderer.drawBattlerFlash(bitmap, enemy.x - bitmap.width / 2, enemy.y - bitmap.height, flash);
                 }
             });
+            actors.forEach(function (entry) { renderer.drawBattleActor(entry, engine); });
             animations.forEach(function (animation) {
                 var entry = animation.entry, data = animation.data;
                 var target = enemies.find(function (item) { return entry.targetType === 'enemy' && item.enemy.index === entry.targetId; });
                 var actorIndex = entry.targetType === 'actor' ? battle.actors.findIndex(function (actor) { return actor.id === entry.targetId; }) : -1;
                 if (data.position === 3) renderer.drawAnimationCells(animation, 408, 312);
-                else if (actorIndex >= 0) renderer.drawAnimationCells(animation, 816 * (actorIndex + 0.5) / battle.actors.length, 576);
+                else if (actorIndex >= 0) {
+                    var bitmap = actors[actorIndex].bitmap, height = bitmap ? Math.floor(bitmap.height / 6) : 0;
+                    renderer.drawAnimationCells(animation, 102 + 204 * actorIndex, 444 -
+                        (data.position === 0 ? height : data.position === 1 ? height / 2 : 0));
+                }
                 else if (target) renderer.drawAnimationCells(animation, target.enemy.x, target.enemy.y -
                     (data.position === 0 ? target.bitmap.height : data.position === 1 ? target.bitmap.height / 2 : 0));
             });
@@ -180,7 +194,25 @@
         if (screen) this.applyTone(context, width, height, screen.tone);
         pictures.forEach(function (entry) { renderer.drawPicture(entry); });
         this.drawScreenEffects(screen, engine.state);
-        return { battle: battle.troopId, enemies: enemies.length };
+        return { battle: battle.troopId, enemies: enemies.length, actors: actors.filter(function (entry) { return entry.bitmap; }).length };
+    };
+
+    CanvasRenderer.prototype.drawBattleActor = function (entry, engine) {
+        var bitmap = entry.bitmap;
+        if (!bitmap || entry.actor.hidden) return;
+        var motion = entry.motion, x = 102 + 204 * entry.index, y = 444;
+        var width = Math.floor(bitmap.width / 9), height = Math.floor(bitmap.height / 6);
+        var sx = Math.floor((Math.floor(motion.index / 6) * 3 + motion.pattern) * bitmap.width / 9);
+        var sy = Math.floor(motion.index % 6 * bitmap.height / 6);
+        var flash = engine.animations && engine.animations.targetEffect(entry.actor.id, null, 'actor');
+        if (flash && flash.hide) return;
+        this.context.drawImage(bitmap, sx, sy, width, height, x - width / 2, y - height * 0.7, width, height);
+        if (flash) this.drawBattlerFlash(bitmap, x - width / 2, y - height * 0.7, flash, { x: sx, y: sy, width: width, height: height });
+        if (entry.weapon) {
+            var index = (motion.weaponImageId - 1) % 12;
+            this.context.drawImage(entry.weapon, (Math.floor(index / 6) * 3 + motion.weaponPattern) * 96, index % 6 * 64,
+                96, 64, x - 16 - 48, y - 64, 96, 64);
+        }
     };
 
     CanvasRenderer.prototype.drawMap = async function (engine, frame) {
@@ -412,12 +444,13 @@
         });
     };
 
-    CanvasRenderer.prototype.drawBattlerFlash = function (bitmap, x, y, flash) {
+    CanvasRenderer.prototype.drawBattlerFlash = function (bitmap, x, y, flash, frame) {
         if (!this.flashCanvas) this.flashCanvas = document.createElement('canvas');
         var canvas = this.flashCanvas;
-        canvas.width = bitmap.width; canvas.height = bitmap.height;
+        frame = frame || { x: 0, y: 0, width: bitmap.width, height: bitmap.height };
+        canvas.width = frame.width; canvas.height = frame.height;
         var context = canvas.getContext('2d');
-        context.drawImage(bitmap, 0, 0);
+        context.drawImage(bitmap, frame.x, frame.y, frame.width, frame.height, 0, 0, frame.width, frame.height);
         context.globalCompositeOperation = 'source-in';
         context.fillStyle = 'rgba(' + flash.color.slice(0, 3).concat(flash.color[3] / 255 * flash.remaining / Math.max(1, flash.duration)).join(',') + ')';
         context.fillRect(0, 0, canvas.width, canvas.height);

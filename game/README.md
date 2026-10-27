@@ -162,7 +162,12 @@ death break kiểm tra chủ thể. Common event chạy cuối hành động. H�
 và animation còn dở, không áp effect muộn. IMMORTAL mặc định giữ đích sống ở
 0 HP qua các effect, chặn death state rồi xác nhận chết trước common event cuối
 action. Hành động lồng nhau giữ bộ đếm riêng, hủy luôn giải phóng bảo vệ. Phần
-hiển thị motion vẫn cần đối chiếu tiếp trước khi chuyển entry chính.
+thiết lập/kết thúc action và hiệu ứng kết liễu vẫn cần đối chiếu tiếp trước khi
+chuyển entry chính. Sprite actor ở front view dùng vị trí và anchor cấu hình
+gốc, sheet 9×6, nhịp 12 frame; hiện motion đánh, phép, kỹ năng, vật phẩm, Guard,
+trúng đòn, né, ít HP và trạng thái/chết. Hình vũ khí đọc System.attackMotions
+và WeaponsN.png, giữ frame qua save; hủy action dọn motion. Quái lóe trắng lúc
+ra đòn và nhấp nháy khi mất HP. Animation, flash và hide bám vị trí actor.
 Phản phép đọc trait MRF (22/5) cho đòn magical, chọn lại theo mỗi effect và ưu
 tiên hơn thế thân. Người thi triển nhận damage/state và tự né theo chỉ số của
 mình; hút HP/MP trả về người phản phép. Không phản dây chuyền, không trả lại

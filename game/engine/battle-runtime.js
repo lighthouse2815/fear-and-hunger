@@ -133,6 +133,50 @@
     BattleRuntime.prototype.actor = function (id) {
         return this.battle && this.battle.actors.find(function (actor) { return actor.id === id; });
     };
+    BattleRuntime.prototype.startMotion = function (battler, type, weaponImageId) {
+        if (battler.enemyId == null) battler.spriteMotion = { type: type, elapsed: 0, weaponImageId: weaponImageId || 0 };
+    };
+    BattleRuntime.prototype.performAction = function (battler, skill, item, counter) {
+        if (battler.enemyId != null) return;
+        if (counter || !item && skill.id === this.attackSkillId(battler)) {
+            var actor = this.battlerState(battler), weapon = this.database.Weapons[actor.equips[0]];
+            var attack = (this.database.System.attackMotions || [])[weapon ? weapon.wtypeId : 0];
+            if (attack) this.startMotion(battler, ['thrust', 'swing', 'missile'][attack.type], attack.weaponImageId);
+        } else this.startMotion(battler, item ? 'item' : skill.id === 2 ? 'guard' :
+            (this.database.System.magicSkills || []).includes(skill.stypeId) ? 'spell' : 'skill');
+    };
+    BattleRuntime.prototype.spriteFrame = function (battler) {
+        var types = ['walk','wait','chant','guard','damage','evade','thrust','swing','missile','skill','spell','item','escape','victory','dying','abnormal','sleep','dead'];
+        var motion = battler.spriteMotion, state = this.battlerState(battler), type, elapsed = this.battle.spriteFrames || 0;
+        if (battler.alive && motion && (motion.elapsed < 36 || motion.type === 'guard')) { type = motion.type; elapsed = motion.elapsed; }
+        else {
+            var definitions = state.states.map(function (id) { return this.database.States[id]; }, this).sort(function (a,b) { return b.priority - a.priority || a.id - b.id; });
+            var stateMotion = definitions.length ? definitions[0].motion : 0;
+            type = !battler.alive || stateMotion === 3 ? 'dead' : stateMotion === 2 ? 'sleep' :
+                this.battlerTraits(battler).some(function (trait) { return trait.code === 62 && trait.dataId === 1; }) ? 'guard' :
+                stateMotion === 1 ? 'abnormal' : state.hp < this.battlerParam(battler,0) / 4 ? 'dying' : 'walk';
+        }
+        var index = types.indexOf(type), loop = [0,1,2,3,12,13,14,15,16,17].includes(index);
+        var pattern = Math.floor(elapsed / 12) % (loop ? 4 : 3);
+        return { index: Math.max(0,index), pattern: pattern === 3 ? 1 : pattern,
+            weaponImageId: motion && motion.elapsed < 36 ? motion.weaponImageId : 0,
+            weaponPattern: motion ? Math.min(2,Math.floor(motion.elapsed / 12)) : 0 };
+    };
+    BattleRuntime.prototype.advanceSprites = function (frames) {
+        if (!this.battle) return;
+        this.battle.spriteFrames = (this.battle.spriteFrames || 0) + frames;
+        this.battle.actors.concat(this.battle.enemies).forEach(function (battler) {
+            if (battler.spriteMotion) {
+                battler.spriteMotion.elapsed += frames;
+                if (battler.spriteMotion.elapsed >= 36 && battler.spriteMotion.type !== 'guard') delete battler.spriteMotion;
+                if (battler.spriteMotion && battler.spriteMotion.type === 'guard' && this.battle.phase === 'input' && !this.battlerTraits(battler).some(function (trait) { return trait.code === 62 && trait.dataId === 1; })) delete battler.spriteMotion;
+            }
+            if (battler.spriteEffect) {
+                battler.spriteEffect.remaining -= frames;
+                if (battler.spriteEffect.remaining <= 0) delete battler.spriteEffect;
+            }
+        }, this);
+    };
     BattleRuntime.prototype.enemy = function (index) {
         return this.battle && this.battle.enemies[index];
     };
@@ -648,6 +692,10 @@
                                 Math.floor(50 * value / runtime.battlerParam(target, 0) * runtime.traitRate(target, 23, 5)));
                             if (damage.type === 5 || damage.type === 6) runtime.changeResource(reflected ? intendedTarget : subject, resource, value);
                             hit.damage = value; hit.resource = resource; report.damage += value;
+                            if (!menu && resource === 'hp' && value > 0) {
+                                if (target.enemyId != null) target.spriteEffect = { type: 'blink', remaining: 20 };
+                                else runtime.startMotion(target, 'damage');
+                            }
                             report.critical = report.critical || hit.critical;
                         }
                         (skill.effects || []).forEach(function (effect) {
@@ -661,6 +709,7 @@
                         });
                         runtime.gainTp(subject, Math.floor((skill.tpGain || 0) * runtime.traitRate(subject, 23, 5)));
                     }
+                    if (!menu && hit.evaded) runtime.startMotion(target, 'evade');
                     hit.defeated = !target.alive; report.hits.push(hit);
                     if (counter && runtime.canCounter(intendedTarget)) {
                         hit.counter = runtime.useAction(intendedTarget, runtime.database.Skills[runtime.attackSkillId(intendedTarget)], 0, false, true, null, subject, deferred);
@@ -780,6 +829,9 @@
             if (effect) effects.push(effect);
         }, this);
         this.syncActors();
+        this.battle.actors.forEach(function (actor) {
+            if (actor.spriteMotion && actor.spriteMotion.type === 'guard') delete actor.spriteMotion;
+        });
         return effects;
     };
     BattleRuntime.prototype.enemyTurn = function () {
