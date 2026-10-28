@@ -134,7 +134,7 @@
             this.state.battleBgm = Object.assign({}, command.parameters[0]);
             return;
         case 216:
-            this.state.followersVisible = command.parameters[0] !== 0;
+            this.state.followersVisible = command.parameters[0] === 0;
             return;
         case 217:
             if (this.handlers.effect) return this.effect(command);

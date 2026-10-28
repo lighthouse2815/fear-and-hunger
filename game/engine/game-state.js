@@ -375,6 +375,7 @@
             regionCover: this.regionCover,
             achievements: this.achievements,
             followersVisible: this.followersVisible, followersGathering: this.followersGathering,
+            followerVisibilityVersion: 1,
             footstepsEnabled: this.footstepsEnabled,
             followerPositions: this.followerPositions, followerFrames: this.followerFrames, vehicleBgm: this.vehicleBgm,
             audio: this.audio,

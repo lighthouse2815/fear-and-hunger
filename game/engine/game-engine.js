@@ -1482,6 +1482,11 @@
     GameEngine.prototype.restore = async function (snapshot) {
         if (!this.database) throw new Error('Engine chưa boot database.');
         if (this.eventRunning || this.stepRunning) throw new Error('Không thể tải save khi sự kiện đang chạy.');
+        // Bản cũ đọc ngược 216: cờ false được ghi sau lệnh hiện người đi theo.
+        // Chỉ sửa save cũ; save mới vẫn giữ đúng các cảnh chủ động ẩn đồng đội.
+        if (snapshot.followerVisibilityVersion == null && snapshot.followersVisible === false) {
+            snapshot = Object.assign({}, snapshot, {followersVisible:true});
+        }
         var state = new stateApi.GameState(snapshot, this.database, this.random);
         var map = await this.prepareMap(state.mapId, state);
         if (!map.isValid(state.x, state.y) || !mapApi.DIRECTION_BITS[state.direction]) throw new Error('Vị trí trong save không hợp lệ.');

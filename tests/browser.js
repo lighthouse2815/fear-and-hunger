@@ -402,6 +402,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if (process.env.FNH_BROWSER_SCOPE === 'party') {
+            await require('./browser-party')({cdp,url:running.url,evalPage,waitFor,clickElement,check,screenshot});
+            check('không có lỗi runtime khi tuyển và hiển thị đồng đội',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất '+passed+' kiểm tra đội hình.');return;
+        }
         if (process.env.FNH_BROWSER_SCOPE === 'playtime') {
             await require('./browser-play-time')({cdp,url:running.url,evalPage,waitFor,check,screenshot});
             check('không có lỗi runtime khi hiển thị thời gian chơi',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
