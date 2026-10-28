@@ -380,6 +380,56 @@
         var signal = interpreter && interpreter.signal;
         input.value = Array.from(actor.name).slice(0, parameters[1]).join('');
         input.maxLength = parameters[1];
+        var defaultName = input.value, page = 0, selected = 0;
+        var grid = document.getElementById('fnh-name-grid'), slots = document.getElementById('fnh-name-slots');
+        var nameMeasure = document.createElement('canvas').getContext('2d'); nameMeasure.font = '28px GameFont';
+        var charWidth = nameMeasure.measureText('A').width;
+        slots.style.left = (18 + Math.min(294 - (parameters[1] + 1) * charWidth / 2, 444 - (parameters[1] + 1) * charWidth)) / 480 * 100 + '%';
+        slots.style.width = parameters[1] * charWidth / 480 * 100 + '%';
+        slots.style.right = 'auto';
+        var face = document.getElementById('fnh-name-face');
+        face.setAttribute('aria-label', actor.name);
+        face.style.backgroundImage = actor.faceName ? 'url("./img/faces/' + encodeURIComponent(actor.faceName) + '.png")' : 'none';
+        face.style.backgroundPosition = (actor.faceIndex % 4 * 100 / 3) + '% ' + Math.floor(actor.faceIndex / 4) * 100 + '%';
+        var tables = [
+            ['ABCDEabcde','FGHIJfghij','KLMNOklmno','PQRSTpqrst','UVWXYuvwxy','Z[]^_z{}|~','01234!#$%&','56789()*+-','/=@<>:; '],
+            ['ÁÉÍÓÚáéíóú','ÀÈÌÒÙàèìòù','ÂÊÎÔÛâêîôû','ÄËÏÖÜäëïöü','ĀĒĪŌŪāēīōū','ÃÅÆÇÐãåæçð','ÑÕØŠŴñõøšŵ','ÝŶŸŽÞýÿŷžþ','ĲŒĳœß«» ']
+        ].map(function (rows) { return Array.from(rows.join('')).concat(['Page', 'OK']); });
+        function updateName() {
+            var letters = Array.from(input.value).slice(0, parameters[1]);
+            input.value = letters.join(''); slots.replaceChildren();
+            for (var i = 0; i < parameters[1]; i++) {
+                var cell = document.createElement('span'); cell.textContent = letters[i] || '';
+                cell.dataset.cursor = String(i === letters.length); slots.appendChild(cell);
+            }
+        }
+        function renderKeys(focus) {
+            grid.replaceChildren();
+            tables[page].forEach(function (letter, index) {
+                var key = document.createElement('button'); key.type = 'button'; key.textContent = letter;
+                if (index >= 88) {
+                    key.textContent = ''; var caption = document.createElement('span'); caption.textContent = letter;
+                    caption.style.display = 'block'; caption.style.transform = 'scaleX(' + Math.min(1, 36 / nameMeasure.measureText(letter).width) + ')'; key.appendChild(caption);
+                }
+                key.dataset.selected = String(index === selected);
+                key.setAttribute('aria-label', letter === ' ' ? 'Space' : letter);
+                key.style.left = ((index % 10 * 42 + Math.floor(index % 10 / 5) * 24) / 444 * 100) + '%';
+                key.style.top = (Math.floor(index / 10) / 9 * 100) + '%';
+                key.onfocus = function () {
+                    selected = index;
+                    Array.from(grid.children).forEach(function (other) { other.dataset.selected = String(other === key); });
+                };
+                key.onclick = function () {
+                    selected = index;
+                    if (index === 88) { page = 1 - page; renderKeys(true); }
+                    else if (index === 89) form.requestSubmit();
+                    else if (Array.from(input.value).length < parameters[1]) { input.value += letter; updateName(); }
+                };
+                grid.appendChild(key);
+            });
+            if (focus) grid.children[selected].focus({ preventScroll: true });
+        }
+        updateName(); renderKeys(false);
         engine.buttons.clear();
         dialog.showModal();
         input.focus(); input.select();
@@ -387,15 +437,40 @@
             function close() {
                 engine.messageRunning = false;
                 form.onsubmit = null; dialog.oncancel = null;
+                input.oninput = null; dialog.onkeydown = null; grid.replaceChildren();
                 if (signal) signal.removeEventListener('abort', abort);
                 dialog.close(); canvas.focus({ preventScroll: true });
             }
             function abort() { close(); reject(signal.reason); }
+            input.oninput = updateName;
+            dialog.onkeydown = function (event) {
+                event.stopPropagation();
+                var key = event.key;
+                if (key === 'Escape' || key === 'Backspace' && event.target !== input) {
+                    input.value = Array.from(input.value).slice(0, -1).join(''); updateName();
+                } else if (key === 'PageUp' || key === 'PageDown') { page = 1 - page; renderKeys(true); }
+                else if (key.startsWith('Arrow')) {
+                    var row = Math.floor(selected / 10), column = selected % 10;
+                    if (key === 'ArrowDown') row = (row + 1) % 9;
+                    if (key === 'ArrowUp') row = (row + 8) % 9;
+                    if (key === 'ArrowLeft') column = (column + 9) % 10;
+                    if (key === 'ArrowRight') column = (column + 1) % 10;
+                    selected = row * 10 + column; grid.children[selected].focus({ preventScroll: true });
+                } else if (key === 'Enter') {
+                    if (!event.repeat) {
+                        if (event.target === input) { selected = 89; grid.children[selected].focus({ preventScroll: true }); }
+                        else grid.children[selected].click();
+                    }
+                } else if (key.length === 1 && event.target !== input && !event.ctrlKey && !event.metaKey) {
+                    if (Array.from(input.value).length < parameters[1]) { input.value += key; updateName(); }
+                } else return;
+                event.preventDefault();
+            };
             dialog.oncancel = function (event) { event.preventDefault(); };
             form.onsubmit = function (event) {
                 event.preventDefault();
                 var name = Array.from(input.value.trim()).slice(0, parameters[1]).join('');
-                if (!name) return;
+                if (!name) { input.value = defaultName; updateName(); return; }
                 engine.state.setActorName(parameters[0], name); close(); resolve();
             };
             if (signal) {
@@ -874,12 +949,14 @@
     (async function () {
         try {
             var skin = await renderer.loadImage('img/system/Window.png');
-            var frame = document.getElementById('fnh-title-frame').getContext('2d');
-            [[24,0,48,24,24,0,192,24],[24,72,48,24,24,84,192,24],
-                [0,24,24,48,0,24,24,60],[72,24,24,48,216,24,24,60],
-                [0,0,24,24,0,0,24,24],[72,0,24,24,216,0,24,24],
-                [0,72,24,24,0,84,24,24],[72,72,24,24,216,84,24,24]].forEach(function (part) {
-                frame.drawImage(skin, part[0] + 96, part[1], part[2], part[3], part[4], part[5], part[6], part[7]);
+            document.querySelectorAll('#fnh-title-frame, .fnh-name-frame').forEach(function (target) {
+                var frame = target.getContext('2d'), w = target.width, h = target.height;
+                [[24,0,48,24,24,0,w-48,24],[24,72,48,24,24,h-24,w-48,24],
+                    [0,24,24,48,0,24,24,h-48],[72,24,24,48,w-24,24,24,h-48],
+                    [0,0,24,24,0,0,24,24],[72,0,24,24,w-24,0,24,24],
+                    [0,72,24,24,0,h-24,24,24],[72,72,24,24,w-24,h-24,24,24]].forEach(function (part) {
+                    frame.drawImage(skin, part[0] + 96, part[1], part[2], part[3], part[4], part[5], part[6], part[7]);
+                });
             });
             var palette = document.createElement('canvas');
             palette.width = skin.width; palette.height = skin.height;

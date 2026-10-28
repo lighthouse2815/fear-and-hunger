@@ -76,6 +76,9 @@ Sau đó cả đội rơi qua sàn sập đang bật và xuống đúng tầng t
 thêm vật phẩm.
 Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro.
+Đặt tên dùng hai khung và chân dung từ faces PNG, bảng 90 ký tự với Page/OK
+như game gốc. Có thể gõ bàn phím hoặc chọn chữ; phím hướng di chuyển con trỏ,
+PageUp/PageDown đổi bảng, Escape xóa ký tự và Enter chọn OK để xác nhận tên.
 Mở `/standalone.html?title=1` để chạy luồng khởi động: sự kiện autorun Map072
 chờ/hiện/fade ảnh `splash_screen1`, rồi lệnh 354 mở tiêu đề. Gameplay bị khóa
 trong splash; title cho chơi mới từ Map010 hoặc tải một trong 20 ô lưu độc lập.

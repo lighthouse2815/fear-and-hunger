@@ -3256,6 +3256,8 @@ async function main() {
         await waitFor(cdp, 'document.querySelector("#fnh-name-dialog").open', 5000, 'nhập tên độc lập');
         check('nhập tên giữ khóa autorun và đúng nhân vật được chọn', await evalPage(cdp,
             'FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.engine.state.switchValue(242) && document.querySelector("#fnh-name-input").maxLength === 10', false, false));
+        check('đặt tên dùng chân dung, ô tên và bảng ký tự như bản gốc', await evalPage(cdp,
+            'document.querySelectorAll("#fnh-name-grid button").length === 90 && document.querySelector("#fnh-name-slots").children.length === 10 && getComputedStyle(document.querySelector("#fnh-name-face")).backgroundImage.includes("/img/faces/") && document.querySelector("#fnh-name-grid button:last-child").textContent === "OK"', false, false));
         await evalPage(cdp, 'document.querySelector("#fnh-name-input").value = "Schoolkid"; document.querySelector("#fnh-name-form").requestSubmit()', false, false);
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.selfSwitchValue(10,1,"A")', 5000, 'kết thúc chọn nhân vật');
         check('luồng chọn knight cập nhật party, tên và nhánh đặc biệt', await evalPage(cdp, `(() => {
