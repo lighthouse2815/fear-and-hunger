@@ -4000,6 +4000,39 @@ async function main() {
                 await e.restore(e.save());return e.state.switchValue(2043) && e.state.variableValue(37)===window.__ritualBefore+1 &&
                     e.map.eventPage(e.map.eventById(37)).conditions.switch1Id===2043 && e.state.party.includes(2);
             })()`,true,false));
+            let fellDeeper=false,triggeredTrap=false;
+            for(let step=0;step<500 && !fellDeeper;step++){
+                const progress=await evalPage(cdp,`(()=>{
+                    const e=FNHStandalonePreview.engine;
+                    if([6,37].includes(e.state.mapId) && e.state.scene==='map' && !e.eventRunning)return 2;
+                    const message=document.querySelector('#fnh-message-text').textContent;
+                    if(message.includes('crack underneath your feet'))window.__sawFloorTrap=true;
+                    const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
+                    const buttons=[...document.querySelectorAll('#fnh-choices button:not(:disabled)')];
+                    const choice=buttons.find(button=>button.textContent==='HEADS') || buttons[0];if(choice)choice.click();
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
+                        const target=document.querySelector('#fnh-battle-targets button:not(:disabled)');if(target)target.click();
+                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
+                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
+                    }
+                    if(e.state.scene!=='map' || e.eventRunning || e.state.mapId!==31)return window.__sawFloorTrap?1:0;
+                    const trapId=e.state.switchValue(1562)?300:e.state.switchValue(1563)?89:277;
+                    const trap=e.map.eventById(trapId),direction=e.map.findDirection(e.state,trap,80);
+                    if(direction)document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();
+                    return window.__sawFloorTrap?1:0;
+                })()`,false,true);
+                triggeredTrap=triggeredTrap || progress>0;fellDeeper=progress===2;
+                if(!fellDeeper)await sleep(180);
+            }
+            if(!fellDeeper)throw new Error('Không đi xuống qua sàn sập: '+JSON.stringify(await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine;return {map:e.state.mapId,x:e.state.x,y:e.state.y,scene:e.state.scene,event:e.eventRunning,
+                    trap:window.__sawFloorTrap,layout:e.state.variableValue(126),message:document.querySelector('#fnh-message-text').textContent,
+                    choices:[...document.querySelectorAll('#fnh-choices button')].map(button=>button.textContent),errors:FNHStandalonePreview.errors};
+            })()`,false,false)));
+            check('sàn sập đưa cả đội xuống tầng sâu theo layout thật',triggeredTrap && await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine;return e.state.mapId==={1:6,2:37}[e.state.variableValue(126)] &&
+                    e.state.party.includes(2) && e.state.followers().some(f=>f.id===2) && FNHStandalonePreview.errors.length===0;
+            })()`,false,false));
         }
         await cdp.send('Page.removeScriptToEvaluateOnNewDocument',{identifier:seeded.identifier});
         }
