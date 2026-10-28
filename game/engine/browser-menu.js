@@ -32,17 +32,19 @@
             try {
                 var payload=store.read(slot);
                 if(payload) {
-                    row.appendChild(node('span',options.engine.database.System.gameTitle));
+                    var members=(payload.state.party||[]).slice(0,4).map(function (id) {
+                        return Object.assign({},options.engine.database.Actors[id],payload.state.actors && payload.state.actors[id]);
+                    });
+                    var names=node('span',members.map(function (actor) {return actor.name;}).filter(Boolean).join(', '));names.className='fnh-save-names';row.appendChild(names);
                     var party=node('span');party.className='fnh-save-party';
-                    (payload.state.party||[]).forEach(function (id) {
-                        var actor=payload.state.actors && payload.state.actors[id] || options.engine.database.Actors[id];
+                    members.forEach(function (actor) {
                         if(!actor || !actor.characterName)return;
-                        var canvas=node('canvas');canvas.width=48;canvas.height=48;canvas.setAttribute('aria-label',actor.name);party.appendChild(canvas);
+                        var canvas=node('canvas');canvas.setAttribute('aria-label',actor.name);canvas.setAttribute('role','img');party.appendChild(canvas);
                         var filename=actor.characterName,index=actor.characterIndex||0;
                         options.renderer.loadImage('img/characters/'+filename+'.png').then(function (bitmap) {
-                            var single=/^!?\$/.test(filename),w=bitmap.width/(single?3:12),h=bitmap.height/(single?4:8);
+                            var prefix=/^[!$]+/.exec(filename),single=prefix && prefix[0].includes('$'),w=bitmap.width/(single?3:12),h=bitmap.height/(single?4:8);
                             var x=(single?1:index%4*3+1)*w,y=(single?0:Math.floor(index/4)*4)*h;
-                            canvas.getContext('2d').drawImage(bitmap,x,y,w,h,24-w/2,48-h,w,h);
+                            canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(bitmap,x,y,w,h,0,0,w,h);canvas.dataset.ready='true';
                         }).catch(function (error) { canvas.title=error.message; });
                     });row.appendChild(party);
                 } else if(options.mode==='load')row.classList.add('fnh-save-empty');
