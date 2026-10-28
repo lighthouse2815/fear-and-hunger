@@ -81,7 +81,7 @@ như game gốc. Có thể gõ bàn phím hoặc chọn chữ; phím hướng di
 PageUp/PageDown đổi bảng, Escape xóa ký tự và Enter chọn OK để xác nhận tên.
 Intro phát liền trong khung game, ẩn điều khiển video và không bật cửa sổ nổi.
 Màn chọn độ khó dùng ba khung theo game gốc: trợ giúp trên cùng, danh sách
-ở giữa và mô tả phía dưới; chọn bằng phím hoặc chuột cập nhật mô tả từ JSON.
+ở giữa và mô tả phía dưới; chọn bằng phím cập nhật mô tả từ JSON.
 Ô thoại chơi chính dùng viền Window.png, chân dung faces, chữ 28px/dòng 36px
 và khung bốn dòng co theo vùng game. Thoại luôn nằm dưới đáy như trang đối chiếu;
 nền thường/tối/trong suốt đọc lệnh 101. Thoại dài chuyển trang, giữ màu/icon
@@ -109,13 +109,13 @@ Danh sách lệnh theo thứ tự Vật phẩm, Trang bị, Chế tạo, Kỹ n�
 Kết thúc; màn đội hình chỉ giữ chân dung, trạng thái, HP/MP và Hunger.
 Tab Chỉ số với EXP, TP và bảng tỷ lệ trạng thái chỉ dùng trong preview kiểm thử.
 Menu Escape dùng sáu icon từ IconSet.png theo ARP_CommandIcons và viền gốc,
-đặt cửa sổ lệnh 70×252 cạnh vùng nội dung 746×624. Up/Down hoặc rê chuột lên
-icon đổi ngay màn bên phải; Enter chuyển vào các lệnh của màn đang xem.
+đặt cửa sổ lệnh 70×252 cạnh vùng nội dung 746×624. Up/Down chọn icon
+đổi ngay màn bên phải; Enter chuyển vào các lệnh của màn đang xem.
 Các màn vật phẩm, trang bị, kỹ năng, chế tạo, tùy chọn và kết thúc dùng khung
 Window.png với hình học lấy từ trang đối chiếu, danh sách/icon và dữ liệu thật.
 Escape/X từ nội dung trả focus về cột icon, bấm tiếp đóng menu. Giữ phím hủy không
 làm menu mở lại. Nút đang chọn dùng bitmap con trỏ từ Window.png, nhấp nháy
-chu kỳ 40 frame; phím hướng/rê chuột đổi con trỏ, quay lại giữ lệnh vừa chọn.
+chu kỳ 40 frame; phím hướng đổi con trỏ, quay lại giữ lệnh vừa chọn.
 Test riêng: `FNH_BROWSER_SCOPE=menu npm run test:browser` đối chiếu bitmap với
 menu gốc và kiểm tra điều khiển, dùng đồ, đổi trang bị, kỹ năng và chế tạo trên
 máy tính/điện thoại. Tùy chọn có các nhóm All/General/Audio/Controls; Command
@@ -124,6 +124,10 @@ filter mà không xóa cấu hình hiệu ứng. Âm lượng và cấu hình ph
 PlayerSettings của engine độc lập.
 Luồng chơi chính ẩn hàng nút điều khiển/hướng dẫn dưới khung game; dùng bàn phím
 để đi, tương tác và mở menu bằng X/Escape. Preview kiểm thử giữ các nút này.
+Chuột bị khóa trong luồng chơi chính, gồm rê chọn, click, cuộn và menu chuột
+phải; không lấy focus khỏi bàn phím. Click xác nhận do bàn phím và thao tác chạm
+vẫn hoạt động. Preview kiểm thử giữ chuột. Kiểm tra riêng:
+`FNH_BROWSER_SCOPE=input npm run test:browser`.
 Nhân vật luôn chạy nhanh theo cấu hình Force Dashing, trừ khi map, trạng thái
 hoặc lệnh sự kiện cấm chạy; tùy chọn đi bộ chỉ hiện trong preview kiểm thử.
 Vật phẩm/sự kiện gọi 352 vẫn mở màn lưu 20 ô riêng; màn này chỉ hiện chức năng

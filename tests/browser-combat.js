@@ -35,13 +35,8 @@ module.exports = async function ({cdp,url,evalPage,waitFor,clickElement,check,sc
     await waitFor(cdp,'document.querySelectorAll("#fnh-combat-targets .fnh-combat-enemy").length>0 && document.querySelector("#fnh-combat-targets .fnh-combat-enemy").style.clipPath',5000,'hình bộ phận quái');
     check('Attack chọn bộ phận Guard, không hiện HP địch',await evalPage(cdp,'[...document.querySelectorAll("#fnh-combat-targets button")].every(b=>!b.textContent.includes("HP")) && document.querySelectorAll("#fnh-combat-targets button").length===FNHStandalonePreview.engine.battle.aliveEnemies().length',false,false));
     await screenshot('combat-targets');
-    const point=await evalPage(cdp,`(()=>{
-        const button=document.querySelector('#fnh-combat-targets [data-target="0"]'),r=button.getBoundingClientRect();
-        for(let y=r.top+2;y<r.bottom;y+=3)for(let x=r.left+2;x<r.right;x+=3)if(document.elementFromPoint(x,y)===button)return {x,y};
-        throw Error('Không chọn được phần thân qua vùng ảnh hiện');
-    })()`,false,false);
-    await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});
-    await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',...point,button:'left',clickCount:1});
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter'});
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter'});
     check('xác nhận Attack mới xếp lệnh, chưa gây sát thương trước lượt đồng đội',await evalPage(cdp,'FNHStandalonePreview.engine.battle.battle.inputActions.length===1 && FNHStandalonePreview.engine.battle.battle.inputActions[0].id===1',false,false));
     await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'});
     check('hủy lệnh trở lại thành viên trước',await evalPage(cdp,'FNHStandalonePreview.engine.battle.battle.inputActions.length===0',false,false));

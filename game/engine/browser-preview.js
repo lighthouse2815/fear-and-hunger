@@ -6,6 +6,17 @@
     var mapId = Number(query.get('map') || 74);
     var automaticEvents = titleFlow || query.get('events') === '1';
     document.body.classList.toggle('fnh-gameplay', automaticEvents);
+    if(automaticEvents) {
+        ['pointerdown','pointerup','pointermove','pointerover','pointerout','pointerenter','pointerleave',
+            'mousedown','mouseup','mousemove','mouseover','mouseout','mouseenter','mouseleave','click','dblclick','contextmenu','wheel'].forEach(function (type) {
+            window.addEventListener(type,function (event) {
+                if(event.pointerType && event.pointerType!=='mouse' || event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents)return;
+                // Click do bàn phím hoặc luồng UI gọi vẫn xác nhận được.
+                if(type==='click' && event.detail===0 && !event.pointerType)return;
+                event.preventDefault();event.stopImmediatePropagation();
+            },{capture:true,passive:false});
+        });
+    }
     if (automaticEvents) document.querySelector('.fnh-stage').appendChild(document.getElementById('fnh-message'));
     var canvas = document.getElementById('fnh-canvas');
     var timer = document.getElementById('fnh-timer');
@@ -589,7 +600,7 @@
             function abort() { finish(signal.reason); }
             function play() {
                 video.play().then(function () { videoPlay.hidden = true; }).catch(function (error) {
-                    if (error.name === 'NotAllowedError') videoPlay.hidden = false;
+                    if (error.name === 'NotAllowedError') {videoPlay.hidden = false;videoPlay.focus({preventScroll:true});}
                     else finish(error);
                 });
             }
@@ -851,6 +862,7 @@
     document.addEventListener('keydown', function (event) {
         audio.unlock();
         if (presentationInput()) {
+            if(!videoPlay.hidden && inputName(event.key)==='ok') {event.preventDefault();if(!event.repeat)videoPlay.click();return;}
             if (engine.state.scene === 'title' && !document.getElementById('fnh-end-screen').contains(event.target)) handleEndKey(event);
             return;
         }

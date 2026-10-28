@@ -267,6 +267,11 @@ async function clickElement(cdp, selector) {
         }
         return;
     }
+    if(await evalPage(cdp,'document.body.classList.contains("fnh-gameplay")',false,false)) {
+        await evalPage(cdp,`(()=>{const button=document.querySelector(${JSON.stringify(selector)});if(!button || button.disabled)throw Error('Không xác nhận được nút: '+${JSON.stringify(selector)});button.focus({preventScroll:true});})()`,false,false);
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});return;
+    }
     const point = await evalPage(cdp, `(async () => {
         const selector = ${JSON.stringify(selector)};
         document.querySelector(selector).scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
@@ -397,6 +402,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if(process.env.FNH_BROWSER_SCOPE==='input') {
+            await require('./browser-keyboard')({cdp,url:running.url,evalPage,waitFor,check});
+            check('không có lỗi runtime khi khóa chuột',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất '+passed+' kiểm tra điều khiển.');return;
+        }
         if (process.env.FNH_BROWSER_SCOPE === 'movement') {
             await require('./browser-movement')({cdp,url:running.url,evalPage,waitFor,clickElement,check,screenshot});
             check('không có lỗi runtime khi di chuyển',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
