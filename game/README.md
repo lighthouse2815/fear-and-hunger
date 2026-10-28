@@ -388,6 +388,11 @@ riêng; mục tiêu địch chọn trên hình bộ phận, không hiện HP đ�
 phần trong suốt PNG để các bộ phận chồng ảnh vẫn chọn được. Preview giữ bảng
 điều khiển kiểm thử. Chạy `FNH_BROWSER_SCOPE=combat npm run test:browser` để
 kiểm tra riêng UI này; các màn chiến đấu khác vẫn cần đối chiếu tiếp.
+Khi Attack chọn một bộ phận, phím hướng đổi mục tiêu và Enter/Z xác nhận.
+PNG của đúng bộ phận nhấp nháy trắng mức 64/255 theo chu kỳ 30 frame như
+sprite gốc; không vẽ khung chữ nhật quanh hình. Hủy, xác nhận hoặc kết thúc
+trận dọn hiệu ứng. Kiểm tra nhịp độc lập:
+`node tests/standalone-battle-selection.js`.
 Bốn người đầu trong party tham chiến; người dự bị và guest không vào hàng đợi
 hay danh sách mục tiêu. Thay đổi party trong troop page cập nhật lại bốn vị trí.
 Attack đọc `<skill_id>` của vũ khí: War scythe/Cursed war scythe dùng skill

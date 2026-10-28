@@ -55,8 +55,9 @@
     BattleUi.prototype.render = function (focus) {
         var ui = this, engine = this.engine, battle = engine.battle.battle;
         var previousFocus=!focus && this.panel.contains(document.activeElement) ? document.activeElement.textContent : null;
+        var previousTarget=previousFocus!==null && document.activeElement.dataset.target;
         this.panel.hidden = !battle || engine.state.scene !== 'battle' || !!battle.result;
-        if (this.panel.hidden) return;
+        if (this.panel.hidden) {this.options.renderer.selectBattleTarget(null);return;}
         if (this.battle !== battle) { this.battle = battle; this.actorId = 0; this.mode = 'command'; }
         var inputs = engine.battle.inputActors(), queued = battle.inputActions || [];
         if (!inputs.some(function (actor) { return actor.id === ui.actorId; })) {
@@ -64,6 +65,7 @@
             this.actorId = next ? next.id : 0;
         }
         var active = !this.busy && battle.phase === 'input' && !engine.messageRunning;
+        if(this.mode!=='target' || !active)this.options.renderer.selectBattleTarget(null);
         if (active && !this.wasActive) focus = true;
         this.wasActive = active;
         var status = document.getElementById('fnh-combat-status'); status.replaceChildren();
@@ -119,6 +121,8 @@
             members.forEach(function (member) {
                 var index = enemies ? member.index : battle.actors.indexOf(member);
                 var node = button(targets,member.name,true,function () { ui.confirm(index); },member.name); node.dataset.target = index;
+                var focusTarget=node.onfocus;
+                node.onfocus=function () {focusTarget();ui.options.renderer.selectBattleTarget(battle,enemies?'enemy':'actor',enemies?index:member.id);};
                 if (enemies) {
                     node.className = 'fnh-combat-enemy'; node.style.left = member.x / 816 * 100 + '%'; node.style.top = member.y / 624 * 100 + '%';
                     var enemy = engine.database.Enemies[member.enemyId];
@@ -147,6 +151,7 @@
         if (focus || previousFocus!==null) {
             var first = this.panel.querySelector('#fnh-combat-commands:not([hidden]) button:enabled, #fnh-combat-list:not([hidden]) button:enabled, #fnh-combat-targets:not([hidden]) button:enabled');
             if(previousFocus!==null)first=Array.from(this.panel.querySelectorAll('button:enabled')).find(function (button) {return button.getClientRects().length && button.textContent===previousFocus;})||first;
+            if(this.mode==='target' && previousTarget!==false && previousTarget!=null)first=targets.querySelector('[data-target="'+previousTarget+'"]:enabled')||first;
             if(this.mode==='command' && this.actorId && this.options.settings && this.options.settings.commandRemember) {
                 var remembered=this.engine.state.actor(this.actorId).lastBattleCommand,command=this.panel.querySelectorAll('#fnh-combat-commands button')[remembered];
                 if(command && !command.disabled)first=command;

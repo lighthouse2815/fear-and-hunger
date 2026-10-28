@@ -238,6 +238,19 @@
         context.restore();
     };
 
+    CanvasRenderer.prototype.selectBattleTarget = function (battle, type, id) {
+        var selected=this.selectedBattleTarget;
+        if(!battle || !type) {this.selectedBattleTarget=null;return;}
+        if(selected && selected.battle===battle && selected.type===type && selected.id===id)return;
+        this.selectedBattleTarget={battle:battle,type:type,id:id,start:battle.spriteFrames||0};
+    };
+
+    CanvasRenderer.prototype.battleSelectionColor = function (battle, type, id) {
+        var selected=this.selectedBattleTarget;
+        if(!selected || selected.battle!==battle || selected.type!==type || selected.id!==id || battle.result)return null;
+        return Math.floor((battle.spriteFrames||0)-selected.start)%30<15 ? [255,255,255,64] : null;
+    };
+
     CanvasRenderer.prototype.drawBattleEnemy = function (entry, engine, iconSheet) {
         var enemy = entry.enemy, bitmap = entry.bitmap, collapse = enemy.collapse, height = bitmap.height;
         if (collapse && collapse.duration == null) collapse.duration = bitmap.height;
@@ -254,6 +267,7 @@
             } else color = [255,128,128,128];
         } else if (effect && effect.type === 'whiten') color = [255,255,255,Math.max(0,128 - (16 - effect.remaining) * 10)];
         else if (effect && effect.type === 'appear') opacity = 1 - effect.remaining / 16;
+        if(!color && enemy.alive && !enemy.hidden)color=this.battleSelectionColor(engine.battle.battle,'enemy',enemy.index);
         if (flash) color = flash.color.slice(0,3).concat(flash.color[3] * flash.remaining / Math.max(1,flash.duration));
         if (!height || !opacity) return;
         var image = bitmap;
@@ -279,6 +293,8 @@
         if (entry.actor.hidden) return;
         var motion = entry.motion, x = 102 + 204 * entry.index, y = 444;
         var flash = engine.animations && engine.animations.targetEffect(entry.actor.id, null, 'actor');
+        var selectionColor=this.battleSelectionColor(engine.battle.battle,'actor',entry.actor.id);
+        if(!flash && selectionColor)flash={color:selectionColor,remaining:1,duration:1};
         if (bitmap && !(flash && flash.hide)) {
             var width = Math.floor(bitmap.width / 9), height = Math.floor(bitmap.height / 6);
             var sx = Math.floor((Math.floor(motion.index / 6) * 3 + motion.pattern) * bitmap.width / 9);
