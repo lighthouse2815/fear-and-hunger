@@ -3521,6 +3521,24 @@ async function main() {
                 await e.createInterpreter([stop],0).run();await frame();return timer.hidden && e.state.timer.frames===remaining;
             }finally{await e.restore(snapshot);}
         })()`,true,false));
+        check('chạm ô câu đố thật chọn và bỏ chọn qua điều khiển',await evalPage(cdp,`(async()=>{
+            const app=FNHStandalonePreview,e=app.engine,snapshot=e.save();
+            const scheduler=new FNHStandaloneScheduler.EventScheduler(e,app.scheduler.handlers,error=>app.errors.push(error.message));
+            const frame=()=>new Promise(resolve=>requestAnimationFrame(resolve));
+            try{
+                await e.restore({mapId:166,x:60,y:36,direction:2,party:[1],switches:{2741:true},timer:{active:true,frames:10800}});
+                const tile=e.map.eventById(40),tick=async predicate=>{
+                    for(let i=0;i<300 && !predicate();i++){scheduler.tick();e.advanceRoutes(1);await frame();}
+                    return predicate();
+                };
+                document.querySelector('#fnh-controls [data-direction="0"]').click();
+                if(!await tick(()=>e.state.selfSwitchValue(166,40,'D') && !e.eventRunning))return false;
+                if(e.state.variableValue(318)!==1)return false;
+                document.querySelector('#fnh-controls [data-direction="0"]').click();
+                if(!await tick(()=>!e.state.selfSwitchValue(166,40,'A') && e.state.variableValue(318)===0 && !e.eventRunning))return false;
+                return e.map.eventPage(tile)===tile.pages[0];
+            }finally{scheduler.stop();await e.restore(snapshot);}
+        })()`,true,false));
         check('điều kiện skill tính trait trạng thái thật và giữ qua save',await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine,snapshot=e.save();
             try {

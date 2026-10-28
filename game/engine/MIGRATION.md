@@ -32,7 +32,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   Lệnh dừng giữ số frame còn lại và trạng thái này được lưu; bắt đầu lại đặt
   thời gian mới. Unit và Chrome dùng lệnh 124 thật từ Map166.
   Unit chạy trọn mở màn puzzle Map166, chọn 26 event ô đúng qua scheduler và
-  kích hoạt hoàn thành tới Map168; chưa kiểm tra di chuyển bằng giao diện.
+  kích hoạt hoàn thành tới Map168; Chrome chọn/bỏ chọn một ô bằng nút tương tác,
+  chưa kiểm tra đường di chuyển qua toàn bộ ô bằng giao diện.
   Nhánh hết giờ cũng tới Map168 và giữ đúng điểm/switch theo dữ liệu thật.
 - Biến số làm tròn xuống khi ghi như runtime gốc, kể cả phép chia số âm;
   kiểm tra qua interpreter và lưu/tải. JSON hiện tại không dùng phép chia 122.
