@@ -72,6 +72,15 @@ const { GameDataStore } = require('../game/engine/data-store');
 
     reset(); engine.state.scene = 'battle'; engine.state.timer = { active: true, frames: 12 };
     engine.advanceRoutes(5); assert.equal(engine.state.timer.frames, 7);
+    const timedSnapshot = engine.save();
+    const loadedTimer = new GameEngine({ dataStore: store, random: () => 0.5 });
+    await loadedTimer.boot({ mapId: 74, x: 8, y: 8, party: [1] });
+    await loadedTimer.restore(timedSnapshot);
+    assert.equal(loadedTimer.state.timer.frames, 7, 'lưu giữa trận giữ thời gian còn lại');
+    const loadedTimeout = loadedTimer.battle.wait();
+    loadedTimer.advanceRoutes(7);
+    assert.equal(await loadedTimeout, 'escape', 'tải giữa trận vẫn kết thúc khi hết giờ');
+    assert.equal(loadedTimer.state.timer.frames, 0);
     const timeout = engine.battle.wait(); engine.advanceRoutes(7);
     assert.equal(await timeout, 'escape', 'hết giờ trả nhánh thoát ngay cả khi không cho chạy');
     assert.equal(engine.state.timer.frames, 0); assert.equal(engine.state.timer.active, true);
