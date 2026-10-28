@@ -123,7 +123,20 @@ async function fixture(events, commonEvents = []) {
     assert.equal(puzzle.state.switchValue(2792), true);
     assert.equal(puzzle.state.switchValue(2791), false);
     const hideSeek = new GameEngine({ dataStore: store, onRouteEffect: () => true });
-    await hideSeek.boot({ mapId: 167, x: 38, y: 44, party: [1], switches: { 2742: true } });
+    await hideSeek.boot({ mapId: 167, x: 38, y: 44, party: [1] });
+    let openingDone = false, openingError;
+    const openingMessages = [];
+    const opening = hideSeek.runEvent(39, { message: text => openingMessages.push(text),
+        effect: code => [245, 250].includes(code) }).catch(error => { openingError = error; })
+        .finally(() => { openingDone = true; });
+    for (let i = 0; i < 2000 && !openingDone; i++) { hideSeek.advanceRoutes(16); await delay(); }
+    assert.equal(openingDone, true, 'mở màn trốn tìm phải kết thúc');
+    await opening;
+    if (openingError) throw openingError;
+    assert.ok(openingMessages.some(text => text.includes('hide and seek')));
+    assert.equal(hideSeek.state.switchValue(2742), true);
+    assert.equal(hideSeek.state.timer.active, true);
+    assert.ok(hideSeek.state.timer.frames > 0 && hideSeek.state.timer.frames <= 59 * 60);
     hideSeek.state.timer = { active: true, frames: 59 };
     let hideSeekDone = false, hideSeekError;
     const hideSeekRun = hideSeek.runEvent(61).catch(error => { hideSeekError = error; })
