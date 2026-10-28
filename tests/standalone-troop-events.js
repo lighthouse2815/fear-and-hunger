@@ -31,6 +31,25 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
         command(301, [0, id, true, true]), command(121, [6009, 6009, 0])
     ], 1, handlers, signal).run();
 
+    const timed = await boot();
+    const timedId = troop([page({ turnValid: true, turnA: 0, turnB: 0 }, [
+        command(230, [120]), command(121, [6098, 6098, 0])
+    ])], timed);
+    timed.state.timer = { active: true, frames: 60 };
+    const timedEvent = timed.createInterpreter([
+        command(301, [0, timedId, false, true]),
+        command(601, [], 0), command(121, [6095, 6095, 0], 1),
+        command(602, [], 0), command(121, [6096, 6096, 0], 1),
+        command(603, [], 0), command(121, [6097, 6097, 0], 1), command(604, [], 0)
+    ], 1).run();
+    await timedEvent;
+    assert.equal(timed.state.timer.frames, 0);
+    assert.equal(timed.state.switchValue(6098), true, 'hết giờ chờ trang troop thực sự hoàn tất');
+    assert.equal(timed.state.switchValue(6096), true, 'trận không cho thoát vẫn trả nhánh thoát khi hết giờ');
+    assert.equal(timed.state.switchValue(6095), false);
+    assert.equal(timed.state.switchValue(6097), false);
+    assert.equal(timed.state.scene, 'map');
+
     // Điều kiện phải kết hợp bằng AND và so HP theo phần trăm, kể cả đúng ngưỡng.
     engine.battle.setup(1, true, true);
     const runtime = engine.battle, enemy = runtime.enemy(0);
