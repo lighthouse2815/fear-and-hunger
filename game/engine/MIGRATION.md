@@ -25,6 +25,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Điều kiện nhân vật có skill tính cả trait actor/class/trang bị/state, cùng
+  nguồn với combat; state Salmonsnake thật cấp skill 64/82 và giữ qua save.
 - Mã màu trong hội thoại, lựa chọn, trợ giúp và credits đọc màu từ Window.png;
   kiểm tra màu chi phí vũ khí thật và giữ chuỗi escape.
 - Hội thoại, lựa chọn, trợ giúp và credits hiển thị mã icon từ IconSet.png;

@@ -3503,6 +3503,18 @@ async function main() {
                 return e.state.pendingChoices.disabled.includes(0) && e.state.pendingChoices.text[0]==='????';
             }finally{await e.restore(snapshot);}
         })()`,true,false));
+        check('điều kiện skill tính trait trạng thái thật và giữ qua save',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine,snapshot=e.save();
+            try {
+                e.state.addActor(1);e.state.changeActorSkill(1,64,false);e.state.changeActorState(1,27,true);
+                const condition=()=>e.createInterpreter([],0).evaluateCondition([4,1,3,64]);
+                if(!condition() || !e.battle.actorSkills(1).some(skill=>skill.id===64))return false;
+                await e.restore(e.save());
+                if(!condition() || !e.battle.actorSkills(1).some(skill=>skill.id===64))return false;
+                e.state.changeActorState(1,27,false);
+                return !condition() && !e.battle.actorSkills(1).some(skill=>skill.id===64);
+            } finally { await e.restore(snapshot); }
+        })()`,true,false));
         check('CURSE WEAPONS lấy kiếm đang đeo và cấp kiếm nguyền đúng một lần',await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine,snapshot=e.save(),list=e.database.CommonEvents[193].list.slice(135,137);
             try{

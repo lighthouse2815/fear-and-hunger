@@ -562,7 +562,9 @@
             if (!actor) return false;
             if (parameters[2] === 1) return actor.name === parameters[3];
             if (parameters[2] === 2) return actor.classId === parameters[3];
-            if (parameters[2] === 3) return actor.skills.includes(parameters[3]);
+            if (parameters[2] === 3) return actor.skills.includes(parameters[3]) || this.state.actorTraitSources(parameters[1]).some(function (source) {
+                return (source.traits || []).some(function (trait) { return trait.code === 43 && trait.dataId === parameters[3]; });
+            });
             if (parameters[2] === 4) return actor.equips[0] === parameters[3];
             if (parameters[2] === 5) return actor.equips.slice(1).includes(parameters[3]);
             if (parameters[2] === 6) return actor.states.includes(parameters[3]);

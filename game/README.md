@@ -84,6 +84,8 @@ Interpreter chạy được common event lồng nhau, vòng lặp có giới h�
 để xác nhận nhận vật phẩm từ common event 52 và không nhận lại sau khi đã mở.
 Điều kiện vũ khí/giáp có cờ tính trang bị kiểm tra cả đồ đang đeo của party;
 trong trận chỉ tính bốn người tham chiến, guest không tính là thành viên party.
+Điều kiện nhân vật có kỹ năng tính cả kỹ năng đã học và kỹ năng do trait của
+nhân vật, class, trang bị hoặc trạng thái cấp, như menu và chiến đấu.
 Lệnh trừ vũ khí/giáp có cùng cờ lấy trong túi trước rồi tháo đồ đang đeo nếu
 thiếu; common event nguyền Short sword nhận đúng kiếm và không nhân đôi đồ.
 Số lượng mỗi loại vật phẩm, vũ khí hoặc giáp trong túi giới hạn ở 99 như game gốc.

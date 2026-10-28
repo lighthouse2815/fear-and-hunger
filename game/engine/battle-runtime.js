@@ -340,10 +340,7 @@
     BattleRuntime.prototype.battlerSources = function (battler) {
         var data = this.battlerState(battler), sources;
         if (battler.enemyId != null) sources = [this.database.Enemies[battler.enemyId]];
-        else {
-            sources = [this.database.Actors[battler.id], this.database.Classes[data.classId]];
-            data.equips.forEach(function (id, slot) { sources.push((slot === 0 ? this.database.Weapons : this.database.Armors)[id]); }, this);
-        }
+        else return this.state.actorTraitSources(battler.id);
         data.states.forEach(function (id) { sources.push(this.database.States[id]); }, this);
         return sources.filter(Boolean);
     };

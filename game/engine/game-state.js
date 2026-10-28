@@ -154,6 +154,17 @@
         return this.party.indexOf(id) >= 0;
     };
 
+    GameState.prototype.actorTraitSources = function (id) {
+        var actor = this.actor(id), database = this.database || {};
+        if (!actor) return [];
+        var sources = [(database.Actors || [])[id], (database.Classes || [])[actor.classId]];
+        actor.equips.forEach(function (itemId, slot) {
+            sources.push(((slot === 0 ? database.Weapons : database.Armors) || [])[itemId]);
+        });
+        actor.states.forEach(function (stateId) { sources.push((database.States || [])[stateId]); });
+        return sources.filter(Boolean);
+    };
+
     GameState.prototype.addActor = function (id, data) {
         positiveId(id, 'ID actor');
         if (!this.actor(id, data)) throw new Error('Thiếu dữ liệu actor ' + id);

@@ -21,6 +21,21 @@ const { EventInterpreter } = require('../game/engine/event-interpreter');
         commands, state, mapId: 74, eventId: 3,
         handlers: { message: text => messages.push(text) }
     });
+    const database = Object.fromEntries(['Actors', 'Classes', 'Weapons', 'Armors', 'States', 'Skills'].map(name =>
+        [name, require('../game/data/' + name + '.json')]));
+    const skillState = new GameState({ party: [1] }, database);
+    const skillCondition = new EventInterpreter({ state: skillState, commands: [] });
+    const hasSkill = id => skillCondition.evaluateCondition([4, 1, 3, id]);
+    assert.equal(hasSkill(64), false);
+    skillState.changeActorState(1, 27, true);
+    assert.equal(hasSkill(64), true, 'state Salmonsnake thật cấp skill 64');
+    assert.equal(hasSkill(82), true, 'state Salmonsnake thật cấp skill 82');
+    const savedSkills = new GameState(skillState.toJSON(), database);
+    assert.equal(new EventInterpreter({ state: savedSkills, commands: [] }).evaluateCondition([4, 1, 3, 64]), true);
+    skillState.changeActorState(1, 27, false);
+    assert.equal(hasSkill(64), false, 'bỏ state cũng bỏ skill tạm');
+    skillState.changeActorSkill(1, 64, true);
+    assert.equal(hasSkill(64), true, 'skill đã học vẫn được tính');
     const result = await interpreter.run();
     assert.deepEqual(messages, ['Xin chào']);
     assert.equal(state.switchValue(10), true);
