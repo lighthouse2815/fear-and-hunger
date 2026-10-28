@@ -3962,6 +3962,44 @@ async function main() {
             })()`,false,false)));
             check('gặp và thắng hai Priest cùng Girl trong hành trình thật',metPriests && await evalPage(cdp,
                 'FNHStandalonePreview.engine.state.party.includes(2) && FNHStandalonePreview.engine.battle.battle.troopId===12 && FNHStandalonePreview.errors.length===0',false,false));
+            await evalPage(cdp,'window.__ritualBefore=FNHStandalonePreview.engine.state.variableValue(37)',false,false);
+            let sacrificed=false;
+            for(let step=0;step<400 && !sacrificed;step++){
+                sacrificed=await evalPage(cdp,`(()=>{
+                    const e=FNHStandalonePreview.engine;
+                    if(e.state.switchValue(2043) && !e.eventRunning && e.state.scene==='map')return true;
+                    const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
+                    const choice=[...document.querySelectorAll('#fnh-choices button:not(:disabled)')].find(button=>button.textContent==='Sacrifice him');
+                    if(choice)choice.click();
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
+                        const target=document.querySelector('#fnh-battle-targets button:not(:disabled)');if(target)target.click();
+                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
+                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
+                    }
+                    if(e.state.scene!=='map' || e.eventRunning)return false;
+                    const statue=e.map.eventById(37),dx=statue.x-e.state.x,dy=statue.y-e.state.y;
+                    if(Math.abs(dx)+Math.abs(dy)===1){
+                        const direction=dx<0?4:dx>0?6:dy<0?8:2;
+                        if(e.state.direction===direction)document.querySelector('#fnh-controls [data-direction="0"]').click();
+                        else document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();
+                    }else{
+                        const direction=e.map.findDirection(e.state,statue,80);
+                        if(direction)document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();
+                    }
+                    return false;
+                })()`,false,true);
+                if(!sacrificed)await sleep(180);
+            }
+            if(!sacrificed)throw new Error('Không hoàn tất tế lễ tại tượng: '+JSON.stringify(await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine;return {map:e.state.mapId,x:e.state.x,y:e.state.y,scene:e.state.scene,event:e.eventRunning,
+                    ritual:e.state.switchValue(2043),message:document.querySelector('#fnh-message-text').textContent,
+                    choices:[...document.querySelectorAll('#fnh-choices button')].map(button=>button.textContent),errors:FNHStandalonePreview.errors};
+            })()`,false,false)));
+            check('tế lễ tăng điểm Alll-Mer và thay trang tượng',await evalPage(cdp,`(async()=>{
+                const e=FNHStandalonePreview.engine;if(e.state.variableValue(37)!==window.__ritualBefore+1 || !e.state.switchValue(2042))return false;
+                await e.restore(e.save());return e.state.switchValue(2043) && e.state.variableValue(37)===window.__ritualBefore+1 &&
+                    e.map.eventPage(e.map.eventById(37)).conditions.switch1Id===2043 && e.state.party.includes(2);
+            })()`,true,false));
         }
         await cdp.send('Page.removeScriptToEvaluateOnNewDocument',{identifier:seeded.identifier});
         }

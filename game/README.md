@@ -69,6 +69,8 @@ cố định để loot ra chìa khóa trong hành trình kiểm thử.
 Sau đó cả đội đi qua cửa thật xuống Map128, xử lý trận phát sinh trên đường.
 Hành trình tiếp tục qua hành lang sang khu ngục kế tiếp theo layout của game.
 Tại đây cả đội gặp và thắng trận hai Priest qua sự kiện thật.
+Test tiếp tục tới tượng, chọn tế lễ và kiểm tra điểm Alll-Mer cùng trạng thái
+tượng sau lưu/tải.
 Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro.
 Mở `/standalone.html?title=1` để chạy luồng khởi động: sự kiện autorun Map072
