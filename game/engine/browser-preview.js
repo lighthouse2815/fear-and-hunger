@@ -5,6 +5,8 @@
     var titleFlow = query.get('title') === '1';
     var mapId = Number(query.get('map') || 74);
     var automaticEvents = titleFlow || query.get('events') === '1';
+    document.body.classList.toggle('fnh-gameplay', automaticEvents);
+    if (automaticEvents) document.querySelector('.fnh-stage').appendChild(document.getElementById('fnh-message'));
     var canvas = document.getElementById('fnh-canvas');
     var timer = document.getElementById('fnh-timer');
     var status = document.getElementById('fnh-status');
