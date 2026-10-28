@@ -173,6 +173,13 @@ chéo, bước lùi, route cưỡng chế, AI và follower/guest. Nhảy giữ q
 camera, đèn, balloon và animation bám vị trí hiển thị giữa hai ô. Lưu/tải giữ
 tiến độ chuyển động, menu/trận tạm dừng; lệnh đặt vị trí/chuyển map dọn đường
 di chuyển cũ. Follower tập hợp bằng lệnh 217 chờ hình đi hết bước cuối.
+Nhịp chân dùng tốc độ đi/chạy thực tế, tăng bộ đếm 1,5 mỗi frame đang đi và
+trở về hình đứng theo nhịp gốc. Giữ phím nối bước ngay sau khi xử lý ô đích,
+không chờ thêm một lượt vẽ. Đồng hồ mô phỏng chạy 60 tick/giây, giữ phần thời
+gian dư giữa các lần vẽ để tránh khựng mỗi ô. Nhịp chân được giữ qua lưu/tải.
+`node tests/standalone-walk-animation.js` đối chiếu từng frame với runtime gốc;
+`FNH_BROWSER_SCOPE=movement npm run test:browser` kiểm tra giữ/thả phím, đổi hướng
+và nối bước ở lịch vẽ 30/60/120Hz.
 Lệnh cuộn bản đồ 204 điều khiển camera theo hướng, khoảng cách và tốc độ trong JSON.
 Camera cuộn theo frame, giữ tiến trình qua save, dừng ở mép map và tiếp tục theo
 nhân vật khi di chuyển. Hai lệnh cuộn nối tiếp chạy lần lượt; cờ chờ giữ event

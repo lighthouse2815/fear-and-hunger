@@ -317,13 +317,14 @@
         var motion = this.state && this.state.motion;
         var walked = motion && motion.walk && motion.x === this.state.x && motion.y === this.state.y && this.state.moveFrames <= frames;
         var state = this.state, followers = state ? state.followers() : [];
+        var playerSpeed = this.map && state ? 8 - Math.log2(this.playerStepFrames()) : 4;
         followers.forEach(function (entry) {
-            entry.walkAnime = state.walkAnime; entry.stepAnime = state.stepAnime; entry.moveSpeed = state.moveSpeed;
+            entry.walkAnime = state.walkAnime; entry.stepAnime = state.stepAnime; entry.moveSpeed = playerSpeed;
         });
         if (this.map && this.state) [this.state].concat(this.map.events, followers).forEach(function (character) {
-            if (character.stepAnime || (character.moveFrames > 0 && character.walkAnime !== false)) {
-                character.animationFrames = (character.animationFrames || 0) + frames;
-            } else character.animationFrames = 0;
+            var speed = character === state && !(character.motion && !character.motion.walk) ? playerSpeed :
+                character.moveSpeed == null ? 4 : character.moveSpeed;
+            movementApi.advanceAnimation(character, frames, speed);
             character.moveFrames = Math.max(0, (character.moveFrames || 0) - frames);
             if (!character.moveFrames) delete character.motion;
             if (character.balloon) character.balloon.remaining = Math.max(0, character.balloon.remaining - frames);

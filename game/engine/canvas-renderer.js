@@ -600,9 +600,8 @@
     };
 
     function animationPattern(character, restingPattern) {
-        if (!character.animationFrames) return restingPattern;
-        var interval = Math.max(1, (9 - (character.moveSpeed == null ? 4 : character.moveSpeed)) * 3);
-        return [0, 1, 2, 1][Math.floor(character.animationFrames / interval) % 4];
+        var pattern = character.walkAnimation ? character.walkAnimation.pattern : restingPattern;
+        return pattern < 3 ? pattern : 1;
     }
 
     CanvasRenderer.prototype.applyTone = function (context, width, height, tone) {

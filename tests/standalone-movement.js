@@ -6,6 +6,7 @@ const path = require('node:path');
 const { GameEngine } = require('../game/engine/game-engine');
 const { validateRoute } = require('../game/engine/movement-runtime');
 const database = { Actors: require('../game/data/Actors.json'), Classes: require('../game/data/Classes.json'),
+    Weapons: require('../game/data/Weapons.json'), Armors: require('../game/data/Armors.json'), States: require('../game/data/States.json'),
     Tilesets: [null, { flags: [16, 0] }], System: {} };
 
 async function create() {

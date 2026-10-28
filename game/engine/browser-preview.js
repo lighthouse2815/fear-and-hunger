@@ -743,9 +743,11 @@
         settings: settings, updateVolume: updateVolume, gameplay: automaticEvents, input: inputName, windowBackground: windowBackground, renderer: renderer,
         clearInput: clearInput
     });
-    var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;
-    function animate(now) {
-        var frames = Math.min(6, Math.max(0, (now - previousFrame) * 60 / 1000));
+    var previousFrame = performance.now(), frameRemainder = 0, drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;
+    async function animate(now) {
+        frameRemainder = Math.min(6, frameRemainder + Math.max(0, (now - previousFrame) * 60 / 1000));
+        var frames = Math.floor(frameRemainder + 1e-9);
+        frameRemainder = Math.max(0, frameRemainder - frames);
         previousFrame = now;
         if (ready) {
             try {
@@ -765,15 +767,21 @@
                 });
                 var active = engine.state.scene === 'battle' || sceneChanged || !!scheduler || engine.autonomousEnabled || screenRevision !== engine.screen.revision || engine.screen.active() ||
                     lightingRevision !== engine.lighting.revision || engine.lighting.active(engine.map) || engine.movement.jobs.size > 0 || [engine.state].concat(engine.map.events, engine.state.followers()).some(function (character) {
-                    return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0);
+                    var pattern = character.walkAnimation && character.walkAnimation.pattern;
+                    return character.stepAnime || character.moveFrames > 0 || (character.balloon && character.balloon.remaining > 0) ||
+                        pattern != null && (pattern < 3 ? pattern : 1) !== (character.pattern == null ? 1 : character.pattern);
                 });
                 active = active || filterRevision !== engine.filters.revision || engine.filters.active();
                 active = active || engine.animations.entries.length > 0 || animationRevision !== engine.animations.revision ||
                     !!(engine.state.regionCover && engine.state.regionCover.enabled);
-                engine.advanceRoutes(frames);
+                for (var tick = 0; tick < frames; tick++) {
+                    engine.advanceRoutes(1);
+                    // Hoàn tất tween và nối bước đang giữ trước tick kế tiếp.
+                    await Promise.resolve();
+                    await Promise.resolve();
+                }
                 renderTimer();
-                var heldDirection = engine.buttons.has('down') ? 2 : engine.buttons.has('left') ? 4 :
-                    engine.buttons.has('right') ? 6 : engine.buttons.has('up') ? 8 : 0;
+                var heldDirection = movementDirection();
                 if (heldDirection && !pictureInput() && !engine.messageRunning && !engine.eventRunning &&
                     !(engine.state.moveFrames > 0) && !engine.movement.jobs.has(engine.state)) {
                     perform(function () { return step(heldDirection); });
@@ -806,10 +814,17 @@
         await engine.interact(eventHandlers);
         await draw();
     }
+    function movementDirection() {
+        return engine.buttons.has('down') ? 2 : engine.buttons.has('left') ? 4 :
+            engine.buttons.has('right') ? 6 : engine.buttons.has('up') ? 8 : 0;
+    }
     async function step(direction) {
         if (engine.state.scene !== 'map') return;
         if (engine.state.moveFrames > 0) await engine.screen.tween([], {}, engine.state.moveFrames);
-        await engine.step(direction, eventHandlers);
+        do {
+            var moved = await engine.step(direction, eventHandlers);
+            direction = movementDirection();
+        } while (moved && direction && engine.state.scene === 'map' && !pictureInput() && !engine.messageRunning && !engine.eventRunning && !commonKeys.size);
         await draw();
     }
     document.addEventListener('pointerdown', function () { audio.unlock(); });

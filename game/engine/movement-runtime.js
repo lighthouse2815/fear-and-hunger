@@ -18,6 +18,29 @@
         character.motion = { fromX: from.x, fromY: from.y, x: character.x, y: character.y, frames: frames, jumpPeak: jumpPeak || 0 };
     }
 
+    function advanceAnimation(character, frames, speed) {
+        var original = character.pattern == null ? 1 : character.pattern;
+        var animation = character.walkAnimation || (character.walkAnimation = { pattern: original, count: 0, remainder: 0 });
+        var remainder = animation.remainder, ticks = Math.floor(remainder + frames + 1e-9);
+        animation.remainder = Math.max(0, remainder + frames - ticks);
+        var wait = Math.max(1, (9 - speed) * 3), remaining = character.moveFrames || 0;
+        var wasMoving = remainder ? animation.moving : remaining > 0;
+        for (var tick = 0; tick < ticks; tick++) {
+            var until = 1 - remainder + tick;
+            var moving = remaining - until > 1e-9;
+            var stopped = !wasMoving;
+            var pattern = animation.pattern < 3 ? animation.pattern : 1;
+            if (moving && character.walkAnime !== false) animation.count += 1.5;
+            else if (character.stepAnime || pattern !== original) animation.count++;
+            if (animation.count >= wait) {
+                animation.pattern = stopped && !character.stepAnime ? original : (animation.pattern + 1) % 4;
+                animation.count = 0;
+            }
+            wasMoving = moving;
+        }
+        animation.moving = wasMoving;
+    }
+
     function validateRoute(route) {
         if (!route || !Array.isArray(route.list)) throw new TypeError('Movement route cần danh sách lệnh.');
         for (var command of route.list) {
@@ -165,5 +188,5 @@
         return { frames: 0 };
     };
 
-    return { MovementRuntime: MovementRuntime, validateRoute: validateRoute, DELTAS: DELTAS, startMotion: startMotion };
+    return { MovementRuntime: MovementRuntime, validateRoute: validateRoute, DELTAS: DELTAS, startMotion: startMotion, advanceAnimation: advanceAnimation };
 }));

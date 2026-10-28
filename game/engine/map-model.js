@@ -177,6 +177,7 @@
                 var page = event.pages[i];
                 if (event.activePage !== page) {
                     event.activePage = page;
+                    delete event.walkAnimation;
                     Object.assign(event, page.image, { directionFixed: !!page.directionFix,
                         through: !!page.through, priorityType: page.priorityType,
                         walkAnime: page.walkAnime, stepAnime: page.stepAnime,
@@ -236,7 +237,7 @@
             var page = map.eventPage(event), properties = {};
             ['x', 'y', 'direction', 'pattern', 'characterName', 'characterIndex', 'tileId', 'moveSpeed',
                 'moveFrequency', 'directionFixed', 'through', 'transparent', 'opacity', 'blendMode',
-                'walkAnime', 'stepAnime', 'chaseRange', 'seePlayer', 'alertSound', 'moveFrames', 'motion', 'animationFrames', 'erased', 'autonomous', 'balloon'].forEach(function (key) {
+                'walkAnime', 'stepAnime', 'chaseRange', 'seePlayer', 'alertSound', 'moveFrames', 'motion', 'animationFrames', 'walkAnimation', 'erased', 'autonomous', 'balloon'].forEach(function (key) {
                 if (event[key] !== undefined) properties[key] = event[key];
             });
             snapshot[event.id] = { mapId: map.id, pageIndex: event.pages.indexOf(page), properties: properties };

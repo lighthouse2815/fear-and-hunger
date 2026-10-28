@@ -76,7 +76,7 @@
         this.dashEnabled = source.dashEnabled !== false;
         this.alwaysDash = source.alwaysDash !== false;
         this.pendingChoices = source.pendingChoices || { text: {}, disabled: [] };
-        ['characterName', 'characterIndex', 'transparent', 'opacity', 'blendMode', 'moveSpeed', 'moveFrequency', 'walkAnime', 'stepAnime', 'moveFrames', 'motion', 'animationFrames', 'balloon'].forEach(function (key) {
+        ['characterName', 'characterIndex', 'transparent', 'opacity', 'blendMode', 'moveSpeed', 'moveFrequency', 'walkAnime', 'stepAnime', 'moveFrames', 'motion', 'animationFrames', 'walkAnimation', 'balloon'].forEach(function (key) {
             if (source[key] !== undefined) this[key] = source[key];
         }, this);
         this.eventLocations = Object.assign({}, source.eventLocations);
@@ -373,7 +373,7 @@
             transparent: this.transparent, opacity: this.opacity, blendMode: this.blendMode,
             moveSpeed: this.moveSpeed, moveFrequency: this.moveFrequency, walkAnime: this.walkAnime, stepAnime: this.stepAnime,
             balloon: this.balloon,
-            moveFrames: this.moveFrames, motion: this.motion, animationFrames: this.animationFrames,
+            moveFrames: this.moveFrames, motion: this.motion, animationFrames: this.animationFrames, walkAnimation: this.walkAnimation,
             eventLocations: this.eventLocations,
             gold: this.gold,
             party: this.party,

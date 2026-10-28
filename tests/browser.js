@@ -393,6 +393,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if (process.env.FNH_BROWSER_SCOPE === 'movement') {
+            await require('./browser-movement')({cdp,url:running.url,evalPage,waitFor,clickElement,check,screenshot});
+            check('không có lỗi runtime khi di chuyển',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất '+passed+' kiểm tra chuyển động.');return;
+        }
         if(process.env.FNH_BROWSER_SCOPE==='save') {
             await require('./browser-save')({cdp,url:running.url,evalPage,waitFor,clickElement,check,screenshot});
             check('không có lỗi runtime ở màn lưu tải',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
