@@ -3925,6 +3925,43 @@ async function main() {
                 const e=FNHStandalonePreview.engine,expected={1:3,2:31,3:53}[e.state.variableValue(123)];
                 return e.state.mapId===expected && e.state.party.includes(2) && e.state.followers().some(f=>f.id===2) && FNHStandalonePreview.errors.length===0;
             })()`,false,false));
+            let defeatedPriests=false,metPriests=false;
+            for(let step=0;step<550 && !defeatedPriests;step++){
+                const progress=await evalPage(cdp,`(()=>{
+                    const e=FNHStandalonePreview.engine,battle=e.battle.battle;
+                    if(battle && battle.troopId===12 && e.state.scene==='battle')window.__metPriests=true;
+                    if(window.__metPriests && battle && battle.troopId===12 && battle.result==='victory' && e.state.scene==='map' && !e.eventRunning)return 2;
+                    const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
+                    const buttons=[...document.querySelectorAll('#fnh-choices button:not(:disabled)')];
+                    const choice=buttons.find(button=>button.textContent==='Attack him') || buttons[0];if(choice)choice.click();
+                    if(e.state.scene==='battle' && battle.phase==='input'){
+                        const target=document.querySelector('#fnh-battle-targets button:not(:disabled)');if(target)target.click();
+                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
+                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
+                    }
+                    if(e.state.scene!=='map' || e.eventRunning || window.__metPriests)return window.__metPriests?1:0;
+                    const priest=e.map.eventById(16),dx=priest.x-e.state.x,dy=priest.y-e.state.y;
+                    if(Math.abs(dx)+Math.abs(dy)===1){
+                        const direction=dx<0?4:dx>0?6:dy<0?8:2;
+                        if(e.state.direction===direction)document.querySelector('#fnh-controls [data-direction="0"]').click();
+                        else document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();
+                    }else{
+                        const direction=e.map.findDirection(e.state,priest,80);
+                        if(direction)document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();
+                    }
+                    return 0;
+                })()`,false,true);
+                metPriests=metPriests || progress>0;defeatedPriests=progress===2;
+                if(!defeatedPriests)await sleep(180);
+            }
+            if(!defeatedPriests)throw new Error('Không hoàn tất trận Priest: '+JSON.stringify(await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine,b=e.battle.battle;return {map:e.state.mapId,x:e.state.x,y:e.state.y,scene:e.state.scene,
+                    event:e.eventRunning,met:window.__metPriests,battle:b&&{troop:b.troopId,phase:b.phase,result:b.result,actions:b.inputActions},
+                    party:e.state.party,message:document.querySelector('#fnh-message-text').textContent,
+                    choices:[...document.querySelectorAll('#fnh-choices button')].map(button=>button.textContent),errors:FNHStandalonePreview.errors};
+            })()`,false,false)));
+            check('gặp và thắng hai Priest cùng Girl trong hành trình thật',metPriests && await evalPage(cdp,
+                'FNHStandalonePreview.engine.state.party.includes(2) && FNHStandalonePreview.engine.battle.battle.troopId===12 && FNHStandalonePreview.errors.length===0',false,false));
         }
         await cdp.send('Page.removeScriptToEvaluateOnNewDocument',{identifier:seeded.identifier});
         }
