@@ -279,6 +279,13 @@
             this.enemyEffectWaiters.forEach(function (track) { this.screen.finish(track); },this);
         }
         if (this.state && ['gameover', 'title', 'menu', 'save'].includes(this.state.scene)) return;
+        if (this.state && this.state.timer.active && this.state.timer.frames > 0) {
+            this.state.timer.frames = Math.max(0, this.state.timer.frames - frames);
+            if (this.state.timer.frames === 0 && this.state.scene === 'battle' && this.battle.battle && !this.battle.battle.result) {
+                if (this.battle.eventRunning) this.battle.pendingResult = 'escape';
+                else this.battle.finish('escape');
+            }
+        }
         if (this.state && this.state.scene === 'battle') {
             if (this.routeErrors.length) throw this.routeErrors.shift();
             this.battle.battle.enemies.forEach(function (enemy) {
@@ -313,7 +320,6 @@
         followers.forEach(function (entry) {
             entry.walkAnime = state.walkAnime; entry.stepAnime = state.stepAnime; entry.moveSpeed = state.moveSpeed;
         });
-        if (this.state && this.state.timer.active) this.state.timer.frames = Math.max(0, this.state.timer.frames - frames);
         if (this.map && this.state) [this.state].concat(this.map.events, followers).forEach(function (character) {
             if (character.stepAnime || (character.moveFrames > 0 && character.walkAnime !== false)) {
                 character.animationFrames = (character.animationFrames || 0) + frames;

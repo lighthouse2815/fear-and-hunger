@@ -70,6 +70,19 @@ const { GameDataStore } = require('../game/engine/data-store');
     const ending = engine.battle.wait(); await run(340, []); assert.equal(await ending, 'escape');
     await assert.rejects(run(331, [0, 1, 0, 10, true]), /không hoạt động/);
 
+    reset(); engine.state.scene = 'battle'; engine.state.timer = { active: true, frames: 12 };
+    engine.advanceRoutes(5); assert.equal(engine.state.timer.frames, 7);
+    const timeout = engine.battle.wait(); engine.advanceRoutes(7);
+    assert.equal(await timeout, 'escape', 'hết giờ trả nhánh thoát ngay cả khi không cho chạy');
+    assert.equal(engine.state.timer.frames, 0); assert.equal(engine.state.timer.active, true);
+    reset(); engine.battle.battle.canEscape = false; engine.state.timer = { active: true, frames: 1 };
+    engine.battle.eventRunning = true; engine.advanceRoutes(2);
+    assert.equal(engine.battle.pendingResult, 'escape', 'chờ trang troop đang chạy');
+    assert.equal(engine.battle.battle.result, null);
+    engine.battle.eventRunning = false; engine.battle.finish(engine.battle.pendingResult); engine.battle.pendingResult = null;
+    engine.state.scene = 'map'; engine.state.timer = { active: true, frames: 5 };
+    engine.advanceRoutes(8); assert.equal(engine.state.timer.frames, 0, 'hết giờ trên map không tự kết thúc scene');
+
     let count = 0;
     for (const troop of engine.database.Troops.filter(Boolean)) for (const page of troop.pages) for (const command of page.list) {
         if (![331, 332, 333, 334, 335, 336, 340, 342].includes(command.code)) continue;
