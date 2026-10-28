@@ -79,8 +79,11 @@ Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 Mở `/standalone.html?title=1` để chạy luồng khởi động: sự kiện autorun Map072
 chờ/hiện/fade ảnh `splash_screen1`, rồi lệnh 354 mở tiêu đề. Gameplay bị khóa
 trong splash; title cho chơi mới từ Map010 hoặc tải một trong 20 ô lưu độc lập.
-Về title trong cùng phiên không phát splash lại. Trạng thái chơi mới đọc cờ ẩn
-nhân vật từ System.json; preview có trạng thái chỉ định vẫn giữ cờ riêng.
+Về title trong cùng phiên không phát splash lại.
+Menu tiêu đề dùng hai lệnh New Game/Continue như Izy_RemoveOption của game gốc;
+Continue mở màn chọn ô lưu riêng và bị khóa nếu chưa có save. Khung 240×108
+đặt tại (288,420) trong vùng 816×624, vẽ viền từ Window.png và co theo màn hình.
+Trạng thái chơi mới đọc cờ ẩn nhân vật từ System.json; preview có trạng thái chỉ định vẫn giữ cờ riêng.
 Luồng chơi có `events=1` hoặc `title=1` dùng menu theo cấu hình gốc: ẩn bạc,
 không hiện Formation hoặc lệnh lưu tự do, ẩn nút lưu/tải nhanh ngoài khung game.
 Danh sách lệnh theo thứ tự Vật phẩm, Trang bị, Chế tạo, Kỹ năng, Tùy chọn,

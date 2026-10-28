@@ -51,6 +51,17 @@
         #fnh-end-actions button:hover, #fnh-end-actions button:focus-visible { background: #ffffff26; }
         #fnh-end-actions label { display: block; font-size: .7em; }
         #fnh-end-title { margin: 0 0 8px; font: inherit; text-shadow: 1px 1px #000; }
+        #fnh-end-screen { container-type: inline-size; }
+        #fnh-end-screen[data-scene='title'] #fnh-end-actions { width: 29.4118%; height: 17.3077%; bottom: 15.3846%; padding: 2.2059cqw; background: #000b; border: 0; box-shadow: none; color: white; font: 3.4314cqw/4.4118cqw GameFont, serif; text-shadow: 1px 1px 2px #000, -1px -1px 2px #000; }
+        #fnh-title-frame { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent; pointer-events: none; }
+        #fnh-end-screen[data-scene='title'] #fnh-end-actions > button { height: 4.4118cqw; padding: 0 .49cqw; text-align: left; outline: none; color: inherit; text-shadow: inherit; }
+        #fnh-end-actions > button:focus-visible { outline: 1px solid #ded3bb; }
+        #fnh-end-screen[data-scene='title'] #fnh-end-actions > button[data-selected='true'], #fnh-end-screen[data-scene='title'] #fnh-end-actions > button:hover { background: #b99aaa59; box-shadow: inset 0 0 0 1px #eee8; }
+        #fnh-end-screen [hidden], #fnh-end-actions button[hidden] { display: none; }
+        #fnh-end-save-panel { position: absolute; inset: 12% 10%; padding: 24px; background: #080808f5; border: 1px solid #a9a49a; font: clamp(16px, 3vw, 26px) GameFont, serif; }
+        #fnh-end-save-panel select { display: block; width: 100%; margin: 20px 0; font: inherit; }
+        #fnh-end-save-panel button { font: inherit; }
+        #fnh-end-error { color: #f1b4a4; }
         #fnh-menu-dialog { box-sizing: border-box; width: min(816px, 96vw); max-height: 90vh; overflow: auto; padding: 16px; background: #10100feb; border: 2px solid #88877d; box-shadow: inset 0 0 0 2px #343431; font-family: GameFont, serif; }
         #fnh-menu-dialog[open] { display: grid; grid-template-columns: minmax(100px, 140px) minmax(0, 1fr); grid-template-areas: 'title close' 'actor select' 'nav message' 'nav content'; gap: 8px 16px; align-items: start; }
         #fnh-menu-title { grid-area: title; margin: 0; }
@@ -125,11 +136,17 @@
             <img id="fnh-end-background" alt="">
             <img id="fnh-end-overlay" alt="" hidden>
             <div id="fnh-end-actions">
+                <canvas id="fnh-title-frame" width="240" height="108" aria-hidden="true" hidden></canvas>
                 <h2 id="fnh-end-title"></h2>
                 <button id="fnh-new-game" type="button">Chơi mới</button>
+                <button id="fnh-continue" type="button">Continue</button>
+            </div>
+            <section id="fnh-end-save-panel" hidden aria-label="Load game">
                 <label for="fnh-end-save-slot">Ô lưu</label><select id="fnh-end-save-slot"></select>
                 <button id="fnh-end-load" type="button">Tải ô 1</button>
-            </div>
+                <button id="fnh-end-save-back" type="button">Cancel</button>
+                <p id="fnh-end-error" role="status"></p>
+            </section>
         </section>
     </div>
     <dialog id="fnh-name-dialog">

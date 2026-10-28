@@ -224,10 +224,20 @@
         if (!visible) { endScene = null; return; }
         if (endScene === scene) return;
         endScene = scene;
+        panel.dataset.scene = scene;
+        document.getElementById('fnh-title-frame').hidden = scene !== 'title';
+        document.getElementById('fnh-end-save-panel').hidden = true;
+        document.getElementById('fnh-end-actions').hidden = false;
         var slots = document.getElementById('fnh-end-save-slot');
         FNHStandaloneMenu.fillSaveSlots(slots, saveStore, Number(slots.value) || 1);
         document.getElementById('fnh-end-load').textContent = 'Tải ô ' + slots.value;
         var system = engine.database.System;
+        document.getElementById('fnh-new-game').textContent = system.terms.commands[18];
+        var continueButton = document.getElementById('fnh-continue');
+        continueButton.textContent = system.terms.commands[19];
+        continueButton.disabled = scene === 'title' && !Array.from({ length: 20 }, function (_, index) { return index + 1; }).some(function (slot) { return saveStore.exists(slot); });
+        document.getElementById('fnh-new-game').dataset.selected = String(continueButton.disabled || scene !== 'title');
+        continueButton.dataset.selected = String(!continueButton.disabled && scene === 'title');
         var background = document.getElementById('fnh-end-background');
         var overlay = document.getElementById('fnh-end-overlay');
         var title = document.getElementById('fnh-end-title');
@@ -244,7 +254,7 @@
         if (scene === 'title') audio.play('bgm', system.titleBgm);
         else if (system.gameoverMe.name) audio.play('me', system.gameoverMe);
         panel.scrollIntoView({ block: 'nearest', behavior: 'instant' });
-        document.getElementById('fnh-new-game').focus({ preventScroll: true });
+        document.getElementById(scene === 'title' && !continueButton.disabled ? 'fnh-continue' : 'fnh-new-game').focus({ preventScroll: true });
     }
     async function draw() {
         syncBattleAudio();
@@ -661,7 +671,10 @@
     document.addEventListener('visibilitychange', function () { if (document.hidden) clearInput(); });
     document.addEventListener('keydown', function (event) {
         audio.unlock();
-        if (presentationInput()) return;
+        if (presentationInput()) {
+            if (engine.state.scene === 'title' && !document.getElementById('fnh-end-screen').contains(event.target)) handleEndKey(event);
+            return;
+        }
         if (document.querySelector('dialog[open]')) return;
         var buttonName = inputName(event.key);
         if (buttonName === 'cancel' && engine.state && engine.state.scene === 'map' &&
@@ -807,10 +820,45 @@
     document.getElementById('fnh-end-load').addEventListener('click', function () {
         perform(async function () {
             var slot = Number(document.getElementById('fnh-end-save-slot').value);
-            if (!await engine.loadFrom(saveStore, slot, eventHandlers)) { setStatus('Ô ' + slot + ' chưa có dữ liệu lưu.'); return; }
+            try {
+                if (!await engine.loadFrom(saveStore, slot, eventHandlers)) {
+                    var empty = 'Ô ' + slot + ' chưa có dữ liệu lưu.';
+                    setStatus(empty); document.getElementById('fnh-end-error').textContent = empty; return;
+                }
+            } catch (error) { document.getElementById('fnh-end-error').textContent = error.message; throw error; }
             await draw();
         });
     });
+    document.getElementById('fnh-continue').addEventListener('click', function () {
+        document.getElementById('fnh-end-actions').hidden = true;
+        document.getElementById('fnh-end-save-panel').hidden = false;
+        document.getElementById('fnh-end-error').textContent = '';
+        document.getElementById('fnh-end-save-slot').focus();
+    });
+    document.querySelectorAll('#fnh-end-actions > button').forEach(function (button) {
+        button.addEventListener('focus', function () {
+            document.querySelectorAll('#fnh-end-actions > button').forEach(function (other) { other.dataset.selected = String(other === button); });
+        });
+    });
+    document.getElementById('fnh-end-save-back').addEventListener('click', function () {
+        document.getElementById('fnh-end-save-panel').hidden = true;
+        document.getElementById('fnh-end-actions').hidden = false;
+        document.getElementById('fnh-continue').focus();
+    });
+    function handleEndKey(event) {
+        var action = inputName(event.key);
+        if (action === 'cancel' && !document.getElementById('fnh-end-save-panel').hidden) document.getElementById('fnh-end-save-back').click();
+        else if (!document.getElementById('fnh-end-actions').hidden && ['up', 'down'].includes(action)) {
+            var buttons = Array.from(document.querySelectorAll('#fnh-end-actions > button:enabled'));
+            var index = buttons.findIndex(function (button) { return button.dataset.selected === 'true'; });
+            buttons[(index + (action === 'up' ? -1 : 1) + buttons.length) % buttons.length].focus();
+        } else if (action === 'ok' && !document.getElementById('fnh-end-actions').hidden) {
+            if (!event.repeat) document.querySelector('#fnh-end-actions > button[data-selected="true"]').click();
+        } else if (action === 'ok' && document.activeElement.tagName === 'BUTTON') { if (!event.repeat) document.activeElement.click(); }
+        else return;
+        event.preventDefault(); event.stopPropagation();
+    }
+    document.getElementById('fnh-end-screen').addEventListener('keydown', handleEndKey);
     document.getElementById('fnh-end-save-slot').addEventListener('change', function (event) {
         document.getElementById('fnh-end-load').textContent = 'Tải ô ' + event.target.value;
     });
@@ -826,6 +874,13 @@
     (async function () {
         try {
             var skin = await renderer.loadImage('img/system/Window.png');
+            var frame = document.getElementById('fnh-title-frame').getContext('2d');
+            [[24,0,48,24,24,0,192,24],[24,72,48,24,24,84,192,24],
+                [0,24,24,48,0,24,24,60],[72,24,24,48,216,24,24,60],
+                [0,0,24,24,0,0,24,24],[72,0,24,24,216,0,24,24],
+                [0,72,24,24,0,84,24,24],[72,72,24,24,216,84,24,24]].forEach(function (part) {
+                frame.drawImage(skin, part[0] + 96, part[1], part[2], part[3], part[4], part[5], part[6], part[7]);
+            });
             var palette = document.createElement('canvas');
             palette.width = skin.width; palette.height = skin.height;
             var context = palette.getContext('2d'); context.drawImage(skin, 0, 0);

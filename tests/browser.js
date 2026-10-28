@@ -3065,6 +3065,7 @@ async function main() {
         })()`,true,false);
         await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="title" && !document.querySelector("#fnh-end-screen").hidden',5000,'về title trước khi tải save âm thanh');
         await evalPage(cdp,'document.querySelector("#fnh-end-save-slot").value=19',false,false);
+        if (await evalPage(cdp,'document.querySelector("#fnh-end-save-panel").hidden',false,false)) await clickElement(cdp,'#fnh-continue');
         await clickElement(cdp,'#fnh-end-load');
         await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="map" && FNHStandalonePreview.audio.buffers.bgm && !FNHStandalonePreview.audio.buffers.bgm.paused && FNHStandalonePreview.audio.buffers.bgs && !FNHStandalonePreview.audio.buffers.bgs.paused',
             10000,'tải từ title phát lại BGM và BGS đã lưu');
@@ -3086,6 +3087,7 @@ async function main() {
         })()`,true,false);
         await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="title" && !document.querySelector("#fnh-end-screen").hidden',5000,'title phát nhạc trước tải save im lặng');
         await evalPage(cdp,'document.querySelector("#fnh-end-save-slot").value=19',false,false);
+        if (await evalPage(cdp,'document.querySelector("#fnh-end-save-panel").hidden',false,false)) await clickElement(cdp,'#fnh-continue');
         await clickElement(cdp,'#fnh-end-load');
         await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="map" && document.querySelector("#fnh-end-screen").hidden',5000,'tải save im lặng từ title');
         check('save im lặng dừng nhạc title, không phát autoplay đè snapshot',await evalPage(cdp,
@@ -3112,6 +3114,7 @@ async function main() {
         await evalPage(cdp, `(() => {
             const slots = document.querySelector('#fnh-end-save-slot'); slots.value = 20; slots.dispatchEvent(new Event('change'));
         })()`, false, false);
+        if (await evalPage(cdp,'document.querySelector("#fnh-end-save-panel").hidden',false,false)) await clickElement(cdp,'#fnh-continue');
         await clickElement(cdp, '#fnh-end-load');
         await waitFor(cdp, 'FNHStandalonePreview.engine.state.scene === "map" && document.querySelector("#fnh-end-screen").hidden',
             5000, 'tải save từ màn game over');
@@ -3121,6 +3124,7 @@ async function main() {
             localStorage.removeItem('FNH_STANDALONE_PREVIEW:20'); localStorage.removeItem('FNH_STANDALONE_PREVIEW:1');
             FNHStandalonePreview.engine.createInterpreter([{ code: 353 }], 0).run()`, true, false);
         await waitFor(cdp, '!document.querySelector("#fnh-end-screen").hidden', 5000, 'game over lần hai');
+        if (await evalPage(cdp,'document.querySelector("#fnh-end-save-panel").hidden',false,false)) await clickElement(cdp,'#fnh-continue');
         await clickElement(cdp, '#fnh-end-load');
         await waitFor(cdp, 'document.querySelector("#fnh-status").textContent.includes("chưa có dữ liệu")', 5000, 'báo ô lưu trống');
         check('ô lưu trống giữ màn game over hoạt động', await evalPage(cdp,
@@ -3134,6 +3138,12 @@ async function main() {
             'document.querySelector("#fnh-end-title").textContent === FNHStandalonePreview.engine.database.System.gameTitle && document.querySelector("#fnh-new-game").getBoundingClientRect().width > 0', false, false));
         check('tiêu đề tôn trọng cấu hình không vẽ tên chồng lên ảnh', await evalPage(cdp,
             '!FNHStandalonePreview.engine.database.System.optDrawTitle && document.querySelector("#fnh-end-title").hidden && document.querySelector("#fnh-end-actions").getBoundingClientRect().width > 0', false, false));
+        check('tiêu đề giữ hai lệnh và tách màn tải theo bản gốc', await evalPage(cdp,`(()=>{
+            const panel=document.querySelector('#fnh-end-actions'),rect=panel.getBoundingClientRect(),stage=document.querySelector('.fnh-stage').getBoundingClientRect();
+            return Array.from(panel.querySelectorAll('button')).map(button=>button.textContent).join(',')==='New Game,Continue' &&
+                document.querySelector('#fnh-end-save-panel').hidden && Math.abs(rect.width/stage.width*816-240)<1 &&
+                Math.abs(rect.height/stage.height*624-108)<1 && !document.querySelector('#fnh-title-frame').hidden;
+        })()`,false,false));
         await evalPage(cdp, `(() => {
             const state=new FNHStandaloneState.GameState({mapId:74,x:8,y:8,direction:8,party:[1],switches:{246:true},variables:{121:1,8235:72}},FNHStandalonePreview.engine.database);
             state.actor(1);const snapshot=state.toJSON();
@@ -3162,6 +3172,7 @@ async function main() {
         check('pre-title kết thúc sạch và không nạp runtime/plugin cũ',await evalPage(cdp,
             'FNHStandalonePreview.engine.state.screen.pictures[1].opacity===0 && !FNHStandalonePreview.scheduler.autorun && FNHStandalonePreview.scheduler.parallel.size===0 && !window.SceneManager && !performance.getEntriesByType("resource").some(entry=>/\\/js\\/rpg_|\\/js\\/plugins|\\/__fnh\\//.test(entry.name))',false,false));
         await evalPage(cdp,'document.querySelector("#fnh-end-save-slot").value=20',false,false);
+        if (await evalPage(cdp,'document.querySelector("#fnh-end-save-panel").hidden',false,false)) await clickElement(cdp,'#fnh-continue');
         await clickElement(cdp,'#fnh-end-load');
         await waitFor(cdp,'FNHStandalonePreview.engine.state.mapId===74 && FNHStandalonePreview.engine.state.scene==="map" && document.querySelector("#fnh-end-screen").hidden',
             10000,'tiếp tục ô lưu từ title sau splash');
