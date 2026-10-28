@@ -26,7 +26,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 ## Đã đối chiếu
 
 - Ô thoại chính dùng Window.png và chân dung faces, khung bốn dòng, nền/vị trí
-  từ lệnh 101, dấu chờ thay nút chữ và phân trang khi vượt khung; Z/Enter/X/chạm
+  từ lệnh 101 (vị trí luôn dưới đáy như trang đối chiếu), dấu chờ thay nút chữ
+  và phân trang khi vượt khung; Z/Enter/X/chạm
   đọc tiếp. Các lựa chọn thường dùng khung dọc, vị trí JSON và trợ giúp riêng,
   không chèn thêm mục hủy. Chrome riêng `FNH_BROWSER_SCOPE=dialogue` kiểm tra
   nguồn/build, phân trang, nền tối/trong suốt, hủy sự kiện, thoại trong trận

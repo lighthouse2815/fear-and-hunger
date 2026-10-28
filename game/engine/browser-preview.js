@@ -306,7 +306,7 @@
         panel.dataset.open = 'true'; panel.dataset.background = String(messageConfig[2] || 0);
         panel.dataset.wrap = String(!!engine.state.wordWrap);
         panel.dataset.face = String(!!messageConfig[0]);
-        panel.style.top = ((messageConfig[3] == null ? 2 : messageConfig[3]) * 222 / 624 * 100) + '%'; panel.style.bottom = 'auto';
+        panel.style.top = 'auto'; panel.style.bottom = '0';
         windowBackground(panel,816,180);
         face.style.backgroundImage = messageConfig[0] ? 'url("./img/faces/' + encodeURIComponent(messageConfig[0]) + '.png")' : 'none';
         face.style.backgroundPosition = (messageConfig[1] % 4 * 100 / 3) + '% ' + Math.floor(messageConfig[1] / 4) * 100 + '%';
@@ -389,7 +389,7 @@
                 var width = Math.min(816, Math.max(96, Math.max.apply(null, choices.map(function (text) {
                     return measure.measureText(FNHStandaloneText.formatText(text,engine.state)).width;
                 }))) + 48);
-                var messageY = messageConfig ? (messageConfig[3] == null ? 2 : messageConfig[3]) * 222 : 624;
+                var messageY = messageConfig ? 444 : 624;
                 var rows = Math.min(choices.length, messageY < 312 && messageY + 180 > 312 ? 4 : 8), height = rows * 36 + 36;
                 choicesPanel.style.width = width / 816 * 100 + '%';
                 choicesPanel.style.height = height / 624 * 100 + '%';

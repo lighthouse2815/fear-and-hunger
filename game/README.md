@@ -83,8 +83,9 @@ Intro phát liền trong khung game, ẩn điều khiển video và không bật
 Màn chọn độ khó dùng ba khung theo game gốc: trợ giúp trên cùng, danh sách
 ở giữa và mô tả phía dưới; chọn bằng phím hoặc chuột cập nhật mô tả từ JSON.
 Ô thoại chơi chính dùng viền Window.png, chân dung faces, chữ 28px/dòng 36px
-và khung bốn dòng co theo vùng game. Vị trí và nền thường/tối/trong suốt đọc
-lệnh 101; thoại dài chuyển trang, giữ màu/icon và khóa sự kiện đến khi đọc hết.
+và khung bốn dòng co theo vùng game. Thoại luôn nằm dưới đáy như trang đối chiếu;
+nền thường/tối/trong suốt đọc lệnh 101. Thoại dài chuyển trang, giữ màu/icon
+và khóa sự kiện đến khi đọc hết.
 Dấu chờ thay nút Tiếp tục; Z/Enter/X hoặc chạm khung để đọc tiếp. Các lựa chọn
 thường cũng có khung dọc riêng, trợ giúp phía trên và vị trí theo JSON, không
 thêm nút hủy ngoài nội dung game. Chạy `FNH_BROWSER_SCOPE=dialogue npm run test:browser`

@@ -12,10 +12,10 @@ module.exports = async function ({cdp,url,evalPage,waitFor,clickElement,check,sc
     await screenshot('dialogue-face');await clickElement(cdp,'#fnh-next');await waitFor(cdp,'window.dialogDone',5000,'đóng thoại');
     check('đóng thoại ẩn khung và trả điều khiển',await evalPage(cdp,'document.querySelector("#fnh-message").dataset.open==="false" && !FNHStandalonePreview.engine.messageRunning',false,false));
     await run(['',0,1,0],'Top dim message');
-    check('vị trí trên và nền tối đọc từ JSON',await evalPage(cdp,`(()=>{const p=document.querySelector('#fnh-message'),s=document.querySelector('.fnh-stage').getBoundingClientRect();return Math.abs(p.getBoundingClientRect().top-s.top)<1 && p.dataset.background==='1' && p.dataset.face==='false';})()`,false,false));
+    check('lệnh thoại phía trên vẫn đặt dưới đáy và giữ nền tối',await evalPage(cdp,`(()=>{const p=document.querySelector('#fnh-message'),s=document.querySelector('.fnh-stage').getBoundingClientRect();return Math.abs(p.getBoundingClientRect().bottom-s.bottom)<1 && p.dataset.background==='1' && p.dataset.face==='false';})()`,false,false));
     await clickElement(cdp,'#fnh-next');await waitFor(cdp,'window.dialogDone',5000,'đóng nền tối');
     await run(['',0,2,1],'Center transparent message');
-    check('vị trí giữa và nền trong suốt đọc từ JSON',await evalPage(cdp,`(()=>{const p=document.querySelector('#fnh-message'),s=document.querySelector('.fnh-stage').getBoundingClientRect();return Math.abs((p.getBoundingClientRect().top-s.top)/s.height*624-222)<1 && p.dataset.background==='2';})()`,false,false));
+    check('lệnh thoại giữa vẫn đặt dưới đáy và giữ nền trong suốt',await evalPage(cdp,`(()=>{const p=document.querySelector('#fnh-message'),s=document.querySelector('.fnh-stage').getBoundingClientRect();return Math.abs(p.getBoundingClientRect().bottom-s.bottom)<1 && p.dataset.background==='2';})()`,false,false));
     await clickElement(cdp,'#fnh-next');await waitFor(cdp,'window.dialogDone',5000,'đóng giữa');
     await run(['',0,0,2],'Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6');
     await clickElement(cdp,'#fnh-next');
