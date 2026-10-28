@@ -123,6 +123,11 @@ máy tính/điện thoại. Tùy chọn có các nhóm All/General/Audio/Control
 Remember nhớ lệnh chiến đấu cho từng nhân vật, Filter Effects bật/tắt hiển thị
 filter mà không xóa cấu hình hiệu ứng. Âm lượng và cấu hình phím giữ trong
 PlayerSettings của engine độc lập.
+Trang bị đọc cờ mất tay của từng nhân vật từ common event 240–242: mất một tay
+không dùng khiên hoặc vũ khí hai tay, mất cả hai tay không đeo lại vũ khí.
+Tối ưu và lưu/tải giữ các giới hạn này; vẫn được tháo đồ và dùng áo/phụ kiện.
+Attack tay không và phép vẫn dùng được nếu trạng thái nhân vật cho phép.
+Kiểm tra riêng cơ chế này: `node tests/standalone-limb-equipment.js`.
 Luồng chơi chính ẩn hàng nút điều khiển/hướng dẫn dưới khung game; dùng bàn phím
 để đi, tương tác và mở menu bằng X/Escape. Preview kiểm thử giữ các nút này.
 Chuột bị khóa trong luồng chơi chính, gồm rê chọn, click, cuộn và menu chuột

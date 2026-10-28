@@ -14,6 +14,11 @@
         );
     }
 }(typeof globalThis !== 'undefined' ? globalThis : this, function (dataApi, stateApi, mapApi, eventApi, scriptApi, movementApi, screenApi, autonomousApi, lightingApi, filterApi, animationApi, battleApi) {
+    // Cờ mất tay của các nhân vật hai tay, do common event 240–242 cập nhật.
+    // Moonless dùng ba cờ mất chân, không áp dụng quy tắc cầm trang bị này.
+    var actorArmSwitches = {1:[36,37],2:[168,169],3:[248,249],4:[252,253],5:[256,257],
+        6:[261,262],8:[381,382],9:[385,386],10:[376,377],11:[390,391],
+        16:[91,92],17:[155,156],18:[161,162],19:[841,842],20:[845,846],21:[849,850]};
     function GameEngine(options) {
         options = options || {};
         this.dataStore = options.dataStore || new dataApi.GameDataStore({ baseUrl: options.baseUrl || '' });
@@ -936,6 +941,9 @@
         if (!itemId) return true;
         var actor = this.state.actor(actorId), traits = this.battle.battlerTraits({ id: actorId });
         var item = (slot === 0 ? this.database.Weapons : this.database.Armors)[itemId];
+        var arms = actorArmSwitches[actorId];
+        if (arms && slot <= 1 && (this.state.switchValue(arms[1]) || this.state.switchValue(arms[0]) &&
+            (slot === 1 || item && item.traits.some(function (trait) { return trait.code === 54 && trait.dataId === 2; })))) return false;
         return !!item && item.etypeId === slot + 1 && (actor.equips[slot] === itemId ||
             this.state.itemCount(slot === 0 ? 'weapons' : 'armors',itemId) > 0) && traits.some(function (trait) {
             return trait.code === (slot === 0 ? 51 : 52) && trait.dataId === (slot === 0 ? item.wtypeId : item.atypeId);

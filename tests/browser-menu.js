@@ -56,6 +56,17 @@ module.exports=async function ({cdp,url,evalPage,waitFor,clickElement,check,scre
     check('rê chọn trang bị hiện so sánh chỉ số trước khi đeo, không sửa trạng thái',await evalPage(cdp,`document.querySelector('[data-param="2"]').lastChild.textContent!=='' && FNHStandalonePreview.engine.state.actor(1).equips[0]===0`,false,false));
     await clickElement(cdp,'[data-equip-item="44"]');await waitFor(cdp,'FNHStandalonePreview.engine.state.actor(1).equips[0]===44',5000,'đeo Scimitar');
     check('trang bị đổi thật, không dùng select của trình duyệt',await evalPage(cdp,`FNHStandalonePreview.engine.state.itemCount('weapons',44)===0 && document.querySelector('[data-slot="0"]').textContent.includes('Scimitar')`,false,false));
+    await evalPage(cdp,`(()=>{const s=FNHStandalonePreview.engine.state;s.setSwitch(36,true);s.gainItem('armors',16,1);})()`,false,false);
+    await focusTab('inventory');await focusTab('equipment');await clickElement(cdp,'[data-slot="0"]');
+    check('mất một tay: danh sách giữ Scimitar và ẩn Crude sword hai tay',await evalPage(cdp,`!!document.querySelector('[data-equip-item="44"]') && !document.querySelector('[data-equip-item="4"]')`,false,false));
+    await clickElement(cdp,'[data-slot="1"]');
+    check('mất một tay: không cho chọn Wooden buckler trong menu',await evalPage(cdp,`!document.querySelector('[data-equip-item="16"]') && !!document.querySelector('[data-equip-item="0"]')`,false,false));
+    await evalPage(cdp,'FNHStandalonePreview.engine.state.setSwitch(37,true)',false,false);
+    await focusTab('inventory');await focusTab('equipment');await clickElement(cdp,'[data-slot="0"]');
+    check('mất hai tay: chỉ còn lựa chọn tháo vũ khí',await evalPage(cdp,`document.querySelectorAll('[data-equip-item]').length===1 && !!document.querySelector('[data-equip-item="0"]')`,false,false));
+    await clickElement(cdp,'[data-equipment-action=optimize]');
+    check('tối ưu trên UI không đeo lại vũ khí khi mất hai tay',await evalPage(cdp,'FNHStandalonePreview.engine.state.actor(1).equips[0]===0',false,false));
+    await evalPage(cdp,`(()=>{const e=FNHStandalonePreview.engine;e.state.setSwitch(36,false);e.state.setSwitch(37,false);e.equipMenuActor(1,0,44);})()`,false,false);
     await key('PageDown','PageDown');check('PageDown đổi nhân vật đang xem ở bảng phải',await evalPage(cdp,'document.querySelector("[data-window=equipment-status]").textContent.includes("Knight")',false,false));
     await key('PageUp','PageUp');await focusTab('skills');await clickElement(cdp,'[data-skill="238"]');await clickElement(cdp,'[data-target-actor="3"]');
     await waitFor(cdp,'FNHStandalonePreview.engine.state.actor(3).hp===100',5000,'Loving whispers');
