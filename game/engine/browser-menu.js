@@ -29,15 +29,39 @@
         var ui = this;
         document.getElementById('fnh-menu').onclick = function () { if (engine.openMenu()) ui.render(); };
         document.getElementById('fnh-menu-close').onclick = function () { ui.close(); };
-        this.dialog.addEventListener('cancel', function (event) { event.preventDefault(); ui.close(); });
+        this.dialog.addEventListener('cancel', function (event) { event.preventDefault(); ui.back(); });
+        this.dialog.addEventListener('keydown', function (event) {
+            if (!options || !options.gameplay || event.target.closest('input,textarea')) return;
+            var action = options.input(event.key);
+            if (action === 'cancel') {
+                event.preventDefault(); event.stopPropagation();
+                if (!event.repeat) ui.back();
+            } else if (event.target.closest('nav') && ['up','down','ok'].includes(action)) {
+                event.preventDefault(); event.stopPropagation();
+                if (action === 'ok') { if (!event.repeat) document.activeElement.click(); return; }
+                var buttons = Array.from(ui.dialog.querySelectorAll('nav button')).filter(function (button) { return !button.hidden && !button.disabled; });
+                var index = buttons.indexOf(document.activeElement), step = action === 'up' ? -1 : 1;
+                if (buttons.length) buttons[(index+step+buttons.length)%buttons.length].focus();
+            }
+        });
         this.actorSelect.onchange = function () { ui.render(); };
         this.dialog.querySelectorAll('[data-menu-tab]').forEach(function (button) {
             button.onclick = function () { ui.tab = button.dataset.menuTab; ui.render(); };
         });
     }
+    MenuUi.prototype.focusCommand = function () {
+        var command = this.dialog.querySelector('nav button:not([hidden]):not(:disabled)');
+        if (command) command.focus({preventScroll:true});
+    };
+    MenuUi.prototype.back = function () {
+        if (this.busy && !(this.engine.menuWaiters && this.engine.menuWaiters.size)) return;
+        if (this.options && this.options.gameplay && this.tab !== 'status' && this.engine.state.scene !== 'save') {
+            this.tab = 'status'; this.render(); this.focusCommand();
+        } else this.close();
+    };
     MenuUi.prototype.close = function () {
         if (this.busy && !(this.engine.menuWaiters && this.engine.menuWaiters.size)) return;
-        this.engine.closeMenu(); this.render(); this.changed();
+        this.engine.closeMenu(); this.render(); document.getElementById('fnh-canvas').focus({preventScroll:true}); this.changed();
     };
     MenuUi.prototype.act = async function (action) {
         if (this.busy) return;
@@ -52,7 +76,8 @@
         var visible = state && ['menu', 'save'].includes(state.scene);
         document.getElementById('fnh-menu').disabled = !state || state.scene !== 'map' || !state.menuEnabled || engine.eventRunning;
         if (!visible) { if (this.dialog.open) this.dialog.close(); return; }
-        if (!this.dialog.open) {
+        var opening = !this.dialog.open;
+        if (opening) {
             this.message.textContent = ''; this.tab = state.scene === 'save' ? 'system' : 'status';
             this.dialog.showModal(); if (this.options && this.options.clearInput) this.options.clearInput(); else engine.buttons.clear();
         }
@@ -82,7 +107,26 @@
                 (state.scene === 'save' ? tab !== 'system' : tab === 'status' || flag != null && engine.database.System.menuCommands[flag] === false);
             button.disabled = ui.busy || ['inventory','skills','equipment','synthesis','status'].includes(tab) && !state.party.length;
             button.setAttribute('aria-pressed', String(button.dataset.menuTab === ui.tab));
+            if (gameplay) {
+                var iconIndex = {inventory:1,equipment:2,synthesis:3,skills:4,options:7,gameEnd:6}[tab];
+                if (iconIndex != null) {
+                    var label = button.textContent, icon = node('span'); icon.className = 'fnh-menu-command-icon';
+                    icon.style.backgroundPosition = (iconIndex%16/15*100) + '% 0%';
+                    var text = node('span',label); text.className = 'fnh-menu-command-label';
+                    button.setAttribute('aria-label',label); button.title=label;button.replaceChildren(icon,text);
+                }
+            }
         });
+        if (gameplay && this.tab === 'status') {
+            if (this.options.windowBackground) {
+                this.options.windowBackground(this.dialog.querySelector('nav'),70,252);
+                this.options.windowBackground(content,746,624);
+            }
+            if (opening) this.focusCommand();
+        } else {
+            this.dialog.querySelector('nav').style.backgroundImage = ''; content.style.backgroundImage = '';
+            if (opening) document.getElementById('fnh-menu-close').focus({preventScroll:true});
+        }
         if (!this.options || !this.options.gameplay) content.appendChild(node('p', 'Bạc: ' + state.gold));
         if (this.tab === 'status' && actor) {
             var overview=node('div');overview.className='fnh-party-overview';
@@ -103,6 +147,7 @@
                 });card.appendChild(icons);
                 [['HP',member.hp,state.actorParam(id,0)],['MP',member.mp,state.actorParam(id,1)]].forEach(function (entry) {
                     var label=node('label',entry[0]+': '+entry[1]+'/'+entry[2]),bar=node('meter');
+                    if (gameplay) label.textContent = (entry[0] === 'HP' ? 'Body' : 'Mind') + ' ' + entry[1];
                     label.className='fnh-party-'+entry[0].toLowerCase();
                     bar.min=0;bar.max=Math.max(1,entry[2]);bar.value=entry[1];bar.setAttribute('aria-label',entry[0]+' '+member.name);
                     label.appendChild(bar);card.appendChild(label);

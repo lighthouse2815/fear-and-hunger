@@ -103,6 +103,10 @@ không hiện Formation hoặc lệnh lưu tự do, ẩn nút lưu/tải nhanh n
 Danh sách lệnh theo thứ tự Vật phẩm, Trang bị, Chế tạo, Kỹ năng, Tùy chọn,
 Kết thúc; màn đội hình chỉ giữ chân dung, trạng thái, HP/MP và Hunger.
 Tab Chỉ số với EXP, TP và bảng tỷ lệ trạng thái chỉ dùng trong preview kiểm thử.
+Menu Escape dùng sáu icon từ IconSet.png theo ARP_CommandIcons và viền gốc,
+đặt cửa sổ lệnh 70×252 cạnh đội hình 746×624. Phím hướng chọn icon, Enter mở;
+Escape/X từ màn con quay về đội hình, bấm tiếp đóng menu. Giữ phím hủy không
+làm menu mở lại. Test riêng: `FNH_BROWSER_SCOPE=menu npm run test:browser`.
 Luồng chơi chính ẩn hàng nút điều khiển/hướng dẫn dưới khung game; dùng bàn phím
 để đi, tương tác và mở menu bằng X/Escape. Preview kiểm thử giữ các nút này.
 Nhân vật luôn chạy nhanh theo cấu hình Force Dashing, trừ khi map, trạng thái

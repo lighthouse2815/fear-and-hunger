@@ -740,7 +740,7 @@
     }
     combatUi = new FNHStandaloneBattleUi.BattleUi(engine, { handlers: eventHandlers, renderer: renderer, changed: draw, input: inputName });
     menuUi = new FNHStandaloneMenu.MenuUi(engine, saveStore, eventHandlers, draw, {
-        settings: settings, updateVolume: updateVolume, gameplay: automaticEvents,
+        settings: settings, updateVolume: updateVolume, gameplay: automaticEvents, input: inputName, windowBackground: windowBackground,
         clearInput: clearInput
     });
     var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;
@@ -843,6 +843,7 @@
             return;
         }
         var buttonName = inputName(event.key);
+        if (buttonName === 'cancel' && event.repeat) return;
         if (buttonName === 'cancel' && engine.state && engine.state.scene === 'map' &&
             !scrollAnimation && !pictureInput() && !engine.eventRunning && !engine.messageRunning && engine.openMenu()) {
             event.preventDefault(); menuUi.render(); return;

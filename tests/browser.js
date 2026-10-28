@@ -255,6 +255,10 @@ async function sendAudioGesture(cdp, type) {
 }
 
 async function clickElement(cdp, selector) {
+    if (selector === '#fnh-menu-close' && await evalPage(cdp,'getComputedStyle(document.querySelector("#fnh-menu-close")).display === "none"',false,false)) {
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'}); return;
+    }
     const point = await evalPage(cdp, `(async () => {
         const selector = ${JSON.stringify(selector)};
         document.querySelector(selector).scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
@@ -385,6 +389,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if (process.env.FNH_BROWSER_SCOPE === 'menu') {
+            await require('./browser-menu')({cdp,url:running.url,evalPage,waitFor,clickElement,check,screenshot});
+            check('không có lỗi runtime trong menu',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất ' + passed + ' kiểm tra menu.'); return;
+        }
         if (process.env.FNH_BROWSER_SCOPE === 'dialogue') {
             await require('./browser-dialogue')({cdp,url:running.url,evalPage,waitFor,clickElement,check,screenshot});
             check('không có lỗi runtime trong hội thoại', runtimeErrors.length === 0, JSON.stringify(runtimeErrors));
