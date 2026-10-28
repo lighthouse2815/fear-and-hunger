@@ -89,6 +89,8 @@ không hiện Formation hoặc lệnh lưu tự do, ẩn nút lưu/tải nhanh n
 Danh sách lệnh theo thứ tự Vật phẩm, Trang bị, Chế tạo, Kỹ năng, Tùy chọn,
 Kết thúc; màn đội hình chỉ giữ chân dung, trạng thái, HP/MP và Hunger.
 Tab Chỉ số với EXP, TP và bảng tỷ lệ trạng thái chỉ dùng trong preview kiểm thử.
+Luồng chơi chính ẩn hàng nút điều khiển/hướng dẫn dưới khung game; dùng bàn phím
+để đi, tương tác và mở menu bằng X/Escape. Preview kiểm thử giữ các nút này.
 Nhân vật luôn chạy nhanh theo cấu hình Force Dashing, trừ khi map, trạng thái
 hoặc lệnh sự kiện cấm chạy; tùy chọn đi bộ chỉ hiện trong preview kiểm thử.
 Vật phẩm/sự kiện gọi 352 vẫn mở màn lưu 20 ô riêng; màn này chỉ hiện chức năng
