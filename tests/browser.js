@@ -3835,12 +3835,17 @@ async function main() {
                     const button=buttons.find(b=>b.textContent.includes('Use Small key')) ||
                         buttons.find(b=>b.textContent==='Open the cage') || buttons.find(b=>b.textContent===\"Don't\");
                     if(button && !button.disabled)button.click();
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
+                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
+                        const target=document.querySelector('#fnh-battle-targets [data-index="0"]');if(target && !target.disabled)target.click();
+                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
+                    }
                     return false;
                 })()`,false,true);
                 if(!rescued)await sleep(100);
             }
             if(!rescued)throw new Error('Không giải cứu được Girl: '+JSON.stringify(await evalPage(cdp,`(()=>{
-                const e=FNHStandalonePreview.engine;return {party:e.state.party,key:e.state.itemCount('items',20),
+                const e=FNHStandalonePreview.engine;return {party:e.state.party,scene:e.state.scene,key:e.state.itemCount('items',20),
                     switch81:e.state.switchValue(81),event:e.eventRunning,message:document.querySelector('#fnh-message-text').textContent,
                     choices:[...document.querySelectorAll('#fnh-choices button')].map(button=>button.textContent),errors:FNHStandalonePreview.errors};
             })()`,false,false)));
@@ -3885,6 +3890,41 @@ async function main() {
             })()`,false,false)));
             check('đi cùng Girl qua cửa tới tầng tiếp theo',await evalPage(cdp,
                 'FNHStandalonePreview.engine.state.mapId===128 && FNHStandalonePreview.engine.state.party.includes(2) && FNHStandalonePreview.engine.state.followers().some(f=>f.id===2) && FNHStandalonePreview.errors.length===0',false,false));
+            let enteredDeeper=false;
+            for(let step=0;step<400 && !enteredDeeper;step++){
+                enteredDeeper=await evalPage(cdp,`(()=>{
+                    const e=FNHStandalonePreview.engine;
+                    if([3,31,53].includes(e.state.mapId) && e.state.scene==='map' && !e.eventRunning)return true;
+                    const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
+                    const choice=document.querySelector('#fnh-choices button:not(:disabled)');if(choice)choice.click();
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
+                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
+                        const target=document.querySelector('#fnh-battle-targets [data-index="0"]');if(target && !target.disabled)target.click();
+                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
+                    }
+                    if(e.state.scene!=='map' || e.eventRunning || e.state.mapId!==128)return false;
+                    const door=e.map.eventById(3),dx=door.x-e.state.x,dy=door.y-e.state.y;
+                    if(!e.state.switchValue(58) && Math.abs(dx)+Math.abs(dy)===1){
+                        const direction=dx<0?4:dx>0?6:dy<0?8:2;
+                        if(e.state.direction===direction)document.querySelector('#fnh-controls [data-direction="0"]').click();
+                        else document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();
+                    }else{
+                        const direction=e.map.findDirection(e.state,door,80);
+                        if(direction)document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();
+                    }
+                    return false;
+                })()`,false,true);
+                if(!enteredDeeper)await sleep(180);
+            }
+            if(!enteredDeeper)throw new Error('Không đi sâu hơn cùng Girl: '+JSON.stringify(await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine;return {map:e.state.mapId,x:e.state.x,y:e.state.y,scene:e.state.scene,
+                    event:e.eventRunning,door:e.state.switchValue(58),layout:e.state.variableValue(123),party:e.state.party,
+                    message:document.querySelector('#fnh-message-text').textContent,errors:FNHStandalonePreview.errors};
+            })()`,false,false)));
+            check('đi cùng Girl qua hành lang tới khu vực ngục kế tiếp',await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine,expected={1:3,2:31,3:53}[e.state.variableValue(123)];
+                return e.state.mapId===expected && e.state.party.includes(2) && e.state.followers().some(f=>f.id===2) && FNHStandalonePreview.errors.length===0;
+            })()`,false,false));
         }
         await cdp.send('Page.removeScriptToEvaluateOnNewDocument',{identifier:seeded.identifier});
         }

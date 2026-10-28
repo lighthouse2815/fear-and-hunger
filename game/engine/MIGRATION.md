@@ -29,7 +29,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   Guard phát sinh, nói chuyện và trả điều khiển; hành trình này dùng cheat.
   Lục xác Guard nhận Small key, mở lồng, trừ chìa và giữ Girl sau lưu/tải;
   test cố định ngẫu nhiên để loot ra chìa khóa. Tiếp tục cùng Girl qua cửa
-  thật sang Map128, xử lý thêm trận chiến trên đường.
+  thật sang Map128, xử lý thêm trận chiến trên đường rồi qua hành lang tới
+  khu ngục kế tiếp theo biến layout 123.
 - Điều kiện nhân vật có skill tính cả trait actor/class/trang bị/state, cùng
   nguồn với combat; state Salmonsnake thật cấp skill 64/82 và giữ qua save.
 - Mã màu trong hội thoại, lựa chọn, trợ giúp và credits đọc màu từ Window.png;
