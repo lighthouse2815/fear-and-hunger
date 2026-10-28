@@ -5,7 +5,7 @@ module.exports = async function ({cdp,url,evalPage,waitFor,clickElement,check,sc
     await evalPage(cdp,`(async()=>{
         const app=FNHStandalonePreview,e=app.engine;app.scheduler.stop();app.audio.setVolume('master',.05);
         await new Promise(resolve=>setTimeout(resolve,50));
-        await e.restore({mapId:74,x:8,y:8,party:[1,3]});e.state.setActorName(1,'lighthouse');
+        e.random=()=>.5;await e.restore({mapId:74,x:8,y:8,party:[1,3]});e.state.setActorName(1,'lighthouse');
         e.state.changeActorSkill(1,8,true);e.state.gainItem('items',28,1);e.state.actor(3).hp=10;
         e.battle.setup(1,true,true);e.state.scene='battle';
     })()`,true,false);
@@ -50,4 +50,10 @@ module.exports = async function ({cdp,url,evalPage,waitFor,clickElement,check,sc
     await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     check('combat vẫn nằm gọn trong khung điện thoại',await evalPage(cdp,`(()=>{const r=document.querySelector('#fnh-combat').getBoundingClientRect();return r.width<=390 && r.x>=0;})()`,false,false));
     await screenshot('combat-mobile');
+    await evalPage(cdp,`(()=>{const a=FNHStandalonePreview;a.settings.commandRemember=true;a.engine.battle.finish('escape');a.engine.state.scene='map';a.engine.state.recoverActor(1);a.engine.state.recoverActor(3);a.engine.battle.setup(1,true,true);a.engine.state.scene='battle';})()`,false,false);
+    await waitFor(cdp,'document.querySelectorAll("#fnh-combat-commands button").length===4',5000,'trận kiểm tra nhớ lệnh');
+    await clickElement(cdp,'#fnh-combat-commands button:nth-child(3)');await clickElement(cdp,'#fnh-combat-commands button:nth-child(3)');
+    await waitFor(cdp,'FNHStandalonePreview.engine.battle.battle.turn>=1 && FNHStandalonePreview.engine.battle.battle.phase==="input"',20000,'lượt sau Guard');
+    await waitFor(cdp,'document.activeElement.textContent==="Guard" && !document.activeElement.disabled',5000,'focus lệnh đã nhớ');
+    check('Command Remember đưa con trỏ về Guard ở lượt sau',await evalPage(cdp,'document.activeElement.textContent==="Guard" && FNHStandalonePreview.engine.state.actor(1).lastBattleCommand===2',false,false));
 };

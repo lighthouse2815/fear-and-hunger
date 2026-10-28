@@ -40,9 +40,11 @@
         Object.values(this.filters).forEach(function (entry) { if (entry.type === 'godray-np') entry.time += frames * 0.01; });
     };
     FilterRuntime.prototype.active = function () {
+        if(this.enabled===false)return false;
         return Object.values(this.filters).some(function (entry) { return entry.type === 'godray-np' && entry.parameters[4] > 0; });
     };
     FilterRuntime.prototype.forTarget = function (target) {
+        if(this.enabled===false)return [];
         return Object.values(this.filters).filter(function (entry) { return entry.target === target; });
     };
     FilterRuntime.prototype.instance = function (entry) {

@@ -14,6 +14,8 @@ assert.equal(state.actor(1).name, 'Mercenary');
 assert.deepEqual(state.actor(1).equips, [44, 0, 0, 1, 0]);
 assert.equal(state.actor(1).classId, 1);
 const levelThree = new ActorState(actors[1], classes[1], { level: 3 });
+const commandMemory=new ActorState(actors[1],classes[1],{lastBattleCommand:2});
+assert.equal(new ActorState(actors[1],classes[1],commandMemory.toJSON()).lastBattleCommand,2,'lưu/tải giữ lệnh chiến đấu được nhớ');
 assert.equal(levelThree.hp, 70, 'bảng chỉ số được đánh chỉ mục bằng level');
 assert.equal(state.actor(4).mp, 100);
 assert.equal(state.hasActor(4), false, 'đọc actor ngoài party không được tự thêm vào party');

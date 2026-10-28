@@ -261,7 +261,11 @@ async function clickElement(cdp, selector) {
     }
     if (selector === '#fnh-menu-close' && await evalPage(cdp,'getComputedStyle(document.querySelector("#fnh-menu-close")).display === "none"',false,false)) {
         await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});
-        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'}); return;
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'});
+        if(await evalPage(cdp,'document.querySelector("#fnh-menu-dialog").open && document.querySelector("#fnh-menu-dialog").classList.contains("fnh-menu-tabs")',false,false)) {
+            await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'});
+        }
+        return;
     }
     const point = await evalPage(cdp, `(async () => {
         const selector = ${JSON.stringify(selector)};
@@ -3365,16 +3369,15 @@ async function main() {
                 !document.querySelector('[data-menu-tab="gameEnd"]').hidden && !document.querySelector('[data-menu-tab="options"]').hidden &&
                 !document.querySelector('[data-menu-tab="synthesis"]').hidden && !document.querySelector('[data-menu-tab="formation"]');
         })()`,false,false));
-        check('menu chơi chỉ có sáu lệnh gốc và bỏ thông số kiểm thử khỏi đội hình',await evalPage(cdp,`(()=>{
+        check('menu chơi chỉ có sáu lệnh gốc và nội dung khớp icon đang chọn',await evalPage(cdp,`(()=>{
             const menu=document.querySelector('#fnh-menu-dialog');
             const commands=Array.from(menu.querySelectorAll('[data-menu-tab]')).filter(button=>!button.hidden).map(button=>button.dataset.menuTab);
             const content=document.querySelector('#fnh-menu-content');
             return commands.join(',')==='inventory,equipment,synthesis,skills,options,gameEnd' &&
-                menu.classList.contains('fnh-menu-home') &&
-                getComputedStyle(content.querySelector('.fnh-party-overview')).gridTemplateColumns.split(' ').length===4 &&
-                menu.querySelector('[data-menu-tab="inventory"]').textContent===FNHStandalonePreview.engine.database.System.terms.commands[4] &&
+                menu.classList.contains('fnh-menu-tabs') && content.dataset.menuPage===document.activeElement.dataset.menuTab &&
+                menu.querySelector('[data-menu-tab="inventory"]').getAttribute('aria-label')===FNHStandalonePreview.engine.database.System.terms.commands[4] &&
                 !content.textContent.includes('EXP:') && !content.textContent.includes('TP:') &&
-                !content.querySelector('.fnh-state-rates') && content.querySelectorAll('.fnh-party-overview [data-party-actor]').length===FNHStandalonePreview.engine.state.party.length &&
+                !content.querySelector('.fnh-state-rates') && content.querySelector('.fnh-menu-window') &&
                 document.querySelector('#fnh-menu-actor').hidden;
         })()`,false,false));
         await screenshot('standalone-game-menu');
@@ -3388,6 +3391,7 @@ async function main() {
         })()`,false,false);
         await clickElement(cdp,'#fnh-menu');
         await clickElement(cdp,'[data-menu-tab="inventory"]');
+        await clickElement(cdp,'[data-menu-key="category-books"]');
         await clickElement(cdp,'#fnh-menu-content button[data-item="40"]');
         await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine;

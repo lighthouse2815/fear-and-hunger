@@ -79,6 +79,7 @@
         this.dialog.addEventListener('keydown', function (event) {
             if (!options || !options.gameplay || event.target.closest('input,textarea')) return;
             var action = options.input(event.key);
+            if (ui.dialog.classList.contains('fnh-menu-tabs') && root.FNHStandaloneGameMenu.handleKey(ui,event)) return;
             if (action === 'cancel') {
                 event.preventDefault(); event.stopPropagation();
                 if (!event.repeat) ui.back();
@@ -95,11 +96,15 @@
             button.onfocus = function () {
                 ui.commandTab = button.dataset.menuTab;
                 ui.dialog.querySelectorAll('[data-menu-tab]').forEach(function (other) { other.dataset.commandSelected = String(other === button); });
+                if (options && options.gameplay && !ui.rendering && engine.state.scene==='menu') {
+                    ui.lastCommandTab=ui.commandTab;
+                    if(ui.tab!==ui.commandTab) {ui.tab=ui.commandTab;ui.gameMenu={};ui.render();}
+                }
             };
             button.onpointermove = function () {
-                if (ui.dialog.classList.contains('fnh-menu-home') && !button.disabled && document.activeElement !== button) button.focus({preventScroll:true});
+                if (ui.dialog.classList.contains('fnh-menu-tabs') && !button.disabled && document.activeElement !== button) button.focus({preventScroll:true});
             };
-            button.onclick = function () { ui.lastCommandTab = ui.commandTab = button.dataset.menuTab; ui.tab = button.dataset.menuTab; ui.render(); };
+            button.onclick = function () { ui.lastCommandTab = ui.commandTab = button.dataset.menuTab; ui.tab = button.dataset.menuTab; ui.render(); if(options && options.gameplay)ui.enterContent(); };
         });
     }
     MenuUi.prototype.focusCommand = function () {
@@ -107,8 +112,16 @@
             this.dialog.querySelector('nav button:not([hidden]):not(:disabled)');
         if (command) command.focus({preventScroll:true});
     };
+    MenuUi.prototype.enterContent = function () {
+        var first=this.content.querySelector('[data-window="category"] button:enabled, [data-window="equipment-command"] button:enabled, [data-window="skill-type"] button:enabled, [data-window="synthesis-command"] button:enabled, [data-window="options-category"] button:enabled, [data-window="game-end"] button:enabled') || this.content.querySelector('button:enabled');
+        if(first)first.focus({preventScroll:true});
+    };
     MenuUi.prototype.back = function () {
         if (this.busy && !(this.engine.menuWaiters && this.engine.menuWaiters.size)) return;
+        if(this.dialog.classList.contains('fnh-menu-tabs')) {
+            if(root.FNHStandaloneGameMenu.back(this))return;
+            this.close();return;
+        }
         if (this.options && this.options.gameplay && this.tab !== 'status' && this.engine.state.scene !== 'save') {
             this.tab = 'status'; this.render(); this.focusCommand();
         } else this.close();
@@ -119,20 +132,32 @@
     };
     MenuUi.prototype.act = async function (action) {
         if (this.busy) return;
+        var focusKey=document.activeElement.dataset.menuKey;
         this.busy = true; this.message.textContent = '';
         var failure;
         try { await action(); await this.changed(); }
         catch (error) { failure = error.message; document.getElementById('fnh-status').textContent = error.message; }
-        finally { this.busy = false; this.render(); if (failure) this.message.textContent = failure; }
+        finally {
+            this.busy = false; this.render(); if (failure) this.message.textContent = failure;
+            if(this.dialog.open && this.dialog.classList.contains('fnh-menu-tabs') && focusKey) {
+                var focus=Array.from(this.content.querySelectorAll('button:enabled')).find(function (button) {return button.dataset.menuKey===focusKey;});
+                if(focus)focus.focus({preventScroll:true});else this.enterContent();
+            }
+        }
     };
     MenuUi.prototype.render = function () {
+        if(this.rendering)return;
+        this.rendering=true;
+        try {this.renderMenu();}finally {this.rendering=false;}
+    };
+    MenuUi.prototype.renderMenu = function () {
         var engine = this.engine, state = engine.state, ui = this;
         var visible = state && ['menu', 'save'].includes(state.scene);
         document.getElementById('fnh-menu').disabled = !state || state.scene !== 'map' || !state.menuEnabled || engine.eventRunning;
         if (!visible) { if (this.dialog.open) this.dialog.close(); return; }
         var opening = !this.dialog.open;
         if (opening) {
-            this.message.textContent = ''; this.tab = state.scene === 'save' ? 'system' : 'status';
+            this.message.textContent = ''; this.gameMenu={};this.tab = state.scene === 'save' ? 'system' : this.options && this.options.gameplay ? this.lastCommandTab : 'status';
             this.dialog.showModal(); if (this.options && this.options.clearInput) this.options.clearInput(); else engine.buttons.clear();
             this.commandTab = this.lastCommandTab;
         }
@@ -146,12 +171,13 @@
         var gameplay = !!(this.options && this.options.gameplay);
         this.dialog.classList.toggle('fnh-file-menu',gameplay && this.tab==='system');
         this.dialog.classList.toggle('fnh-game-menu', gameplay);
+        this.dialog.classList.toggle('fnh-menu-tabs',gameplay && this.tab!=='system');
         this.dialog.classList.toggle('fnh-menu-home', gameplay && this.tab === 'status');
-        var selectActor = !gameplay || ['inventory', 'equipment', 'skills'].includes(this.tab);
+        var selectActor = !gameplay;
         this.actorSelect.hidden = !selectActor;
         this.dialog.querySelector('label[for="fnh-menu-actor"]').hidden = !selectActor;
         var actor = actorId && state.actor(actorId), content = this.content;
-        content.replaceChildren();
+        if(!gameplay || ['status','system'].includes(this.tab))content.replaceChildren();
         this.dialog.querySelectorAll('[data-menu-tab]').forEach(function (button) {
             var tab = button.dataset.menuTab, flag = {inventory:0,skills:1,equipment:2,status:3,system:5}[tab];
             if (gameplay) {
@@ -173,16 +199,17 @@
                 }
             }
         });
-        if (gameplay && this.tab === 'status') {
+        if (gameplay && this.tab !== 'system') {
             if (this.options.windowBackground) {
                 this.options.windowBackground(this.dialog.querySelector('nav'),70,252);
-                this.options.windowBackground(content,746,624);
+                if(this.tab==='status')this.options.windowBackground(content,746,624);else content.style.backgroundImage='';
             }
             if (opening) this.focusCommand();
         } else {
             this.dialog.querySelector('nav').style.backgroundImage = ''; content.style.backgroundImage = '';
             if (opening && !(gameplay && this.tab==='system')) document.getElementById('fnh-menu-close').focus({preventScroll:true});
         }
+        if(gameplay && !['status','system'].includes(this.tab)) {root.FNHStandaloneGameMenu.render(this,actorId);return;}
         if (!this.options || !this.options.gameplay) content.appendChild(node('p', 'Bạc: ' + state.gold));
         if (this.tab === 'status' && actor) {
             var overview=node('div');overview.className='fnh-party-overview';

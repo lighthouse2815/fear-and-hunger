@@ -268,6 +268,7 @@
         document.getElementById(scene === 'title' && !continueButton.disabled ? 'fnh-continue' : 'fnh-new-game').focus({ preventScroll: true });
     }
     async function draw() {
+        if(engine.filters)engine.filters.enabled=settings.filterEffects;
         syncBattleAudio();
         renderTimer();
         await renderer.draw(engine);
@@ -738,9 +739,9 @@
         settings.setVolume(category, value); audio.setVolume(category, settings.volumes[category] / 100);
         video.volume = audio.masterVolume; document.getElementById('fnh-volume').value = settings.volumes.master;
     }
-    combatUi = new FNHStandaloneBattleUi.BattleUi(engine, { handlers: eventHandlers, renderer: renderer, changed: draw, input: inputName });
+    combatUi = new FNHStandaloneBattleUi.BattleUi(engine, { handlers: eventHandlers, renderer: renderer, changed: draw, input: inputName, settings:settings });
     menuUi = new FNHStandaloneMenu.MenuUi(engine, saveStore, eventHandlers, draw, {
-        settings: settings, updateVolume: updateVolume, gameplay: automaticEvents, input: inputName, windowBackground: windowBackground, renderer: renderer,
+        settings: settings, updateVolume: updateVolume, gameplay: automaticEvents, input: inputName, windowBackground: windowBackground, richText: setRichText, renderer: renderer,
         clearInput: clearInput
     });
     var previousFrame = performance.now(), frameRemainder = 0, drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;
@@ -751,6 +752,7 @@
         previousFrame = now;
         if (ready) {
             try {
+                if(engine.filters.enabled!==settings.filterEffects) {engine.filters.enabled=settings.filterEffects;engine.filters.revision++;}
                 syncBattleAudio();
                 if (scrollAnimation) scrollAnimation.playbackRate = !scrollNoFast &&
                     (scrollFastHeld || engine.buttons.has('ok') || engine.buttons.has('cancel') || engine.buttons.has('shift')) ? 3 : 1;
@@ -1063,6 +1065,9 @@
     (async function () {
         try {
             var skin = await renderer.loadImage('img/system/Window.png'); windowSkin = skin;
+            var selectionSkin=document.createElement('canvas');selectionSkin.width=selectionSkin.height=48;
+            selectionSkin.getContext('2d').drawImage(skin,96,96,48,48,0,0,48,48);
+            document.getElementById('fnh-menu-dialog').style.setProperty('--fnh-menu-selection-image','url("'+selectionSkin.toDataURL()+'")');
             var menuCursor = document.createElement('canvas'); menuCursor.width = 34; menuCursor.height = 36;
             [0,4,44].forEach(function (sx,i) {
                 [0,4,44].forEach(function (sy,j) {

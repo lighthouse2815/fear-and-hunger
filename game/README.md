@@ -109,12 +109,19 @@ Danh sách lệnh theo thứ tự Vật phẩm, Trang bị, Chế tạo, Kỹ n�
 Kết thúc; màn đội hình chỉ giữ chân dung, trạng thái, HP/MP và Hunger.
 Tab Chỉ số với EXP, TP và bảng tỷ lệ trạng thái chỉ dùng trong preview kiểm thử.
 Menu Escape dùng sáu icon từ IconSet.png theo ARP_CommandIcons và viền gốc,
-đặt cửa sổ lệnh 70×252 cạnh đội hình 746×624. Phím hướng chọn icon, Enter mở;
-Escape/X từ màn con quay về đội hình, bấm tiếp đóng menu. Giữ phím hủy không
+đặt cửa sổ lệnh 70×252 cạnh vùng nội dung 746×624. Up/Down hoặc rê chuột lên
+icon đổi ngay màn bên phải; Enter chuyển vào các lệnh của màn đang xem.
+Các màn vật phẩm, trang bị, kỹ năng, chế tạo, tùy chọn và kết thúc dùng khung
+Window.png với hình học lấy từ trang đối chiếu, danh sách/icon và dữ liệu thật.
+Escape/X từ nội dung trả focus về cột icon, bấm tiếp đóng menu. Giữ phím hủy không
 làm menu mở lại. Nút đang chọn dùng bitmap con trỏ từ Window.png, nhấp nháy
 chu kỳ 40 frame; phím hướng/rê chuột đổi con trỏ, quay lại giữ lệnh vừa chọn.
 Test riêng: `FNH_BROWSER_SCOPE=menu npm run test:browser` đối chiếu bitmap với
-menu gốc và kiểm tra điều khiển trên máy tính/điện thoại.
+menu gốc và kiểm tra điều khiển, dùng đồ, đổi trang bị, kỹ năng và chế tạo trên
+máy tính/điện thoại. Tùy chọn có các nhóm All/General/Audio/Controls; Command
+Remember nhớ lệnh chiến đấu cho từng nhân vật, Filter Effects bật/tắt hiển thị
+filter mà không xóa cấu hình hiệu ứng. Âm lượng và cấu hình phím giữ trong
+PlayerSettings của engine độc lập.
 Luồng chơi chính ẩn hàng nút điều khiển/hướng dẫn dưới khung game; dùng bàn phím
 để đi, tương tác và mở menu bằng X/Escape. Preview kiểm thử giữ các nút này.
 Nhân vật luôn chạy nhanh theo cấu hình Force Dashing, trừ khi map, trạng thái

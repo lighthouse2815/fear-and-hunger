@@ -36,6 +36,7 @@
     };
     BattleUi.prototype.choose = function (kind, id) {
         this.kind = kind; this.id = id;
+        this.engine.state.actor(this.actorId).lastBattleCommand=kind==='item'?3:id===1?0:id===2?2:1;
         var data = kind === 'item' ? this.engine.database.Items[id] : this.engine.battle.skillFor(this.engine.battle.actor(this.actorId), id);
         if ([1, 7, 9].includes(data.scope)) { this.mode = 'target'; this.render(true); }
         else this.confirm(0);
@@ -53,6 +54,7 @@
     };
     BattleUi.prototype.render = function (focus) {
         var ui = this, engine = this.engine, battle = engine.battle.battle;
+        var previousFocus=!focus && this.panel.contains(document.activeElement) ? document.activeElement.textContent : null;
         this.panel.hidden = !battle || engine.state.scene !== 'battle' || !!battle.result;
         if (this.panel.hidden) return;
         if (this.battle !== battle) { this.battle = battle; this.actorId = 0; this.mode = 'command'; }
@@ -99,9 +101,9 @@
             var actor = engine.battle.actor(this.actorId);
             if (actor) {
                 button(commands,'Attack',engine.battle.canUseSkill(actor,engine.battle.skillFor(actor,1)),function () { ui.choose('skill',1); });
-                button(commands,'Skills',true,function () { ui.mode = 'skill'; ui.render(true); });
+                button(commands,'Skills',true,function () { engine.state.actor(ui.actorId).lastBattleCommand=1;ui.mode = 'skill'; ui.render(true); });
                 button(commands,'Guard',engine.battle.canUseSkill(actor,engine.database.Skills[2]),function () { ui.choose('skill',2); });
-                button(commands,'Item',true,function () { ui.mode = 'item'; ui.render(true); });
+                button(commands,'Item',true,function () { engine.state.actor(ui.actorId).lastBattleCommand=3;ui.mode = 'item'; ui.render(true); });
             } else button(commands,'Fight',true,function () { ui.run(function () { return engine.startBattleTurn(ui.options.handlers); }); });
         } else if (this.mode === 'skill' || this.mode === 'item') {
             var itemMode = this.mode === 'item', user = engine.battle.actor(this.actorId);
@@ -142,8 +144,13 @@
             });
             help.textContent = data.name + ' — Select a target';
         }
-        if (focus) {
+        if (focus || previousFocus!==null) {
             var first = this.panel.querySelector('#fnh-combat-commands:not([hidden]) button:enabled, #fnh-combat-list:not([hidden]) button:enabled, #fnh-combat-targets:not([hidden]) button:enabled');
+            if(previousFocus!==null)first=Array.from(this.panel.querySelectorAll('button:enabled')).find(function (button) {return button.getClientRects().length && button.textContent===previousFocus;})||first;
+            if(this.mode==='command' && this.actorId && this.options.settings && this.options.settings.commandRemember) {
+                var remembered=this.engine.state.actor(this.actorId).lastBattleCommand,command=this.panel.querySelectorAll('#fnh-combat-commands button')[remembered];
+                if(command && !command.disabled)first=command;
+            }
             if (first) { first.focus({preventScroll:true}); first.onfocus(); }
         }
     };

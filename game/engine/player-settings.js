@@ -17,6 +17,7 @@
         this.key = options.key || 'FNH_STANDALONE_SETTINGS';
         this.volumes = { master: 100, bgm: 100, bgs: 100, me: 100, se: 100 };
         this.keys = Object.assign({}, defaults); this.alwaysDash = true;
+        this.commandRemember=false;this.filterEffects=true;
         var saved;
         try { saved = this.storage && JSON.parse(this.storage.getItem(this.key)); } catch (_) {}
         if (!saved || saved.version !== 1) return;
@@ -25,12 +26,13 @@
             if (Number.isFinite(value)) this.volumes[category] = Math.max(0, Math.min(100, value));
         }, this);
         if (typeof saved.alwaysDash === 'boolean') this.alwaysDash = saved.alwaysDash;
+        ['commandRemember','filterEffects'].forEach(function (key) {if(typeof saved[key]==='boolean')this[key]=saved[key];},this);
         if (saved.keys && typeof saved.keys === 'object') Object.keys(saved.keys).forEach(function (key) {
             if (validKey(key) && (actions.includes(saved.keys[key]) || saved.keys[key] === '')) this.keys[key] = saved.keys[key];
         }, this);
     }
     PlayerSettings.prototype.save = function () {
-        if (this.storage) this.storage.setItem(this.key, JSON.stringify({ version: 1, volumes: this.volumes, keys: this.keys, alwaysDash: this.alwaysDash }));
+        if (this.storage) this.storage.setItem(this.key, JSON.stringify({ version: 1, volumes: this.volumes, keys: this.keys, alwaysDash: this.alwaysDash, commandRemember:this.commandRemember,filterEffects:this.filterEffects }));
     };
     PlayerSettings.prototype.setVolume = function (category, value) {
         if (!categories.includes(category) || !Number.isFinite(value)) throw new Error('Thiết lập âm lượng không hợp lệ.');
