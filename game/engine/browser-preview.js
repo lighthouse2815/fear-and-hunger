@@ -37,6 +37,17 @@
     window.FNHStandalonePreview = { engine: engine, audio: audio, settings: settings, errors: errors };
 
     function setStatus(text) { status.textContent = text; }
+    function setRichText(element, text) {
+        var nodes = FNHStandaloneText.formatParts(text, engine.state).map(function (part) {
+            if (typeof part === 'string') return document.createTextNode(part);
+            var icon = document.createElement('span');
+            icon.className = 'fnh-text-icon';
+            icon.setAttribute('aria-hidden', 'true');
+            icon.style.backgroundPosition = -(part.icon % 16) * 32 + 'px ' + -Math.floor(part.icon / 16) * 32 + 'px';
+            return icon;
+        });
+        element.replaceChildren.apply(element, nodes);
+    }
     var menuUi;
     var battleTarget = 0, battleActor = 0, battleFriend = 0, battleSkill = 2, battleItem = 0, battleKind = 'skill';
     var lastBattle = null, lastScene = null, lastBattlePhase = null, lastActionRevision = null;
@@ -240,14 +251,14 @@
     function showMessage(text, parameters, interpreter, options) {
         return queueUi(function () {
             if (engine.state.scene === 'battle') renderBattleUi();
-            message.textContent = FNHStandaloneText.formatText(engine.state.wordWrap ? text.replace(/\n/g, ' ') : text, engine.state);
+            setRichText(message, engine.state.wordWrap ? text.replace(/\n/g, ' ') : text);
             if (options && options.choicesFollow) { next.hidden = true; return; }
             return messageDialog(text, interpreter);
         }, interpreter);
     }
     function messageDialog(text, interpreter) {
         engine.messageRunning = true;
-        message.textContent = FNHStandaloneText.formatText(engine.state.wordWrap ? text.replace(/\n/g, ' ') : text, engine.state);
+        setRichText(message, engine.state.wordWrap ? text.replace(/\n/g, ' ') : text);
         next.hidden = false;
         next.focus({ preventScroll: true });
         return new Promise(function (resolve, reject) {
@@ -286,11 +297,11 @@
             function addChoice(label, index) {
                 var button = document.createElement('button');
                 button.type = 'button';
-                button.textContent = FNHStandaloneText.formatText(label, engine.state);
+                setRichText(button, label);
                 button.disabled = details.disabled.includes(index);
                 button.onfocus = button.onmouseenter = function () {
-                    help.textContent = FNHStandaloneText.formatText(details.help[index] || '', engine.state);
-                    if (details.message[index]) message.textContent = FNHStandaloneText.formatText(details.message[index], engine.state);
+                    setRichText(help, details.help[index] || '');
+                    if (details.message[index]) setRichText(message, details.message[index]);
                 };
                 button.onclick = function () {
                     close();
@@ -402,7 +413,7 @@
             var content = document.getElementById('fnh-scroll-content');
             var fast = document.getElementById('fnh-scroll-fast');
             var signal = interpreter && interpreter.signal;
-            content.textContent = FNHStandaloneText.formatText(text, engine.state);
+            setRichText(content, text);
             engine.messageRunning = true; engine.buttons.clear();
             scrollNoFast = parameters[1] === true; scrollFastHeld = false;
             fast.hidden = scrollNoFast; panel.hidden = false;

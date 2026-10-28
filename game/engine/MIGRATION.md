@@ -25,6 +25,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Hội thoại, lựa chọn, trợ giúp và credits hiển thị mã icon từ IconSet.png;
+  văn bản escape vẫn giữ nguyên. Chrome kiểm tra icon Morning star thật.
 - Danh sách lựa chọn hỗ trợ phím hướng, xác nhận và hủy theo cấu hình; bỏ qua
   mục bị khóa. Chrome kiểm tra lựa chọn thật trong Common 193 và nhánh hủy.
 - HIME_LargeChoices gộp các lệnh lựa chọn liền nhau, giữ mặc định/hủy, nội dung

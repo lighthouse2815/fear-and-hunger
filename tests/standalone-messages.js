@@ -7,13 +7,15 @@ const { GameDataStore } = require('../game/engine/data-store');
 const { GameState } = require('../game/engine/game-state');
 const { EventInterpreter } = require('../game/engine/event-interpreter');
 const { ScreenRuntime } = require('../game/engine/screen-runtime');
-const { formatText } = require('../game/engine/text-format');
+const { formatText, formatParts } = require('../game/engine/text-format');
 const delay = () => new Promise(resolve => setImmediate(resolve));
 
 (async () => {
     const state = new GameState({ party: [1], actors: { 1: { name: 'Cahara' } }, variables: { 5: 42 } }, { System: { currencyUnit: 'silver' } });
     assert.equal(formatText('\\N[1] / \\P[1]: \\V[5] \\G', state), 'Cahara / Cahara: 42 silver');
     assert.equal(formatText('\\\\N[1] <WordWrap>red \\C[2]text\\C[0]<br>done.\\|', state), '\\N[1] red text\ndone.');
+    assert.deepEqual(formatParts('\\i[304] Morning \\V[5] \\\\i[8] \\I[17]', state),
+        [{ icon: 304 }, ' Morning 42 \\i[8] ', { icon: 17 }]);
     const runtime = new ScreenRuntime(state);
     const interpreter = new EventInterpreter({ state, commands: [
         { code: 356, parameters: ['GabText First \\N[1]'] }, { code: 356, parameters: ['ShowGab'] },

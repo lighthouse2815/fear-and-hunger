@@ -3552,6 +3552,13 @@ async function main() {
             const buttons=document.querySelectorAll('#fnh-choices button');return !window.__curseJourneyError && buttons.length===19 &&
                 !buttons[12].disabled && buttons[12].textContent.includes('Morning star') && buttons[0].disabled;
         })()`,false,false));
+        check('lựa chọn nguyền vẽ icon Morning star từ IconSet',await evalPage(cdp,`(()=>{
+            const button=document.querySelector('#fnh-choices button:nth-child(13)'),icon=button.querySelector('.fnh-text-icon');
+            if(!icon || button.textContent.includes('\\\\i['))return false;
+            const style=getComputedStyle(icon);
+            return style.backgroundImage.includes('/img/system/IconSet.png') && style.backgroundPosition==='0px -608px' &&
+                style.width==='32px' && style.height==='32px';
+        })()`,false,false));
         await evalPage(cdp,'document.querySelector("#fnh-choices button:nth-child(13)").focus()',false,false);
         await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40});
         await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40});
@@ -3588,6 +3595,12 @@ async function main() {
         await waitFor(cdp,'window.__keyboardChoiceResult!==null',5000,'hủy lựa chọn bằng bàn phím');
         check('phím hủy trả về nhánh hủy của lựa chọn',await evalPage(cdp,
             'window.__keyboardChoiceResult===-1 && !document.querySelector("#fnh-choices button")',false,false));
+        await evalPage(cdp,`FNHStandalonePreview.scheduler.handlers.message(${JSON.stringify('Vật phẩm \\i[191] và \\\\i[8]')},[],null,{choicesFollow:true})`,true,false);
+        check('hội thoại hiện icon và giữ mã được escape thành chữ',await evalPage(cdp,`(()=>{
+            const message=document.querySelector('#fnh-message-text'),icons=message.querySelectorAll('.fnh-text-icon');
+            return icons.length===1 && getComputedStyle(icons[0]).backgroundPosition==='-480px -352px' &&
+                message.textContent===${JSON.stringify('Vật phẩm  và \\i[8]')};
+        })()`,false,false));
         check('phần thưởng trứng thật không cộng vượt 99 và giữ đúng qua save',await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine,snapshot=e.save();
             try{
