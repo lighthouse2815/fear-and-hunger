@@ -842,7 +842,9 @@
                 window.FNHStandalonePreview.scheduler = scheduler;
             }
             ready = true;
+            document.getElementById('fnh-loading').hidden = true;
         } catch (error) {
+            document.getElementById('fnh-loading').hidden = true;
             setStatus('Không khởi động được engine: ' + error.message);
             console.error(error);
         }
