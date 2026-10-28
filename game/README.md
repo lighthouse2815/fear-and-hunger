@@ -64,6 +64,8 @@ xác minh giải mã, phát OGG và âm lượng thật.
 Đi qua cửa ở cổng ngục có thể vào Map001 và quay lại bằng sự kiện chạm thật.
 Kiểm tra Chrome cũng đi từ entry chính qua Guard của layout 3 tới lồng Girl,
 nói chuyện rồi trở lại điều khiển; hành trình này dùng tên bật cheat.
+Sau đó test cấp một Small key để kiểm tra mở lồng, thêm Girl và lưu/tải;
+chưa kiểm tra việc tự tìm chìa khóa trong hành trình này.
 Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro.
 Mở `/standalone.html?title=1` để chạy luồng khởi động: sự kiện autorun Map072

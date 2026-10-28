@@ -3798,6 +3798,36 @@ async function main() {
             await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'kết thúc nói chuyện với Girl');
             check('nói chuyện xong trả quyền điều khiển và giữ Girl trong lồng',await evalPage(cdp,
                 'FNHStandalonePreview.engine.state.scene==="map" && !FNHStandalonePreview.engine.state.hasActor(2) && !FNHStandalonePreview.engine.state.switchValue(81) && FNHStandalonePreview.errors.length===0',false,false));
+            await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine;e.state.gainItem('items',20,-99);e.state.gainItem('items',20,1);
+                document.querySelector('#fnh-controls [data-direction="0"]').click();
+            })()`,false,false);
+            let rescued=false;
+            for(let attempt=0;attempt<240 && !rescued;attempt++){
+                rescued=await evalPage(cdp,`(()=>{
+                    const e=FNHStandalonePreview.engine;
+                    if(e.state.hasActor(2) && e.state.switchValue(81) && !e.eventRunning)return true;
+                    const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
+                    const buttons=[...document.querySelectorAll('#fnh-choices button')];
+                    const button=buttons.find(b=>b.textContent.includes('Use Small key')) ||
+                        buttons.find(b=>b.textContent==='Open the cage') || buttons.find(b=>b.textContent===\"Don't\");
+                    if(button && !button.disabled)button.click();
+                    return false;
+                })()`,false,true);
+                if(!rescued)await sleep(100);
+            }
+            if(!rescued)throw new Error('Không giải cứu được Girl: '+JSON.stringify(await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine;return {party:e.state.party,key:e.state.itemCount('items',20),
+                    switch81:e.state.switchValue(81),event:e.eventRunning,message:document.querySelector('#fnh-message-text').textContent,
+                    choices:[...document.querySelectorAll('#fnh-choices button')].map(button=>button.textContent),errors:FNHStandalonePreview.errors};
+            })()`,false,false)));
+            check('chìa khóa kiểm thử mở lồng và thêm Girl vào đội',rescued && await evalPage(cdp,
+                'FNHStandalonePreview.engine.state.itemCount("items",20)===0 && FNHStandalonePreview.engine.state.party.includes(2) && FNHStandalonePreview.errors.length===0',false,false));
+            check('lưu tải giữ Girl và lồng đã mở',await evalPage(cdp,`(async()=>{
+                const e=FNHStandalonePreview.engine;await e.restore(e.save());
+                return e.state.party.includes(2) && e.state.switchValue(81) && e.state.itemCount('items',20)===0 &&
+                    e.state.followers().some(follower=>follower.id===2);
+            })()`,true,false));
         }
         await cdp.send('Page.removeScriptToEvaluateOnNewDocument',{identifier:seeded.identifier});
         }
