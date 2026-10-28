@@ -3738,6 +3738,67 @@ async function main() {
         })()`,false,false)));
         check(cheat?'thắng Guard và hoàn tất nhánh sự kiện thật khi dùng tên lighthouse':'thắng Guard và hoàn tất nhánh sự kiện bằng nhân vật thường',completedGuard && await evalPage(cdp,
             'FNHStandalonePreview.engine.state.switchValue(23) && FNHStandalonePreview.engine.state.actor(1).hp>0 && FNHStandalonePreview.engine.state.hasNameCheat(1)==='+cheat+' && FNHStandalonePreview.errors.length===0',false,false));
+        if (cheat) {
+            let foundGirl=false;
+            for(let step=0;step<240 && !foundGirl;step++){
+                foundGirl=await evalPage(cdp,`(()=>{
+                    const e=FNHStandalonePreview.engine, text=document.querySelector('#fnh-message-text').textContent;
+                    if(text.includes('little girl inside the cage'))return true;
+                    const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
+                    const choice=document.querySelector('#fnh-choices button:not(:disabled)');if(choice)choice.click();
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input' && !document.querySelector('#fnh-battle-attack').disabled){
+                        const target=document.querySelector('#fnh-battle-targets [data-index="0"]');if(target && !target.disabled)target.click();
+                        document.querySelector('#fnh-battle-attack').click();document.querySelector('#fnh-battle-start').click();
+                    }
+                    if(e.state.scene!=='map' || e.eventRunning)return false;
+                    const cage=e.map.eventById(88),dx=cage.x-e.state.x,dy=cage.y-e.state.y;
+                    let direction;
+                    if(Math.abs(dx)+Math.abs(dy)===1){
+                        direction=dx<0?4:dx>0?6:dy<0?8:2;
+                        if(e.state.direction===direction){document.querySelector('#fnh-controls [data-direction="0"]').click();return false;}
+                    }else direction=e.map.findDirection(e.state,cage,60);
+                    if(direction)document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();
+                    return false;
+                })()`,false,true);
+                if(!foundGirl)await sleep(180);
+            }
+            if(!foundGirl)throw new Error('Không tới lồng Girl: '+JSON.stringify(await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine,cage=e.map.eventById(88);
+                return {map:e.state.mapId,x:e.state.x,y:e.state.y,direction:e.state.direction,scene:e.state.scene,
+                    event:e.eventRunning,cageX:cage.x,cageY:cage.y,path:e.map.findDirection(e.state,cage,60),
+                    message:document.querySelector('#fnh-message-text').textContent,errors:FNHStandalonePreview.errors};
+            })()`,false,false)));
+            check('sau Guard đi đến lồng và gặp Girl qua sự kiện thật',foundGirl && await evalPage(cdp,
+                'FNHStandalonePreview.engine.state.mapId===51 && FNHStandalonePreview.engine.eventRunning && FNHStandalonePreview.errors.length===0',false,false));
+            let canTalk=false;
+            for(let attempt=0;attempt<100 && !canTalk;attempt++){
+                canTalk=await evalPage(cdp,`(()=>{
+                    const buttons=[...document.querySelectorAll('#fnh-choices button')];
+                    if(buttons.some(button=>button.textContent==='Talk'))return true;
+                    const skip=buttons.find(button=>button.textContent===\"Don't\");if(skip)skip.click();
+                    else if(!document.querySelector('#fnh-next').hidden)document.querySelector('#fnh-next').click();
+                    return false;
+                })()`,false,true);
+                if(!canTalk)await sleep(100);
+            }
+            if(!canTalk)throw new Error('Không mở được hội thoại Girl: '+JSON.stringify(await evalPage(cdp,`(()=>({
+                message:document.querySelector('#fnh-message-text').textContent,
+                choices:[...document.querySelectorAll('#fnh-choices button')].map(button=>button.textContent),
+                event:FNHStandalonePreview.engine.eventRunning,errors:FNHStandalonePreview.errors
+            }))()`,false,false)));
+            await evalPage(cdp,'[...document.querySelectorAll("#fnh-choices button")].find(button=>button.textContent==="Talk").click()',false,false);
+            await waitFor(cdp,'document.querySelector("#fnh-message-text").textContent.includes("*sob*") && document.querySelectorAll("#fnh-choices button").length>0',5000,'nói chuyện với Girl');
+            check('Girl khóc và hiện lựa chọn hội thoại thật',await evalPage(cdp,`(()=>{
+                const choices=[...document.querySelectorAll('#fnh-choices button')].map(button=>button.textContent);
+                return choices.includes('"Are you okay?"') && choices.includes('"Are you a monster?"');
+            })()`,false,false));
+            await evalPage(cdp,'[...document.querySelectorAll("#fnh-choices button")].find(button=>button.textContent.includes("Are you okay?")).click()',false,false);
+            await waitFor(cdp,'document.querySelector("#fnh-message-text").textContent.includes("She doesn\'t respond.") && !document.querySelector("#fnh-next").hidden',5000,'câu trả lời của Girl');
+            await clickElement(cdp,'#fnh-next');
+            await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'kết thúc nói chuyện với Girl');
+            check('nói chuyện xong trả quyền điều khiển và giữ Girl trong lồng',await evalPage(cdp,
+                'FNHStandalonePreview.engine.state.scene==="map" && !FNHStandalonePreview.engine.state.hasActor(2) && !FNHStandalonePreview.engine.state.switchValue(81) && FNHStandalonePreview.errors.length===0',false,false));
+        }
         await cdp.send('Page.removeScriptToEvaluateOnNewDocument',{identifier:seeded.identifier});
         }
         await guardJourney(true);

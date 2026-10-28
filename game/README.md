@@ -62,6 +62,8 @@ tải lại trang; đặt lại bàn phím không đổi âm lượng. Âm lư�
 xuống 5% chỉ nằm trong phiên kiểm thử; Chrome test tắt đầu ra loa nhưng vẫn
 xác minh giải mã, phát OGG và âm lượng thật.
 Đi qua cửa ở cổng ngục có thể vào Map001 và quay lại bằng sự kiện chạm thật.
+Kiểm tra Chrome cũng đi từ entry chính qua Guard của layout 3 tới lồng Girl,
+nói chuyện rồi trở lại điều khiển; hành trình này dùng tên bật cheat.
 Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro.
 Mở `/standalone.html?title=1` để chạy luồng khởi động: sự kiện autorun Map072

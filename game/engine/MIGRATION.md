@@ -25,6 +25,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Chrome đi liên tục từ entry chính qua Guard layout 3 tới lồng Girl, xử lý
+  Guard phát sinh, nói chuyện và trả điều khiển; hành trình này dùng cheat.
 - Điều kiện nhân vật có skill tính cả trait actor/class/trang bị/state, cùng
   nguồn với combat; state Salmonsnake thật cấp skill 64/82 và giữ qua save.
 - Mã màu trong hội thoại, lựa chọn, trợ giúp và credits đọc màu từ Window.png;
