@@ -3132,6 +3132,8 @@ async function main() {
             10000, 'về tiêu đề dùng asset và BGM độc lập');
         check('màn tiêu đề có hình, nhạc và nút chơi mới', await evalPage(cdp,
             'document.querySelector("#fnh-end-title").textContent === FNHStandalonePreview.engine.database.System.gameTitle && document.querySelector("#fnh-new-game").getBoundingClientRect().width > 0', false, false));
+        check('tiêu đề tôn trọng cấu hình không vẽ tên chồng lên ảnh', await evalPage(cdp,
+            '!FNHStandalonePreview.engine.database.System.optDrawTitle && document.querySelector("#fnh-end-title").hidden && document.querySelector("#fnh-end-actions").getBoundingClientRect().width > 0', false, false));
         await evalPage(cdp, `(() => {
             const state=new FNHStandaloneState.GameState({mapId:74,x:8,y:8,direction:8,party:[1],switches:{246:true},variables:{121:1,8235:72}},FNHStandalonePreview.engine.database);
             state.actor(1);const snapshot=state.toJSON();

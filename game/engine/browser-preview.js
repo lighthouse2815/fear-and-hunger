@@ -228,7 +228,9 @@
         var system = engine.database.System;
         var background = document.getElementById('fnh-end-background');
         var overlay = document.getElementById('fnh-end-overlay');
-        document.getElementById('fnh-end-title').textContent = scene === 'gameover' ? 'Game Over' : system.gameTitle;
+        var title = document.getElementById('fnh-end-title');
+        title.textContent = scene === 'gameover' ? 'Game Over' : system.gameTitle;
+        title.hidden = scene === 'title' && !system.optDrawTitle;
         var first = scene === 'gameover' ? './img/system/GameOver.png' :
             system.title1Name ? './img/titles1/' + encodeURIComponent(system.title1Name) + '.png' : null;
         background.hidden = !first;
