@@ -158,15 +158,20 @@ async function fixture(events, commonEvents = []) {
     }
     assert.equal(hideSeek.state.variableValue(333), 8, 'tìm lại sau tải không cộng điểm lần hai');
     hideSeek.state.setSwitch(2781, true);
-    await runHideSeek(60);
-    assert.equal(hideSeek.state.switchValue(2743), true, 'đủ tám nhân vật mở trang thắng');
+    const hideErrors = [];
+    const hideScheduler = new EventScheduler(hideSeek, { message: text => foundMessages.push(text),
+        effect: code => code === 250 }, error => hideErrors.push(error));
+    for (let i = 0; i < 1000 && hideSeek.state.mapId !== 168; i++) {
+        hideScheduler.tick(); hideSeek.advanceRoutes(8); await delay();
+    }
+    assert.equal(hideSeek.state.switchValue(2743), true, 'scheduler mở trang thắng khi đủ tám nhân vật');
     assert.equal(hideSeek.state.timer.active, false);
-    assert.deepEqual([hideSeek.state.mapId, hideSeek.state.x, hideSeek.state.y], [167, 38, 45]);
-    await runHideSeek(60, { message: text => foundMessages.push(text), effect: code => code === 250 });
     assert.ok(foundMessages.some(text => text.includes('You found everyone!')));
     assert.equal(hideSeek.state.mapId, 168);
     assert.equal(hideSeek.state.switchValue(2791), true);
     assert.equal(hideSeek.state.variableValue(334), 2);
+    assert.deepEqual(hideErrors, []);
+    hideScheduler.stop(); await delay();
     await hideSeek.restore(hideSeekOpening);
     hideSeek.state.timer = { active: true, frames: 59 };
     let hideSeekDone = false, hideSeekError;
