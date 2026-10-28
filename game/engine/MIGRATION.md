@@ -25,6 +25,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Đồng hồ của lệnh 124 hiện góc trên bên phải ở map/trận, ẩn khi dừng hoặc
+  mở menu; Chrome kiểm tra lệnh ba phút và dừng thật của Map166 cùng save.
+  Nhịp đếm trong trận và hành vi hết giờ vẫn cần hoàn thiện.
 - Biến số làm tròn xuống khi ghi như runtime gốc, kể cả phép chia số âm;
   kiểm tra qua interpreter và lưu/tải. JSON hiện tại không dùng phép chia 122.
 - Chrome đi liên tục từ entry chính qua Guard layout 3 tới lồng Girl, xử lý

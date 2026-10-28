@@ -6,6 +6,7 @@
     var mapId = Number(query.get('map') || 74);
     var automaticEvents = titleFlow || query.get('events') === '1';
     var canvas = document.getElementById('fnh-canvas');
+    var timer = document.getElementById('fnh-timer');
     var status = document.getElementById('fnh-status');
     var message = document.getElementById('fnh-message-text');
     var next = document.getElementById('fnh-next');
@@ -38,6 +39,13 @@
     window.FNHStandalonePreview = { engine: engine, audio: audio, settings: settings, errors: errors };
 
     function setStatus(text) { status.textContent = text; }
+    function renderTimer() {
+        var state = engine.state, countdown = state && state.timer;
+        timer.hidden = !countdown || !countdown.active || !['map', 'battle'].includes(state.scene);
+        if (timer.hidden) return;
+        var seconds = Math.floor(countdown.frames / 60);
+        timer.textContent = String(Math.floor(seconds / 60) % 60).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
+    }
     function setRichText(element, text) {
         var nodes = [], color = null;
         FNHStandaloneText.formatParts(text, engine.state).forEach(function (part) {
@@ -236,6 +244,7 @@
     }
     async function draw() {
         syncBattleAudio();
+        renderTimer();
         await renderer.draw(engine);
         renderBattleUi();
         renderEndScreen();
@@ -586,6 +595,7 @@
                 active = active || engine.animations.entries.length > 0 || animationRevision !== engine.animations.revision ||
                     !!(engine.state.regionCover && engine.state.regionCover.enabled);
                 engine.advanceRoutes(frames);
+                renderTimer();
                 var heldDirection = engine.buttons.has('down') ? 2 : engine.buttons.has('left') ? 4 :
                     engine.buttons.has('right') ? 6 : engine.buttons.has('up') ? 8 : 0;
                 if (heldDirection && !pictureInput() && !engine.messageRunning && !engine.eventRunning &&

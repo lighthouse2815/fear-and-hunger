@@ -3503,6 +3503,23 @@ async function main() {
                 return e.state.pendingChoices.disabled.includes(0) && e.state.pendingChoices.text[0]==='????';
             }finally{await e.restore(snapshot);}
         })()`,true,false));
+        check('đồng hồ từ lệnh Map166 hiển thị và giữ qua lưu tải',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine,snapshot=e.save(),timer=document.querySelector('#fnh-timer');
+            const frame=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            try{
+                const map=await (await fetch('data/Map166.json')).json();
+                const start=map.events[67].pages[0].list.find(command=>command.code===124 && command.parameters[0]===0);
+                const stop=map.events[307].pages[0].list.find(command=>command.code===124 && command.parameters[0]===1);
+                if(!start || !stop || start.parameters[1]!==180)return false;
+                e.state.scene='menu';await e.createInterpreter([start],0).run();
+                await frame();if(!timer.hidden || e.state.timer.frames!==10800)return false;
+                e.state.scene='map';await frame();
+                if(timer.hidden || !['03:00','02:59'].includes(timer.textContent))return false;
+                e.state.scene='menu';e.state.timer.frames=61;await e.restore(e.save());
+                e.state.scene='map';await frame();if(timer.hidden || !['00:01','00:00'].includes(timer.textContent))return false;
+                await e.createInterpreter([stop],0).run();await frame();return timer.hidden;
+            }finally{await e.restore(snapshot);}
+        })()`,true,false));
         check('điều kiện skill tính trait trạng thái thật và giữ qua save',await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine,snapshot=e.save();
             try {

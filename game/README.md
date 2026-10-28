@@ -95,6 +95,8 @@ Interpreter chạy được common event lồng nhau, vòng lặp có giới h�
 điều kiện, biến ngẫu nhiên và self-switch. Test dùng thùng đồ event 39 trên Map074
 để xác nhận nhận vật phẩm từ common event 52 và không nhận lại sau khi đã mở.
 Biến số được làm tròn xuống khi ghi, kể cả số âm và kết quả phép chia.
+Các event đếm giờ hiện đồng hồ phút:giây trên màn hình; thời gian được lưu cùng
+save. Bộ đếm trong trận vẫn cần đối chiếu và hoàn thiện.
 Điều kiện vũ khí/giáp có cờ tính trang bị kiểm tra cả đồ đang đeo của party;
 trong trận chỉ tính bốn người tham chiến, guest không tính là thành viên party.
 Điều kiện nhân vật có kỹ năng tính cả kỹ năng đã học và kỹ năng do trait của
