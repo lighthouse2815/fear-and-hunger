@@ -69,6 +69,29 @@ async function fixture(events, commonEvents = []) {
     assert.deepEqual(tileErrors, []);
     tileScheduler.stop(); await delay();
     await puzzle.restore(puzzleSnapshot);
+    const solveMessages = [], solveErrors = [];
+    const solveScheduler = new EventScheduler(puzzle, { message: text => solveMessages.push(text),
+        effect: code => [245, 250].includes(code) }, error => solveErrors.push(error));
+    const correctTiles = puzzle.map.events.filter(event => {
+        const page = event.pages[3];
+        return page && page.list.some(command => command.code === 122 && command.parameters[0] === 318 && command.parameters[2] === 1);
+    });
+    assert.equal(correctTiles.length, 26, 'JSON câu đố có 26 ô đúng');
+    for (const tile of correctTiles) {
+        await puzzle.runEvent(tile.id, { effect: code => code === 250 });
+        for (let i = 0; i < 300 && !puzzle.state.selfSwitchValue(166, tile.id, 'D'); i++) {
+            solveScheduler.tick(); puzzle.advanceRoutes(1); await delay();
+        }
+        assert.equal(puzzle.state.selfSwitchValue(166, tile.id, 'D'), true, 'ô ' + tile.id + ' được chọn');
+    }
+    for (let i = 0; i < 2000 && puzzle.state.mapId === 166; i++) {
+        solveScheduler.tick(); puzzle.advanceRoutes(16); await delay();
+    }
+    assert.equal(puzzle.state.mapId, 168, 'chọn đủ ô thật kích hoạt trang hoàn thành');
+    assert.ok(solveMessages.some(text => text.includes('solved the puzzle')));
+    assert.deepEqual(solveErrors, []);
+    solveScheduler.stop(); await delay();
+    await puzzle.restore(puzzleSnapshot);
     async function runPuzzleEnding(eventId) {
         let done = false, error;
         const messages = [];

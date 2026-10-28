@@ -31,8 +31,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   đang chạy. Unit kiểm tra đếm, dừng ở menu, hết giờ trên map và trong trận.
   Lệnh dừng giữ số frame còn lại và trạng thái này được lưu; bắt đầu lại đặt
   thời gian mới. Unit và Chrome dùng lệnh 124 thật từ Map166.
-  Unit chạy trọn mở màn puzzle Map166 và cả nhánh giải đúng/hết giờ tới Map168,
-  kiểm tra điểm và switch; điều kiện giải đúng được đặt trực tiếp trong test.
+  Unit chạy trọn mở màn puzzle Map166, chọn 26 event ô đúng qua scheduler và
+  kích hoạt hoàn thành tới Map168; chưa kiểm tra di chuyển bằng giao diện.
+  Nhánh hết giờ cũng tới Map168 và giữ đúng điểm/switch theo dữ liệu thật.
 - Biến số làm tròn xuống khi ghi như runtime gốc, kể cả phép chia số âm;
   kiểm tra qua interpreter và lưu/tải. JSON hiện tại không dùng phép chia 122.
 - Chrome đi liên tục từ entry chính qua Guard layout 3 tới lồng Girl, xử lý
