@@ -122,6 +122,23 @@ async function fixture(events, commonEvents = []) {
     assert.equal(puzzle.state.timer.active, false);
     assert.equal(puzzle.state.switchValue(2792), true);
     assert.equal(puzzle.state.switchValue(2791), false);
+    await puzzle.restore(puzzleSnapshot);
+    puzzle.state.setSwitch(2781, true);
+    puzzle.state.timer = { active: true, frames: 59 };
+    const puzzleTimeoutMessages = [], puzzleTimeoutErrors = [];
+    const puzzleTimeoutScheduler = new EventScheduler(puzzle, { message: text => puzzleTimeoutMessages.push(text),
+        effect: code => [245, 250].includes(code) }, error => puzzleTimeoutErrors.push(error));
+    for (let i = 0; i < 2000 && puzzle.state.mapId !== 168; i++) {
+        puzzleTimeoutScheduler.tick(); puzzle.advanceRoutes(16); await delay();
+    }
+    assert.equal(puzzle.state.switchValue(2744), true, 'scheduler phát hiện hết giờ câu đố');
+    assert.equal(puzzle.state.timer.active, false);
+    assert.ok(puzzleTimeoutMessages.some(text => text.includes('failed at solving')));
+    assert.equal(puzzle.state.mapId, 168, 'nhánh hết giờ câu đố chuyển đến phòng kết quả');
+    assert.equal(puzzle.state.switchValue(2792), true);
+    assert.equal(puzzle.state.switchValue(2791), false);
+    assert.deepEqual(puzzleTimeoutErrors, []);
+    puzzleTimeoutScheduler.stop(); await delay();
     const hideSeek = new GameEngine({ dataStore: store, onRouteEffect: () => true });
     await hideSeek.boot({ mapId: 167, x: 38, y: 44, party: [1] });
     let openingDone = false, openingError;
