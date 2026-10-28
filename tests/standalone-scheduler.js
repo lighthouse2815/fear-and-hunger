@@ -150,6 +150,13 @@ async function fixture(events, commonEvents = []) {
         await runHideSeek(id, { message: text => foundMessages.push(text), effect: code => code === 250 });
     }
     assert.equal(hideSeek.state.variableValue(333), 8, 'tìm tám nhân vật thật tăng bộ đếm');
+    const foundSnapshot = hideSeek.save(); await hideSeek.restore(foundSnapshot);
+    for (const id of [13, 44, 45, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57]) {
+        assert.equal(hideSeek.map.eventPage(hideSeek.map.eventById(id)).list.length, 1,
+            'event ' + id + ' đã tìm và các ô liên quan đều chuyển trang rỗng');
+        await runHideSeek(id, { message: text => foundMessages.push(text), effect: code => code === 250 });
+    }
+    assert.equal(hideSeek.state.variableValue(333), 8, 'tìm lại sau tải không cộng điểm lần hai');
     hideSeek.state.setSwitch(2781, true);
     await runHideSeek(60);
     assert.equal(hideSeek.state.switchValue(2743), true, 'đủ tám nhân vật mở trang thắng');
