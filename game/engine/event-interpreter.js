@@ -144,7 +144,9 @@
             if (this.state.scene === 'battle') return;
             this.state.scene = command.code === 351 ? 'menu' : 'save';
             return this.handlers.menu ? this.handlers.menu(this.state.scene, this) : undefined;
-        case 353: this.state.scene = 'gameover'; return;
+        case 353:
+            if (!this.state.hasPartyNameCheat()) this.state.scene = 'gameover';
+            return;
         case 354: this.state.scene = 'title'; return;
         case 281: this.state.mapNameDisplay = command.parameters[0] === 0; return;
         case 134: case 135:

@@ -402,6 +402,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if (process.env.FNH_BROWSER_SCOPE === 'cheat') {
+            await require('./browser-name-cheat')({cdp,url:running.url,evalPage,waitFor,check});
+            check('không có lỗi runtime khi dùng cheat',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất '+passed+' kiểm tra bất tử.');return;
+        }
         if(process.env.FNH_BROWSER_SCOPE==='input') {
             await require('./browser-keyboard')({cdp,url:running.url,evalPage,waitFor,check});
             check('không có lỗi runtime khi khóa chuột',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
@@ -3279,14 +3284,14 @@ async function main() {
             const passed=e.battle.enemy(0).hp===10001 && e.state.actor(1).hp===hp && e.state.hasNameCheat(1);
             e.battle.finish('escape');e.leaveBattle('escape');return passed;
         })()`,true,false));
-        check('đổi tên tắt cheat và game over cốt truyện vẫn kết thúc',await evalPage(cdp,`(async()=>{
+        check('đổi tên tắt cheat, bật lại chặn cả game over cốt truyện',await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine;
             await e.createInterpreter([{code:320,parameters:[1,'Mercenary']},{code:311,parameters:[0,1,1,0,99999,true]}],0).run();
             if(e.state.actor(1).hp!==0||e.state.hasNameCheat(1))return false;
             e.state.setActorName(1,'lighthouse');
             await e.createInterpreter([{code:353},{code:121,parameters:[7389,7389,0]}],0).run();
             window.cheatNamePage.list=window.cheatNameList;delete window.cheatNamePage;delete window.cheatNameList;
-            return e.state.scene==='gameover' && !e.state.switchValue(7389) && e.state.hasNameCheat(1);
+            return e.state.scene==='map' && e.state.switchValue(7389) && e.state.hasNameCheat(1);
         })()`,true,false));
         await evalPage(cdp,'FNHStandalonePreview.engine.createInterpreter([{code:354}],0).run()',true,false);
         await waitFor(cdp,'!document.querySelector("#fnh-end-screen").hidden && FNHStandalonePreview.engine.state.scene==="title"',5000,'trở lại tiêu đề không phát splash lần hai');

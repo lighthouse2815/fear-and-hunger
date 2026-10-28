@@ -223,7 +223,7 @@
             if (effect) { effect.removedStates = removed; state.walkEffects.push(effect); }
         }, this);
         if (state.walkEffects.some(function (effect) { return effect.hp < 0; })) this.screen.handleEffect(224, [[255, 0, 0, 128], 8, false]);
-        if (state.party.length && state.party.every(function (id) { return state.actor(id).hp <= 0; })) state.scene = 'gameover';
+        if (!state.hasPartyNameCheat() && state.party.length && state.party.every(function (id) { return state.actor(id).hp <= 0; })) state.scene = 'gameover';
     };
 
     GameEngine.prototype.canDash = function () {
@@ -1311,6 +1311,7 @@
 
     GameEngine.prototype.leaveBattle = function (result, interpreter) {
         this.animations.clearBattle();
+        if (result === 'defeat' && this.state.hasPartyNameCheat()) result = 'escape';
         if (this.state.scene === 'battle') this.state.scene = result === 'defeat' ? 'gameover' : 'map';
         if (result === 'defeat' && interpreter) interpreter.index = interpreter.commands.length;
         return result === 'victory' ? 0 : result === 'escape' ? 1 : 2;

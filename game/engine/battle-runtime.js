@@ -109,6 +109,7 @@
     };
     BattleRuntime.prototype.finish = function (result) {
         if (!this.battle || this.battle.result) return this.battle && this.battle.result;
+        if (result === 'defeat' && this.state.hasPartyNameCheat()) result = 'escape';
         this.battle.result = result;
         this.battle.phase = 'finished';
         this.battle.inputActions = [];

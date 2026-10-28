@@ -529,9 +529,13 @@ không nạp runtime/plugin cũ và phát được OGG thật.
 miễn trạng thái chết và gây ít nhất 9.999 sát thương mỗi đòn gây mất/hút HP trúng
 quái. Tên không phân biệt hoa thường; đổi sang tên khác sẽ tắt cheat. Cheat đi
 theo tên trong save, không tăng sát thương hồi máu hay đòn đánh đồng đội và không
-thay đổi các kết thúc do sự kiện cốt truyện gọi trực tiếp.
+cho phép Game Over khi nhân vật này còn trong đội, kể cả lệnh 353 do cốt truyện
+gọi trực tiếp. Sự kiện tiếp tục sau lệnh bị chặn; thất bại trong trận trả về bản đồ.
+Save cũ ở màn Game Over có nhân vật này trong đội cũng được hồi sinh khi tải lại.
 Cheat này cũng đã được triển khai trong engine độc lập, không cần plugin gốc;
 đổi tên bằng lệnh 320, tăng HP tối đa, state và tải save đều giữ cùng quy tắc.
+Kiểm tra riêng: `node tests/standalone-name-cheat.js` và
+`FNH_BROWSER_SCOPE=cheat npm run test:browser`.
 
 ## Muốn sửa gì thì mở đâu?
 

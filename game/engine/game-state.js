@@ -99,6 +99,7 @@
         Object.keys(this.actors).forEach(function (id) {
             if (actorApi.hasNameCheat(this.actors[id])) this.updateActor(Number(id), function () {});
         }, this);
+        if (this.scene === 'gameover' && this.hasPartyNameCheat()) this.scene = 'map';
     }
 
     GameState.prototype.switchValue = function (id) {
@@ -212,6 +213,10 @@
     GameState.prototype.hasNameCheat = function (id) {
         var actor = this.actor(id);
         return !!actor && actorApi.hasNameCheat(actor);
+    };
+
+    GameState.prototype.hasPartyNameCheat = function () {
+        return this.party.some(function (id) { return this.hasNameCheat(id); }, this);
     };
 
     GameState.prototype.setActorName = function (id, name) {

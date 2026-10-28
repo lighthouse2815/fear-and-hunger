@@ -235,8 +235,9 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 - Cheat tên `lighthouse` đọc tên đã trim/không phân biệt hoa thường, luôn đầy HP,
   miễn death state và tăng đòn gây mất/hút HP trúng quái lên tối thiểu 9.999 sau
   modifier. Không tăng hồi phục/MP/đòn đồng đội hay cho quái cùng tên; đổi tên tắt.
-  UI đặt tên/lệnh 320/chỉ số/state/save/339/tick đều kiểm tra; 353 kết thúc truyện
-  vẫn chạy và dừng event như bình thường, không nạp FNH_NameCheat gốc.
+  UI đặt tên/lệnh 320/chỉ số/state/save/339/tick đều kiểm tra; có nhân vật cheat
+  trong đội chặn 353 và tiếp tục event, thất bại trả về bản đồ. Save Game Over cũ
+  hồi sinh khi tải lại; không nạp FNH_NameCheat gốc.
 - `standalone.html?title=1` chạy autorun Map072 thật: chờ/fade/giữ splash theo
   frame, 354 về title, khóa gameplay. Chrome so pixel PNG, Continue tải ô được
   chọn và New Game mở chọn nhân vật; về title không lặp splash trong cùng phiên.
