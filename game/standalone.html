@@ -76,6 +76,8 @@
         @media (prefers-reduced-motion: reduce) { #fnh-loading p::after { animation: none; } }
         #fnh-timer { position: absolute; top: 0; right: 0; width: 11.765%; height: 7.692%; display: grid; place-items: center; font: clamp(14px, 3.92vw, 32px) GameFont, serif; color: white; text-shadow: -2px -2px 2px black, 2px 2px 2px black; pointer-events: none; z-index: 2; }
         #fnh-timer[hidden] { display: none; }
+        #fnh-play-time { position: absolute; top: 1.5%; left: 1.5%; padding: .35em .55em; border-radius: 3px; background: #0008; color: #ded3bb; font: clamp(12px, 2.2cqw, 18px) GameFont, serif; font-variant-numeric: tabular-nums; text-shadow: 1px 1px 2px #000; pointer-events: none; z-index: 2; }
+        #fnh-play-time[hidden] { display: none; }
         #fnh-video { position: absolute; inset: 0; width: 100%; height: 100%; background: black; object-fit: contain; pointer-events: none; }
         #fnh-video[hidden] { display: none; }
         #fnh-video-play { position: absolute; inset: 40% 30%; }
@@ -264,6 +266,7 @@
         <canvas id="fnh-canvas" width="816" height="624" tabindex="0" aria-label="Bản đồ game"></canvas>
         <div id="fnh-loading" role="status"><p>Đang tải…</p></div>
         <div id="fnh-timer" hidden aria-label="Thời gian còn lại"></div>
+        <div id="fnh-play-time" hidden aria-label="Thời gian chơi"></div>
         <section id="fnh-combat" hidden aria-label="Battle">
             <div id="fnh-combat-commands" class="fnh-combat-window" aria-label="Commands"></div>
             <div id="fnh-combat-status" class="fnh-combat-window" aria-label="Party"></div>

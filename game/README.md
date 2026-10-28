@@ -149,6 +149,9 @@ Biến số được làm tròn xuống khi ghi, kể cả số âm và kết qu
 Các event đếm giờ hiện đồng hồ phút:giây trên màn hình; thời gian được lưu cùng
 save. Đồng hồ tiếp tục đếm trong trận và kết thúc trận theo nhánh thoát khi hết giờ.
 Lệnh dừng ẩn đồng hồ nhưng giữ thời gian còn lại trong trạng thái và save.
+Thời gian chơi hiện ở góc trên trái theo giờ:phút:giây, lưu cùng từng ô save;
+save cũ chưa có thời gian bắt đầu từ 0. Đồng hồ tính cả menu, hội thoại và trận
+đấu, tạm dừng khi ẩn tab, ở tiêu đề hoặc Game Over. Bộ đếm sự kiện vẫn ở góc phải.
 Điều kiện vũ khí/giáp có cờ tính trang bị kiểm tra cả đồ đang đeo của party;
 trong trận chỉ tính bốn người tham chiến, guest không tính là thành viên party.
 Điều kiện nhân vật có kỹ năng tính cả kỹ năng đã học và kỹ năng do trait của

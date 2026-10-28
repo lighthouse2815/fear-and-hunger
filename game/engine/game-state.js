@@ -68,6 +68,7 @@
         if (!Array.isArray(this.regionCover.open)) this.regionCover.open = [0];
         this.mapTileset = source.mapTileset || null;
         this.timer = source.timer || { active: false, frames: 0 };
+        this.playTimeMs = Number.isFinite(source.playTimeMs) ? Math.max(0, source.playTimeMs) : 0;
         this.menuEnabled = source.menuEnabled !== false;
         this.saveEnabled = source.saveEnabled !== false;
         this.battleBgm = source.battleBgm || null;
@@ -348,6 +349,16 @@
         return this.inventory[kind][String(id)] || 0;
     };
 
+    GameState.prototype.advancePlayTime = function (milliseconds) {
+        if (['map','battle','menu','save'].includes(this.scene) && Number.isFinite(milliseconds) && milliseconds > 0) this.playTimeMs += milliseconds;
+    };
+
+    GameState.prototype.playTimeText = function () {
+        var seconds = Math.floor(this.playTimeMs / 1000);
+        return [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
+            .map(function (value) { return String(value).padStart(2,'0'); }).join(':');
+    };
+
     GameState.prototype.toJSON = function () {
         return clone({
             mapId: this.mapId,
@@ -370,7 +381,7 @@
             scene: this.scene, pendingEventStack: this.pendingEventStack,
             mapNameDisplay: this.mapNameDisplay,
             battle: this.battle, walkSteps: this.walkSteps, walkEffects: this.walkEffects,
-            timer: this.timer, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
+            timer: this.timer, playTimeMs: this.playTimeMs, menuEnabled: this.menuEnabled, saveEnabled: this.saveEnabled, battleBgm: this.battleBgm, vehicleId: this.vehicleId,
             wordWrap: this.wordWrap, pendingChoices: this.pendingChoices,
             dashEnabled: this.dashEnabled,
             alwaysDash: this.alwaysDash,

@@ -39,4 +39,21 @@ assert.throws(() => state.setVariable(1, 'sai'), /Giá trị biến không hợp
 assert.throws(() => state.setSelfSwitch(74, 8, 'E', true), /Self-switch không hợp lệ/);
 assert.throws(() => state.gainItem('gold', 1, 1), /Loại vật phẩm không hợp lệ/);
 
-console.log('ĐẠT: state engine độc lập quản lý công tắc, biến, self-switch và vật phẩm.');
+assert.equal(state.playTimeMs,0,'save cũ bắt đầu thời gian từ 0');
+assert.equal(state.playTimeText(),'00:00:00');
+for (const scene of ['map','battle','menu','save']) {
+    state.scene=scene;state.advancePlayTime(1000.25);
+}
+assert.equal(state.playTimeMs,4001);
+for (const scene of ['title','gameover']) {state.scene=scene;state.advancePlayTime(10000);}
+assert.equal(state.playTimeMs,4001,'tiêu đề và Game Over không tính giờ chơi');
+state.scene='map';
+for (const invalid of [-1,NaN,Infinity,'1000',undefined]) state.advancePlayTime(invalid);
+assert.equal(state.playTimeMs,4001);
+state.advancePlayTime(360000000+359999);
+assert.equal(state.playTimeText(),'100:06:04','không cuộn giờ về 0 sau 24/100 giờ');
+assert.equal(new GameState(state.toJSON()).playTimeMs,state.playTimeMs,'lưu/tải không làm mất phần mili giây');
+assert.equal(new GameState({playTimeMs:-100}).playTimeText(),'00:00:00');
+assert.equal(new GameState({playTimeMs:'sai'}).playTimeMs,0);
+
+console.log('ĐẠT: state quản lý công tắc, biến, self-switch, vật phẩm và thời gian chơi qua các scene/save cũ-mới.');

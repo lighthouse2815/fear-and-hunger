@@ -20,6 +20,7 @@
     if (automaticEvents) document.querySelector('.fnh-stage').appendChild(document.getElementById('fnh-message'));
     var canvas = document.getElementById('fnh-canvas');
     var timer = document.getElementById('fnh-timer');
+    var playTime = document.getElementById('fnh-play-time');
     var status = document.getElementById('fnh-status');
     var message = document.getElementById('fnh-message-text');
     var next = document.getElementById('fnh-next');
@@ -64,6 +65,11 @@
     function setStatus(text) { status.textContent = text; }
     function renderTimer() {
         var state = engine.state, countdown = state && state.timer;
+        playTime.hidden = !state || !['map','battle'].includes(state.scene) || titleFlow && state.mapId === 72;
+        if (!playTime.hidden) {
+            var text = state.playTimeText();
+            if (playTime.textContent !== text) playTime.textContent = text;
+        }
         timer.hidden = !countdown || !countdown.active || !['map', 'battle'].includes(state.scene);
         if (timer.hidden) return;
         var seconds = Math.floor(countdown.frames / 60);
@@ -757,12 +763,14 @@
     });
     var previousFrame = performance.now(), frameRemainder = 0, drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;
     async function animate(now) {
-        frameRemainder = Math.min(6, frameRemainder + Math.max(0, (now - previousFrame) * 60 / 1000));
+        var elapsed = Math.max(0, now - previousFrame);
+        frameRemainder = Math.min(6, frameRemainder + elapsed * 60 / 1000);
         var frames = Math.floor(frameRemainder + 1e-9);
         frameRemainder = Math.max(0, frameRemainder - frames);
         previousFrame = now;
         if (ready) {
             try {
+                if (!document.hidden && !(titleFlow && engine.state.mapId === 72)) engine.state.advancePlayTime(elapsed);
                 if(engine.filters.enabled!==settings.filterEffects) {engine.filters.enabled=settings.filterEffects;engine.filters.revision++;}
                 syncBattleAudio();
                 if (scrollAnimation) scrollAnimation.playbackRate = !scrollNoFast &&
@@ -858,7 +866,10 @@
         heldKeys.delete(key); releaseButton(name); commonKeys.delete(name);
     });
     window.addEventListener('blur', clearInput);
-    document.addEventListener('visibilitychange', function () { if (document.hidden) clearInput(); });
+    document.addEventListener('visibilitychange', function () {
+        previousFrame = performance.now();
+        if (document.hidden) clearInput();
+    });
     document.addEventListener('keydown', function (event) {
         audio.unlock();
         if (presentationInput()) {
