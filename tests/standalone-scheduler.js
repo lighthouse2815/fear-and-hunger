@@ -17,6 +17,21 @@ async function fixture(events, commonEvents = []) {
     return engine;
 }
 (async () => {
+    const realTimerEvent = require('../game/data/Map166.json').events[307];
+    const timed = await fixture([null, realTimerEvent]);
+    const timerErrors = [], timerScheduler = new EventScheduler(timed, {}, error => timerErrors.push(error));
+    timed.state.setSwitch(2741, true);
+    timed.state.timer = { active: true, frames: 60 };
+    timerScheduler.tick(); await delay();
+    assert.equal(timed.state.switchValue(2744), false, 'trang song song chưa hết giờ khi còn một giây');
+    timed.advanceRoutes(1);
+    for (let i = 0; i < 20 && !timed.state.switchValue(2744); i++) { timerScheduler.tick(); await delay(); }
+    assert.equal(timed.state.switchValue(2744), true, 'trang song song Map166 phát hiện dưới một giây');
+    assert.equal(timed.state.switchValue(202), true);
+    assert.deepEqual(timed.state.timer, { active: false, frames: 59 });
+    assert.equal(timed.map.eventPage(timed.map.eventById(307)).trigger, 3, 'switch hết giờ đổi sang trang autorun');
+    timerScheduler.stop();
+    assert.deepEqual(timerErrors, []);
     const engine = await fixture([null,
         { id: 1, x: 0, y: 1, pages: [page(3, [
             { code: 122, parameters: [1, 1, 1, 0, 1] }, { code: 230, parameters: [3] }, { code: 123, parameters: ['A', 0] }
