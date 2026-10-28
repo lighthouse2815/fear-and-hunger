@@ -17,6 +17,15 @@ const { EventInterpreter } = require('../game/engine/event-interpreter');
     assert.deepEqual(new GameState(timerState.toJSON()).timer, timerState.timer, 'lưu giữ thời gian đã dừng');
     await new EventInterpreter({ state: timerState, commands: [timerStart] }).run();
     assert.deepEqual(timerState.timer, { active: true, frames: 10800 }, 'bắt đầu lại đặt thời gian mới');
+    const timeoutPage = map166.events[307].pages[0].list;
+    timerState.timer.frames = 60;
+    await new EventInterpreter({ state: timerState, commands: timeoutPage }).run();
+    assert.equal(timerState.switchValue(2744), false, 'còn một giây chưa chạy nhánh hết giờ');
+    timerState.timer.frames = 59;
+    await new EventInterpreter({ state: timerState, commands: timeoutPage }).run();
+    assert.equal(timerState.switchValue(2744), true, 'dưới một giây chạy nhánh hết giờ thật');
+    assert.equal(timerState.switchValue(202), true);
+    assert.deepEqual(timerState.timer, { active: false, frames: 59 }, 'trang thật dừng nhưng giữ thời gian');
     const arithmetic = new GameState();
     await new EventInterpreter({ state: arithmetic, commands: [
         { code: 122, parameters: [1, 1, 0, 0, 7] },
