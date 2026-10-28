@@ -122,6 +122,22 @@ async function fixture(events, commonEvents = []) {
     assert.equal(puzzle.state.timer.active, false);
     assert.equal(puzzle.state.switchValue(2792), true);
     assert.equal(puzzle.state.switchValue(2791), false);
+    const hideSeek = new GameEngine({ dataStore: store, onRouteEffect: () => true });
+    await hideSeek.boot({ mapId: 167, x: 38, y: 44, party: [1], switches: { 2742: true } });
+    hideSeek.state.timer = { active: true, frames: 59 };
+    let hideSeekDone = false, hideSeekError;
+    const hideSeekRun = hideSeek.runEvent(61).catch(error => { hideSeekError = error; })
+        .finally(() => { hideSeekDone = true; });
+    for (let i = 0; i < 300 && !hideSeekDone; i++) { hideSeek.advanceRoutes(8); await delay(); }
+    assert.equal(hideSeekDone, true, 'nhánh hết giờ trốn tìm phải kết thúc');
+    await hideSeekRun;
+    if (hideSeekError) throw hideSeekError;
+    assert.equal(hideSeek.state.timer.active, false);
+    assert.equal(hideSeek.state.switchValue(2746), true);
+    assert.equal(hideSeek.state.switchValue(2744), true);
+    assert.deepEqual([hideSeek.state.mapId, hideSeek.state.x, hideSeek.state.y], [167, 38, 45]);
+    const hideSeekSave = hideSeek.save(); await hideSeek.restore(hideSeekSave);
+    assert.equal(hideSeek.state.switchValue(2744), true, 'lưu giữ nhánh hết giờ trốn tìm');
     const engine = await fixture([null,
         { id: 1, x: 0, y: 1, pages: [page(3, [
             { code: 122, parameters: [1, 1, 1, 0, 1] }, { code: 230, parameters: [3] }, { code: 123, parameters: ['A', 0] }
