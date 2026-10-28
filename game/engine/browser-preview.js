@@ -80,7 +80,7 @@
         });
         element.replaceChildren.apply(element, nodes);
     }
-    var menuUi;
+    var menuUi, combatUi;
     var battleTarget = 0, battleActor = 0, battleFriend = 0, battleSkill = 2, battleItem = 0, battleKind = 'skill';
     var lastBattle = null, lastScene = null, lastBattlePhase = null, lastActionRevision = null;
     function formatResourceChanges(effect) {
@@ -107,6 +107,7 @@
         lastBattle = battle; lastScene = engine.state.scene;
         lastBattlePhase = battle && battle.phase;
         lastActionRevision = battle && battle.actionRevision;
+        if (automaticEvents && combatUi) { panel.hidden = true; combatUi.render(); return; }
         if (!battle || engine.state.scene !== 'battle' || battle.result) { panel.hidden = true; return; }
         panel.hidden = false;
         document.getElementById('fnh-battle-round').textContent = 'Lượt ' + battle.turn + (battle.extraTurn ? ' · Lượt bổ sung' : '');
@@ -680,6 +681,7 @@
         settings.setVolume(category, value); audio.setVolume(category, settings.volumes[category] / 100);
         video.volume = audio.masterVolume; document.getElementById('fnh-volume').value = settings.volumes.master;
     }
+    combatUi = new FNHStandaloneBattleUi.BattleUi(engine, { handlers: eventHandlers, renderer: renderer, changed: draw, input: inputName });
     menuUi = new FNHStandaloneMenu.MenuUi(engine, saveStore, eventHandlers, draw, {
         settings: settings, updateVolume: updateVolume, gameplay: automaticEvents,
         clearInput: clearInput
@@ -779,6 +781,10 @@
             return;
         }
         if (document.querySelector('dialog[open]')) return;
+        if (automaticEvents && engine.state && engine.state.scene === 'battle' && !engine.messageRunning) {
+            if (!document.getElementById('fnh-combat').contains(event.target)) combatUi.handleKey(event);
+            return;
+        }
         var buttonName = inputName(event.key);
         if (buttonName === 'cancel' && engine.state && engine.state.scene === 'map' &&
             !scrollAnimation && !pictureInput() && !engine.eventRunning && !engine.messageRunning && engine.openMenu()) {
@@ -979,6 +985,10 @@
             var skin = await renderer.loadImage('img/system/Window.png'); windowSkin = skin;
             document.querySelectorAll('#fnh-title-frame, .fnh-name-frame').forEach(function (target) {
                 drawWindowFrame(target);
+            });
+            [['fnh-combat-commands',192,180],['fnh-combat-status',624,180],['fnh-combat-list',816,180],['fnh-combat-help',816,72]].forEach(function (entry) {
+                var frame = document.createElement('canvas'); frame.width = entry[1]; frame.height = entry[2]; drawWindowFrame(frame);
+                document.getElementById(entry[0]).style.backgroundImage = 'url("' + frame.toDataURL() + '")';
             });
             var palette = document.createElement('canvas');
             palette.width = skin.width; palette.height = skin.height;

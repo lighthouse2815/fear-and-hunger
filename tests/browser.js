@@ -385,6 +385,27 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        await cdp.send('Page.addScriptToEvaluateOnNewDocument', {source: `
+            window.fnhTestCombatAttack=function(){
+                const targets=document.querySelector('#fnh-combat-targets');
+                if(targets && !targets.hidden){
+                    const target=targets.querySelector('[data-target="0"]:enabled') || targets.querySelector('button:enabled');
+                    if(target)target.click();return;
+                }
+                const commands=document.querySelector('#fnh-combat-commands');
+                if(commands && !commands.hidden){
+                    const attack=[...commands.querySelectorAll('button:enabled')].find(button=>button.textContent==='Attack');
+                    if(attack)attack.click();
+                    else {const fight=[...commands.querySelectorAll('button:enabled')].find(button=>button.textContent==='Fight');if(fight)fight.click();}
+                }
+            };`});
+
+        if (process.env.FNH_BROWSER_SCOPE === 'combat') {
+            await require('./browser-combat')({ cdp, url: running.url, evalPage, waitFor, clickElement, check, screenshot });
+            check('không có lỗi runtime trong giao diện chiến đấu', runtimeErrors.length === 0, JSON.stringify(runtimeErrors));
+            log('Hoàn tất ' + passed + ' kiểm tra combat.');
+            return;
+        }
 
         const namespace = 'smoke-' + process.pid + '-' + Date.now().toString(36);
         const url = running.url + 'legacy.html?fnh_save_ns=' + encodeURIComponent(namespace);
@@ -3787,10 +3808,7 @@ async function main() {
             completedGuard=await evalPage(cdp,`(()=>{
                 const e=FNHStandalonePreview.engine,next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
                 const choice=document.querySelector('#fnh-choices button:not(:disabled)');if(choice)choice.click();
-                if(e.state.scene==='battle' && e.battle.battle.phase==='input' && !document.querySelector('#fnh-battle-attack').disabled){
-                    const torso=document.querySelector('#fnh-battle-targets [data-index="0"]');if(torso && !torso.disabled)torso.click();
-                    document.querySelector('#fnh-battle-attack').click();document.querySelector('#fnh-battle-start').click();
-                }
+                if(e.state.scene==='battle' && e.battle.battle.phase==='input') window.fnhTestCombatAttack();
                 return e.state.scene==='map' && !e.eventRunning && e.battle.battle && e.battle.battle.result==='victory';
             })()`,false,true);
             if(!completedGuard)await sleep(200);
@@ -3837,10 +3855,7 @@ async function main() {
                     if(text.includes('little girl inside the cage'))return true;
                     const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
                     const choice=document.querySelector('#fnh-choices button:not(:disabled)');if(choice)choice.click();
-                    if(e.state.scene==='battle' && e.battle.battle.phase==='input' && !document.querySelector('#fnh-battle-attack').disabled){
-                        const target=document.querySelector('#fnh-battle-targets [data-index="0"]');if(target && !target.disabled)target.click();
-                        document.querySelector('#fnh-battle-attack').click();document.querySelector('#fnh-battle-start').click();
-                    }
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input') window.fnhTestCombatAttack();
                     if(e.state.scene!=='map' || e.eventRunning)return false;
                     const cage=e.map.eventById(88),dx=cage.x-e.state.x,dy=cage.y-e.state.y;
                     let direction;
@@ -3900,11 +3915,7 @@ async function main() {
                     const button=buttons.find(b=>b.textContent.includes('Use Small key')) ||
                         buttons.find(b=>b.textContent==='Open the cage') || buttons.find(b=>b.textContent===\"Don't\");
                     if(button && !button.disabled)button.click();
-                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
-                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
-                        const target=document.querySelector('#fnh-battle-targets [data-index="0"]');if(target && !target.disabled)target.click();
-                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
-                    }
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input') window.fnhTestCombatAttack();
                     return false;
                 })()`,false,true);
                 if(!rescued)await sleep(100);
@@ -3928,11 +3939,7 @@ async function main() {
                     if(e.state.mapId===128 && e.state.scene==='map' && !e.eventRunning)return true;
                     const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
                     const choice=document.querySelector('#fnh-choices button:not(:disabled)');if(choice)choice.click();
-                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
-                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
-                        const target=document.querySelector('#fnh-battle-targets [data-index="0"]');if(target && !target.disabled)target.click();
-                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
-                    }
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input') window.fnhTestCombatAttack();
                     if(e.state.scene!=='map' || e.eventRunning || e.state.mapId!==51)return false;
                     const door=e.map.eventById(16),dx=door.x-e.state.x,dy=door.y-e.state.y;
                     if(!e.state.switchValue(24) && Math.abs(dx)+Math.abs(dy)===1){
@@ -3962,11 +3969,7 @@ async function main() {
                     if([3,31,53].includes(e.state.mapId) && e.state.scene==='map' && !e.eventRunning)return true;
                     const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
                     const choice=document.querySelector('#fnh-choices button:not(:disabled)');if(choice)choice.click();
-                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
-                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
-                        const target=document.querySelector('#fnh-battle-targets [data-index="0"]');if(target && !target.disabled)target.click();
-                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
-                    }
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input') window.fnhTestCombatAttack();
                     if(e.state.scene!=='map' || e.eventRunning || e.state.mapId!==128)return false;
                     const door=e.map.eventById(3),dx=door.x-e.state.x,dy=door.y-e.state.y;
                     if(!e.state.switchValue(58) && Math.abs(dx)+Math.abs(dy)===1){
@@ -3999,11 +4002,7 @@ async function main() {
                     const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
                     const buttons=[...document.querySelectorAll('#fnh-choices button:not(:disabled)')];
                     const choice=buttons.find(button=>button.textContent==='Attack him') || buttons[0];if(choice)choice.click();
-                    if(e.state.scene==='battle' && battle.phase==='input'){
-                        const target=document.querySelector('#fnh-battle-targets button:not(:disabled)');if(target)target.click();
-                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
-                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
-                    }
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input') window.fnhTestCombatAttack();
                     if(e.state.scene!=='map' || e.eventRunning || window.__metPriests)return window.__metPriests?1:0;
                     const priest=e.map.eventById(16),dx=priest.x-e.state.x,dy=priest.y-e.state.y;
                     if(Math.abs(dx)+Math.abs(dy)===1){
@@ -4036,11 +4035,7 @@ async function main() {
                     const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
                     const choice=[...document.querySelectorAll('#fnh-choices button:not(:disabled)')].find(button=>button.textContent==='Sacrifice him');
                     if(choice)choice.click();
-                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
-                        const target=document.querySelector('#fnh-battle-targets button:not(:disabled)');if(target)target.click();
-                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
-                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
-                    }
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input') window.fnhTestCombatAttack();
                     if(e.state.scene!=='map' || e.eventRunning)return false;
                     const statue=e.map.eventById(37),dx=statue.x-e.state.x,dy=statue.y-e.state.y;
                     if(Math.abs(dx)+Math.abs(dy)===1){
@@ -4075,11 +4070,7 @@ async function main() {
                     const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
                     const buttons=[...document.querySelectorAll('#fnh-choices button:not(:disabled)')];
                     const choice=buttons.find(button=>button.textContent==='HEADS') || buttons[0];if(choice)choice.click();
-                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
-                        const target=document.querySelector('#fnh-battle-targets button:not(:disabled)');if(target)target.click();
-                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
-                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
-                    }
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input') window.fnhTestCombatAttack();
                     if(e.state.scene!=='map' || e.eventRunning || e.state.mapId!==31)return window.__sawFloorTrap?1:0;
                     const trapId=e.state.switchValue(1562)?300:e.state.switchValue(1563)?89:277;
                     const trap=e.map.eventById(trapId),direction=e.map.findDirection(e.state,trap,80);
@@ -4106,11 +4097,7 @@ async function main() {
                     if(e.state.selfSwitchValue(37,133,'A') && !e.eventRunning && e.state.scene==='map')return true;
                     const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
                     const choice=document.querySelector('#fnh-choices button:not(:disabled)');if(choice)choice.click();
-                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
-                        const target=document.querySelector('#fnh-battle-targets button:not(:disabled)');if(target)target.click();
-                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
-                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
-                    }
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input') window.fnhTestCombatAttack();
                     if(e.state.scene!=='map' || e.eventRunning || e.state.mapId!==37)return false;
                     const crate=e.map.eventById(133),dx=crate.x-e.state.x,dy=crate.y-e.state.y;
                     if(Math.abs(dx)+Math.abs(dy)===1){

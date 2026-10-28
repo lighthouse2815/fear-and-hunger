@@ -344,6 +344,13 @@ Vật phẩm dùng ngoài trận đọc công thức hồi HP/MP,
 state, học skill và common event từ JSON; Blue vial trả vỏ chai và scroll dạy
 đúng nhân vật được chọn. Khi menu mở, map/di chuyển/timer được tạm dừng.
 Trong trận có thể chọn nhân vật, kỹ năng đã học hoặc Guard, mục tiêu quái/đồng đội.
+Luồng chơi chính đặt cửa sổ Attack/Skills/Guard/Item và bảng Body/Mind trong
+khung 816×624, dùng viền Window.png như game gốc. Chọn đủ lệnh đội tự chạy lượt;
+hủy quay lại lệnh trước, hủy tiếp mở Fight/Run. Kỹ năng/vật phẩm có danh sách
+riêng; mục tiêu địch chọn trên hình bộ phận, không hiện HP địch. Vùng chọn bỏ
+phần trong suốt PNG để các bộ phận chồng ảnh vẫn chọn được. Preview giữ bảng
+điều khiển kiểm thử. Chạy `FNH_BROWSER_SCOPE=combat npm run test:browser` để
+kiểm tra riêng UI này; các màn chiến đấu khác vẫn cần đối chiếu tiếp.
 Bốn người đầu trong party tham chiến; người dự bị và guest không vào hàng đợi
 hay danh sách mục tiêu. Thay đổi party trong troop page cập nhật lại bốn vị trí.
 Attack đọc `<skill_id>` của vũ khí: War scythe/Cursed war scythe dùng skill
