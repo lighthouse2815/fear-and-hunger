@@ -52,6 +52,37 @@ async function fixture(events, commonEvents = []) {
     assert.equal(puzzle.state.switchValue(2741), true, 'autorun puzzle mở trang đếm giờ');
     assert.equal(puzzle.state.switchValue(410), false, 'autorun trả quyền điều khiển');
     assert.equal(puzzle.map.eventPage(puzzle.map.eventById(67)).trigger, 0);
+    const puzzleSnapshot = puzzle.save();
+    async function runPuzzleEnding(eventId) {
+        let done = false, error;
+        const messages = [];
+        const run = puzzle.runEvent(eventId, { message: text => messages.push(text),
+            effect: code => [245, 250].includes(code) })
+            .catch(reason => { error = reason; }).finally(() => { done = true; });
+        for (let i = 0; i < 2000 && !done; i++) { puzzle.advanceRoutes(16); await delay(); }
+        assert.equal(done, true, 'nhánh kết thúc puzzle phải kết thúc');
+        await run;
+        if (error) throw error;
+        return messages;
+    }
+    puzzle.state.setSwitch(2781, true);
+    puzzle.state.setVariable(318, 26); puzzle.state.setVariable(319, 0);
+    const successMessages = await runPuzzleEnding(305);
+    assert.ok(successMessages.some(text => text.includes('solved the puzzle')));
+    assert.equal(puzzle.state.mapId, 168);
+    assert.equal(puzzle.state.timer.active, false);
+    assert.equal(puzzle.state.switchValue(2791), true);
+    assert.equal(puzzle.state.variableValue(334), 2);
+    await puzzle.restore(puzzleSnapshot);
+    puzzle.state.setSwitch(2781, true); puzzle.state.timer.frames = 0;
+    await puzzle.runEvent(307);
+    assert.equal(puzzle.state.switchValue(2744), true, 'trang hết giờ mở nhánh thất bại');
+    const failureMessages = await runPuzzleEnding(307);
+    assert.ok(failureMessages.some(text => text.includes('failed at solving')));
+    assert.equal(puzzle.state.mapId, 168);
+    assert.equal(puzzle.state.timer.active, false);
+    assert.equal(puzzle.state.switchValue(2792), true);
+    assert.equal(puzzle.state.switchValue(2791), false);
     const engine = await fixture([null,
         { id: 1, x: 0, y: 1, pages: [page(3, [
             { code: 122, parameters: [1, 1, 1, 0, 1] }, { code: 230, parameters: [3] }, { code: 123, parameters: ['A', 0] }
