@@ -25,6 +25,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Biến số làm tròn xuống khi ghi như runtime gốc, kể cả phép chia số âm;
+  kiểm tra qua interpreter và lưu/tải. JSON hiện tại không dùng phép chia 122.
 - Chrome đi liên tục từ entry chính qua Guard layout 3 tới lồng Girl, xử lý
   Guard phát sinh, nói chuyện và trả điều khiển; hành trình này dùng cheat.
   Lục xác Guard nhận Small key, mở lồng, trừ chìa và giữ Girl sau lưu/tải;

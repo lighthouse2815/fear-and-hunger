@@ -120,7 +120,7 @@
         positiveId(id, 'ID biến');
         var number = Number(value);
         if (!Number.isFinite(number)) throw new TypeError('Giá trị biến không hợp lệ: ' + value);
-        this.variables[id] = number;
+        this.variables[id] = Math.floor(number);
     };
 
     GameState.prototype.selfSwitchKey = function (mapId, eventId, letter) {

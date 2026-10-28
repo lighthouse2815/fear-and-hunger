@@ -5,6 +5,15 @@ const { GameState } = require('../game/engine/game-state');
 const { EventInterpreter } = require('../game/engine/event-interpreter');
 
 (async () => {
+    const arithmetic = new GameState();
+    await new EventInterpreter({ state: arithmetic, commands: [
+        { code: 122, parameters: [1, 1, 0, 0, 7] },
+        { code: 122, parameters: [1, 1, 4, 0, 2] },
+        { code: 122, parameters: [2, 2, 0, 0, -7] },
+        { code: 122, parameters: [2, 2, 4, 0, 2] }
+    ] }).run();
+    assert.equal(arithmetic.variableValue(1), 3, 'chia dương làm tròn xuống');
+    assert.equal(arithmetic.variableValue(2), -4, 'chia âm làm tròn xuống');
     const state = new GameState({ mapId: 74, gold: 10 });
     const messages = [];
     const commands = [
