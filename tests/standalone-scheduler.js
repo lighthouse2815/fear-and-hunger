@@ -53,6 +53,22 @@ async function fixture(events, commonEvents = []) {
     assert.equal(puzzle.state.switchValue(410), false, 'autorun trả quyền điều khiển');
     assert.equal(puzzle.map.eventPage(puzzle.map.eventById(67)).trigger, 0);
     const puzzleSnapshot = puzzle.save();
+    const tileErrors = [], tileScheduler = new EventScheduler(puzzle, { effect: code => code === 250 }, error => tileErrors.push(error));
+    await puzzle.runEvent(40, { effect: code => code === 250 });
+    for (let i = 0; i < 300 && !puzzle.state.selfSwitchValue(166, 40, 'D'); i++) {
+        tileScheduler.tick(); puzzle.advanceRoutes(1); await delay();
+    }
+    assert.equal(puzzle.state.selfSwitchValue(166, 40, 'D'), true, 'ô thật qua ba trang autorun tới trạng thái chọn');
+    assert.equal(puzzle.state.variableValue(318), 1, 'ô đúng tăng bộ đếm câu đố');
+    await puzzle.runEvent(40, { effect: code => code === 250 });
+    for (let i = 0; i < 300 && (puzzle.state.variableValue(318) !== 0 || puzzle.state.selfSwitchValue(166, 40, 'A')); i++) {
+        tileScheduler.tick(); puzzle.advanceRoutes(1); await delay();
+    }
+    assert.equal(puzzle.state.variableValue(318), 0, 'bỏ chọn ô trừ bộ đếm');
+    assert.equal(puzzle.state.selfSwitchValue(166, 40, 'A'), false);
+    assert.deepEqual(tileErrors, []);
+    tileScheduler.stop(); await delay();
+    await puzzle.restore(puzzleSnapshot);
     async function runPuzzleEnding(eventId) {
         let done = false, error;
         const messages = [];
