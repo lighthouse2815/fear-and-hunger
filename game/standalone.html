@@ -60,6 +60,32 @@
         #fnh-menu-message { grid-area: message; margin: 0; }
         #fnh-menu-content { grid-area: content; min-width: 0; padding: 8px; background: #0808089c; border: 1px solid #77766e; }
         #fnh-menu-content label { display: block; margin: 12px 0; }
+        #fnh-menu-dialog.fnh-menu-home { aspect-ratio: 816 / 624; max-height: 96vh; padding: 0; grid-template-columns: 8.58% minmax(0, 1fr); grid-template-rows: 1fr; grid-template-areas: 'nav content'; gap: 0; container-type: inline-size; }
+        .fnh-menu-home #fnh-menu-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+        .fnh-menu-home #fnh-menu-close { position: absolute; left: 0; bottom: 0; width: 8.58%; padding: 2px; font: 2.45cqw GameFont, serif; }
+        .fnh-menu-home #fnh-menu-message:empty { display: none; }
+        #fnh-menu-dialog.fnh-menu-home nav { padding: 12% 3%; gap: 0; }
+        #fnh-menu-dialog.fnh-menu-home nav button { height: 4.41cqw; padding: 0; font-size: 2.45cqw; white-space: nowrap; }
+        #fnh-menu-dialog.fnh-menu-home nav button[data-menu-tab='synthesis'] { font-size: 1.25cqw; }
+        #fnh-menu-dialog.fnh-menu-home nav button[data-menu-tab='options'] { font-size: 1.65cqw; }
+        .fnh-menu-home #fnh-menu-content { padding: 2.2cqw; height: 100%; box-sizing: border-box; }
+        .fnh-menu-home .fnh-party-overview { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; height: 100%; }
+        .fnh-menu-home .fnh-party-overview section { position: relative; height: 100%; font-size: 2.45cqw; }
+        .fnh-menu-home .fnh-party-name { position: absolute; top: 6.12%; left: 3%; margin: 0; padding: 0; border: 0; background: transparent; font: inherit; outline: none; }
+        .fnh-menu-home .fnh-party-name:focus-visible { outline: 1px solid #e7ddca; }
+        .fnh-menu-home .fnh-party-nickname { position: absolute; top: 12.24%; left: 3%; margin: 0; }
+        .fnh-menu-home .fnh-menu-bust { position: absolute; top: 17%; height: 61.22%; object-fit: cover; object-position: center top; }
+        .fnh-menu-home .fnh-menu-state-icons { position: absolute; top: 67.35%; left: 3%; min-height: 0; }
+        .fnh-menu-home #fnh-menu-content label { position: absolute; left: 3%; right: 3%; margin: 0; font-size: 2.2cqw; }
+        .fnh-menu-home .fnh-party-hunger { top: 73.47%; }
+        .fnh-menu-home .fnh-party-hp { top: 79.59%; }
+        .fnh-menu-home .fnh-party-mp { top: 85.71%; }
+        .fnh-menu-home meter { height: 1.22cqw; appearance: none; background: #202020; border: 0; }
+        .fnh-menu-home meter::-webkit-meter-bar { background: #202020; border: 0; border-radius: 0; }
+        .fnh-menu-home meter::-webkit-meter-optimum-value { background: #b49a57; }
+        .fnh-menu-home .fnh-party-hp meter::-webkit-meter-optimum-value { background: linear-gradient(90deg, #65252a, #b65a58); }
+        .fnh-menu-home .fnh-party-mp meter::-webkit-meter-optimum-value { background: linear-gradient(90deg, #293c69, #6388b7); }
+        .fnh-menu-home meter::-moz-meter-bar { background: #b49a57; }
         .fnh-party-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)); gap: 12px; }
         .fnh-party-overview section { min-width: 0; }
         .fnh-party-overview meter { display: block; width: 100%; }
@@ -115,11 +141,11 @@
         <button id="fnh-menu-close" type="button">Đóng</button>
         <label for="fnh-menu-actor">Nhân vật</label><select id="fnh-menu-actor"></select>
         <nav aria-label="Danh mục menu">
-            <button type="button" data-menu-tab="status">Chỉ số</button>
             <button type="button" data-menu-tab="inventory">Túi đồ</button>
             <button type="button" data-menu-tab="equipment">Trang bị</button>
-            <button type="button" data-menu-tab="skills">Kỹ năng</button>
             <button type="button" data-menu-tab="synthesis">Chế tạo</button>
+            <button type="button" data-menu-tab="skills">Kỹ năng</button>
+            <button type="button" data-menu-tab="status">Chỉ số</button>
             <button type="button" data-menu-tab="system">Lưu/Tải</button>
             <button type="button" data-menu-tab="options">Tùy chọn</button>
             <button type="button" data-menu-tab="gameEnd">Kết thúc</button>

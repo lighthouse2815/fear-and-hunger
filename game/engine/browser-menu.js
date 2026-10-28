@@ -63,12 +63,23 @@
             var option = node('option', state.actor(id).name); option.value = id; ui.actorSelect.appendChild(option);
         });
         if (actorId) this.actorSelect.value = actorId;
+        var gameplay = !!(this.options && this.options.gameplay);
+        this.dialog.classList.toggle('fnh-game-menu', gameplay);
+        this.dialog.classList.toggle('fnh-menu-home', gameplay && this.tab === 'status');
+        var selectActor = !gameplay || ['inventory', 'equipment', 'skills'].includes(this.tab);
+        this.actorSelect.hidden = !selectActor;
+        this.dialog.querySelector('label[for="fnh-menu-actor"]').hidden = !selectActor;
         var actor = actorId && state.actor(actorId), content = this.content;
         content.replaceChildren();
         this.dialog.querySelectorAll('[data-menu-tab]').forEach(function (button) {
             var tab = button.dataset.menuTab, flag = {inventory:0,skills:1,equipment:2,status:3,system:5}[tab];
-            button.hidden = !!(ui.options && ui.options.gameplay) &&
-                (state.scene === 'save' ? tab !== 'system' : flag != null && engine.database.System.menuCommands[flag] === false);
+            if (gameplay) {
+                var term = {inventory:4, equipment:6, skills:5, options:11, gameEnd:10}[tab];
+                if (term != null) button.textContent = engine.database.System.terms.commands[term];
+                else if (tab === 'synthesis') button.textContent = 'Synthesis';
+            }
+            button.hidden = gameplay &&
+                (state.scene === 'save' ? tab !== 'system' : tab === 'status' || flag != null && engine.database.System.menuCommands[flag] === false);
             button.disabled = ui.busy || ['inventory','skills','equipment','synthesis','status'].includes(tab) && !state.party.length;
             button.setAttribute('aria-pressed', String(button.dataset.menuTab === ui.tab));
         });
@@ -77,13 +88,13 @@
             var overview=node('div');overview.className='fnh-party-overview';
             state.party.forEach(function (id) {
                 var member=state.actor(id),status=engine.menuActorStatus(id),card=node('section');card.dataset.partyActor=id;
-                var choose=node('button',member.name);choose.type='button';choose.setAttribute('aria-pressed',String(id===actorId));
+                var choose=node('button',member.name);choose.className='fnh-party-name';choose.type='button';choose.setAttribute('aria-pressed',String(id===actorId));
                 choose.onclick=function () { ui.actorSelect.value=id;ui.render(); };card.appendChild(choose);
                 if(member.faceName) {
                     var bust=node('img');bust.className='fnh-menu-bust';bust.alt=member.name;
                     bust.src='./img/pictures/'+encodeURIComponent(member.faceName+'_'+(member.faceIndex+1))+'.png';card.appendChild(bust);
                 }
-                card.appendChild(node('p',member.nickname));
+                var nickname=node('p',member.nickname);nickname.className='fnh-party-nickname';card.appendChild(nickname);
                 var icons=node('div');icons.className='fnh-menu-state-icons';icons.setAttribute('aria-label','Trạng thái '+member.name);
                 status.stateIcons.forEach(function (state) {
                     var icon=node('span');icon.className='fnh-menu-state-icon';icon.dataset.state=state.id;
@@ -92,14 +103,17 @@
                 });card.appendChild(icons);
                 [['HP',member.hp,state.actorParam(id,0)],['MP',member.mp,state.actorParam(id,1)]].forEach(function (entry) {
                     var label=node('label',entry[0]+': '+entry[1]+'/'+entry[2]),bar=node('meter');
+                    label.className='fnh-party-'+entry[0].toLowerCase();
                     bar.min=0;bar.max=Math.max(1,entry[2]);bar.value=entry[1];bar.setAttribute('aria-label',entry[0]+' '+member.name);
                     label.appendChild(bar);card.appendChild(label);
                 });
                 var hunger=node('label',status.nextExp==null?'':'Hunger: '+status.nextExp),gauge=node('meter');
+                hunger.className='fnh-party-hunger';
                 gauge.min=0;gauge.max=1;gauge.value=status.hunger;gauge.dataset.hungerActor=id;gauge.setAttribute('aria-label','Hunger '+member.name);
                 hunger.appendChild(gauge);card.appendChild(hunger);overview.appendChild(card);
             });
             content.appendChild(overview);
+            if (gameplay) return;
             var details=engine.menuActorStatus(actorId);
             content.appendChild(node('h3', actor.name + ' · Lv ' + actor.level));
             content.appendChild(node('p',details.className+(actor.nickname?' · '+actor.nickname:'')));

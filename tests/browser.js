@@ -3302,6 +3302,19 @@ async function main() {
                 !document.querySelector('[data-menu-tab="gameEnd"]').hidden && !document.querySelector('[data-menu-tab="options"]').hidden &&
                 !document.querySelector('[data-menu-tab="synthesis"]').hidden && !document.querySelector('[data-menu-tab="formation"]');
         })()`,false,false));
+        check('menu chơi chỉ có sáu lệnh gốc và bỏ thông số kiểm thử khỏi đội hình',await evalPage(cdp,`(()=>{
+            const menu=document.querySelector('#fnh-menu-dialog');
+            const commands=Array.from(menu.querySelectorAll('[data-menu-tab]')).filter(button=>!button.hidden).map(button=>button.dataset.menuTab);
+            const content=document.querySelector('#fnh-menu-content');
+            return commands.join(',')==='inventory,equipment,synthesis,skills,options,gameEnd' &&
+                menu.classList.contains('fnh-menu-home') &&
+                getComputedStyle(content.querySelector('.fnh-party-overview')).gridTemplateColumns.split(' ').length===4 &&
+                menu.querySelector('[data-menu-tab="inventory"]').textContent===FNHStandalonePreview.engine.database.System.terms.commands[4] &&
+                !content.textContent.includes('EXP:') && !content.textContent.includes('TP:') &&
+                !content.querySelector('.fnh-state-rates') && content.querySelectorAll('.fnh-party-overview [data-party-actor]').length===FNHStandalonePreview.engine.state.party.length &&
+                document.querySelector('#fnh-menu-actor').hidden;
+        })()`,false,false));
+        await screenshot('standalone-game-menu');
         await clickElement(cdp,'#fnh-menu-close');
         await evalPage(cdp,`(()=>{
             const e=FNHStandalonePreview.engine;e.state.gainItem('items',40,1);
