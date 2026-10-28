@@ -187,6 +187,24 @@ async function fixture(events, commonEvents = []) {
     assert.deepEqual([hideSeek.state.mapId, hideSeek.state.x, hideSeek.state.y], [167, 38, 45]);
     const hideSeekSave = hideSeek.save(); await hideSeek.restore(hideSeekSave);
     assert.equal(hideSeek.state.switchValue(2744), true, 'lưu giữ nhánh hết giờ trốn tìm');
+    await hideSeek.restore(hideSeekOpening);
+    hideSeek.state.setSwitch(2781, true);
+    hideSeek.state.timer = { active: true, frames: 59 };
+    const timeoutMessages = [], timeoutErrors = [];
+    const timeoutScheduler = new EventScheduler(hideSeek, { message: text => timeoutMessages.push(text),
+        effect: code => [245, 250].includes(code) }, error => timeoutErrors.push(error));
+    for (let i = 0; i < 2000 && hideSeek.state.mapId !== 168; i++) {
+        timeoutScheduler.tick(); hideSeek.advanceRoutes(8); await delay();
+    }
+    assert.equal(hideSeek.state.switchValue(2744), true, 'scheduler mở nhánh hết giờ trốn tìm');
+    assert.equal(hideSeek.state.switchValue(2746), true);
+    assert.equal(hideSeek.state.timer.active, false);
+    assert.ok(timeoutMessages.some(text => text.includes('You failed at finding everyone')));
+    assert.equal(hideSeek.state.mapId, 168, 'nhánh hết giờ chuyển đến phòng kết quả');
+    assert.equal(hideSeek.state.switchValue(2792), true);
+    assert.equal(hideSeek.state.switchValue(2791), false);
+    assert.deepEqual(timeoutErrors, []);
+    timeoutScheduler.stop(); await delay();
     const engine = await fixture([null,
         { id: 1, x: 0, y: 1, pages: [page(3, [
             { code: 122, parameters: [1, 1, 1, 0, 1] }, { code: 230, parameters: [3] }, { code: 123, parameters: ['A', 0] }
