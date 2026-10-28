@@ -3739,6 +3739,32 @@ async function main() {
         check(cheat?'thắng Guard và hoàn tất nhánh sự kiện thật khi dùng tên lighthouse':'thắng Guard và hoàn tất nhánh sự kiện bằng nhân vật thường',completedGuard && await evalPage(cdp,
             'FNHStandalonePreview.engine.state.switchValue(23) && FNHStandalonePreview.engine.state.actor(1).hp>0 && FNHStandalonePreview.engine.state.hasNameCheat(1)==='+cheat+' && FNHStandalonePreview.errors.length===0',false,false));
         if (cheat) {
+            await evalPage(cdp,`(()=>{const e=FNHStandalonePreview.engine;window.__guardRandom=e.random;e.random=()=>0.3;})()`,false,false);
+            let foundKey=false;
+            for(let step=0;step<180 && !foundKey;step++){
+                foundKey=await evalPage(cdp,`(()=>{
+                    const e=FNHStandalonePreview.engine;
+                    if(e.state.itemCount('items',20)>0 && !e.eventRunning)return true;
+                    const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
+                    const buttons=[...document.querySelectorAll('#fnh-choices button')];
+                    const choice=buttons.find(button=>button.textContent==='Search him') || buttons.find(button=>button.textContent==='No');
+                    if(choice)choice.click();
+                    if(e.state.scene!=='map' || e.eventRunning)return false;
+                    const guard=e.map.eventById(9);
+                    if(e.state.x===guard.x && e.state.y===guard.y)document.querySelector('#fnh-controls [data-direction="0"]').click();
+                    else {const direction=e.map.findDirection(e.state,guard,60);if(direction)document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();}
+                    return false;
+                })()`,false,true);
+                if(!foundKey)await sleep(150);
+            }
+            if(!foundKey)throw new Error('Không tìm được Small key trên Guard: '+JSON.stringify(await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine,guard=e.map.eventById(9);return {x:e.state.x,y:e.state.y,guardX:guard.x,guardY:guard.y,
+                    scene:e.state.scene,event:e.eventRunning,key:e.state.itemCount('items',20),message:document.querySelector('#fnh-message-text').textContent,
+                    choices:[...document.querySelectorAll('#fnh-choices button')].map(button=>button.textContent),errors:FNHStandalonePreview.errors};
+            })()`,false,false)));
+            await evalPage(cdp,'FNHStandalonePreview.engine.random=window.__guardRandom;delete window.__guardRandom',false,false);
+            check('lục xác Guard nhận Small key từ loot thật',await evalPage(cdp,
+                'FNHStandalonePreview.engine.state.itemCount("items",20)===1 && FNHStandalonePreview.engine.state.switchValue(45)',false,false));
             let foundGirl=false;
             for(let step=0;step<240 && !foundGirl;step++){
                 foundGirl=await evalPage(cdp,`(()=>{
@@ -3798,10 +3824,7 @@ async function main() {
             await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'kết thúc nói chuyện với Girl');
             check('nói chuyện xong trả quyền điều khiển và giữ Girl trong lồng',await evalPage(cdp,
                 'FNHStandalonePreview.engine.state.scene==="map" && !FNHStandalonePreview.engine.state.hasActor(2) && !FNHStandalonePreview.engine.state.switchValue(81) && FNHStandalonePreview.errors.length===0',false,false));
-            await evalPage(cdp,`(()=>{
-                const e=FNHStandalonePreview.engine;e.state.gainItem('items',20,-99);e.state.gainItem('items',20,1);
-                document.querySelector('#fnh-controls [data-direction="0"]').click();
-            })()`,false,false);
+            await clickElement(cdp,'#fnh-controls [data-direction="0"]');
             let rescued=false;
             for(let attempt=0;attempt<240 && !rescued;attempt++){
                 rescued=await evalPage(cdp,`(()=>{
@@ -3821,7 +3844,7 @@ async function main() {
                     switch81:e.state.switchValue(81),event:e.eventRunning,message:document.querySelector('#fnh-message-text').textContent,
                     choices:[...document.querySelectorAll('#fnh-choices button')].map(button=>button.textContent),errors:FNHStandalonePreview.errors};
             })()`,false,false)));
-            check('chìa khóa kiểm thử mở lồng và thêm Girl vào đội',rescued && await evalPage(cdp,
+            check('chìa khóa từ Guard mở lồng và thêm Girl vào đội',rescued && await evalPage(cdp,
                 'FNHStandalonePreview.engine.state.itemCount("items",20)===0 && FNHStandalonePreview.engine.state.party.includes(2) && FNHStandalonePreview.errors.length===0',false,false));
             check('lưu tải giữ Girl và lồng đã mở',await evalPage(cdp,`(async()=>{
                 const e=FNHStandalonePreview.engine;await e.restore(e.save());
