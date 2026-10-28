@@ -16,6 +16,16 @@
     var engine = new FNHStandaloneEngine.GameEngine({ baseUrl: '.', forceDashing: automaticEvents });
     var renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { baseUrl: '.' });
     var textColors = [];
+    var windowSkin;
+    function drawWindowFrame(target) {
+        var frame = target.getContext('2d'), w = target.width, h = target.height;
+        [[24,0,48,24,24,0,w-48,24],[24,72,48,24,24,h-24,w-48,24],
+            [0,24,24,48,0,24,24,h-48],[72,24,24,48,w-24,24,24,h-48],
+            [0,0,24,24,0,0,24,24],[72,0,24,24,w-24,0,24,24],
+            [0,72,24,24,0,h-24,24,24],[72,72,24,24,w-24,h-24,24,24]].forEach(function (part) {
+            frame.drawImage(windowSkin, part[0] + 96, part[1], part[2], part[3], part[4], part[5], part[6], part[7]);
+        });
+    }
     var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
     var settings = new FNHStandaloneSettings.PlayerSettings({ key: 'FNH_STANDALONE_PREVIEW_SETTINGS' });
     var audio = new FNHStandaloneAudio.AudioManager({ baseUrl: '.', onError: function (error) { setStatus(error.message); } });
@@ -319,9 +329,26 @@
             var signal = interpreter && interpreter.signal;
             details = details || { disabled: [], help: [], message: [], defaultIndex: 0 };
             var help = document.getElementById('fnh-choice-help');
+            var stage = document.querySelector('.fnh-stage'), panel = document.getElementById('fnh-message');
+            var difficulty = automaticEvents && engine.state.mapId === 10 && choices[0] === 'Fear & Hunger' && choices[1] === 'Terror & Starvation';
+            if (difficulty) {
+                stage.classList.add('fnh-difficulty'); stage.append(choicesPanel, help);
+                var measure = document.createElement('canvas').getContext('2d'); measure.font = '28px GameFont';
+                var width = Math.max.apply(null, choices.map(function (text) { return measure.measureText(text).width; })) + 48;
+                choicesPanel.style.width = width / 816 * 100 + '%';
+                [[panel,816,180],[help,816,72],[choicesPanel,Math.ceil(width),180]].forEach(function (entry) {
+                    var frame = document.createElement('canvas'); frame.width = entry[1]; frame.height = entry[2]; drawWindowFrame(frame);
+                    entry[0].style.backgroundImage = 'url("' + frame.toDataURL() + '")';
+                });
+            }
             choicesPanel.replaceChildren();
             function close() {
                 engine.messageRunning = false;
+                if (difficulty) {
+                    stage.classList.remove('fnh-difficulty'); panel.append(choicesPanel, help);
+                    [panel, help, choicesPanel].forEach(function (element) { element.style.backgroundImage = ''; });
+                    choicesPanel.style.width = '';
+                }
                 choicesPanel.onkeydown = null;
                 choicesPanel.replaceChildren();
                 help.textContent = '';
@@ -335,6 +362,7 @@
                 setRichText(button, label);
                 button.disabled = details.disabled.includes(index);
                 button.onfocus = button.onmouseenter = function () {
+                    if (difficulty) Array.from(choicesPanel.children).forEach(function (other) { other.dataset.selected = String(other === button); });
                     setRichText(help, details.help[index] || '');
                     if (details.message[index]) setRichText(message, details.message[index]);
                 };
@@ -363,7 +391,7 @@
             };
             var focused = choicesPanel.children[details.defaultIndex];
             if (!focused || focused.disabled) focused = choicesPanel.querySelector('button:enabled');
-            if (focused) focused.focus({ preventScroll: true });
+            if (focused) { focused.focus({ preventScroll: true }); focused.onfocus(); }
             if (signal) signal.addEventListener('abort', abort, { once: true });
         });
     }
@@ -948,15 +976,9 @@
     });
     (async function () {
         try {
-            var skin = await renderer.loadImage('img/system/Window.png');
+            var skin = await renderer.loadImage('img/system/Window.png'); windowSkin = skin;
             document.querySelectorAll('#fnh-title-frame, .fnh-name-frame').forEach(function (target) {
-                var frame = target.getContext('2d'), w = target.width, h = target.height;
-                [[24,0,48,24,24,0,w-48,24],[24,72,48,24,24,h-24,w-48,24],
-                    [0,24,24,48,0,24,24,h-48],[72,24,24,48,w-24,24,24,h-48],
-                    [0,0,24,24,0,0,24,24],[72,0,24,24,w-24,0,24,24],
-                    [0,72,24,24,0,h-24,24,24],[72,72,24,24,w-24,h-24,24,24]].forEach(function (part) {
-                    frame.drawImage(skin, part[0] + 96, part[1], part[2], part[3], part[4], part[5], part[6], part[7]);
-                });
+                drawWindowFrame(target);
             });
             var palette = document.createElement('canvas');
             palette.width = skin.width; palette.height = skin.height;

@@ -80,6 +80,8 @@ Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 như game gốc. Có thể gõ bàn phím hoặc chọn chữ; phím hướng di chuyển con trỏ,
 PageUp/PageDown đổi bảng, Escape xóa ký tự và Enter chọn OK để xác nhận tên.
 Intro phát liền trong khung game, ẩn điều khiển video và không bật cửa sổ nổi.
+Màn chọn độ khó dùng ba khung theo game gốc: trợ giúp trên cùng, danh sách
+ở giữa và mô tả phía dưới; chọn bằng phím hoặc chuột cập nhật mô tả từ JSON.
 Nếu trình duyệt chặn tự phát, nút Tiếp tục cho phép bắt đầu cảnh bằng tương tác.
 Mở `/standalone.html?title=1` để chạy luồng khởi động: sự kiện autorun Map072
 chờ/hiện/fade ảnh `splash_screen1`, rồi lệnh 354 mở tiêu đề. Gameplay bị khóa
