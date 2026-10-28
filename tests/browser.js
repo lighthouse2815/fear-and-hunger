@@ -3559,6 +3559,15 @@ async function main() {
             return style.backgroundImage.includes('/img/system/IconSet.png') && style.backgroundPosition==='0px -608px' &&
                 style.width==='32px' && style.height==='32px';
         })()`,false,false));
+        check('chi phí nguyền dùng màu từ bảng Window.png',await evalPage(cdp,`(async()=>{
+            const button=document.querySelector('#fnh-choices button:nth-child(13)');
+            const colored=[...button.querySelectorAll('span')].find(node=>node.textContent==='[1]');
+            const skin=new Image();skin.src='img/system/Window.png';await skin.decode();
+            const canvas=document.createElement('canvas');canvas.width=skin.width;canvas.height=skin.height;
+            const context=canvas.getContext('2d');context.drawImage(skin,0,0);
+            const pixel=context.getImageData(126,150,1,1).data;
+            return colored && getComputedStyle(colored).color===\`rgb(\${pixel[0]}, \${pixel[1]}, \${pixel[2]})\`;
+        })()`,true,false));
         await evalPage(cdp,'document.querySelector("#fnh-choices button:nth-child(13)").focus()',false,false);
         await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40});
         await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40});

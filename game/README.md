@@ -47,6 +47,7 @@ state không có icon không chiếm chỗ. Icon có tên để xem bằng chu�
 Các lựa chọn hiển thị bằng nút trong trang, không mở hộp thoại `prompt`.
 Mã icon trong hội thoại, trợ giúp, lựa chọn và credits hiển thị ảnh tương ứng
 từ IconSet.png; mã được escape vẫn giữ dạng chữ.
+Mã màu trong các nội dung này dùng bảng màu từ Window.png của game.
 Khi chọn bằng bàn phím, phím hướng chuyển giữa các mục khả dụng; phím xác nhận
 và hủy dùng cấu hình của người chơi, hủy chỉ hoạt động khi sự kiện cho phép.
 Các nhóm lựa chọn liền nhau được gộp theo cấu hình HIME_LargeChoices; sự kiện

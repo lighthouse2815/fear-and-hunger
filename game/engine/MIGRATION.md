@@ -25,6 +25,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Mã màu trong hội thoại, lựa chọn, trợ giúp và credits đọc màu từ Window.png;
+  kiểm tra màu chi phí vũ khí thật và giữ chuỗi escape.
 - Hội thoại, lựa chọn, trợ giúp và credits hiển thị mã icon từ IconSet.png;
   văn bản escape vẫn giữ nguyên. Chrome kiểm tra icon Morning star thật.
 - Danh sách lựa chọn hỗ trợ phím hướng, xác nhận và hủy theo cấu hình; bỏ qua

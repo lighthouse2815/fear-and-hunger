@@ -12,6 +12,7 @@
     var choicesPanel = document.getElementById('fnh-choices');
     var engine = new FNHStandaloneEngine.GameEngine({ baseUrl: '.', forceDashing: automaticEvents });
     var renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { baseUrl: '.' });
+    var textColors = [];
     var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
     var settings = new FNHStandaloneSettings.PlayerSettings({ key: 'FNH_STANDALONE_PREVIEW_SETTINGS' });
     var audio = new FNHStandaloneAudio.AudioManager({ baseUrl: '.', onError: function (error) { setStatus(error.message); } });
@@ -38,13 +39,24 @@
 
     function setStatus(text) { status.textContent = text; }
     function setRichText(element, text) {
-        var nodes = FNHStandaloneText.formatParts(text, engine.state).map(function (part) {
-            if (typeof part === 'string') return document.createTextNode(part);
+        var nodes = [], color = null;
+        FNHStandaloneText.formatParts(text, engine.state).forEach(function (part) {
+            if (typeof part === 'string') {
+                if (color === null) nodes.push(document.createTextNode(part));
+                else {
+                    var span = document.createElement('span');
+                    span.style.color = textColors[color] || 'rgb(0, 0, 0)';
+                    span.textContent = part;
+                    nodes.push(span);
+                }
+                return;
+            }
+            if (part.color !== undefined) { color = part.color; return; }
             var icon = document.createElement('span');
             icon.className = 'fnh-text-icon';
             icon.setAttribute('aria-hidden', 'true');
             icon.style.backgroundPosition = -(part.icon % 16) * 32 + 'px ' + -Math.floor(part.icon / 16) * 32 + 'px';
-            return icon;
+            nodes.push(icon);
         });
         element.replaceChildren.apply(element, nodes);
     }
@@ -799,6 +811,14 @@
     });
     (async function () {
         try {
+            var skin = await renderer.loadImage('img/system/Window.png');
+            var palette = document.createElement('canvas');
+            palette.width = skin.width; palette.height = skin.height;
+            var context = palette.getContext('2d'); context.drawImage(skin, 0, 0);
+            for (var n = 0; n < 32; n++) {
+                var pixel = context.getImageData(102 + n % 8 * 12, 150 + Math.floor(n / 8) * 12, 1, 1).data;
+                textColors.push('rgb(' + pixel[0] + ', ' + pixel[1] + ', ' + pixel[2] + ')');
+            }
             if (titleFlow) { await engine.boot(); await engine.loadMap(72, { x: 0, y: 0, direction: 2 }); }
             else if (automaticEvents && mapId === 10) await engine.boot();
             else await engine.boot({ mapId: mapId, x: mapId === 74 ? 8 : 1, y: mapId === 74 ? 8 : 0,

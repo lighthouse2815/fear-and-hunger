@@ -16,6 +16,8 @@ const delay = () => new Promise(resolve => setImmediate(resolve));
     assert.equal(formatText('\\\\N[1] <WordWrap>red \\C[2]text\\C[0]<br>done.\\|', state), '\\N[1] red text\ndone.');
     assert.deepEqual(formatParts('\\i[304] Morning \\V[5] \\\\i[8] \\I[17]', state),
         [{ icon: 304 }, ' Morning 42 \\i[8] ', { icon: 17 }]);
+    assert.deepEqual(formatParts('A \\c[2]red \\i[3]\\C[0]normal \\\\c[4]', state),
+        ['A ', { color: 2 }, 'red ', { icon: 3 }, { color: 0 }, 'normal \\c[4]']);
     const runtime = new ScreenRuntime(state);
     const interpreter = new EventInterpreter({ state, commands: [
         { code: 356, parameters: ['GabText First \\N[1]'] }, { code: 356, parameters: ['ShowGab'] },
