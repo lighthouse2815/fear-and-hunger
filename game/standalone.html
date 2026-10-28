@@ -48,10 +48,19 @@
         #fnh-end-actions button:hover, #fnh-end-actions button:focus-visible { background: #ffffff26; }
         #fnh-end-actions label { display: block; font-size: .7em; }
         #fnh-end-title { margin: 0 0 8px; font: inherit; text-shadow: 1px 1px #000; }
-        #fnh-menu-dialog { width: min(720px, 92vw); max-height: 85vh; overflow: auto; }
-        #fnh-menu-dialog nav { display: flex; flex-wrap: wrap; gap: 6px; }
+        #fnh-menu-dialog { box-sizing: border-box; width: min(816px, 96vw); max-height: 90vh; overflow: auto; padding: 16px; background: #10100feb; border: 2px solid #88877d; box-shadow: inset 0 0 0 2px #343431; font-family: GameFont, serif; }
+        #fnh-menu-dialog[open] { display: grid; grid-template-columns: minmax(100px, 140px) minmax(0, 1fr); grid-template-areas: 'title close' 'actor select' 'nav message' 'nav content'; gap: 8px 16px; align-items: start; }
+        #fnh-menu-title { grid-area: title; margin: 0; }
+        #fnh-menu-close { grid-area: close; justify-self: end; margin: 0; }
+        #fnh-menu-dialog > label { grid-area: actor; }
+        #fnh-menu-actor { grid-area: select; max-width: 100%; }
+        #fnh-menu-dialog nav { grid-area: nav; display: flex; flex-direction: column; gap: 2px; padding: 8px; background: #080808b8; border: 1px solid #77766e; }
+        #fnh-menu-dialog nav button { margin: 0; border: 0; background: transparent; text-align: left; font: inherit; }
+        #fnh-menu-dialog nav button[aria-pressed='true'] { outline: 0; background: #ffffff30; }
+        #fnh-menu-message { grid-area: message; margin: 0; }
+        #fnh-menu-content { grid-area: content; min-width: 0; padding: 8px; background: #0808089c; border: 1px solid #77766e; }
         #fnh-menu-content label { display: block; margin: 12px 0; }
-        .fnh-party-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); gap: 12px; }
+        .fnh-party-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)); gap: 12px; }
         .fnh-party-overview section { min-width: 0; }
         .fnh-party-overview meter { display: block; width: 100%; }
         .fnh-menu-bust { display: block; width: 100%; height: 360px; object-fit: none; object-position: center top; }
