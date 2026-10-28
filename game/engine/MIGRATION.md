@@ -25,6 +25,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Danh sách lựa chọn hỗ trợ phím hướng, xác nhận và hủy theo cấu hình; bỏ qua
+  mục bị khóa. Chrome kiểm tra lựa chọn thật trong Common 193 và nhánh hủy.
 - HIME_LargeChoices gộp các lệnh lựa chọn liền nhau, giữ mặc định/hủy, nội dung
   khóa, trợ giúp và nhánh kể cả sau save. Common 193 hiện đủ 19 mục; unit kiểm
   tra cả bốn nhóm, Chrome nguyền Short sword và Morning star qua UI thật.

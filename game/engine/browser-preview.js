@@ -276,6 +276,7 @@
             choicesPanel.replaceChildren();
             function close() {
                 engine.messageRunning = false;
+                choicesPanel.onkeydown = null;
                 choicesPanel.replaceChildren();
                 help.textContent = '';
                 if (signal) signal.removeEventListener('abort', abort);
@@ -299,6 +300,21 @@
             }
             choices.forEach(addChoice);
             if (cancelType !== -1) addChoice('Quay lại', cancelType >= 0 ? cancelType : -1);
+            choicesPanel.onkeydown = function (event) {
+                var action = inputName(event.key);
+                if (action === 'up' || action === 'down' || action === 'left' || action === 'right') {
+                    var buttons = Array.from(choicesPanel.querySelectorAll('button:enabled'));
+                    var current = buttons.indexOf(document.activeElement);
+                    var step = action === 'up' || action === 'left' ? -1 : 1;
+                    if (buttons.length) buttons[(current + step + buttons.length) % buttons.length].focus();
+                } else if (action === 'ok') {
+                    if (!event.repeat && document.activeElement && !document.activeElement.disabled) document.activeElement.click();
+                } else if (action === 'cancel') {
+                    if (!event.repeat && cancelType !== -1) choicesPanel.lastElementChild.click();
+                } else return;
+                event.preventDefault();
+                event.stopPropagation();
+            };
             var focused = choicesPanel.children[details.defaultIndex];
             if (!focused || focused.disabled) focused = choicesPanel.querySelector('button:enabled');
             if (focused) focused.focus({ preventScroll: true });

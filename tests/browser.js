@@ -3552,7 +3552,20 @@ async function main() {
             const buttons=document.querySelectorAll('#fnh-choices button');return !window.__curseJourneyError && buttons.length===19 &&
                 !buttons[12].disabled && buttons[12].textContent.includes('Morning star') && buttons[0].disabled;
         })()`,false,false));
-        await clickElement(cdp,'#fnh-choices button:nth-child(13)');
+        await evalPage(cdp,'document.querySelector("#fnh-choices button:nth-child(13)").focus()',false,false);
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40});
+        check('mũi tên bỏ qua các lựa chọn bị khóa',await evalPage(cdp,`(()=>{
+            const buttons=[...document.querySelectorAll('#fnh-choices button')];
+            const next=buttons.slice(13).find(button=>!button.disabled);
+            return buttons[13].disabled && document.activeElement===next;
+        })()`,false,false));
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowUp',code:'ArrowUp',windowsVirtualKeyCode:38});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowUp',code:'ArrowUp',windowsVirtualKeyCode:38});
+        check('mũi tên lên trở về Morning star',await evalPage(cdp,
+            'document.activeElement===document.querySelector("#fnh-choices button:nth-child(13)")',false,false));
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'z',code:'KeyZ',windowsVirtualKeyCode:90});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'z',code:'KeyZ',windowsVirtualKeyCode:90});
         await waitFor(cdp,'!document.querySelector("#fnh-next").hidden || window.__curseJourneyError',5000,'nhận Cursed morning star');
         check('nhánh lựa chọn thứ 13 tiêu soul và nguyền đúng vũ khí',await evalPage(cdp,`(()=>{
             const e=FNHStandalonePreview.engine;return !window.__curseJourneyError && e.state.actor(4).equips[0]===0 &&
@@ -3564,6 +3577,17 @@ async function main() {
         check('nhánh thứ 13 kết thúc mà không mở lại nhóm lựa chọn',await evalPage(cdp,
             '!window.__curseJourneyError && !FNHStandalonePreview.engine.eventRunning && document.querySelectorAll("#fnh-choices button").length===0',false,false));
         await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.__curseJourneySnapshot).then(()=>{delete window.__curseJourneySnapshot;return true})',true,false);
+        await evalPage(cdp,`(()=>{
+            window.__keyboardChoiceResult=null;
+            FNHStandalonePreview.scheduler.handlers.choice(['Một','Hai'],-2,null,
+                {disabled:[],help:[],message:[],defaultIndex:0}).then(value=>window.__keyboardChoiceResult=value);
+        })()`,false,false);
+        await waitFor(cdp,'document.querySelectorAll("#fnh-choices button").length===3',5000,'lựa chọn cho phép hủy');
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+        await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+        await waitFor(cdp,'window.__keyboardChoiceResult!==null',5000,'hủy lựa chọn bằng bàn phím');
+        check('phím hủy trả về nhánh hủy của lựa chọn',await evalPage(cdp,
+            'window.__keyboardChoiceResult===-1 && !document.querySelector("#fnh-choices button")',false,false));
         check('phần thưởng trứng thật không cộng vượt 99 và giữ đúng qua save',await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine,snapshot=e.save();
             try{

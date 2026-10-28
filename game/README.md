@@ -45,6 +45,8 @@ Thẻ mỗi đồng đội hiện icon trạng thái từ IconSet.png, theo đ�
 state không có icon không chiếm chỗ. Icon có tên để xem bằng chuột hoặc trình
 đọc màn hình, và cập nhật riêng theo từng nhân vật khi thêm/xóa state.
 Các lựa chọn hiển thị bằng nút trong trang, không mở hộp thoại `prompt`.
+Khi chọn bằng bàn phím, phím hướng chuyển giữa các mục khả dụng; phím xác nhận
+và hủy dùng cấu hình của người chơi, hủy chỉ hoạt động khi sự kiện cho phép.
 Các nhóm lựa chọn liền nhau được gộp theo cấu hình HIME_LargeChoices; sự kiện
 nguyền vũ khí hiện đủ 19 mục, chọn đúng nhánh và không hỏi lại nhóm sau.
 Phím T đốt đuốc qua common event 289, C dùng Phase qua common event 257. Các
