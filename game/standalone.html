@@ -168,7 +168,12 @@
         #fnh-menu-dialog.fnh-menu-home nav button { flex: 0 0 4.4118cqw; width: 4.1667cqw; padding: 0; }
         .fnh-menu-command-icon { display: block; width: 3.9216cqw; height: 3.9216cqw; background-image: url('img/system/IconSet.png'); background-size: 1600% 2000%; image-rendering: pixelated; }
         .fnh-menu-command-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-        #fnh-menu-dialog.fnh-menu-home nav button:focus { outline: 1px solid #eee8; background: #b99aaa59; }
+        #fnh-menu-dialog.fnh-menu-home nav button { position: relative; outline: none; background: transparent; box-shadow: none; }
+        #fnh-menu-dialog.fnh-menu-home nav button::before { content: ''; position: absolute; inset: 0; background: var(--fnh-menu-cursor-image) center / 100% 100% no-repeat; pointer-events: none; visibility: hidden; }
+        #fnh-menu-dialog.fnh-menu-home nav button[data-command-selected='true']::before { visibility: visible; animation: fnh-menu-cursor 666.6667ms linear infinite; }
+        .fnh-menu-home .fnh-menu-command-icon { position: absolute; left: .2451cqw; top: .2451cqw; }
+        @keyframes fnh-menu-cursor { 0%, 100% { opacity: 1; } 50% { opacity: .372549; } }
+        @media (prefers-reduced-motion: reduce) { #fnh-menu-dialog.fnh-menu-home nav button[data-command-selected='true']::before { animation: none; } }
         .fnh-menu-home #fnh-menu-close { display: none; }
         .fnh-menu-home #fnh-menu-content { border: 0; background-size: 100% 100%; padding: 2.2059cqw; }
         .fnh-menu-home .fnh-party-name { font-size: 3.4314cqw; }

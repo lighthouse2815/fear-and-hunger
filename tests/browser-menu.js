@@ -1,5 +1,11 @@
 'use strict';
 module.exports=async function ({cdp,url,evalPage,waitFor,clickElement,check,screenshot}) {
+    // Chỉ trang đối chiếu dùng runtime cũ; lấy bitmap con trỏ thật làm chuẩn.
+    await cdp.send('Page.navigate',{url:url+'legacy.html'});
+    await waitFor(cdp,'window.SceneManager && SceneManager._scene instanceof Scene_Title',30000,'tiêu đề đối chiếu');
+    await evalPage(cdp,'DataManager.setupNewGame();SceneManager.goto(Scene_Menu)',false,false);
+    await waitFor(cdp,'SceneManager._scene instanceof Scene_Menu && SceneManager._scene._commandWindow && SceneManager._scene._commandWindow._windowskin.isReady()',15000,'menu đối chiếu');
+    const reference=await evalPage(cdp,`(()=>{const w=SceneManager._scene._commandWindow;w._refreshCursor();return {width:w._cursorRect.width,height:w._cursorRect.height,image:w._windowCursorSprite.bitmap._canvas.toDataURL()};})()`,false,false);
     await cdp.send('Page.navigate',{url:url+'standalone.html?events=1&map=74'});
     await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.engine.map && document.querySelector("#fnh-loading").hidden',30000,'khởi động menu');
     await evalPage(cdp,`(async()=>{const a=FNHStandalonePreview;a.scheduler.stop();await new Promise(r=>setTimeout(r,50));await a.engine.restore({mapId:74,x:8,y:8,party:[1,3],menuEnabled:true});document.querySelector('#fnh-canvas').focus();})()`,true,false);
@@ -7,17 +13,29 @@ module.exports=async function ({cdp,url,evalPage,waitFor,clickElement,check,scre
     await key('Escape','Escape');await waitFor(cdp,'document.querySelector("#fnh-menu-dialog").open',5000,'Escape mở menu');
     check('Escape mở đội hình và focus icon Item như bản gốc',await evalPage(cdp,'document.querySelector("#fnh-menu-dialog").classList.contains("fnh-menu-home") && document.activeElement.dataset.menuTab==="inventory" && document.querySelectorAll(".fnh-menu-command-icon").length===6',false,false));
     check('viền hai khung dùng asset gốc, danh sách 70×252 và không có nút đóng thừa',await evalPage(cdp,`(()=>{const d=document.querySelector('#fnh-menu-dialog').getBoundingClientRect(),n=document.querySelector('#fnh-menu-dialog nav');return Math.abs(n.getBoundingClientRect().width/d.width*816-70)<1 && Math.abs(n.getBoundingClientRect().height/d.height*624-252)<1 && n.style.backgroundImage.includes('data:image/png') && getComputedStyle(document.querySelector('#fnh-menu-close')).display==='none';})()`,false,false));
+    check('bitmap và kích thước con trỏ khớp menu gốc, bỏ viền focus trình duyệt',await evalPage(cdp,`(()=>{const b=document.activeElement,s=getComputedStyle(b),p=getComputedStyle(b,'::before'),d=document.querySelector('#fnh-menu-dialog'),r=b.getBoundingClientRect(),scale=d.clientWidth/816,reference=${JSON.stringify(reference)};
+        return Math.abs(r.width/scale-reference.width)<.1 && Math.abs(r.height/scale-reference.height)<.1 && p.visibility==='visible' && p.backgroundImage.includes(reference.image) && s.outlineStyle==='none' && s.backgroundColor==='rgba(0, 0, 0, 0)';})()`,false,false));
+    check('con trỏ nhấp nháy đúng chu kỳ 40 frame mà không làm mờ icon',await evalPage(cdp,`(()=>{const b=document.activeElement,a=b.getAnimations({subtree:true})[0];if(!a)return false;const playing=a.playState;a.pause();a.currentTime=0;const max=+getComputedStyle(b,'::before').opacity;a.currentTime=1000/3;const min=+getComputedStyle(b,'::before').opacity;a.play();return playing==='running' && Math.abs(a.effect.getTiming().duration-2000/3)<.01 && max===1 && Math.abs(min-95/255)<.001 && getComputedStyle(b.querySelector('span')).opacity==='1';})()`,false,false));
     await screenshot('menu-escape-home');
     await key('ArrowDown','ArrowDown');check('phím hướng chuyển icon sang Eq',await evalPage(cdp,'document.activeElement.dataset.menuTab==="equipment"',false,false));
+    check('chỉ nút đang chọn hiện con trỏ, nút cũ bỏ sáng',await evalPage(cdp,`document.querySelectorAll('nav [data-command-selected="true"]').length===1 && document.activeElement.dataset.commandSelected==='true' && getComputedStyle(document.querySelector('[data-menu-tab="inventory"]'),'::before').visibility==='hidden'`,false,false));
+    await screenshot('menu-selected-equipment');
     await key('Enter','Enter');check('Enter mở trang bị',await evalPage(cdp,'document.querySelector("#fnh-menu-dialog").open && !document.querySelector("#fnh-menu-dialog").classList.contains("fnh-menu-home") && document.querySelector("select[data-slot]")!==null',false,false));
     await key('Escape','Escape');check('Escape từ màn con quay về đội hình và giữ menu',await evalPage(cdp,'FNHStandalonePreview.engine.state.scene==="menu" && document.querySelector("#fnh-menu-dialog").classList.contains("fnh-menu-home")',false,false));
+    check('quay về giữ con trỏ tại Eq vừa chọn',await evalPage(cdp,'document.activeElement.dataset.menuTab==="equipment" && document.activeElement.dataset.commandSelected==="true"',false,false));
+    await evalPage(cdp,`(()=>{const r=document.querySelector('[data-menu-tab="skills"]').getBoundingClientRect();window.menuHoverPoint={x:r.x+r.width/2,y:r.y+r.height/2};})()`,false,false);
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',...await evalPage(cdp,'window.menuHoverPoint',false,false)});
+    check('di chuột chuyển con trỏ sang Skills mà chưa mở màn con',await evalPage(cdp,'document.activeElement.dataset.menuTab==="skills" && document.activeElement.dataset.commandSelected==="true" && document.querySelector("#fnh-menu-dialog").classList.contains("fnh-menu-home")',false,false));
     await key('x','KeyX');await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="map"',5000,'X đóng menu');
     await key('Escape','Escape',true);check('giữ Escape không mở lại menu ngoài ý muốn',await evalPage(cdp,'FNHStandalonePreview.engine.state.scene==="map" && !document.querySelector("#fnh-menu-dialog").open',false,false));
-    await key('Escape','Escape');await key('Escape','Escape');check('Escape mở/đóng sạch, không kẹt điều khiển',await evalPage(cdp,'FNHStandalonePreview.engine.state.scene==="map" && FNHStandalonePreview.engine.buttons.size===0',false,false));
+    await key('Escape','Escape');
+    check('mở lại chọn lệnh đã xác nhận, không nhớ nhầm lệnh chỉ rê chuột',await evalPage(cdp,'document.activeElement.dataset.menuTab==="equipment" && document.activeElement.dataset.commandSelected==="true"',false,false));
+    await key('Escape','Escape');check('Escape mở/đóng sạch, không kẹt điều khiển',await evalPage(cdp,'FNHStandalonePreview.engine.state.scene==="map" && FNHStandalonePreview.engine.buttons.size===0',false,false));
     await key('Escape','Escape');await clickElement(cdp,'[data-menu-tab="options"]');await key('Escape','Escape');
     check('Options cũng quay về màn chính khi hủy',await evalPage(cdp,'document.querySelector("#fnh-menu-dialog").classList.contains("fnh-menu-home")',false,false));
     await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     check('menu co vừa điện thoại và sáu icon vẫn hiện',await evalPage(cdp,`(()=>{const d=document.querySelector('#fnh-menu-dialog').getBoundingClientRect();return d.width<=390 && d.left>=0 && [...document.querySelectorAll('.fnh-menu-command-icon')].every(i=>i.getBoundingClientRect().width>0);})()`,false,false));
+    check('con trỏ và viền chọn co cùng icon trên điện thoại',await evalPage(cdp,`(()=>{const d=document.querySelector('#fnh-menu-dialog'),b=document.activeElement,p=getComputedStyle(b,'::before'),scale=d.clientWidth/816;return b.dataset.menuTab==='options' && p.visibility==='visible' && Math.abs(b.getBoundingClientRect().width/scale-34)<.1 && p.backgroundSize==='100% 100%';})()`,false,false));
     await screenshot('menu-escape-mobile');
     await key('Escape','Escape');
     await evalPage(cdp,`(()=>{const a=FNHStandalonePreview;window.menuSaveDone=false;a.engine.createInterpreter([{code:352},{code:121,parameters:[992,992,0]}],0,a.scheduler.handlers).run().then(()=>window.menuSaveDone=true);})()`,false,false);

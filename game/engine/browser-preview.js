@@ -1048,6 +1048,13 @@
     (async function () {
         try {
             var skin = await renderer.loadImage('img/system/Window.png'); windowSkin = skin;
+            var menuCursor = document.createElement('canvas'); menuCursor.width = 34; menuCursor.height = 36;
+            [0,4,44].forEach(function (sx,i) {
+                [0,4,44].forEach(function (sy,j) {
+                    menuCursor.getContext('2d').drawImage(skin,96+sx,96+sy,[4,40,4][i],[4,40,4][j],[0,4,30][i],[0,4,32][j],[4,26,4][i],[4,28,4][j]);
+                });
+            });
+            document.getElementById('fnh-menu-dialog').style.setProperty('--fnh-menu-cursor-image','url("' + menuCursor.toDataURL() + '")');
             var pause = document.createElement('canvas'); pause.width = 24; pause.height = 24;
             pause.getContext('2d').drawImage(skin,144,96,24,24,0,0,24,24);
             document.getElementById('fnh-next').style.setProperty('--fnh-pause-image','url("' + pause.toDataURL() + '")');

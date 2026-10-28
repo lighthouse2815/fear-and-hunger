@@ -71,7 +71,7 @@
         this.content = document.getElementById('fnh-menu-content');
         this.message = document.getElementById('fnh-menu-message');
         this.actorSelect = document.getElementById('fnh-menu-actor');
-        this.tab = 'status'; this.busy = false; this.skillTarget = null; this.saveSlot = 1;
+        this.tab = 'status'; this.commandTab = 'inventory'; this.lastCommandTab = 'inventory'; this.busy = false; this.skillTarget = null; this.saveSlot = 1;
         var ui = this;
         document.getElementById('fnh-menu').onclick = function () { if (engine.openMenu()) ui.render(); };
         document.getElementById('fnh-menu-close').onclick = function () { ui.close(); };
@@ -92,11 +92,19 @@
         });
         this.actorSelect.onchange = function () { ui.render(); };
         this.dialog.querySelectorAll('[data-menu-tab]').forEach(function (button) {
-            button.onclick = function () { ui.tab = button.dataset.menuTab; ui.render(); };
+            button.onfocus = function () {
+                ui.commandTab = button.dataset.menuTab;
+                ui.dialog.querySelectorAll('[data-menu-tab]').forEach(function (other) { other.dataset.commandSelected = String(other === button); });
+            };
+            button.onpointermove = function () {
+                if (ui.dialog.classList.contains('fnh-menu-home') && !button.disabled && document.activeElement !== button) button.focus({preventScroll:true});
+            };
+            button.onclick = function () { ui.lastCommandTab = ui.commandTab = button.dataset.menuTab; ui.tab = button.dataset.menuTab; ui.render(); };
         });
     }
     MenuUi.prototype.focusCommand = function () {
-        var command = this.dialog.querySelector('nav button:not([hidden]):not(:disabled)');
+        var command = this.dialog.querySelector('nav button[data-menu-tab="' + this.commandTab + '"]:not([hidden]):not(:disabled)') ||
+            this.dialog.querySelector('nav button:not([hidden]):not(:disabled)');
         if (command) command.focus({preventScroll:true});
     };
     MenuUi.prototype.back = function () {
@@ -126,6 +134,7 @@
         if (opening) {
             this.message.textContent = ''; this.tab = state.scene === 'save' ? 'system' : 'status';
             this.dialog.showModal(); if (this.options && this.options.clearInput) this.options.clearInput(); else engine.buttons.clear();
+            this.commandTab = this.lastCommandTab;
         }
         var actorId = Number(this.actorSelect.value);
         if (!state.party.includes(actorId)) actorId = state.party[0];
