@@ -294,9 +294,50 @@
         uiTail = result.catch(function () {});
         return result;
     }
+    var messageConfig = null;
+    function windowBackground(element, width, height) {
+        var frame = document.createElement('canvas'); frame.width = width; frame.height = height;
+        drawWindowFrame(frame); element.style.backgroundImage = 'url("' + frame.toDataURL() + '")';
+    }
+    function prepareMessage(parameters) {
+        messageConfig = parameters || ['',0,0,2];
+        if (!automaticEvents) return;
+        var panel = document.getElementById('fnh-message'), face = document.getElementById('fnh-message-face');
+        panel.dataset.open = 'true'; panel.dataset.background = String(messageConfig[2] || 0);
+        panel.dataset.wrap = String(!!engine.state.wordWrap);
+        panel.dataset.face = String(!!messageConfig[0]);
+        panel.style.top = ((messageConfig[3] == null ? 2 : messageConfig[3]) * 222 / 624 * 100) + '%'; panel.style.bottom = 'auto';
+        windowBackground(panel,816,180);
+        face.style.backgroundImage = messageConfig[0] ? 'url("./img/faces/' + encodeURIComponent(messageConfig[0]) + '.png")' : 'none';
+        face.style.backgroundPosition = (messageConfig[1] % 4 * 100 / 3) + '% ' + Math.floor(messageConfig[1] / 4) * 100 + '%';
+    }
+    function hideMessage() {
+        document.getElementById('fnh-message').dataset.open = 'false'; messageConfig = null;
+    }
+    function messagePages() {
+        if (!automaticEvents || !message.clientHeight) return [message.innerHTML];
+        var pieces = [], pages = [];
+        Array.from(message.childNodes).forEach(function (node) {
+            if (node.nodeType === 1 && node.classList.contains('fnh-text-icon')) { pieces.push(node.cloneNode(true)); return; }
+            var tokens = (node.textContent || '').match(/\S+[^\S\n]*|\n|[\t ]+/g) || [];
+            tokens.forEach(function (token) {
+                if (node.nodeType === 3) pieces.push(document.createTextNode(token));
+                else { var span = node.cloneNode(false); span.textContent = token; pieces.push(span); }
+            });
+        });
+        message.replaceChildren();
+        pieces.forEach(function (piece) {
+            message.appendChild(piece);
+            if (message.scrollHeight > message.clientHeight + 1 && message.childNodes.length > 1) {
+                piece.remove(); pages.push(message.innerHTML); message.replaceChildren(piece);
+            }
+        });
+        pages.push(message.innerHTML); message.innerHTML = pages[0]; return pages;
+    }
     function showMessage(text, parameters, interpreter, options) {
         return queueUi(function () {
             if (engine.state.scene === 'battle') renderBattleUi();
+            prepareMessage(parameters);
             setRichText(message, engine.state.wordWrap ? text.replace(/\n/g, ' ') : text);
             if (options && options.choicesFollow) { next.hidden = true; return; }
             return messageDialog(text, interpreter);
@@ -305,6 +346,7 @@
     function messageDialog(text, interpreter) {
         engine.messageRunning = true;
         setRichText(message, engine.state.wordWrap ? text.replace(/\n/g, ' ') : text);
+        var pages = messagePages(), pageIndex = 0;
         next.hidden = false;
         next.focus({ preventScroll: true });
         return new Promise(function (resolve, reject) {
@@ -312,12 +354,21 @@
             function close() {
                 engine.messageRunning = false;
                 next.hidden = true;
-                next.onclick = null;
+                next.onclick = null; next.onkeydown = null;
+                hideMessage();
                 if (signal) signal.removeEventListener('abort', abort);
                 canvas.focus({ preventScroll: true });
             }
             function abort() { close(); reject(signal.reason); }
-            next.onclick = function () { close(); resolve(); };
+            next.onclick = function () {
+                if (++pageIndex < pages.length) { message.innerHTML = pages[pageIndex]; return; }
+                close(); resolve();
+            };
+            next.onkeydown = function (event) {
+                if (!['ok','cancel'].includes(inputName(event.key))) return;
+                event.preventDefault(); event.stopPropagation();
+                if (!event.repeat) next.click();
+            };
             if (signal) signal.addEventListener('abort', abort, { once: true });
         });
     }
@@ -331,24 +382,30 @@
             details = details || { disabled: [], help: [], message: [], defaultIndex: 0 };
             var help = document.getElementById('fnh-choice-help');
             var stage = document.querySelector('.fnh-stage'), panel = document.getElementById('fnh-message');
-            var difficulty = automaticEvents && engine.state.mapId === 10 && choices[0] === 'Fear & Hunger' && choices[1] === 'Terror & Starvation';
-            if (difficulty) {
-                stage.classList.add('fnh-difficulty'); stage.append(choicesPanel, help);
+            var originalStyle = automaticEvents;
+            if (originalStyle) {
+                stage.classList.add('fnh-choice-active'); stage.append(choicesPanel, help);
                 var measure = document.createElement('canvas').getContext('2d'); measure.font = '28px GameFont';
-                var width = Math.max.apply(null, choices.map(function (text) { return measure.measureText(text).width; })) + 48;
+                var width = Math.min(816, Math.max(96, Math.max.apply(null, choices.map(function (text) {
+                    return measure.measureText(FNHStandaloneText.formatText(text,engine.state)).width;
+                }))) + 48);
+                var messageY = messageConfig ? (messageConfig[3] == null ? 2 : messageConfig[3]) * 222 : 624;
+                var rows = Math.min(choices.length, messageY < 312 && messageY + 180 > 312 ? 4 : 8), height = rows * 36 + 36;
                 choicesPanel.style.width = width / 816 * 100 + '%';
-                [[panel,816,180],[help,816,72],[choicesPanel,Math.ceil(width),180]].forEach(function (entry) {
-                    var frame = document.createElement('canvas'); frame.width = entry[1]; frame.height = entry[2]; drawWindowFrame(frame);
-                    entry[0].style.backgroundImage = 'url("' + frame.toDataURL() + '")';
-                });
+                choicesPanel.style.height = height / 624 * 100 + '%';
+                choicesPanel.style.left = ((details.position == null ? 2 : details.position) * (816-width)/2) / 816 * 100 + '%';
+                choicesPanel.style.top = (messageY >= 312 ? messageY-height : messageY+180) / 624 * 100 + '%';
+                choicesPanel.dataset.background = String(details.background || 0);
+                windowBackground(choicesPanel,Math.ceil(width),height); windowBackground(help,816,72);
+                panel.dataset.open = String(!!messageConfig || details.message.some(Boolean));
+                if (!messageConfig && details.message.some(Boolean)) prepareMessage(['',0,0,2]);
             }
             choicesPanel.replaceChildren();
             function close() {
                 engine.messageRunning = false;
-                if (difficulty) {
-                    stage.classList.remove('fnh-difficulty'); panel.append(choicesPanel, help);
-                    [panel, help, choicesPanel].forEach(function (element) { element.style.backgroundImage = ''; });
-                    choicesPanel.style.width = '';
+                if (originalStyle) {
+                    stage.classList.remove('fnh-choice-active'); panel.append(choicesPanel, help);
+                    choicesPanel.removeAttribute('style'); help.removeAttribute('style'); hideMessage();
                 }
                 choicesPanel.onkeydown = null;
                 choicesPanel.replaceChildren();
@@ -363,7 +420,7 @@
                 setRichText(button, label);
                 button.disabled = details.disabled.includes(index);
                 button.onfocus = button.onmouseenter = function () {
-                    if (difficulty) Array.from(choicesPanel.children).forEach(function (other) { other.dataset.selected = String(other === button); });
+                    if (originalStyle) Array.from(choicesPanel.children).forEach(function (other) { other.dataset.selected = String(other === button); });
                     setRichText(help, details.help[index] || '');
                     if (details.message[index]) setRichText(message, details.message[index]);
                 };
@@ -374,7 +431,7 @@
                 choicesPanel.appendChild(button);
             }
             choices.forEach(addChoice);
-            if (cancelType !== -1) addChoice('Quay lại', cancelType >= 0 ? cancelType : -1);
+            if (!originalStyle && cancelType !== -1) addChoice('Quay lại', cancelType >= 0 ? cancelType : -1);
             choicesPanel.onkeydown = function (event) {
                 var action = inputName(event.key);
                 if (action === 'up' || action === 'down' || action === 'left' || action === 'right') {
@@ -385,7 +442,7 @@
                 } else if (action === 'ok') {
                     if (!event.repeat && document.activeElement && !document.activeElement.disabled) document.activeElement.click();
                 } else if (action === 'cancel') {
-                    if (!event.repeat && cancelType !== -1) choicesPanel.lastElementChild.click();
+                    if (!event.repeat && cancelType !== -1) { close(); resolve(cancelType); }
                 } else return;
                 event.preventDefault();
                 event.stopPropagation();
@@ -983,6 +1040,9 @@
     (async function () {
         try {
             var skin = await renderer.loadImage('img/system/Window.png'); windowSkin = skin;
+            var pause = document.createElement('canvas'); pause.width = 24; pause.height = 24;
+            pause.getContext('2d').drawImage(skin,144,96,24,24,0,0,24,24);
+            document.getElementById('fnh-next').style.setProperty('--fnh-pause-image','url("' + pause.toDataURL() + '")');
             document.querySelectorAll('#fnh-title-frame, .fnh-name-frame').forEach(function (target) {
                 drawWindowFrame(target);
             });

@@ -82,6 +82,13 @@ PageUp/PageDown đổi bảng, Escape xóa ký tự và Enter chọn OK để x�
 Intro phát liền trong khung game, ẩn điều khiển video và không bật cửa sổ nổi.
 Màn chọn độ khó dùng ba khung theo game gốc: trợ giúp trên cùng, danh sách
 ở giữa và mô tả phía dưới; chọn bằng phím hoặc chuột cập nhật mô tả từ JSON.
+Ô thoại chơi chính dùng viền Window.png, chân dung faces, chữ 28px/dòng 36px
+và khung bốn dòng co theo vùng game. Vị trí và nền thường/tối/trong suốt đọc
+lệnh 101; thoại dài chuyển trang, giữ màu/icon và khóa sự kiện đến khi đọc hết.
+Dấu chờ thay nút Tiếp tục; Z/Enter/X hoặc chạm khung để đọc tiếp. Các lựa chọn
+thường cũng có khung dọc riêng, trợ giúp phía trên và vị trí theo JSON, không
+thêm nút hủy ngoài nội dung game. Chạy `FNH_BROWSER_SCOPE=dialogue npm run test:browser`
+để kiểm tra riêng ô thoại, phân trang, lựa chọn và dọn khung khi hủy.
 Nếu trình duyệt chặn tự phát, nút Tiếp tục cho phép bắt đầu cảnh bằng tương tác.
 Mở `/standalone.html?title=1` để chạy luồng khởi động: sự kiện autorun Map072
 chờ/hiện/fade ảnh `splash_screen1`, rồi lệnh 354 mở tiêu đề. Gameplay bị khóa

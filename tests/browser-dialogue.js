@@ -1,0 +1,44 @@
+'use strict';
+module.exports = async function ({cdp,url,evalPage,waitFor,clickElement,check,screenshot}) {
+    await cdp.send('Page.navigate',{url:url+'standalone.html?events=1&map=74'});
+    await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.engine.map && document.querySelector("#fnh-loading").hidden',30000,'khởi động hội thoại');
+    await evalPage(cdp,`(async()=>{const a=FNHStandalonePreview;a.scheduler.stop();await new Promise(r=>setTimeout(r,50));a.audio.setVolume('master',.05);await a.engine.restore({mapId:74,x:8,y:8,party:[1]});})()`,true,false);
+    async function run(parameters,text) {
+        await evalPage(cdp,`(()=>{const a=FNHStandalonePreview;window.dialogDone=false;window.dialogError=null;a.engine.createInterpreter([{code:101,parameters:${JSON.stringify(parameters)}},{code:401,parameters:[${JSON.stringify(text)}]}],0,a.scheduler.handlers).run().then(()=>window.dialogDone=true).catch(e=>window.dialogError=e.message);})()`,false,false);
+        await waitFor(cdp,'!document.querySelector("#fnh-next").hidden',5000,'hộp thoại');
+    }
+    await run(['Actor1',0,0,2],'First line\nSecond line\nThird line\nFourth line');
+    check('khung thoại cao 180 ở đáy, chân dung, viền gốc và dấu chờ thay nút chữ',await evalPage(cdp,`(()=>{const p=document.querySelector('#fnh-message'),r=p.getBoundingClientRect(),s=document.querySelector('.fnh-stage').getBoundingClientRect();return Math.abs(r.height/s.height*624-180)<1 && Math.abs((r.y-s.y)/s.height*624-444)<1 && p.dataset.face==='true' && p.style.backgroundImage.includes('data:image/png') && getComputedStyle(document.querySelector('#fnh-next')).fontSize==='0px' && document.querySelector('#fnh-next').style.getPropertyValue('--fnh-pause-image').includes('data:image/png') && !window.dialogDone;})()`,false,false));
+    await screenshot('dialogue-face');await clickElement(cdp,'#fnh-next');await waitFor(cdp,'window.dialogDone',5000,'đóng thoại');
+    check('đóng thoại ẩn khung và trả điều khiển',await evalPage(cdp,'document.querySelector("#fnh-message").dataset.open==="false" && !FNHStandalonePreview.engine.messageRunning',false,false));
+    await run(['',0,1,0],'Top dim message');
+    check('vị trí trên và nền tối đọc từ JSON',await evalPage(cdp,`(()=>{const p=document.querySelector('#fnh-message'),s=document.querySelector('.fnh-stage').getBoundingClientRect();return Math.abs(p.getBoundingClientRect().top-s.top)<1 && p.dataset.background==='1' && p.dataset.face==='false';})()`,false,false));
+    await clickElement(cdp,'#fnh-next');await waitFor(cdp,'window.dialogDone',5000,'đóng nền tối');
+    await run(['',0,2,1],'Center transparent message');
+    check('vị trí giữa và nền trong suốt đọc từ JSON',await evalPage(cdp,`(()=>{const p=document.querySelector('#fnh-message'),s=document.querySelector('.fnh-stage').getBoundingClientRect();return Math.abs((p.getBoundingClientRect().top-s.top)/s.height*624-222)<1 && p.dataset.background==='2';})()`,false,false));
+    await clickElement(cdp,'#fnh-next');await waitFor(cdp,'window.dialogDone',5000,'đóng giữa');
+    await run(['',0,0,2],'Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6');
+    await clickElement(cdp,'#fnh-next');
+    check('quá bốn dòng chuyển trang và giữ sự kiện chờ',await evalPage(cdp,'!window.dialogDone && document.querySelector("#fnh-message-text").textContent.includes("Line 5")',false,false));
+    await clickElement(cdp,'#fnh-next');await waitFor(cdp,'window.dialogDone',5000,'hết trang');
+    await evalPage(cdp,`(()=>{const a=FNHStandalonePreview;window.choiceDone=false;a.engine.createInterpreter([{code:101,parameters:['',0,0,2]},{code:401,parameters:['Open the door?']},{code:102,parameters:[['Open','Leave'],-2,0,2,0]},{code:402,indent:0,parameters:[0,'Open']},{code:108,indent:1,parameters:['ChoiceHelp Door help']},{code:403,indent:0},{code:121,indent:1,parameters:[994,994,0]},{code:404,indent:0}],0,a.scheduler.handlers).run().then(()=>window.choiceDone=true);})()`,false,false);
+    await waitFor(cdp,'document.querySelectorAll("#fnh-choices button").length===2',5000,'cửa thật dạng chọn');
+    check('lựa chọn dọc ở trên thoại, trợ giúp riêng và không thêm nút hủy ngoài JSON',await evalPage(cdp,`(()=>{const c=document.querySelector('#fnh-choices'),p=document.querySelector('#fnh-message');return c.parentElement.classList.contains('fnh-stage') && c.children.length===2 && c.getBoundingClientRect().bottom<=p.getBoundingClientRect().top+1 && document.querySelector('#fnh-choice-help').textContent==='Door help';})()`,false,false));
+    await screenshot('dialogue-choices');
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'});
+    await waitFor(cdp,'window.choiceDone',5000,'hủy chọn');
+    check('Escape chạy nhánh hủy và dọn các khung phụ',await evalPage(cdp,'FNHStandalonePreview.engine.state.switchValue(994) && !document.querySelector(".fnh-stage").classList.contains("fnh-choice-active")',false,false));
+    await evalPage(cdp,`(()=>{const a=FNHStandalonePreview;window.abortMessage=new AbortController();window.abortDone=false;a.engine.createInterpreter([{code:101,parameters:['',0,0,2]},{code:401,parameters:['Wait for cancellation']},{code:121,parameters:[993,993,0]}],0,a.scheduler.handlers,abortMessage.signal).run().catch(()=>window.abortDone=true);})()`,false,false);
+    await waitFor(cdp,'!document.querySelector("#fnh-next").hidden',5000,'hội thoại chờ hủy');
+    await evalPage(cdp,'abortMessage.abort()',false,false);await waitFor(cdp,'window.abortDone',5000,'hủy sự kiện');
+    check('hủy sự kiện dọn khung thoại và không chạy lệnh sau',await evalPage(cdp,'document.querySelector("#fnh-message").dataset.open==="false" && !FNHStandalonePreview.engine.state.switchValue(993)',false,false));
+    await evalPage(cdp,'FNHStandalonePreview.engine.battle.setup(1,true,true);FNHStandalonePreview.engine.state.scene="battle"',false,false);
+    await run(['',0,0,2],'Dialogue during battle');
+    check('thoại trong trận nằm trên bảng combat và tiếp tục bằng bàn phím',await evalPage(cdp,`(()=>{const r=document.querySelector('#fnh-next').getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2).id==='fnh-next';})()`,false,false));
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'z',code:'KeyZ'});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'z',code:'KeyZ'});await waitFor(cdp,'window.dialogDone',5000,'Z tiếp tục thoại');
+    await evalPage(cdp,'FNHStandalonePreview.engine.battle.finish("escape");FNHStandalonePreview.engine.state.scene="map"',false,false);
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await run(['Actor1',1,0,2],'Mobile dialogue');
+    check('hội thoại co cùng khung game trên điện thoại',await evalPage(cdp,'document.querySelector("#fnh-message").getBoundingClientRect().width<=390 && document.querySelector("#fnh-message").getBoundingClientRect().left>=0',false,false));
+    await clickElement(cdp,'#fnh-next');
+};

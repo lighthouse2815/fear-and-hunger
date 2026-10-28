@@ -25,6 +25,12 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- Ô thoại chính dùng Window.png và chân dung faces, khung bốn dòng, nền/vị trí
+  từ lệnh 101, dấu chờ thay nút chữ và phân trang khi vượt khung; Z/Enter/X/chạm
+  đọc tiếp. Các lựa chọn thường dùng khung dọc, vị trí JSON và trợ giúp riêng,
+  không chèn thêm mục hủy. Chrome riêng `FNH_BROWSER_SCOPE=dialogue` kiểm tra
+  nguồn/build, phân trang, nền tối/trong suốt, hủy sự kiện, thoại trong trận
+  và kích thước điện thoại. Chưa đối chiếu toàn bộ nhịp hiện từng ký tự.
 - Đồng hồ của lệnh 124 hiện góc trên bên phải ở map/trận, ẩn khi dừng hoặc
   mở menu; Chrome kiểm tra lệnh ba phút và dừng thật của Map166 cùng save.
   Đồng hồ tiếp tục đếm trong trận; hết giờ trả nhánh thoát và đợi trang troop

@@ -385,6 +385,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if (process.env.FNH_BROWSER_SCOPE === 'dialogue') {
+            await require('./browser-dialogue')({cdp,url:running.url,evalPage,waitFor,clickElement,check,screenshot});
+            check('không có lỗi runtime trong hội thoại', runtimeErrors.length === 0, JSON.stringify(runtimeErrors));
+            log('Hoàn tất ' + passed + ' kiểm tra hội thoại.'); return;
+        }
         await cdp.send('Page.addScriptToEvaluateOnNewDocument', {source: `
             window.fnhTestCombatAttack=function(){
                 const targets=document.querySelector('#fnh-combat-targets');
