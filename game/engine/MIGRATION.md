@@ -29,6 +29,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   mở menu; Chrome kiểm tra lệnh ba phút và dừng thật của Map166 cùng save.
   Đồng hồ tiếp tục đếm trong trận; hết giờ trả nhánh thoát và đợi trang troop
   đang chạy. Unit kiểm tra đếm, dừng ở menu, hết giờ trên map và trong trận.
+  Lệnh dừng giữ số frame còn lại và trạng thái này được lưu; bắt đầu lại đặt
+  thời gian mới. Unit và Chrome dùng lệnh 124 thật từ Map166.
 - Biến số làm tròn xuống khi ghi như runtime gốc, kể cả phép chia số âm;
   kiểm tra qua interpreter và lưu/tải. JSON hiện tại không dùng phép chia 122.
 - Chrome đi liên tục từ entry chính qua Guard layout 3 tới lồng Girl, xử lý

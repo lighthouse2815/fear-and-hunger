@@ -127,7 +127,8 @@
         case 123:
             return this.controlSelfSwitch(command.parameters || []);
         case 124:
-            this.state.timer = { active: command.parameters[0] === 0, frames: (command.parameters[1] || 0) * 60 };
+            if (command.parameters[0] === 0) this.state.timer = { active: true, frames: (command.parameters[1] || 0) * 60 };
+            else this.state.timer.active = false;
             return;
         case 132:
             this.state.battleBgm = Object.assign({}, command.parameters[0]);

@@ -97,6 +97,7 @@ Interpreter chạy được common event lồng nhau, vòng lặp có giới h�
 Biến số được làm tròn xuống khi ghi, kể cả số âm và kết quả phép chia.
 Các event đếm giờ hiện đồng hồ phút:giây trên màn hình; thời gian được lưu cùng
 save. Đồng hồ tiếp tục đếm trong trận và kết thúc trận theo nhánh thoát khi hết giờ.
+Lệnh dừng ẩn đồng hồ nhưng giữ thời gian còn lại trong trạng thái và save.
 Điều kiện vũ khí/giáp có cờ tính trang bị kiểm tra cả đồ đang đeo của party;
 trong trận chỉ tính bốn người tham chiến, guest không tính là thành viên party.
 Điều kiện nhân vật có kỹ năng tính cả kỹ năng đã học và kỹ năng do trait của

@@ -5,6 +5,18 @@ const { GameState } = require('../game/engine/game-state');
 const { EventInterpreter } = require('../game/engine/event-interpreter');
 
 (async () => {
+    const timerState = new GameState();
+    const map166 = require('../game/data/Map166.json');
+    const timerStart = map166.events[67].pages[0].list.find(command => command.code === 124 && command.parameters[0] === 0);
+    const timerStop = map166.events[307].pages[0].list.find(command => command.code === 124 && command.parameters[0] === 1);
+    await new EventInterpreter({ state: timerState, commands: [timerStart] }).run();
+    assert.equal(timerState.timer.frames, 10800);
+    timerState.timer.frames = 427;
+    await new EventInterpreter({ state: timerState, commands: [timerStop] }).run();
+    assert.deepEqual(timerState.timer, { active: false, frames: 427 }, 'dừng giữ thời gian còn lại');
+    assert.deepEqual(new GameState(timerState.toJSON()).timer, timerState.timer, 'lưu giữ thời gian đã dừng');
+    await new EventInterpreter({ state: timerState, commands: [timerStart] }).run();
+    assert.deepEqual(timerState.timer, { active: true, frames: 10800 }, 'bắt đầu lại đặt thời gian mới');
     const arithmetic = new GameState();
     await new EventInterpreter({ state: arithmetic, commands: [
         { code: 122, parameters: [1, 1, 0, 0, 7] },

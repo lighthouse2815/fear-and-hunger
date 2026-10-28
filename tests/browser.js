@@ -3517,7 +3517,8 @@ async function main() {
                 if(timer.hidden || !['03:00','02:59'].includes(timer.textContent))return false;
                 e.state.scene='menu';e.state.timer.frames=61;await e.restore(e.save());
                 e.state.scene='map';await frame();if(timer.hidden || !['00:01','00:00'].includes(timer.textContent))return false;
-                await e.createInterpreter([stop],0).run();await frame();return timer.hidden;
+                const remaining=e.state.timer.frames;
+                await e.createInterpreter([stop],0).run();await frame();return timer.hidden && e.state.timer.frames===remaining;
             }finally{await e.restore(snapshot);}
         })()`,true,false));
         check('điều kiện skill tính trait trạng thái thật và giữ qua save',await evalPage(cdp,`(async()=>{
