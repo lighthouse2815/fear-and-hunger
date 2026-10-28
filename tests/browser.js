@@ -4033,6 +4033,50 @@ async function main() {
                 const e=FNHStandalonePreview.engine;return e.state.mapId==={1:6,2:37}[e.state.variableValue(126)] &&
                     e.state.party.includes(2) && e.state.followers().some(f=>f.id===2) && FNHStandalonePreview.errors.length===0;
             })()`,false,false));
+            await evalPage(cdp,`(()=>{const e=FNHStandalonePreview.engine;window.__crateInventory=JSON.stringify(e.state.inventory);})()`,false,false);
+            let searchedCrate=false;
+            for(let step=0;step<250 && !searchedCrate;step++){
+                searchedCrate=await evalPage(cdp,`(()=>{
+                    const e=FNHStandalonePreview.engine;
+                    if(e.state.selfSwitchValue(37,133,'A') && !e.eventRunning && e.state.scene==='map')return true;
+                    const next=document.querySelector('#fnh-next');if(!next.hidden)next.click();
+                    const choice=document.querySelector('#fnh-choices button:not(:disabled)');if(choice)choice.click();
+                    if(e.state.scene==='battle' && e.battle.battle.phase==='input'){
+                        const target=document.querySelector('#fnh-battle-targets button:not(:disabled)');if(target)target.click();
+                        const attack=document.querySelector('#fnh-battle-attack'),start=document.querySelector('#fnh-battle-start');
+                        if(!start.disabled)start.click();else if(!attack.disabled)attack.click();
+                    }
+                    if(e.state.scene!=='map' || e.eventRunning || e.state.mapId!==37)return false;
+                    const crate=e.map.eventById(133),dx=crate.x-e.state.x,dy=crate.y-e.state.y;
+                    if(Math.abs(dx)+Math.abs(dy)===1){
+                        const direction=dx<0?4:dx>0?6:dy<0?8:2;
+                        if(e.state.direction===direction)document.querySelector('#fnh-controls [data-direction="0"]').click();
+                        else document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();
+                    }else{
+                        const direction=e.map.findDirection(e.state,crate,80);
+                        if(direction)document.querySelector('#fnh-controls [data-direction="'+direction+'"]').click();
+                    }
+                    return false;
+                })()`,false,true);
+                if(!searchedCrate)await sleep(180);
+            }
+            if(!searchedCrate)throw new Error('Không mở được thùng tầng sâu: '+JSON.stringify(await evalPage(cdp,`(()=>{
+                const e=FNHStandalonePreview.engine;return {map:e.state.mapId,x:e.state.x,y:e.state.y,scene:e.state.scene,event:e.eventRunning,
+                    message:document.querySelector('#fnh-message-text').textContent,errors:FNHStandalonePreview.errors};
+            })()`,false,false)));
+            check('thùng tầng sâu cho vật phẩm và giữ trạng thái sau lưu tải',await evalPage(cdp,`(async()=>{
+                const e=FNHStandalonePreview.engine,inventory=JSON.stringify(e.state.inventory);
+                if(inventory===window.__crateInventory || !e.state.party.includes(2))return false;
+                window.__crateAfter=inventory;
+                await e.restore(e.save());return e.state.selfSwitchValue(37,133,'A') && JSON.stringify(e.state.inventory)===inventory &&
+                    e.map.eventPage(e.map.eventById(133)).conditions.selfSwitchValid && e.state.party.includes(2);
+            })()`,true,false));
+            await clickElement(cdp,'#fnh-controls [data-direction="0"]');
+            await waitFor(cdp,'document.querySelector("#fnh-message-text").textContent.includes("Nothing left here.") && !document.querySelector("#fnh-next").hidden',5000,'mở lại thùng đã tìm');
+            await clickElement(cdp,'#fnh-next');
+            await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'kết thúc tìm lại thùng');
+            check('mở lại thùng đã tìm không nhận thêm vật phẩm',await evalPage(cdp,
+                'JSON.stringify(FNHStandalonePreview.engine.state.inventory)===window.__crateAfter && FNHStandalonePreview.engine.state.party.includes(2)',false,false));
         }
         await cdp.send('Page.removeScriptToEvaluateOnNewDocument',{identifier:seeded.identifier});
         }

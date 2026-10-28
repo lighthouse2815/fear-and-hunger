@@ -72,6 +72,8 @@ Tại đây cả đội gặp và thắng trận hai Priest qua sự kiện th�
 Test tiếp tục tới tượng, chọn tế lễ và kiểm tra điểm Alll-Mer cùng trạng thái
 tượng sau lưu/tải.
 Sau đó cả đội rơi qua sàn sập đang bật và xuống đúng tầng theo layout.
+Ở Map037, test tìm vật phẩm trong thùng, lưu/tải và xác nhận mở lại không nhận
+thêm vật phẩm.
 Preview mặc định chọn sẵn Mercenary và layout 1 để kiểm tra. Mở
 `/standalone.html?map=10&events=1` để chạy màn chọn bốn nhân vật, nhập tên và intro.
 Mở `/standalone.html?title=1` để chạy luồng khởi động: sự kiện autorun Map072
