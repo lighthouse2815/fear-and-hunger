@@ -32,6 +32,26 @@ async function fixture(events, commonEvents = []) {
     assert.equal(timed.map.eventPage(timed.map.eventById(307)).trigger, 3, 'switch hết giờ đổi sang trang autorun');
     timerScheduler.stop();
     assert.deepEqual(timerErrors, []);
+
+    const store = new GameDataStore({ fetchImpl: async url => ({ ok: true, json: async () =>
+        JSON.parse(await fs.readFile(path.join(__dirname, '../game', url), 'utf8')) }) });
+    const puzzle = new GameEngine({ dataStore: store, onRouteEffect: () => true });
+    await puzzle.boot({ mapId: 166, x: 1, y: 1, party: [1] });
+    const puzzleMessages = [];
+    let puzzleDone = false, puzzleError;
+    const puzzleRun = puzzle.runEvent(67, { message: text => puzzleMessages.push(text),
+        effect: code => [245, 250].includes(code) })
+        .catch(error => { puzzleError = error; }).finally(() => { puzzleDone = true; });
+    for (let i = 0; i < 2000 && !puzzleDone; i++) { puzzle.advanceRoutes(16); await delay(); }
+    assert.equal(puzzleDone, true, 'toàn bộ mở màn puzzle phải kết thúc');
+    await puzzleRun;
+    if (puzzleError) throw puzzleError;
+    assert.ok(puzzleMessages.some(text => text.includes('Solve the ancient puzzle')));
+    assert.equal(puzzle.state.timer.active, true);
+    assert.ok(puzzle.state.timer.frames > 0 && puzzle.state.timer.frames <= 10800);
+    assert.equal(puzzle.state.switchValue(2741), true, 'autorun puzzle mở trang đếm giờ');
+    assert.equal(puzzle.state.switchValue(410), false, 'autorun trả quyền điều khiển');
+    assert.equal(puzzle.map.eventPage(puzzle.map.eventById(67)).trigger, 0);
     const engine = await fixture([null,
         { id: 1, x: 0, y: 1, pages: [page(3, [
             { code: 122, parameters: [1, 1, 1, 0, 1] }, { code: 230, parameters: [3] }, { code: 123, parameters: ['A', 0] }
