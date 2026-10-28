@@ -3270,6 +3270,7 @@ async function main() {
         check('intro độc lập phát asset webm thật và giữ sự kiện đang chờ', await evalPage(cdp, `(() => {
             const video = document.querySelector('#fnh-video');
             return video.src.endsWith('/movies/intro.webm') && !video.paused && video.duration > 1 &&
+                !video.controls && video.disablePictureInPicture && getComputedStyle(video).pointerEvents === 'none' &&
                 !FNHStandalonePreview.engine.state.switchValue(295);
         })()`, false, false));
         await screenshot('standalone-opening');
