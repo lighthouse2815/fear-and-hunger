@@ -98,6 +98,10 @@ Về title trong cùng phiên không phát splash lại.
 Menu tiêu đề dùng hai lệnh New Game/Continue như Izy_RemoveOption của game gốc;
 Continue mở màn chọn ô lưu riêng và bị khóa nếu chưa có save. Khung 240×108
 đặt tại (288,420) trong vùng 816×624, vẽ viền từ Window.png và co theo màn hình.
+Màn lưu/tải dùng danh sách 20 File cuộn, năm ô mỗi lần, khung trợ giúp 72px
+và khung danh sách 552px. Ô đã lưu hiện tên game và sprite đội hình; chọn ô
+để lưu/tải, Escape quay lại. Lưu từ sách đóng màn và tiếp tục sự kiện, giữ
+checkpoint trong save. Kiểm tra riêng: `FNH_BROWSER_SCOPE=save npm run test:browser`.
 Trạng thái chơi mới đọc cờ ẩn nhân vật từ System.json; preview có trạng thái chỉ định vẫn giữ cờ riêng.
 Luồng chơi có `events=1` hoặc `title=1` dùng menu theo cấu hình gốc: ẩn bạc,
 không hiện Formation hoặc lệnh lưu tự do, ẩn nút lưu/tải nhanh ngoài khung game.

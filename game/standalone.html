@@ -105,6 +105,25 @@
         #fnh-end-save-panel select { display: block; width: 100%; margin: 20px 0; font: inherit; }
         #fnh-end-save-panel button { font: inherit; }
         #fnh-end-error { color: #f1b4a4; }
+        #fnh-end-save-panel { inset: 0; padding: 0; border: 0; background: #080808c0; font: 3.4314cqw/4.4118cqw GameFont, serif; }
+        #fnh-end-save-panel > label, #fnh-end-save-panel #fnh-end-save-slot, #fnh-end-load, #fnh-end-save-back { display: none; }
+        #fnh-end-error { position: absolute; top: 0; left: 0; margin: 0; padding: 2.2059cqw; z-index: 2; background: #100b08; font: inherit; }
+        #fnh-end-error:empty { display: none; }
+        .fnh-save-screen { position: absolute; inset: 0; color: white; font: 3.4314cqw/4.4118cqw GameFont, serif; text-shadow: 1px 1px 2px black; }
+        .fnh-save-help, .fnh-save-list { position: absolute; left: 0; right: 0; box-sizing: border-box; padding: 2.2059cqw; background: #080808b0; background-size: 100% 100%; }
+        .fnh-save-help { top: 0; height: 11.5385%; }
+        .fnh-save-list { top: 11.5385%; bottom: 0; overflow: hidden; }
+        .fnh-save-rows { position: absolute; inset: 2.2059cqw; overflow-y: auto; scrollbar-width: thin; }
+        .fnh-save-list .fnh-save-file { position: relative; display: grid; grid-template-columns: 23.5294cqw 1fr; align-items: start; box-sizing: border-box; width: 100%; height: 12.6225cqw; margin: 0; padding: 0 .49cqw; border: 0; border-radius: 0; background: transparent; color: white; text-align: left; font: inherit; text-shadow: inherit; outline: none; }
+        .fnh-save-list .fnh-save-file[data-selected='true'], .fnh-save-list .fnh-save-file:focus { background: #b99aaa59; box-shadow: inset 0 0 0 1px #eee8; }
+        .fnh-save-empty { opacity: .5; }
+        .fnh-save-party { position: absolute; left: 27.45cqw; bottom: .49cqw; display: flex; gap: 0; }
+        .fnh-save-party canvas { width: 5.8824cqw; height: 5.8824cqw; background: transparent; }
+        #fnh-menu-dialog[open].fnh-file-menu { width: min(816px,96vw); aspect-ratio: 816/624; max-height: 96vh; padding: 0; border: 0; box-shadow: none; display: block; background: transparent; }
+        .fnh-file-menu #fnh-menu-title, .fnh-file-menu #fnh-menu-close, #fnh-menu-dialog.fnh-file-menu nav, .fnh-file-menu > label, .fnh-file-menu #fnh-menu-actor { display: none; }
+        .fnh-file-menu #fnh-menu-content { position: absolute; inset: 0; padding: 0; border: 0; }
+        .fnh-file-menu #fnh-menu-message { position: absolute; top: 0; left: 0; z-index: 2; background: #100b08; }
+        .fnh-file-menu #fnh-menu-message:empty { display: none; }
         #fnh-menu-dialog { box-sizing: border-box; width: min(816px, 96vw); max-height: 90vh; overflow: auto; padding: 16px; background: #10100feb; border: 2px solid #88877d; box-shadow: inset 0 0 0 2px #343431; font-family: GameFont, serif; }
         #fnh-menu-dialog.fnh-game-menu { container-type: inline-size; }
         #fnh-menu-dialog[open] { display: grid; grid-template-columns: minmax(100px, 140px) minmax(0, 1fr); grid-template-areas: 'title close' 'actor select' 'nav message' 'nav content'; gap: 8px 16px; align-items: start; }
@@ -217,6 +236,7 @@
                 <button id="fnh-continue" type="button">Continue</button>
             </div>
             <section id="fnh-end-save-panel" hidden aria-label="Load game">
+                <div id="fnh-end-file-list"></div>
                 <label for="fnh-end-save-slot">Ô lưu</label><select id="fnh-end-save-slot"></select>
                 <button id="fnh-end-load" type="button">Tải ô 1</button>
                 <button id="fnh-end-save-back" type="button">Cancel</button>

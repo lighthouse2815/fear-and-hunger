@@ -255,6 +255,10 @@ async function sendAudioGesture(cdp, type) {
 }
 
 async function clickElement(cdp, selector) {
+    if(selector==='#fnh-end-load') {
+        const slot=await evalPage(cdp,'document.querySelector("#fnh-end-save-slot").value',false,false);
+        return clickElement(cdp,'#fnh-end-file-list [data-slot="'+slot+'"]');
+    }
     if (selector === '#fnh-menu-close' && await evalPage(cdp,'getComputedStyle(document.querySelector("#fnh-menu-close")).display === "none"',false,false)) {
         await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});
         await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'}); return;
@@ -389,6 +393,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if(process.env.FNH_BROWSER_SCOPE==='save') {
+            await require('./browser-save')({cdp,url:running.url,evalPage,waitFor,clickElement,check,screenshot});
+            check('không có lỗi runtime ở màn lưu tải',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất '+passed+' kiểm tra lưu tải.');return;
+        }
         if (process.env.FNH_BROWSER_SCOPE === 'menu') {
             await require('./browser-menu')({cdp,url:running.url,evalPage,waitFor,clickElement,check,screenshot});
             check('không có lỗi runtime trong menu',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
@@ -3385,10 +3394,9 @@ async function main() {
         await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="save" && document.querySelector("#fnh-menu-dialog").open',5000,'sách mở màn lưu riêng trong chơi thường');
         check('lệnh 352 từ sách vẫn mở lưu và khóa các tab khác trong chơi thường',await evalPage(cdp,`(()=>{
             const tabs=Array.from(document.querySelectorAll('[data-menu-tab]')).filter(button=>!button.hidden).map(button=>button.dataset.menuTab);
-            return tabs.join(',')==='system' && !document.querySelector('#fnh-menu-save').disabled && document.querySelector('#fnh-menu-load').hidden;
+            return tabs.join(',')==='system' && document.querySelectorAll('#fnh-menu-content .fnh-save-file').length===20 && !document.querySelector('#fnh-menu-load');
         })()`,false,false));
-        await clickElement(cdp,'#fnh-menu-save');
-        await clickElement(cdp,'#fnh-menu-close');
+        await clickElement(cdp,'#fnh-menu-content [data-slot="1"]');
         await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine;
             for(let i=0;i<1000 && !window.__gameplayBookDone && !window.__gameplayBookError;i++){

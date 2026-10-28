@@ -18,6 +18,52 @@
         }
         select.value = selected || 1;
     }
+    function renderSaveFiles(container, store, options) {
+        var previous=document.activeElement;
+        if(container.contains(previous) && previous.matches('.fnh-save-file')) {options.focus=true;options.selected=Number(previous.dataset.slot);}
+        container.replaceChildren(); container.classList.add('fnh-save-screen');
+        var help = node('div',options.mode === 'save' ? 'Save to which file?' : 'Load which file?'); help.className='fnh-save-help';
+        var list = node('div'); list.className='fnh-save-list'; list.setAttribute('aria-label',options.mode==='save'?'Save files':'Load files');
+        var rows=node('div');rows.className='fnh-save-rows';list.appendChild(rows);
+        options.windowBackground(help,816,72); options.windowBackground(list,816,552);
+        for (var slot=1;slot<=20;slot++) {
+            var row=node('button');row.type='button';row.className='fnh-save-file';row.dataset.slot=slot;
+            var label=node('span','File '+slot);label.className='fnh-save-id';row.appendChild(label);
+            try {
+                var payload=store.read(slot);
+                if(payload) {
+                    row.appendChild(node('span',options.engine.database.System.gameTitle));
+                    var party=node('span');party.className='fnh-save-party';
+                    (payload.state.party||[]).forEach(function (id) {
+                        var actor=payload.state.actors && payload.state.actors[id] || options.engine.database.Actors[id];
+                        if(!actor || !actor.characterName)return;
+                        var canvas=node('canvas');canvas.width=48;canvas.height=48;canvas.setAttribute('aria-label',actor.name);party.appendChild(canvas);
+                        var filename=actor.characterName,index=actor.characterIndex||0;
+                        options.renderer.loadImage('img/characters/'+filename+'.png').then(function (bitmap) {
+                            var single=/^!?\$/.test(filename),w=bitmap.width/(single?3:12),h=bitmap.height/(single?4:8);
+                            var x=(single?1:index%4*3+1)*w,y=(single?0:Math.floor(index/4)*4)*h;
+                            canvas.getContext('2d').drawImage(bitmap,x,y,w,h,24-w/2,48-h,w,h);
+                        }).catch(function (error) { canvas.title=error.message; });
+                    });row.appendChild(party);
+                } else if(options.mode==='load')row.classList.add('fnh-save-empty');
+            } catch(error) {row.appendChild(node('span',error.message));row.classList.add('fnh-save-corrupt');}
+            row.onfocus=function () {list.querySelectorAll('button').forEach(function (other) {other.dataset.selected=String(other===this);},this);};
+            row.onclick=function () {options.confirm(Number(this.dataset.slot));};rows.appendChild(row);
+        }
+        list.onkeydown=function (event) {
+            var action=options.input(event.key),buttons=Array.from(rows.children),index=buttons.indexOf(document.activeElement);
+            if(['up','down','pageup','pagedown'].includes(action)) {
+                var step=action==='up'?-1:action==='down'?1:action==='pageup'?-5:5;
+                buttons[Math.max(0,Math.min(19,index+step))].focus();
+            } else if(action==='ok') {if(!event.repeat && document.activeElement.matches('.fnh-save-file'))document.activeElement.click();}
+            else return;
+            event.preventDefault();event.stopPropagation();
+        };
+        container.append(help,list);
+        var selected=rows.children[Math.max(0,Math.min(19,(options.selected||1)-1))];
+        selected.dataset.selected='true';if(options.focus)selected.focus({preventScroll:true});
+        rows.scrollTop=Math.max(0,(Number(selected.dataset.slot)-3)*103/816*container.clientWidth);
+    }
     function MenuUi(engine, saveStore, handlers, changed, options) {
         this.engine = engine; this.saveStore = saveStore; this.handlers = handlers; this.changed = changed;
         this.options = options;
@@ -89,6 +135,7 @@
         });
         if (actorId) this.actorSelect.value = actorId;
         var gameplay = !!(this.options && this.options.gameplay);
+        this.dialog.classList.toggle('fnh-file-menu',gameplay && this.tab==='system');
         this.dialog.classList.toggle('fnh-game-menu', gameplay);
         this.dialog.classList.toggle('fnh-menu-home', gameplay && this.tab === 'status');
         var selectActor = !gameplay || ['inventory', 'equipment', 'skills'].includes(this.tab);
@@ -125,7 +172,7 @@
             if (opening) this.focusCommand();
         } else {
             this.dialog.querySelector('nav').style.backgroundImage = ''; content.style.backgroundImage = '';
-            if (opening) document.getElementById('fnh-menu-close').focus({preventScroll:true});
+            if (opening && !(gameplay && this.tab==='system')) document.getElementById('fnh-menu-close').focus({preventScroll:true});
         }
         if (!this.options || !this.options.gameplay) content.appendChild(node('p', 'Bạc: ' + state.gold));
         if (this.tab === 'status' && actor) {
@@ -324,6 +371,14 @@
             cancel.onclick=function () { ui.tab='status';ui.render(); };
             content.append(title,cancel);
         } else if (this.tab === 'system') {
+            if (gameplay) {
+                renderSaveFiles(content,ui.saveStore,{engine:engine,renderer:ui.options.renderer,windowBackground:ui.options.windowBackground,input:ui.options.input,mode:'save',selected:ui.saveSlot,focus:opening,
+                    confirm:function (slot) {
+                        if(ui.busy && !(engine.menuWaiters && engine.menuWaiters.size))return;
+                        try {ui.saveSlot=slot;engine.saveMenuTo(ui.saveStore,slot);ui.close();}
+                        catch(error){ui.message.textContent=error.message;}
+                    }});return;
+            }
             var slotLabel = node('label', 'Ô lưu: '), slots = node('select'); slots.id = 'fnh-menu-save-slot';
             fillSaveSlots(slots, ui.saveStore, this.saveSlot);
             slots.disabled = ui.busy && !(engine.menuWaiters && engine.menuWaiters.size);
@@ -346,5 +401,5 @@
             content.append(save, load);
         }
     };
-    root.FNHStandaloneMenu = { MenuUi: MenuUi, fillSaveSlots: fillSaveSlots };
+    root.FNHStandaloneMenu = { MenuUi: MenuUi, fillSaveSlots: fillSaveSlots, renderSaveFiles: renderSaveFiles };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

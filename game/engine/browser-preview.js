@@ -740,7 +740,7 @@
     }
     combatUi = new FNHStandaloneBattleUi.BattleUi(engine, { handlers: eventHandlers, renderer: renderer, changed: draw, input: inputName });
     menuUi = new FNHStandaloneMenu.MenuUi(engine, saveStore, eventHandlers, draw, {
-        settings: settings, updateVolume: updateVolume, gameplay: automaticEvents, input: inputName, windowBackground: windowBackground,
+        settings: settings, updateVolume: updateVolume, gameplay: automaticEvents, input: inputName, windowBackground: windowBackground, renderer: renderer,
         clearInput: clearInput
     });
     var previousFrame = performance.now(), drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;
@@ -1000,7 +1000,14 @@
         document.getElementById('fnh-end-actions').hidden = true;
         document.getElementById('fnh-end-save-panel').hidden = false;
         document.getElementById('fnh-end-error').textContent = '';
-        document.getElementById('fnh-end-save-slot').focus();
+        FNHStandaloneMenu.renderSaveFiles(document.getElementById('fnh-end-file-list'),saveStore,{
+            engine:engine,renderer:renderer,windowBackground:windowBackground,input:inputName,mode:'load',focus:true,
+            selected:Number(document.getElementById('fnh-end-save-slot').value)||1,
+            confirm:function (slot) {
+                document.getElementById('fnh-end-save-slot').value=slot;
+                document.getElementById('fnh-end-load').click();
+            }
+        });
     });
     document.querySelectorAll('#fnh-end-actions > button').forEach(function (button) {
         button.addEventListener('focus', function () {
