@@ -159,7 +159,7 @@
         if (!visible) { if (this.dialog.open) this.dialog.close(); return; }
         var opening = !this.dialog.open;
         if (opening) {
-            this.message.textContent = ''; this.gameMenu={};this.tab = state.scene === 'save' ? 'system' : this.options && this.options.gameplay ? this.lastCommandTab : 'status';
+            this.message.textContent = ''; this.gameMenu={};this.tab = state.scene === 'save' ? 'system' : 'status';
             this.dialog.showModal(); if (this.options && this.options.clearInput) this.options.clearInput(); else engine.buttons.clear();
             this.commandTab = this.lastCommandTab;
         }
@@ -214,11 +214,16 @@
         if(gameplay && !['status','system'].includes(this.tab)) {root.FNHStandaloneGameMenu.render(this,actorId);return;}
         if (!this.options || !this.options.gameplay) content.appendChild(node('p', 'Bạc: ' + state.gold));
         if (this.tab === 'status' && actor) {
+            content.dataset.menuPage='status';
             var overview=node('div');overview.className='fnh-party-overview';
             state.party.forEach(function (id) {
                 var member=state.actor(id),status=engine.menuActorStatus(id),card=node('section');card.dataset.partyActor=id;
                 var choose=node('button',member.name);choose.className='fnh-party-name';choose.type='button';choose.setAttribute('aria-pressed',String(id===actorId));
-                choose.onclick=function () { ui.actorSelect.value=id;ui.render(); };card.appendChild(choose);
+                choose.onclick=function () {
+                    ui.actorSelect.value=id;ui.render();
+                    var selected=content.querySelector('[data-party-actor="'+id+'"] .fnh-party-name');
+                    if(selected)selected.focus({preventScroll:true});
+                };card.appendChild(choose);
                 if(member.faceName) {
                     var bust=node('img');bust.className='fnh-menu-bust';bust.alt=member.name;
                     bust.src='./img/pictures/'+encodeURIComponent(member.faceName+'_'+(member.faceIndex+1))+'.png';card.appendChild(bust);

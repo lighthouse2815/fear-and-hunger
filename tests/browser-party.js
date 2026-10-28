@@ -1,5 +1,5 @@
 'use strict';
-module.exports=async function ({cdp,url,evalPage,waitFor,check,screenshot}) {
+module.exports=async function ({cdp,url,evalPage,waitFor,clickElement,check,screenshot}) {
     await cdp.send('Page.navigate',{url:url+'standalone.html?events=1&map=24'});
     await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.engine.map && document.querySelector("#fnh-loading").hidden',30000,'khởi động đội hình');
     await evalPage(cdp,`(async()=>{const a=FNHStandalonePreview;a.scheduler.stop();await new Promise(r=>setTimeout(r,50));a.audio.setVolume('master',.05);await a.engine.restore({mapId:24,x:59,y:18,direction:8,party:[1],switches:{246:true,1016:true}});await a.engine.runEvent(191,{message:async()=>{},choice:async()=>0,effect:async()=>true});window.partyDraws=[];const draw=FNHStandaloneCanvas.CanvasRenderer.prototype.drawActorImage;FNHStandaloneCanvas.CanvasRenderer.prototype.drawActorImage=function(sheets,actor,x,y){if(actor.id===Infinity||actor.id>=100000)partyDraws.push({id:actor.id,name:actor.image.characterName,x:actor.x,y:actor.y});return draw.call(this,sheets,actor,x,y);};document.querySelector('#fnh-canvas').focus();})()`,true,false);
@@ -15,4 +15,21 @@ module.exports=async function ({cdp,url,evalPage,waitFor,check,screenshot}) {
     await evalPage(cdp,'FNHStandalonePreview.engine.createInterpreter([{code:216,parameters:[0]}],0).run();partyDraws=[]',true,false);
     await waitFor(cdp,'partyDraws.some(d=>d.id===100006)',5000,'216 hiện lại sprite Le\'garde');
     check('216 hiện lại đồng đội sau cảnh truyện',await evalPage(cdp,'FNHStandalonePreview.engine.state.followersVisible',false,false));
+    async function key(key,code) {await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key,code});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key,code});}
+    await evalPage(cdp,'document.querySelector("#fnh-canvas").focus()',false,false);await key('Escape','Escape');
+    await waitFor(cdp,'document.querySelector("#fnh-menu-dialog").open',5000,'mở Esc xem đội hình');
+    await waitFor(cdp,'[...document.querySelectorAll(".fnh-menu-bust")].length===2 && [...document.querySelectorAll(".fnh-menu-bust")].every(img=>img.complete && img.naturalWidth>0)',5000,'chân dung cả hai nhân vật');
+    check('Esc hiện cả người chơi và Le\'garde với chân dung, Body/Mind/Hunger',await evalPage(cdp,`(()=>{const cards=[...document.querySelectorAll('[data-party-actor]')];return cards.map(c=>+c.dataset.partyActor).join(',')==='1,6' && cards[1].textContent.includes("Le'garde") && cards.every(c=>c.querySelector('.fnh-party-hp meter') && c.querySelector('.fnh-party-mp meter') && c.querySelector('[data-hunger-actor]'));})()`,false,false));
+    await screenshot('legarde-in-escape-party');
+    await clickElement(cdp,'[data-party-actor="1"] .fnh-party-name');await key('ArrowRight','ArrowRight');await key('Enter','Enter');
+    check('phím hướng và Enter chọn Le\'garde trong tổng quan đội',await evalPage(cdp,'document.querySelector("#fnh-menu-actor").value==="6" && document.activeElement.closest("[data-party-actor]").dataset.partyActor==="6"',false,false));
+    await evalPage(cdp,'document.querySelector("[data-menu-tab=equipment]").focus()',false,false);
+    check('màn trang bị hiển thị người đã chọn, không cố định nhân vật đầu',await evalPage(cdp,`document.querySelector('[data-window="equipment-status"]').textContent.includes("Le'garde")`,false,false));
+    await key('Enter','Enter');await key('PageUp','PageUp');
+    check('PageUp đổi từ Le\'garde về người chơi trong trang bị',await evalPage(cdp,'document.querySelector("#fnh-menu-actor").value==="1"',false,false));
+    await key('Escape','Escape');await key('Escape','Escape');await key('Escape','Escape');
+    check('mở lại Esc luôn hiện toàn đội, nhớ icon lệnh đang chọn',await evalPage(cdp,'document.querySelectorAll("[data-party-actor]").length===2 && document.activeElement.dataset.menuTab==="equipment"',false,false));
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    check('đội hình và chân dung Le\'garde nằm trong khung trên điện thoại',await evalPage(cdp,`(()=>{const p=document.querySelector('#fnh-menu-content').getBoundingClientRect();return [...document.querySelectorAll('[data-party-actor],.fnh-menu-bust')].every(el=>{const r=el.getBoundingClientRect();return r.width>0 && r.left>=p.left-.1 && r.right<=p.right+.1 && r.bottom<=p.bottom+.1;});})()`,false,false));
+    await screenshot('legarde-escape-party-mobile');
 };

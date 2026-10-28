@@ -117,6 +117,9 @@ Window.png với hình học lấy từ trang đối chiếu, danh sách/icon v�
 Escape/X từ nội dung trả focus về cột icon, bấm tiếp đóng menu. Giữ phím hủy không
 làm menu mở lại. Nút đang chọn dùng bitmap con trỏ từ Window.png, nhấp nháy
 chu kỳ 40 frame; phím hướng đổi con trỏ, quay lại giữ lệnh vừa chọn.
+Mỗi lần mở Escape hiện tổng quan toàn đội với chân dung, trạng thái, Body/Mind
+và Hunger; icon lệnh vẫn được nhớ. Up/Down xem ngay các màn tương ứng, Enter
+vào lệnh đang chọn. Trang bị/Kỹ năng đổi người bằng PageUp/PageDown.
 Test riêng: `FNH_BROWSER_SCOPE=menu npm run test:browser` đối chiếu bitmap với
 menu gốc và kiểm tra điều khiển, dùng đồ, đổi trang bị, kỹ năng và chế tạo trên
 máy tính/điện thoại. Tùy chọn có các nhóm All/General/Audio/Controls; Command

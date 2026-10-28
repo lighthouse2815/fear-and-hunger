@@ -194,7 +194,7 @@
             ui.actorSelect.value=ids[(index+(action==='pageup'?-1:1)+ids.length)%ids.length];ui.gameMenu.equipSlot=null;ui.render();
             if(!ui.content.contains(document.activeElement))ui.enterContent();
         } else if(['up','down','left','right'].includes(action)) {
-            var parent=target.closest('.fnh-menu-window'),buttons=Array.from(parent.querySelectorAll('button:enabled')),index=buttons.indexOf(target),columns=Number(parent.dataset.columns)||1;
+            var parent=target.closest('.fnh-menu-window') || ui.content,buttons=Array.from(parent.querySelectorAll('button:enabled')),index=buttons.indexOf(target),columns=Number(parent.dataset.columns)||1;
             var step=action==='up'?-columns:action==='down'?columns:action==='left'?-1:1;
             if(buttons.length)buttons[(index+step+buttons.length)%buttons.length].focus({preventScroll:true});
         } else if(action==='ok' && target.tagName==='BUTTON'){if(!event.repeat)target.click();}

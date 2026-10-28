@@ -13,7 +13,7 @@ module.exports=async function ({cdp,url,evalPage,waitFor,check}) {
     await key('Escape','Escape');
     check('Escape vẫn mở menu bằng bàn phím',await evalPage(cdp,'document.activeElement.dataset.menuTab==="inventory" && document.querySelector("#fnh-menu-dialog").open',false,false));
     await mouse('[data-menu-tab=equipment]');
-    check('rê và bấm chuột không đổi tab, không lấy focus',await evalPage(cdp,'document.activeElement.dataset.menuTab==="inventory" && document.querySelector("#fnh-menu-content").dataset.menuPage==="inventory"',false,false));
+    check('rê và bấm chuột không đổi tab, không lấy focus',await evalPage(cdp,'document.activeElement.dataset.menuTab==="inventory" && document.querySelector("#fnh-menu-content").dataset.menuPage==="status"',false,false));
     await key('ArrowDown','ArrowDown');
     check('Down vẫn đổi trang bị ngay',await evalPage(cdp,'document.activeElement.dataset.menuTab==="equipment" && document.querySelector("#fnh-menu-content").dataset.menuPage==="equipment"',false,false));
     const before=await evalPage(cdp,'JSON.stringify(FNHStandalonePreview.engine.state.actor(1).equips)',false,false);
