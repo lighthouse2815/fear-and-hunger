@@ -25,12 +25,16 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
 
 ## Đã đối chiếu
 
+- HIME_LargeChoices gộp các lệnh lựa chọn liền nhau, giữ mặc định/hủy, nội dung
+  khóa, trợ giúp và nhánh kể cả sau save. Common 193 hiện đủ 19 mục; unit kiểm
+  tra cả bốn nhóm, Chrome nguyền Short sword và Morning star qua UI thật.
 - Túi giới hạn 99 mỗi loại item/vũ khí/giáp khi cộng qua sự kiện hoặc gameplay;
   unit và Chrome kiểm tra phần thưởng hai trứng từ common 52, giảm và save.
 - Lệnh 127/128 có cờ lấy trang bị: trừ túi trước, thiếu mới tháo theo thứ tự
   party/ô, kể cả đồ khóa; battle chỉ tính người tham chiến, không lấy của guest.
   Common 193 biến Short sword đang đeo thành Cursed short sword đúng một lần;
-  unit và Chrome kiểm tra số lượng, biến và save.
+  unit và Chrome kiểm tra số lượng, biến và save. Chrome chạy toàn bộ common 193
+  qua danh sách lựa chọn, tiêu Lesser soul, nhận thông báo rồi giữ kết quả khi tải.
 - Điều kiện 111 vũ khí/giáp với cờ tính trang bị đọc cả party: 159 điều kiện
   vũ khí và 36 điều kiện giáp thật. Common 193 không khóa Short sword đang đeo;
   battle chỉ tính thành viên tham chiến, guest/dự bị ngoài trận giữ quy tắc gốc.

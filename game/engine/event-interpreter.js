@@ -373,22 +373,39 @@
     EventInterpreter.prototype.showChoices = async function (command) {
         var parameters = command.parameters || [];
         var choices = Array.isArray(parameters[0]) ? parameters[0].slice() : [];
-        var cancelType = parameters[1];
+        var cancelType = parameters[1], defaultIndex = parameters[2], indent = command.indent || 0;
+        var groups = [], offset = 0, start = this.index, end;
+        while (true) {
+            end = this.findCommand(404, indent, start);
+            groups.push({ start: start, end: end, offset: offset });
+            var next = end >= 0 && this.commands[end + 1];
+            if (!next || next.code !== 102 || (next.indent || 0) !== indent) break;
+            offset = choices.length;
+            var nextParameters = next.parameters || [];
+            if (nextParameters[1] >= 0) cancelType = nextParameters[1] + offset;
+            else if (nextParameters[1] === -2) cancelType = -2;
+            if (nextParameters[2] >= 0) defaultIndex = nextParameters[2] + offset;
+            if (Array.isArray(nextParameters[0])) choices = choices.concat(nextParameters[0]);
+            start = end + 2;
+        }
         if (!this.handlers.choice) return this.unsupported(command);
         var overrides = this.state.pendingChoices;
         this.state.pendingChoices = { text: {}, disabled: [] };
         choices = choices.map(function (text, index) { return index in overrides.text ? overrides.text[index] : text; });
-        var details = { disabled: overrides.disabled.slice(), help: [], message: [], defaultIndex: parameters[2], position: parameters[3], background: parameters[4] };
-        var indent = command.indent || 0, branch = -1;
-        for (var i = this.index; i < this.commands.length; i++) {
-            var item = this.commands[i];
-            if ((item.indent || 0) === indent && item.code === 404) break;
-            if ((item.indent || 0) === indent && item.code === 402) branch = item.parameters[0];
-            if ((item.indent || 0) === indent + 1 && (item.code === 108 || item.code === 408) && branch >= 0) {
-                var comment = /^(ChoiceHelp|ChoiceMessage)\s+(.*)$/.exec(item.parameters[0]);
-                if (comment) details[comment[1] === 'ChoiceHelp' ? 'help' : 'message'][branch] = comment[2];
+        var details = { disabled: overrides.disabled.slice(), help: [], message: [], defaultIndex: defaultIndex, position: parameters[3], background: parameters[4] };
+        var markers = [], cancelMarker = -1, interpreter = this;
+        groups.forEach(function (group) {
+            var branch = -1;
+            for (var i = group.start; i < (group.end < 0 ? interpreter.commands.length : group.end); i++) {
+                var item = interpreter.commands[i];
+                if ((item.indent || 0) === indent && item.code === 402) { branch = group.offset + item.parameters[0]; markers[branch] = i; }
+                if ((item.indent || 0) === indent && item.code === 403) cancelMarker = i;
+                if ((item.indent || 0) === indent + 1 && (item.code === 108 || item.code === 408) && branch >= 0) {
+                    var comment = /^(ChoiceHelp|ChoiceMessage)\s+(.*)$/.exec(item.parameters[0]);
+                    if (comment) details[comment[1] === 'ChoiceHelp' ? 'help' : 'message'][branch] = comment[2];
+                }
             }
-        }
+        });
         var choice = await this.handlers.choice(choices, cancelType, this, details);
         if (choice === -1 && cancelType !== -1) choice = cancelType;
         if (!Number.isInteger(choice) || (choice < 0 ? choice !== -2 || cancelType !== -2 : choice >= choices.length)) {
@@ -396,14 +413,13 @@
         }
         if (details.disabled.includes(choice)) throw new Error('Lựa chọn đang bị khóa: ' + choice);
         this.result.choices.push({ choices: choices, selected: choice });
-        var marker = this.findChoiceMarker(indent, choice, this.index);
-        if (marker < 0) {
-            var missingEnd = this.findCommand(404, indent, this.index);
-            this.index = missingEnd < 0 ? this.commands.length : missingEnd + 1;
+        var marker = choice < 0 ? cancelMarker : markers[choice];
+        if (marker == null || marker < 0) {
+            this.index = end < 0 ? this.commands.length : end + 1;
             return;
         }
         this.index = marker + 1;
-        this.choiceFrames.push({ indent: indent, startIndex: marker + 1, endIndex: this.findCommand(404, indent, marker + 1) });
+        this.choiceFrames.push({ indent: indent, startIndex: marker + 1, endIndex: end });
     };
 
     EventInterpreter.prototype.pluginCommand = function (command) {
@@ -455,20 +471,6 @@
         return this.effect(command);
     };
 
-    EventInterpreter.prototype.findChoiceMarker = function (indent, choice, start) {
-        var wanted = choice < 0 ? 403 : 402;
-        for (var i = start; i < this.commands.length; i += 1) {
-            var command = this.commands[i];
-            if ((command.indent || 0) !== indent) continue;
-            if (command.code === 404) return -1;
-            if (command.code === 403 && wanted === 403) return i;
-            if (command.code === 402) {
-                if (wanted === 402 && command.parameters[0] === choice) return i;
-            }
-        }
-        return -1;
-    };
-
     EventInterpreter.prototype.choiceFrame = function (indent) {
         for (var i = this.choiceFrames.length - 1; i >= 0; i -= 1) {
             if (this.choiceFrames[i].indent === indent) return this.choiceFrames[i];
@@ -486,7 +488,10 @@
 
     EventInterpreter.prototype.choiceEnd = function (command) {
         var frame = this.choiceFrame(command.indent || 0);
-        if (frame) this.choiceFrames.splice(this.choiceFrames.indexOf(frame), 1);
+        if (frame) {
+            if (frame.endIndex >= 0 && this.index - 1 !== frame.endIndex) this.index = frame.endIndex + 1;
+            this.choiceFrames.splice(this.choiceFrames.indexOf(frame), 1);
+        }
     };
 
     EventInterpreter.prototype.condition = function (command) {

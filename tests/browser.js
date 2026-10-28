@@ -3513,6 +3513,57 @@ async function main() {
                 return e.state.actor(4).equips[0]===0 && e.state.itemCount('weapons',13)===1;
             }finally{await e.restore(snapshot);}
         })()`,true,false));
+        await evalPage(cdp,`(()=>{
+            const app=FNHStandalonePreview,e=app.engine;window.__curseJourneySnapshot=e.save();
+            e.state.addActor(4);e.state.actor(4).equips[0]=1;e.state.gainItem('weapons',1,-99);
+            e.state.gainItem('weapons',13,-99);e.state.gainItem('items',116,-99);e.state.gainItem('items',116,1);
+            e.state.setSwitch(1901,false);window.__curseJourneyDone=false;window.__curseJourneyError=null;
+            e.runCommonEvent(193,app.scheduler.handlers).then(()=>window.__curseJourneyDone=true,error=>window.__curseJourneyError=error.message);
+        })()`,false,false);
+        await waitFor(cdp,'document.querySelectorAll("#fnh-choices button").length>0 || window.__curseJourneyError',5000,'mở danh sách nguyền vũ khí thật');
+        check('common event nguyền hiện Short sword đang đeo và giữ các món thiếu bị khóa',await evalPage(cdp,`(()=>{
+            const buttons=[...document.querySelectorAll('#fnh-choices button')];
+            return !window.__curseJourneyError && buttons.length>6 && !buttons[0].disabled && buttons[0].textContent.includes('Short sword') && buttons[1].disabled;
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-choices button:first-child');
+        await waitFor(cdp,'!document.querySelector("#fnh-next").hidden || window.__curseJourneyError',5000,'thông báo nhận kiếm nguyền');
+        check('event nguyền tiêu soul, tháo kiếm đang đeo và hiện phần thưởng',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;
+            return !window.__curseJourneyError && e.eventRunning && e.state.actor(4).equips[0]===0 &&
+                e.state.itemCount('items',116)===0 && e.state.itemCount('weapons',1)===0 && e.state.itemCount('weapons',13)===1 &&
+                e.state.switchValue(1901) && document.querySelector('#fnh-message-text').textContent.includes('Cursed short sword');
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-next');
+        await waitFor(cdp,'window.__curseJourneyDone || window.__curseJourneyError',5000,'kết thúc common event nguyền vũ khí');
+        check('common event nguyền hoàn tất và giữ kết quả qua save',await evalPage(cdp,`(async()=>{
+            const e=FNHStandalonePreview.engine;if(window.__curseJourneyError || e.eventRunning)return false;
+            await e.restore(e.save());return e.state.actor(4).equips[0]===0 && e.state.itemCount('weapons',13)===1 && e.state.switchValue(1901);
+        })()`,true,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.__curseJourneySnapshot).then(()=>{delete window.__curseJourneySnapshot;return true})',true,false);
+        await evalPage(cdp,`(()=>{
+            const app=FNHStandalonePreview,e=app.engine;window.__curseJourneySnapshot=e.save();
+            e.state.addActor(4);e.state.actor(4).equips[0]=38;e.state.gainItem('weapons',38,-99);
+            e.state.gainItem('weapons',39,-99);e.state.gainItem('items',116,-99);e.state.gainItem('items',116,1);
+            window.__curseJourneyDone=false;window.__curseJourneyError=null;
+            e.runCommonEvent(193,app.scheduler.handlers).then(()=>window.__curseJourneyDone=true,error=>window.__curseJourneyError=error.message);
+        })()`,false,false);
+        await waitFor(cdp,'document.querySelectorAll("#fnh-choices button").length===19 || window.__curseJourneyError',5000,'lựa chọn gộp Morning star');
+        check('lựa chọn thứ 13 của event nguyền hiện Morning star đang đeo',await evalPage(cdp,`(()=>{
+            const buttons=document.querySelectorAll('#fnh-choices button');return !window.__curseJourneyError && buttons.length===19 &&
+                !buttons[12].disabled && buttons[12].textContent.includes('Morning star') && buttons[0].disabled;
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-choices button:nth-child(13)');
+        await waitFor(cdp,'!document.querySelector("#fnh-next").hidden || window.__curseJourneyError',5000,'nhận Cursed morning star');
+        check('nhánh lựa chọn thứ 13 tiêu soul và nguyền đúng vũ khí',await evalPage(cdp,`(()=>{
+            const e=FNHStandalonePreview.engine;return !window.__curseJourneyError && e.state.actor(4).equips[0]===0 &&
+                e.state.itemCount('items',116)===0 && e.state.itemCount('weapons',38)===0 && e.state.itemCount('weapons',39)===1 &&
+                document.querySelector('#fnh-message-text').textContent.includes('Cursed morning star');
+        })()`,false,false));
+        await clickElement(cdp,'#fnh-next');
+        await waitFor(cdp,'window.__curseJourneyDone || window.__curseJourneyError',5000,'kết thúc nhánh thứ 13');
+        check('nhánh thứ 13 kết thúc mà không mở lại nhóm lựa chọn',await evalPage(cdp,
+            '!window.__curseJourneyError && !FNHStandalonePreview.engine.eventRunning && document.querySelectorAll("#fnh-choices button").length===0',false,false));
+        await evalPage(cdp,'FNHStandalonePreview.engine.restore(window.__curseJourneySnapshot).then(()=>{delete window.__curseJourneySnapshot;return true})',true,false);
         check('phần thưởng trứng thật không cộng vượt 99 và giữ đúng qua save',await evalPage(cdp,`(async()=>{
             const e=FNHStandalonePreview.engine,snapshot=e.save();
             try{
