@@ -5,6 +5,18 @@ const values = new Map(), storage = { getItem: key => values.get(key) || null, s
 const settings = new PlayerSettings({storage,key:'settings'});
 assert.equal(settings.volumes.master,100);assert.equal(settings.volumes.bgm,100);
 assert.equal(settings.commandRemember,false);assert.equal(settings.filterEffects,true);
+for (const [key,action] of Object.entries({w:'up',a:'left',s:'down',d:'right',ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'})) {
+    assert.equal(settings.actionFor(key),action);
+}
+assert.equal(settings.actionFor('W'),'up');assert.equal(settings.actionFor('PageDown'),'pagedown');
+storage.setItem('old-default',JSON.stringify({version:1,volumes:{master:30},keys:{w:'pagedown',ArrowUp:'up'}}));
+const oldDefault=new PlayerSettings({storage,key:'old-default'});
+assert.equal(oldDefault.actionFor('w'),'up');assert.equal(oldDefault.actionFor('a'),'left');assert.equal(oldDefault.volumes.master,30);
+storage.setItem('old-custom',JSON.stringify({version:1,keys:{w:'torch',a:'',s:'skill',d:'ok'}}));
+const oldCustom=new PlayerSettings({storage,key:'old-custom'});
+assert.equal(oldCustom.actionFor('w'),'torch');assert.equal(oldCustom.actionFor('a'),'');assert.equal(oldCustom.actionFor('s'),'skill');assert.equal(oldCustom.actionFor('d'),'ok');
+storage.setItem('old-custom-page',JSON.stringify({version:1,keys:{w:'pagedown',a:'torch'}}));
+assert.equal(new PlayerSettings({storage,key:'old-custom-page'}).actionFor('w'),'pagedown');
 settings.commandRemember=true;settings.filterEffects=false;settings.save();
 const menuSettings=new PlayerSettings({storage,key:'settings'});
 assert.equal(menuSettings.commandRemember,true);assert.equal(menuSettings.filterEffects,false);
@@ -17,6 +29,8 @@ assert.equal(restored.volumes.master,3);assert.equal(restored.volumes.bgm,37);
 assert.equal(restored.actionFor('h'),'torch');assert.equal(restored.actionFor('t'),'');assert.equal(restored.alwaysDash,false);
 restored.layout(true);assert.equal(restored.actionFor('w'),'up');assert.equal(restored.actionFor('d'),'right');assert.equal(restored.actionFor('ArrowUp'),'up');
 restored.layout(false);assert.equal(restored.actionFor('w'),'pagedown');assert.equal(restored.actionFor('t'),'torch');assert.equal(restored.actionFor('h'),'');
+const restoredDefault=new PlayerSettings({storage,key:'settings'});
+assert.equal(restoredDefault.actionFor('w'),'pagedown');assert.equal(restoredDefault.actionFor('a'),'');
 assert.equal(restored.volumes.master,3,'đặt lại phím không đổi âm lượng');
 restored.setVolume('master',100);assert.equal(restored.volumes.master,100,'điều chỉnh tổng đến 100%');
 storage.setItem('loud',JSON.stringify({version:1,volumes:{master:100,bgm:73},keys:{h:'torch'},alwaysDash:false}));
@@ -35,5 +49,5 @@ assert.equal(invalid.actionFor('t'),'torch');assert.equal(invalid.actionFor('Arr
 const blocked=new PlayerSettings({storage:{getItem(){throw new Error('bị chặn');},setItem(){throw new Error('hết chỗ');}}});
 assert.equal(blocked.volumes.master,100);assert.throws(()=>blocked.setVolume('master',25),/hết chỗ/);assert.equal(blocked.volumes.master,100);
 assert.throws(()=>blocked.bind('h','torch'),/hết chỗ/);assert.equal(blocked.actionFor('h'),'');
-assert.throws(()=>blocked.layout(true),/hết chỗ/);assert.equal(blocked.actionFor('w'),'pagedown');
+assert.throws(()=>blocked.layout(true),/hết chỗ/);assert.equal(blocked.actionFor('w'),'up');
 console.log('ĐẠT: tùy chọn mặc định 100%, nhóm âm lượng, lưu/đọc, đổi/xóa phím, WASD/reset, dữ liệu hỏng và lỗi storage.');

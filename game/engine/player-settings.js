@@ -7,6 +7,7 @@
     var defaults = { ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up',
         Enter: 'ok', ' ': 'ok', z: 'ok', x: 'cancel', Escape: 'cancel', Shift: 'shift',
         PageUp: 'pageup', PageDown: 'pagedown', q: 'pageup', w: 'pagedown', t: 'torch', c: 'skill' };
+    var wasd = { w: 'up', a: 'left', s: 'down', d: 'right' };
     var actions = ['down', 'left', 'right', 'up', 'ok', 'cancel', 'shift', 'pageup', 'pagedown', 'torch', 'skill'];
     var categories = ['master', 'bgm', 'bgs', 'me', 'se'];
     function keyName(key) { return key.length === 1 ? key.toLowerCase() : key; }
@@ -16,11 +17,12 @@
         this.storage = options.storage || (typeof localStorage !== 'undefined' ? localStorage : null);
         this.key = options.key || 'FNH_STANDALONE_SETTINGS';
         this.volumes = { master: 100, bgm: 100, bgs: 100, me: 100, se: 100 };
-        this.keys = Object.assign({}, defaults); this.alwaysDash = true;
+        this.keys = Object.assign({}, defaults, wasd); this.alwaysDash = true;
         this.commandRemember=false;this.filterEffects=true;
         var saved;
         try { saved = this.storage && JSON.parse(this.storage.getItem(this.key)); } catch (_) {}
-        if (!saved || saved.version !== 1) return;
+        if (!saved || ![1, 2].includes(saved.version)) return;
+        if (saved.version === 2 && saved.keys && typeof saved.keys === 'object') this.keys = Object.assign({}, defaults);
         categories.forEach(function (category) {
             var value = saved.volumes && saved.volumes[category];
             if (Number.isFinite(value)) this.volumes[category] = Math.max(0, Math.min(100, value));
@@ -28,11 +30,13 @@
         if (typeof saved.alwaysDash === 'boolean') this.alwaysDash = saved.alwaysDash;
         ['commandRemember','filterEffects'].forEach(function (key) {if(typeof saved[key]==='boolean')this[key]=saved[key];},this);
         if (saved.keys && typeof saved.keys === 'object') Object.keys(saved.keys).forEach(function (key) {
+            if (saved.version === 1 && key === 'w' && saved.keys.w === 'pagedown' &&
+                !['a', 's', 'd'].some(function (letter) { return Object.prototype.hasOwnProperty.call(saved.keys, letter); })) return;
             if (validKey(key) && (actions.includes(saved.keys[key]) || saved.keys[key] === '')) this.keys[key] = saved.keys[key];
         }, this);
     }
     PlayerSettings.prototype.save = function () {
-        if (this.storage) this.storage.setItem(this.key, JSON.stringify({ version: 1, volumes: this.volumes, keys: this.keys, alwaysDash: this.alwaysDash, commandRemember:this.commandRemember,filterEffects:this.filterEffects }));
+        if (this.storage) this.storage.setItem(this.key, JSON.stringify({ version: 2, volumes: this.volumes, keys: this.keys, alwaysDash: this.alwaysDash, commandRemember:this.commandRemember,filterEffects:this.filterEffects }));
     };
     PlayerSettings.prototype.setVolume = function (category, value) {
         if (!categories.includes(category) || !Number.isFinite(value)) throw new Error('Thiết lập âm lượng không hợp lệ.');

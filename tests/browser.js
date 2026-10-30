@@ -1079,13 +1079,11 @@ async function main() {
         await clickElement(cdp,'#fnh-next');await waitFor(cdp,'!FNHStandalonePreview.engine.eventRunning',5000,'xong common event phím mới');
         check('nhấn nhanh phím đã gán vẫn chạy đốt đuốc đúng một lần',await evalPage(cdp,
             'FNHStandalonePreview.engine.state.itemCount("items",5)===0 && FNHStandalonePreview.engine.state.switchValue(3151)',false,false));
-        await clickElement(cdp,'#fnh-menu');await clickElement(cdp,'[data-menu-tab="options"]');await clickElement(cdp,'[data-key-layout="wasd"]');
-        await clickElement(cdp,'#fnh-menu-close');
         await evalPage(cdp,'FNHStandalonePreview.engine.state.through=true;window.settingsX=FNHStandalonePreview.engine.state.x;document.querySelector("#fnh-canvas").focus()',false,false);
         await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'d',code:'KeyD',windowsVirtualKeyCode:68});
         await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'d',code:'KeyD',windowsVirtualKeyCode:68});
         await waitFor(cdp,'FNHStandalonePreview.engine.state.x===window.settingsX+1',5000,'WASD di chuyển thật');
-        check('layout WASD điều khiển được nhân vật',await evalPage(cdp,'FNHStandalonePreview.settings.actionFor("w")==="up" && FNHStandalonePreview.settings.actionFor("d")==="right"',false,false));
+        check('WASD mặc định điều khiển được nhân vật sau tải lại',await evalPage(cdp,'FNHStandalonePreview.settings.actionFor("w")==="up" && FNHStandalonePreview.settings.actionFor("d")==="right"',false,false));
         await waitFor(cdp,'!FNHStandalonePreview.engine.stepRunning && FNHStandalonePreview.engine.state.moveFrames===0',5000,'sprite tới đích trước khi mở menu tùy chọn');
         await clickElement(cdp,'#fnh-menu');await clickElement(cdp,'[data-menu-tab="options"]');await clickElement(cdp,'[data-key-layout="default"]');
         await evalPage(cdp, `(() => {
