@@ -817,8 +817,7 @@
                         pattern != null && (pattern < 3 ? pattern : 1) !== (character.pattern == null ? 1 : character.pattern);
                 });
                 active = active || filterRevision !== engine.filters.revision || engine.filters.active();
-                active = active || engine.animations.entries.length > 0 || animationRevision !== engine.animations.revision ||
-                    !!(engine.state.regionCover && engine.state.regionCover.enabled);
+                active = active || engine.animations.entries.length > 0 || animationRevision !== engine.animations.revision;
                 for (var tick = 0; tick < frames; tick++) {
                     engine.advanceRoutes(1);
                     // Hoàn tất tween và nối bước đang giữ trước tick kế tiếp.

@@ -1002,6 +1002,18 @@ async function main() {
             }
             return different > 10000;
         })()`, false, false));
+        check('lệnh vùng cũ không che map và nhân vật khi plugin gốc không bật', await evalPage(cdp, `(async () => {
+            const e = new FNHStandaloneEngine.GameEngine({dataStore:FNHStandalonePreview.engine.dataStore});
+            await e.boot({mapId:1,x:34,y:63,party:[1]});
+            e.lighting = null; e.screen = null;
+            const renderer = new FNHStandaloneCanvas.CanvasRenderer(document.createElement('canvas'));
+            await renderer.draw(e);
+            const before = renderer.context.getImageData(0,0,816,624).data;
+            await e.createInterpreter([{code:356,parameters:['RegionReveal 1']}],1).run();
+            await renderer.draw(e);
+            const after = renderer.context.getImageData(0,0,816,624).data;
+            return e.state.regionCover.enabled && before.every((value,index)=>value===after[index]);
+        })()`, true, false));
         await evalPage(cdp, `(async () => {
             const e = FNHStandalonePreview.engine;
             window.beforeMapTransition = e.save();
