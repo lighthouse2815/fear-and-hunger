@@ -182,6 +182,7 @@
     }
     function back(ui) {
         var view=ui.gameMenu||{};
+        if(ui.partyCommand){ui.partyCommand=null;ui.focusCommand();return true;}
         if(view.target || view.keyboard){view.target=null;view.keyboard=false;ui.render();ui.focusCommand();return true;}
         if(ui.content.contains(document.activeElement)){ui.focusCommand();return true;}
         return false;

@@ -20,6 +20,8 @@ module.exports=async function ({cdp,url,evalPage,waitFor,check}) {
     await mouse('[data-equipment-action=clear]');
     check('bấm chuột không tháo trang bị',await evalPage(cdp,'JSON.stringify(FNHStandalonePreview.engine.state.actor(1).equips)',false,false)===before);
     await key('Enter','Enter');
+    check('Enter mở chọn nhân vật cho trang bị',await evalPage(cdp,'document.activeElement.closest("[data-party-actor]").dataset.partyActor==="1"',false,false));
+    await key('Enter','Enter');
     check('Enter vẫn chuyển vào các lệnh bên phải',await evalPage(cdp,'document.activeElement.dataset.menuKey==="equip"',false,false));
     await key('Escape','Escape');await key('Escape','Escape');
     await evalPage(cdp,`(()=>{const a=FNHStandalonePreview;window.inputDialogueDone=false;a.engine.createInterpreter([{code:101,parameters:['',0,0,2]},{code:401,parameters:['Keyboard only']}],0,a.scheduler.handlers).run().then(()=>window.inputDialogueDone=true);})()`,false,false);

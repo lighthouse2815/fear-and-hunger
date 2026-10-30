@@ -73,7 +73,7 @@
         this.content = document.getElementById('fnh-menu-content');
         this.message = document.getElementById('fnh-menu-message');
         this.actorSelect = document.getElementById('fnh-menu-actor');
-        this.tab = 'status'; this.commandTab = 'inventory'; this.lastCommandTab = 'inventory'; this.busy = false; this.skillTarget = null; this.saveSlot = 1;
+        this.tab = 'status'; this.commandTab = 'inventory'; this.lastCommandTab = 'inventory'; this.busy = false; this.skillTarget = null; this.saveSlot = 1; this.partyCommand = null;
         var ui = this;
         document.getElementById('fnh-menu').onclick = function () { if (engine.openMenu()) ui.render(); };
         document.getElementById('fnh-menu-close').onclick = function () { ui.close(); };
@@ -106,7 +106,14 @@
             button.onpointermove = function () {
                 if (ui.dialog.classList.contains('fnh-menu-tabs') && !button.disabled && document.activeElement !== button) button.focus({preventScroll:true});
             };
-            button.onclick = function () { ui.lastCommandTab = ui.commandTab = button.dataset.menuTab; ui.tab = button.dataset.menuTab; ui.render(); if(options && options.gameplay)ui.enterContent(); };
+            button.onclick = function () {
+                ui.lastCommandTab = ui.commandTab = button.dataset.menuTab;
+                if (options && options.gameplay && ['equipment','skills'].includes(ui.commandTab)) {
+                    ui.partyCommand = ui.commandTab; ui.tab = 'status'; ui.render();
+                    var selected = ui.content.querySelector('[data-party-actor="' + ui.actorSelect.value + '"] .fnh-party-name');
+                    if (selected) selected.focus({preventScroll:true});
+                } else { ui.tab = ui.commandTab; ui.render(); if(options && options.gameplay)ui.enterContent(); }
+            };
         });
     }
     MenuUi.prototype.focusCommand = function () {
@@ -159,7 +166,7 @@
         if (!visible) { if (this.dialog.open) this.dialog.close(); return; }
         var opening = !this.dialog.open;
         if (opening) {
-            this.message.textContent = ''; this.gameMenu={};this.tab = state.scene === 'save' ? 'system' : 'status';
+            this.message.textContent = ''; this.gameMenu={};this.partyCommand=null;this.tab = state.scene === 'save' ? 'system' : 'status';
             this.dialog.showModal(); if (this.options && this.options.clearInput) this.options.clearInput(); else engine.buttons.clear();
             this.commandTab = this.lastCommandTab;
         }
@@ -220,7 +227,9 @@
                 var member=state.actor(id),status=engine.menuActorStatus(id),card=node('section');card.dataset.partyActor=id;
                 var choose=node('button',member.name);choose.className='fnh-party-name';choose.type='button';choose.setAttribute('aria-pressed',String(id===actorId));
                 choose.onclick=function () {
-                    ui.actorSelect.value=id;ui.render();
+                    ui.actorSelect.value=id;
+                    if (ui.partyCommand) {ui.tab=ui.partyCommand;ui.partyCommand=null;ui.gameMenu={};ui.render();ui.enterContent();return;}
+                    ui.render();
                     var selected=content.querySelector('[data-party-actor="'+id+'"] .fnh-party-name');
                     if(selected)selected.focus({preventScroll:true});
                 };card.appendChild(choose);
