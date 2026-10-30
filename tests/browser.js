@@ -1002,6 +1002,24 @@ async function main() {
             }
             return different > 10000;
         })()`, false, false));
+        await evalPage(cdp, `(async () => {
+            const e = FNHStandalonePreview.engine;
+            window.beforeMapTransition = e.save();
+            await e.restore({ mapId: 74, x: 15, y: 5, direction: 8, party: [1], switches: {246:true, 3480:true}, variables: {121:1} });
+            document.querySelector('#fnh-canvas').focus();
+        })()`, true, false);
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowUp', code: 'ArrowUp' });
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowUp', code: 'ArrowUp' });
+        await waitFor(cdp, '!document.querySelector("#fnh-map-fade").hidden', 10000, 'cửa thật bắt đầu chuyển cảnh');
+        check('chuyển map dùng fade đen của sự kiện gốc', await evalPage(cdp,
+            'getComputedStyle(document.querySelector("#fnh-map-fade")).backgroundColor === "rgb(0, 0, 0)"', false, false));
+        await waitFor(cdp, 'FNHStandalonePreview.engine.state.mapId === 1 && document.querySelector("#fnh-map-fade").hidden',
+            10000, 'chuyển cảnh vào map mới hoàn tất');
+        check('map mới hiện đúng tên từ dữ liệu gốc', await evalPage(cdp,
+            'FNHStandalonePreview.engine.screen.mapName.text === FNHStandalonePreview.engine.map.data.displayName && FNHStandalonePreview.engine.screen.mapName.opacity > 0', false, false));
+        await waitFor(cdp, '!FNHStandalonePreview.engine.eventRunning && !FNHStandalonePreview.engine.stepRunning',
+            10000, 'sự kiện chuyển map kết thúc');
+        await evalPage(cdp, '(async () => { await FNHStandalonePreview.engine.restore(window.beforeMapTransition); })()', true, false);
         await evalPage(cdp, `(() => {
             const e = FNHStandalonePreview.engine;
             window.shortcutBefore = e.save();

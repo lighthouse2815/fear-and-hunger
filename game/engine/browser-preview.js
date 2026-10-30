@@ -728,7 +728,31 @@
         }
         if (phase !== 'out') panel.hidden=true;
     }
+    async function transitionMap(fadeType, load, interpreter) {
+        if (fadeType === 2) return load();
+        var panel = document.getElementById('fnh-map-fade');
+        var signal = interpreter.signal;
+        panel.style.background = fadeType === 1 ? '#fff' : '#000';
+        panel.hidden = false;
+        async function fade(from, to) {
+            if (signal && signal.aborted) throw signal.reason;
+            var animation = panel.animate([{ opacity: from }, { opacity: to }],
+                { duration: 400, easing: 'linear', fill: 'forwards' });
+            function abort() { animation.cancel(); }
+            if (signal) signal.addEventListener('abort', abort, { once: true });
+            try { await animation.finished; panel.style.opacity = String(to); }
+            catch (error) { if (signal && signal.aborted) throw signal.reason; throw error; }
+            finally { if (signal) signal.removeEventListener('abort', abort); animation.cancel(); }
+        }
+        try {
+            await fade(0, 1);
+            await load();
+            await draw();
+            await fade(1, 0);
+        } finally { panel.hidden = true; }
+    }
     var eventHandlers = {
+        mapTransition: transitionMap,
         battleTransition: transitionBattle,
         battleAudio: function (phase, battle) {
             if (phase === 'start') {

@@ -432,7 +432,28 @@
             pictures.forEach(function (entry) { renderer.drawPicture(entry); });
         } finally { this.context = context; context.restore(); }
         this.drawScreenEffects(screen, state);
+        if (engine.screen && state.scene === 'map') this.drawMapName(engine.screen.mapName);
         return { startX: startX, startY: startY };
+    };
+
+    CanvasRenderer.prototype.drawMapName = function (name) {
+        if (!name || name.opacity <= 0) return;
+        var context = this.context;
+        context.save();
+        context.globalAlpha = name.opacity / 255;
+        var gradient = context.createLinearGradient(18, 0, 342, 0);
+        gradient.addColorStop(0, 'rgba(0,0,0,0)');
+        gradient.addColorStop(0.5, 'rgba(0,0,0,0.6)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        context.fillStyle = gradient;
+        context.fillRect(18, 18, 324, 36);
+        context.font = '28px GameFont, serif';
+        context.textAlign = 'center'; context.textBaseline = 'middle';
+        context.lineWidth = 4; context.lineJoin = 'round'; context.strokeStyle = 'rgba(0,0,0,0.5)';
+        context.fillStyle = '#fff';
+        context.strokeText(name.text, 180, 36, 324);
+        context.fillText(name.text, 180, 36, 324);
+        context.restore();
     };
 
     CanvasRenderer.prototype.drawScreenEffects = function (screen, state) {

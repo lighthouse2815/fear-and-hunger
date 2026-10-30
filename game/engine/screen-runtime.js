@@ -17,6 +17,7 @@
         this.screen.fogs = this.screen.fogs || [];
         this.waiters = new Map();
         this.revision = 0;
+        this.mapName = null;
     }
     ScreenRuntime.prototype.target = function (path) {
         return path.reduce(function (value, key) { return value && value[key]; }, this.screen);
@@ -45,6 +46,16 @@
     ScreenRuntime.prototype.advance = function (frames, scene) {
         if (!Number.isFinite(frames) || frames < 0) throw new RangeError('Số frame không hợp lệ.');
         var runtime = this;
+        if ((!scene || scene === 'map') && this.mapName) {
+            var name = this.mapName;
+            for (var frame = 0; frame < frames; frame++) {
+                if (name.remaining > 0 && this.state.mapNameDisplay) {
+                    name.opacity = Math.min(255, name.opacity + 16);
+                    name.remaining--;
+                } else name.opacity = Math.max(0, name.opacity - 16);
+            }
+            if (name.remaining <= 0 && name.opacity === 0) { this.mapName = null; this.revision++; }
+        }
         this.screen.tweens.slice().forEach(function (track) {
             if (scene && (track.scene || 'map') !== scene) return;
             var target = runtime.target(track.path);
@@ -80,11 +91,16 @@
         this.waiters.clear();
     };
     ScreenRuntime.prototype.active = function () {
-        return !!this.screen.gab || this.screen.tweens.length > 0 || this.screen.weather.power > 0 ||
+        return !!(this.mapName && (this.mapName.opacity > 0 || this.state.mapNameDisplay && this.mapName.remaining > 0)) ||
+            !!this.screen.gab || this.screen.tweens.length > 0 || this.screen.weather.power > 0 ||
             this.screen.fogs.some(function (fog) { return fog.moveX || fog.moveY; }) ||
             (this.screen.parallax && ((this.screen.parallax.loopX && this.screen.parallax.speedX) || (this.screen.parallax.loopY && this.screen.parallax.speedY))) ||
             (this.screen.shake && this.screen.shake.remaining > 0) ||
             Object.values(this.screen.pictures).some(function (picture) { return picture.rotationSpeed; });
+    };
+    ScreenRuntime.prototype.showMapName = function (name) {
+        this.mapName = name ? { text: name, remaining: 150, opacity: 0 } : null;
+        this.revision++;
     };
     ScreenRuntime.prototype.showGab = function (text) {
         if ((this.screen.gab && this.screen.gab.text === text) || this.screen.gabQueue.some(function (gab) { return gab.text === text; })) return;

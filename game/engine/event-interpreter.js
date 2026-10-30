@@ -667,7 +667,8 @@
             mapId: parameters[0] === 0 ? parameters[1] : this.state.variableValue(parameters[1]),
             x: parameters[0] === 0 ? parameters[2] : this.state.variableValue(parameters[2]),
             y: parameters[0] === 0 ? parameters[3] : this.state.variableValue(parameters[3]),
-            direction: parameters[4] || this.state.direction
+            direction: parameters[4] || this.state.direction,
+            fadeType: parameters[5] == null ? 0 : parameters[5]
         };
         // Tải và kiểm tra đích trước; lỗi tải không được làm map/state lệch nhau.
         if (this.handlers.transfer) await this.handlers.transfer(destination, this);

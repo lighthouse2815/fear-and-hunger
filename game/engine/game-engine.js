@@ -112,6 +112,7 @@
         if (this.stepWait) this.screen.finish(this.stepWait);
         this.screen.setupFogs(map.data.note);
         this.screen.setupParallax(map.data);
+        this.screen.showMapName(map.data.displayName);
         delete this.screen.screen.battlebacks;
         this.lighting.sources(map);
         this.pendingTouchEvents = [];
@@ -598,7 +599,9 @@
         };
         var transfer = eventHandlers.transfer;
         eventHandlers.transfer = async function (destination, interpreter) {
-            await engine.loadMap(destination.mapId, destination);
+            var load = function () { return engine.loadMap(destination.mapId, destination); };
+            if (eventHandlers.mapTransition) await eventHandlers.mapTransition(destination.fadeType, load, interpreter);
+            else await load();
             if (transfer) return transfer(destination, interpreter);
         };
         var effect = eventHandlers.effect;
@@ -1502,6 +1505,7 @@
         this.battle = new battleApi.BattleRuntime(this.state, this.database, this.random, this.onStateChange, this.onBattleSound);
         if (this.movement) this.movement.clear();
         this.map = map;
+        this.screen.showMapName(map.data.displayName);
         this.lighting.sources(map);
         this.pendingTouchEvents = [];
         this.resetMovement(state.routeSnapshots);
