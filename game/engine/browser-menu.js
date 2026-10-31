@@ -37,6 +37,9 @@
                         return Object.assign({},options.engine.database.Actors[id],payload.state.actors && payload.state.actors[id]);
                     });
                     var names=node('span',members.map(function (actor) {return actor.name;}).filter(Boolean).join(', '));names.className='fnh-save-names';row.appendChild(names);
+                    var playTimeMs=payload.state.playTimeMs;
+                    var playTime=node('span',root.FNHStandaloneState.GameState.prototype.playTimeText.call({playTimeMs:Number.isFinite(playTimeMs)?Math.max(0,playTimeMs):0}));
+                    playTime.className='fnh-save-play-time';row.appendChild(playTime);
                     var party=node('span');party.className='fnh-save-party';
                     members.forEach(function (actor) {
                         if(!actor || !actor.characterName)return;
