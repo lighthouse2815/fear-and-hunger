@@ -884,6 +884,36 @@
     function inputName(key) {
         return settings.actionFor(key);
     }
+    var selectionPanels = '#fnh-end-actions, #fnh-title-settings, #fnh-end-file-list, #fnh-choices, #fnh-name-dialog, #fnh-menu-dialog, #fnh-combat';
+    function selectionIdentity(element) {
+        var panel=element && element.closest(selectionPanels), button=element && element.closest('button');
+        if (!panel) return null;
+        var area=element.closest('[data-window]');
+        var key=element.id || button && (button.id || button.dataset.menuKey || button.dataset.menuTab || button.dataset.setting || button.dataset.slot || button.dataset.target);
+        if (!key && button) key=Array.from(button.parentElement.querySelectorAll('button')).indexOf(button);
+        return { panel:panel.id, key:(area ? area.dataset.window+':' : '')+key };
+    }
+    var pendingSelectionSound = null;
+    function finishSelectionSound() {
+        var pending=pendingSelectionSound;if (!pending) return;
+        pendingSelectionSound=null;clearTimeout(pending.timer);
+        var after=selectionIdentity(document.activeElement);
+        var changed=after && pending.before.panel===after.panel && pending.before.key!==after.key;
+        if (!changed && pending.option && after && pending.before.panel===after.panel) changed=pending.previous!==JSON.stringify([settings.language,settings.screenWidth,settings.commandRemember,settings.filterEffects,settings.volumes]);
+        var sound=engine.database && engine.database.System.sounds[0];
+        if (pending.event.defaultPrevented && changed && sound && sound.name) {audio.unlock();audio.play('se',sound);}
+    }
+    document.addEventListener('keydown', function (event) {
+        finishSelectionSound();
+        var action=inputName(event.key);
+        if (!['up','down','left','right','pageup','pagedown'].includes(action)) return;
+        var before=selectionIdentity(event.target);
+        if (!before) return;
+        var option=event.target.closest('[data-setting], [data-menu-key^="option-"], [data-volume]');
+        var previous=option && JSON.stringify([settings.language,settings.screenWidth,settings.commandRemember,settings.filterEffects,settings.volumes]);
+        pendingSelectionSound={event:event,before:before,option:option,previous:previous};
+        pendingSelectionSound.timer=setTimeout(finishSelectionSound,0);
+    }, true);
     function pictureInput() {
         return automaticEvents && (!video.hidden || engine.state.mapId === 10);
     }

@@ -30,7 +30,10 @@ module.exports=async function ({cdp,url,evalPage,waitFor,clickElement,check,scre
     check('vật phẩm: khung trợ giúp, bốn loại và danh sách hai cột đúng hình học bản gốc',await geometry('inventory',{_helpWindow:'help',_categoryWindow:'category',_itemWindow:'items'}) && await evalPage(cdp,'document.querySelectorAll("[data-window=category] button").length===4 && document.querySelector("[data-window=items]").dataset.columns==="2" && document.querySelectorAll("[data-window=items] .fnh-game-menu-icon").length>0',false,false));
     await screenshot('menu-tab-inventory');
     const before=await evalPage(cdp,'JSON.stringify(FNHStandalonePreview.engine.state.actor(1).equips)',false,false);
+    await evalPage(cdp,`(()=>{const a=FNHStandalonePreview.audio,play=a.play;window.menuCursorSounds=[];a.play=function(category,sound,...rest){if(category==='se' && sound.name==='fnh_cursor')menuCursorSounds.push(sound);return play.call(this,category,sound,...rest);};})()`,false,false);
     await key('ArrowDown','ArrowDown');
+    await waitFor(cdp,'menuCursorSounds.length>0',2000,'âm thanh con trỏ menu');
+    check('chuyển tab menu phát tiếng con trỏ đúng một lần',await evalPage(cdp,'menuCursorSounds.length===1',false,false));
     check('chỉ Down tự hiện trang bị bên phải, không cần Enter',await page('equipment') && await evalPage(cdp,'document.activeElement.dataset.menuTab==="equipment"',false,false));
     check('trang bị: đúng khung chỉ số, ba lệnh, năm ô và danh sách theo bản gốc',await geometry('equipment',{_helpWindow:'help',_statusWindow:'equipment-status',_commandWindow:'equipment-command',_slotWindow:'equipment-slots',_itemWindow:'equipment-items'}) && await evalPage(cdp,'document.querySelectorAll("[data-window=equipment-slots] button").length===5 && !document.querySelector("#fnh-menu-content select") && document.querySelector("[data-window=equipment-status]").textContent.includes("Attack")',false,false));
     await screenshot('menu-tab-equipment');

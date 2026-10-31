@@ -20,6 +20,9 @@ module.exports = async function ({cdp,url,evalPage,waitFor,clickElement,check,sc
             document.querySelectorAll('.fnh-combat-member').length===2 && document.querySelector('#fnh-combat-status').textContent.includes('Body');
     })()`,false,false));
     await screenshot('combat-commands');
+    await evalPage(cdp,`(()=>{const a=FNHStandalonePreview.audio,play=a.play;window.combatCursorSounds=[];a.play=function(category,sound,...rest){if(category==='se' && sound.name==='fnh_cursor')combatCursorSounds.push(sound);return play.call(this,category,sound,...rest);};})()`,false,false);
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowDown',code:'ArrowDown'});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowDown',code:'ArrowDown'});
+    check('chuyển lệnh chiến đấu phát tiếng con trỏ gốc',await evalPage(cdp,'combatCursorSounds.length===1 && document.activeElement.textContent==="Skills"',false,false));
     await evalPage(cdp,"FNHStandalonePreview.settings.language='vi'",false,false);
     await clickElement(cdp,'#fnh-combat-commands button:nth-child(2)');
     check('giao diện danh sách chiến đấu dùng tiếng Việt',await evalPage(cdp,`!document.querySelector('#fnh-combat-list').hidden && document.querySelector('#fnh-combat-list').textContent.includes('Hủy') && document.querySelector('#fnh-combat-status').textContent.includes('Thể lực')`,false,false));

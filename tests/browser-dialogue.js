@@ -23,8 +23,13 @@ module.exports = async function ({cdp,url,evalPage,waitFor,clickElement,check,sc
     await clickElement(cdp,'#fnh-next');await waitFor(cdp,'window.dialogDone',5000,'hết trang');
     await evalPage(cdp,`(()=>{const a=FNHStandalonePreview;window.choiceDone=false;a.engine.createInterpreter([{code:101,parameters:['',0,0,2]},{code:401,parameters:['Open the door?']},{code:102,parameters:[['Open','Leave'],-2,0,2,0]},{code:402,indent:0,parameters:[0,'Open']},{code:108,indent:1,parameters:['ChoiceHelp Door help']},{code:403,indent:0},{code:121,indent:1,parameters:[994,994,0]},{code:404,indent:0}],0,a.scheduler.handlers).run().then(()=>window.choiceDone=true);})()`,false,false);
     await waitFor(cdp,'document.querySelectorAll("#fnh-choices button").length===2',5000,'cửa thật dạng chọn');
+    await evalPage(cdp,`(()=>{const a=FNHStandalonePreview.audio,play=a.play;window.choiceCursorSounds=[];a.play=function(category,sound,...rest){if(category==='se' && sound.name==='fnh_cursor')choiceCursorSounds.push(sound);return play.call(this,category,sound,...rest);};})()`,false,false);
     check('lựa chọn dọc ở trên thoại, trợ giúp riêng và không thêm nút hủy ngoài JSON',await evalPage(cdp,`(()=>{const c=document.querySelector('#fnh-choices'),p=document.querySelector('#fnh-message');return c.parentElement.classList.contains('fnh-stage') && c.children.length===2 && c.getBoundingClientRect().bottom<=p.getBoundingClientRect().top+1 && document.querySelector('#fnh-choice-help').textContent==='Door help';})()`,false,false));
     await screenshot('dialogue-choices');
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowDown',code:'ArrowDown'});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowDown',code:'ArrowDown'});
+    await waitFor(cdp,'choiceCursorSounds.length>0',2000,'âm thanh con trỏ hội thoại');
+    const cursorState=await evalPage(cdp,`({sounds:choiceCursorSounds.length,focus:document.activeElement.textContent})`,false,false);
+    check('di chuyển lựa chọn hội thoại phát tiếng con trỏ gốc một lần',cursorState.sounds===1 && cursorState.focus==='Leave',JSON.stringify(cursorState));
     await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'});
     await waitFor(cdp,'window.choiceDone',5000,'hủy chọn');
     check('Escape chạy nhánh hủy và dọn các khung phụ',await evalPage(cdp,'FNHStandalonePreview.engine.state.switchValue(994) && !document.querySelector(".fnh-stage").classList.contains("fnh-choice-active")',false,false));
