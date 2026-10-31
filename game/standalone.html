@@ -14,7 +14,7 @@
         #fnh-canvas:focus { outline: none; }
         #fnh-status { padding: 10px 12px; color: #b8aa95; font-size: 13px; }
         #fnh-message { min-height: 48px; padding: 12px; border: 1px solid #564a3c; background: #17120f; white-space: pre-wrap; }
-        .fnh-gameplay #fnh-status, .fnh-gameplay label[for='fnh-volume'] { display: none; }
+        .fnh-gameplay #fnh-status, .fnh-gameplay label[for='fnh-volume'], .fnh-gameplay label[for='fnh-always-dash'] { display: none; }
         .fnh-gameplay #fnh-controls, .fnh-gameplay #fnh-menu, .fnh-gameplay #fnh-save, .fnh-gameplay #fnh-load { display: none; }
         .fnh-gameplay #fnh-message { display: none; position: absolute; inset: auto 0 0; box-sizing: border-box; height: 28.8462%; padding: 2.2059cqw; border: 0; overflow: hidden; z-index: 6; background: #080808d0; background-size: 100% 100%; color: white; font: 3.4314cqw/4.4118cqw GameFont, serif; text-shadow: 1px 1px 2px black; white-space: normal; }
         .fnh-gameplay #fnh-message[data-open='true'] { display: block; }
@@ -263,7 +263,7 @@
         #fnh-name-form > label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
     </style>
 </head>
-<body>
+<body class="fnh-gameplay">
 <main>
     <div class="fnh-stage">
         <canvas id="fnh-canvas" width="816" height="624" tabindex="0" aria-label="Bản đồ game"></canvas>
@@ -358,7 +358,7 @@
     <button id="fnh-save" type="button">Lưu ô 1</button>
     <button id="fnh-load" type="button">Tải ô 1</button>
     <label for="fnh-volume">Âm lượng <input id="fnh-volume" type="range" min="0" max="100" value="100"></label>
-    <label><input id="fnh-always-dash" type="checkbox" checked> Luôn chạy nhanh</label>
+    <label for="fnh-always-dash"><input id="fnh-always-dash" type="checkbox" checked> Luôn chạy nhanh</label>
     <section id="fnh-battle" hidden aria-label="Trận chiến">
         <strong id="fnh-battle-title">Trận chiến</strong>
         <p id="fnh-battle-round"></p>
