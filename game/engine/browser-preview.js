@@ -947,6 +947,7 @@
     document.addEventListener('visibilitychange', function () {
         previousFrame = performance.now();
         if (document.hidden) clearInput();
+        else audio.resume();
     });
     document.addEventListener('keydown', function (event) {
         audio.unlock();

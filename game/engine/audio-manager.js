@@ -21,6 +21,14 @@
         this.savedBgm = null;
         this.context = options.audioContext || (!options.audioFactory && typeof AudioContext !== 'undefined' ? new AudioContext() : null);
         this.panGraphs = new WeakMap();
+        this.activated = !!this.context && this.context.state === 'running';
+        this.resuming = null;
+        var manager = this;
+        this.onContextStateChange = function () {
+            if (manager.context.state === 'running') manager.activated = true;
+            else if (manager.activated) manager.resume();
+        };
+        if (this.context && this.context.addEventListener) this.context.addEventListener('statechange', this.onContextStateChange);
     }
 
     function volumeValue(value) {
@@ -45,21 +53,34 @@
         function failed(error) {
             if (!manager.tracks.has(audio)) return;
             if (error.name === 'NotAllowedError') manager.pending.add(audio);
-            else if (error.name !== 'AbortError') manager.onError(error);
+            else {
+                if (error.name !== 'AbortError') manager.onError(error);
+                if (manager.tracks.get(audio).category === 'se') manager.release(audio);
+            }
         }
         try {
+            this.resume();
             this.pending.delete(audio);
             var promise = audio.play();
             if (promise && promise.catch) promise.catch(failed);
         } catch (error) { failed(error); }
     };
 
+    AudioManager.prototype.resume = function () {
+        var manager = this, context = this.context;
+        if (!this.activated || !context || !['suspended', 'interrupted'].includes(context.state) || this.resuming) return;
+        try {
+            this.resuming = Promise.resolve(context.resume()).then(function () { manager.resuming = null; }, function (error) {
+                manager.resuming = null; manager.onError(error);
+            });
+        } catch (error) { this.onError(error); }
+    };
+
     // App gọi trực tiếp trong pointerdown/keydown để giữ quyền phát của gesture.
     AudioManager.prototype.unlock = function () {
         var manager = this;
-        if (this.context && this.context.state === 'suspended') {
-            this.context.resume().catch(function (error) { manager.onError(error); });
-        }
+        this.activated = true;
+        this.resume();
         Array.from(this.pending).forEach(function (audio) { manager.requestPlay(audio); });
     };
 
@@ -103,7 +124,10 @@
                 else if (category === 'me' && manager.buffers.me === audio) manager.stop('me');
             });
             audio.addEventListener('error', function () {
-                if (manager.tracks.has(audio)) manager.onError(new Error('Không tải được âm thanh: ' + audio.src));
+                if (manager.tracks.has(audio)) {
+                    manager.onError(new Error('Không tải được âm thanh: ' + audio.src));
+                    if (category === 'se') manager.release(audio);
+                }
             });
         }
         if (position != null) audio.currentTime = Math.max(0, Number(position) || 0);
@@ -122,6 +146,7 @@
         this.pending.delete(audio);
         this.tracks.delete(audio);
         audio.pause();
+        if (audio.removeAttribute && audio.load) { audio.removeAttribute('src'); audio.load(); }
         var index = this.seBuffers.indexOf(audio);
         if (index >= 0) this.seBuffers.splice(index, 1);
     };
@@ -237,6 +262,8 @@
 
     AudioManager.prototype.dispose = function () {
         // Dừng ME cuối cùng để không phát lại BGM trong lúc thu hồi tài nguyên.
+        this.activated = false;
+        if (this.context && this.context.removeEventListener) this.context.removeEventListener('statechange', this.onContextStateChange);
         ['bgm', 'bgs', 'se', 'me'].forEach(this.stop.bind(this));
         if (this.context && this.context.state !== 'closed') this.context.close().catch(this.onError);
     };

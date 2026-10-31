@@ -14,10 +14,13 @@ class FakeAudio extends EventTarget {
     play() {
         this.played += 1;
         if (this.blocked) return Promise.reject(new DOMException('Cần tương tác', 'NotAllowedError'));
+        if (this.failure) return Promise.reject(this.failure);
         this.paused = false;
         return Promise.resolve();
     }
     pause() { this.paused = true; }
+    removeAttribute(name) { if (name === 'src') this.src = ''; }
+    load() { this.unloaded = true; }
 }
 
 (async () => {
@@ -42,6 +45,19 @@ class FakeAudio extends EventTarget {
         se.dispatchEvent(new Event('ended'));
         assert.equal(manager.seBuffers.length, 0);
         assert.equal(manager.tracks.has(se), false);
+        assert.equal(se.src, '', 'giải phóng nguồn sau khi hiệu ứng kết thúc');
+        assert.equal(se.unloaded, true);
+        const brokenSe = manager.play('se', { name: 'missing' });
+        brokenSe.dispatchEvent(new Event('error'));
+        assert.equal(manager.seBuffers.length, 0, 'hiệu ứng tải lỗi không chiếm tài nguyên');
+        assert.equal(manager.tracks.has(brokenSe), false);
+        errors.length = 0;
+        const failedAudio = new FakeAudio(); failedAudio.failure = new DOMException('Không thể giải mã', 'NotSupportedError');
+        const failedManager = new AudioManager({ audioFactory: () => failedAudio, onError: error => errors.push(error) });
+        failedManager.play('se', { name: 'broken' }); await Promise.resolve();
+        assert.equal(failedManager.seBuffers.length, 0, 'hiệu ứng phát lỗi cũng được giải phóng');
+        assert.equal(failedAudio.unloaded, true);
+        failedManager.dispose(); errors.length = 0;
 
         manager.handleEffect(243, []);
         const me = manager.play('me', { name: 'victory', volume: 100 });
@@ -81,8 +97,11 @@ class FakeAudio extends EventTarget {
         locked.dispose();
 
         const sourceElements = new WeakSet(), nodes = [];
+        let stateChange;
         const context = {
             state: 'suspended', destination: {}, resumes: 0,
+            addEventListener(type, listener) { if (type === 'statechange') stateChange = listener; },
+            removeEventListener(type, listener) { if (type === 'statechange' && stateChange === listener) stateChange = null; },
             createMediaElementSource(audio) {
                 assert.equal(sourceElements.has(audio), false, 'mỗi element chỉ được tạo một MediaElementSource');
                 sourceElements.add(audio);
@@ -100,6 +119,9 @@ class FakeAudio extends EventTarget {
         const stereo = new AudioManager({ audioFactory: () => stereoAudio, audioContext: context, masterVolume: 0.05 });
         stereo.unlock(); await Promise.resolve();
         assert.equal(context.resumes, 1, 'gesture mở cả AudioContext');
+        context.state = 'suspended'; stateChange(); await Promise.resolve();
+        assert.equal(context.resumes, 2, 'tự khôi phục AudioContext khi bị ngắt giữa lúc chơi');
+        assert.equal(context.state, 'running');
         stereo.play('bgm', { name: 'wind', pan: -100, volume: 80 });
         assert.equal(nodes[1].pan.value, -1);
         assert.ok(Math.abs(stereoAudio.volume - 0.04) < 0.000001, 'stereo giữ âm lượng nhỏ');
@@ -114,6 +136,7 @@ class FakeAudio extends EventTarget {
         assert.equal(nodes[1].pan.value, 0.25, 'phát lại element đã dừng không tạo source trùng');
         stereo.dispose(); await Promise.resolve();
         assert.equal(context.state, 'closed');
+        assert.equal(stateChange, null);
         assert.equal(nodes[1].connections.length, 0);
 
         manager.fadeOut('bgm', 10);

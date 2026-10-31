@@ -407,6 +407,11 @@ async function main() {
             check('không có lỗi runtime khi tung đồng xu',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
             log('Hoàn tất '+passed+' kiểm tra đồng xu.');return;
         }
+        if (process.env.FNH_BROWSER_SCOPE === 'audio') {
+            await require('./browser-audio')({cdp,url:running.url,evalPage,waitFor,check});
+            check('không có lỗi runtime trong âm thanh',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất '+passed+' kiểm tra âm thanh.');return;
+        }
         if (process.env.FNH_BROWSER_SCOPE === 'beat') {
             await require('./browser-beat')({cdp,url:running.url,evalPage,waitFor,check});
             check('không có lỗi runtime khi đánh xác',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
@@ -484,6 +489,7 @@ async function main() {
             return;
         }
 
+        await require('./browser-audio')({cdp,url:running.url,evalPage,waitFor,check});
         await require('./browser-door')({cdp,url:running.url,evalPage,waitFor,check});
         await require('./browser-beat')({cdp,url:running.url,evalPage,waitFor,check});
         await require('./browser-coin')({cdp,url:running.url,evalPage,waitFor,check});
