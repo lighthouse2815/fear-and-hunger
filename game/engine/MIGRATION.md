@@ -295,7 +295,8 @@ Không coi việc mở được preview hoặc có callback lệnh là hoàn t�
   lặp kín vùng nhìn, tạm dừng trong trận và giữ offset qua save/chuyển map.
 - Tiếng bước chân đọc 122 note terrain, ưu tiên region/terrain/mặc định; quái,
   follower/guest giảm âm theo khoảng cách, tôn trọng ẩn/No Footsteps/phương tiện,
-  lệnh bật tắt giữ qua save. Volume nhân mức tổng người chơi đã chọn; test dùng mức 5% riêng.
+  lệnh bật tắt giữ qua save. Bước chân người chơi lớn gấp bốn bản gốc, giới hạn
+  100%; âm lượng tổng và hiệu ứng vẫn có tác dụng, test dùng mức 5% riêng.
 - Menu lưu/tải 20 ô, thông tin checkpoint và đọc ô được chọn từ game over/title;
   save trong common event giữ stack, ô hỏng không ngăn chọn các ô khác.
 - State 23 buộc crit trong Select rồi khôi phục trong Deselect. Engine thực thi

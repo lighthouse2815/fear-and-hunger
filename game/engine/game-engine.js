@@ -400,9 +400,9 @@
         var player = character === this.state;
         if (!this.state.footstepsEnabled || player && this.state.vehicleId !== -1 || /<No Footsteps>/i.test(character.note || '')) return null;
         var distance = Math.abs(this.map.deltaX(character.x, this.state.x)) + Math.abs(this.map.deltaY(character.y, this.state.y));
-        // Thiết lập nội dung gốc: SE mặc định 20/70, player 1.20, event 1.50
-        // và giảm volume 0.10 mỗi ô. Pan giữ quy tắc khoảng cách của game.
-        var volume = player ? 1.2 : 1.5 - distance * 0.1;
+        // Tăng riêng bước chân người chơi gấp bốn so với mức gốc 1.20;
+        // event vẫn dùng mức 1.50 và giảm 0.10 mỗi ô theo khoảng cách.
+        var volume = player ? 4.8 : 1.5 - distance * 0.1;
         if (volume <= 0) return null;
         var map = this.map, region = map.regionId(character.x, character.y), terrain = map.terrainTag(character.x, character.y);
         function find(note, kind, id) {
@@ -412,7 +412,8 @@
         }
         var sound = region && find(map.data.note, 'Region', region) ||
             terrain && find(map.tileset.note, 'Terrain Tag', terrain) || find(map.data.note, 'Region', 0) || ['footstep_tile', 20, 70];
-        return { name: sound[0], volume: Number(sound[1] || 20) * volume,
+        var soundVolume = Number(sound[1] || 20) * volume;
+        return { name: sound[0], volume: player ? Math.min(100, soundVolume) : soundVolume,
             pitch: Number(sound[2] || 70), pan: player ? 0 : Math.max(-100, Math.min(100, this.map.deltaX(this.state.x, character.x))) };
     };
 

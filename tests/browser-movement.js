@@ -19,6 +19,11 @@ module.exports=async function ({cdp,url,evalPage,waitFor,check,screenshot}) {
     async function prepare(dash=true) {
         await evalPage(cdp,`(async()=>{const e=FNHStandalonePreview.engine;await e.restore({mapId:74,x:8,y:8,party:[1,3],alwaysDash:false});e.autonomousEnabled=false;e.forceDashing=${dash};e.state.through=true;e.buttons.clear();walkTrace=[];walkDraws=[];document.querySelector('#fnh-canvas').focus();})()`,true,false);
     }
+    await prepare();
+    await evalPage(cdp,`(()=>{const a=FNHStandalonePreview;a.engine.state.followersVisible=false;window.walkAudio=[];window.walkOriginalPlay=a.audio.play;a.audio.play=function(category,sound,...rest){const audio=walkOriginalPlay.call(this,category,sound,...rest);if(category==='se' && sound.name.startsWith('footstep_'))walkAudio.push({name:sound.name,volume:sound.volume,actual:audio.volume,url:audio.src});return audio;};})()`,false,false);
+    await key('keyDown','ArrowRight','ArrowRight');await drive(1,2);await key('keyUp','ArrowRight','ArrowRight');await drive(1,12);
+    check('bước chân nhân vật dùng OGG thật, mức lớn hơn và vẫn theo âm lượng tổng',await evalPage(cdp,`(()=>{const a=FNHStandalonePreview,s=a.engine.footstepSound(a.engine.state),played=walkAudio[0];return walkAudio.length===1 && played.name===s.name && played.volume===s.volume && played.volume>24 && played.volume<=100 && Math.abs(played.actual-played.volume/100*a.audio.masterVolume*a.audio.volumes.se)<1e-6 && played.url.endsWith('/audio/se/'+encodeURIComponent(played.name)+'.ogg');})()`,false,false));
+    await evalPage(cdp,'FNHStandalonePreview.audio.play=walkOriginalPlay',false,false);
     for (const [name,frames,count,dash] of [['60Hz',1,64,true],['120Hz',.5,128,true],['30Hz',2,32,true],['đi bộ',1,64,false]]) {
         await prepare(dash);
         await key('keyDown','ArrowRight','ArrowRight');await drive(frames,count);await key('keyUp','ArrowRight','ArrowRight');await drive(frames,Math.ceil(40/frames));
