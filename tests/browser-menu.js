@@ -78,7 +78,13 @@ module.exports=async function ({cdp,url,evalPage,waitFor,clickElement,check,scre
     check('chế tạo trừ nguyên liệu và mở tên công thức',await evalPage(cdp,`FNHStandalonePreview.engine.state.itemCount('items',8)===1 && document.querySelector('[data-synthesis="item:5"]').textContent.includes('Torch')`,false,false));
     await focusTab('options');await clickElement(cdp,'[data-menu-key=options-Audio]');await evalPage(cdp,'document.querySelector("[data-volume=bgm]").focus()',false,false);await key('ArrowLeft','ArrowLeft');
     check('Options chỉnh âm lượng bằng trái/phải và cập nhật số/thanh',await evalPage(cdp,'FNHStandalonePreview.settings.volumes.bgm===80 && document.querySelector("[data-volume=bgm]").textContent.includes("80%")',false,false));
-    await clickElement(cdp,'[data-menu-key=options-General]');await clickElement(cdp,'[data-menu-key=option-commandRemember]');await clickElement(cdp,'[data-menu-key=option-filterEffects]');
+    await clickElement(cdp,'[data-menu-key=options-General]');
+    await clickElement(cdp,'[data-menu-key=option-screenWidth]');
+    check('chọn màn hình lớn đổi kích thước và lưu lại',await evalPage(cdp,`FNHStandalonePreview.settings.screenWidth==='large' && getComputedStyle(document.documentElement).getPropertyValue('--fnh-screen-width').trim()==='1088px' && JSON.parse(localStorage.getItem('FNH_STANDALONE_PREVIEW_SETTINGS')).screenWidth==='large'`,false,false));
+    await clickElement(cdp,'[data-menu-key=option-screenWidth]');
+    check('ba mức kích thước xoay vòng về nhỏ',await evalPage(cdp,`FNHStandalonePreview.settings.screenWidth==='small' && getComputedStyle(document.querySelector('main')).width==='640px'`,false,false));
+    await clickElement(cdp,'[data-menu-key=option-screenWidth]');
+    await clickElement(cdp,'[data-menu-key=option-commandRemember]');await clickElement(cdp,'[data-menu-key=option-filterEffects]');
     await waitFor(cdp,'FNHStandalonePreview.engine.filters.enabled===false',5000,'tắt filter');
     check('hai lựa chọn General đổi cấu hình thật và lưu được',await evalPage(cdp,'FNHStandalonePreview.settings.commandRemember && !FNHStandalonePreview.settings.filterEffects && JSON.parse(localStorage.getItem("FNH_STANDALONE_PREVIEW_SETTINGS")).commandRemember',false,false));
     await clickElement(cdp,'[data-menu-key=options-Controls]');await clickElement(cdp,'[data-menu-key=keyboard-config]');

@@ -5,6 +5,10 @@ const values = new Map(), storage = { getItem: key => values.get(key) || null, s
 const settings = new PlayerSettings({storage,key:'settings'});
 assert.equal(settings.volumes.master,100);assert.equal(settings.volumes.bgm,100);
 assert.equal(settings.commandRemember,false);assert.equal(settings.filterEffects,true);
+assert.equal(settings.screenWidth,'medium');
+settings.screenWidth='large';settings.save();assert.equal(new PlayerSettings({storage,key:'settings'}).screenWidth,'large');
+storage.setItem('invalid-width',JSON.stringify({version:2,screenWidth:'huge'}));
+assert.equal(new PlayerSettings({storage,key:'invalid-width'}).screenWidth,'medium');
 for (const [key,action] of Object.entries({w:'up',a:'left',s:'down',d:'right',ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'})) {
     assert.equal(settings.actionFor(key),action);
 }

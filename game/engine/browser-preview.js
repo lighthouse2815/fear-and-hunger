@@ -40,6 +40,10 @@
     }
     var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
     var settings = new FNHStandaloneSettings.PlayerSettings({ key: 'FNH_STANDALONE_PREVIEW_SETTINGS' });
+    function applyScreenWidth() {
+        document.documentElement.style.setProperty('--fnh-screen-width', { small: 640, medium: 816, large: 1088 }[settings.screenWidth] + 'px');
+    }
+    applyScreenWidth();
     var audio = new FNHStandaloneAudio.AudioManager({ baseUrl: '.', onError: function (error) { setStatus(error.message); } });
     engine.audio = audio;
     FNHStandaloneSettings.categories.forEach(function (category) { audio.setVolume(category, settings.volumes[category] / 100); });
@@ -782,7 +786,7 @@
     }
     combatUi = new FNHStandaloneBattleUi.BattleUi(engine, { handlers: eventHandlers, renderer: renderer, changed: draw, input: inputName, settings:settings });
     menuUi = new FNHStandaloneMenu.MenuUi(engine, saveStore, eventHandlers, draw, {
-        settings: settings, updateVolume: updateVolume, gameplay: automaticEvents, input: inputName, windowBackground: windowBackground, richText: setRichText, renderer: renderer,
+        settings: settings, updateVolume: updateVolume, applyScreenWidth: applyScreenWidth, gameplay: automaticEvents, input: inputName, windowBackground: windowBackground, richText: setRichText, renderer: renderer,
         clearInput: clearInput
     });
     var previousFrame = performance.now(), frameRemainder = 0, drawing = false, screenRevision = -1, lightingRevision = -1, filterRevision = -1, animationRevision = -1;

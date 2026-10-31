@@ -18,7 +18,7 @@
         this.key = options.key || 'FNH_STANDALONE_SETTINGS';
         this.volumes = { master: 100, bgm: 100, bgs: 100, me: 100, se: 100 };
         this.keys = Object.assign({}, defaults, wasd); this.alwaysDash = true;
-        this.commandRemember=false;this.filterEffects=true;
+        this.commandRemember=false;this.filterEffects=true;this.screenWidth='medium';
         var saved;
         try { saved = this.storage && JSON.parse(this.storage.getItem(this.key)); } catch (_) {}
         if (!saved || ![1, 2].includes(saved.version)) return;
@@ -29,6 +29,7 @@
         }, this);
         if (typeof saved.alwaysDash === 'boolean') this.alwaysDash = saved.alwaysDash;
         ['commandRemember','filterEffects'].forEach(function (key) {if(typeof saved[key]==='boolean')this[key]=saved[key];},this);
+        if (['small','medium','large'].includes(saved.screenWidth)) this.screenWidth = saved.screenWidth;
         if (saved.keys && typeof saved.keys === 'object') Object.keys(saved.keys).forEach(function (key) {
             if (saved.version === 1 && key === 'w' && saved.keys.w === 'pagedown' &&
                 !['a', 's', 'd'].some(function (letter) { return Object.prototype.hasOwnProperty.call(saved.keys, letter); })) return;
@@ -36,7 +37,7 @@
         }, this);
     }
     PlayerSettings.prototype.save = function () {
-        if (this.storage) this.storage.setItem(this.key, JSON.stringify({ version: 2, volumes: this.volumes, keys: this.keys, alwaysDash: this.alwaysDash, commandRemember:this.commandRemember,filterEffects:this.filterEffects }));
+        if (this.storage) this.storage.setItem(this.key, JSON.stringify({ version: 2, volumes: this.volumes, keys: this.keys, alwaysDash: this.alwaysDash, commandRemember:this.commandRemember,filterEffects:this.filterEffects,screenWidth:this.screenWidth }));
     };
     PlayerSettings.prototype.setVolume = function (category, value) {
         if (!categories.includes(category) || !Number.isFinite(value)) throw new Error('Thiết lập âm lượng không hợp lệ.');

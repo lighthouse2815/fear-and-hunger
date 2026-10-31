@@ -137,6 +137,16 @@
             var categories=frame('options-category',0,108,240,516,1),options=frame('options',240,108,576,516,1),category=view.optionCategory||'All',settings=ui.options.settings;
             ['All','General','Audio','Controls','Exit'].forEach(function (name) {var b=button(categories,name,'options-'+name,function () {if(name==='Exit')ui.focusCommand();else first(options);},name==='All'?"A list of all of the game's settings.":name+' settings.');b.dataset.selected=String(category===name);b.onfocus=function () {if(name!=='Exit' && view.optionCategory!==name)changeCategory('optionCategory',name);};});
             if(category==='All'||category==='General') {
+                var widths=['small','medium','large'],widthLabels=['Small','Medium','Large'];
+                function setWidth(step) {
+                    var before=settings.screenWidth,index=widths.indexOf(before);
+                    settings.screenWidth=widths[(index+step+widths.length)%widths.length];
+                    try {settings.save();ui.options.applyScreenWidth();refresh('option-screenWidth');}
+                    catch(error) {settings.screenWidth=before;ui.message.textContent=error.message;}
+                }
+                var widthButton=button(options,'Screen Size','option-screenWidth',function () {setWidth(1);},'Change the size of the game screen.');
+                widthButton.appendChild(node('span',widthLabels[widths.indexOf(settings.screenWidth)],'fnh-game-menu-amount'));
+                widthButton.onkeydown=function (event) {var action=ui.options.input(event.key);if(action==='left'||action==='right'){event.preventDefault();event.stopPropagation();setWidth(action==='left'?-1:1);}};
                 [['commandRemember','Command Remember'],['filterEffects','Filter Effects']].forEach(function (entry) {
                     function setOption(value) {var before=settings[entry[0]];settings[entry[0]]=value;try{settings.save();if(entry[0]==='filterEffects')state.setSwitch(3520,settings.filterEffects);refresh('option-'+entry[0]);}catch(error){settings[entry[0]]=before;ui.message.textContent=error.message;}}
                     var b=button(options,entry[1],'option-'+entry[0],function () {setOption(!settings[entry[0]]);},entry[0]==='commandRemember'?'Game remembers the last command selected during battle.':'Enable or disable the Filter Effects.');
