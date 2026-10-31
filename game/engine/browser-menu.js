@@ -103,6 +103,7 @@
                 ui.commandTab = button.dataset.menuTab;
                 ui.dialog.querySelectorAll('[data-menu-tab]').forEach(function (other) { other.dataset.commandSelected = String(other === button); });
                 if (options && options.gameplay && !ui.rendering && engine.state.scene==='menu') {
+                    ui.partyCommand=null;
                     ui.lastCommandTab=ui.commandTab;
                     if(ui.tab!==ui.commandTab) {ui.tab=ui.commandTab;ui.gameMenu={};ui.render();}
                 }
@@ -112,7 +113,7 @@
             };
             button.onclick = function () {
                 ui.lastCommandTab = ui.commandTab = button.dataset.menuTab;
-                if (options && options.gameplay && ['equipment','skills'].includes(ui.commandTab)) {
+                if (options && options.gameplay && ['inventory','equipment','skills'].includes(ui.commandTab)) {
                     ui.partyCommand = ui.commandTab; ui.tab = 'status'; ui.render();
                     var selected = ui.content.querySelector('[data-party-actor="' + ui.actorSelect.value + '"] .fnh-party-name');
                     if (selected) selected.focus({preventScroll:true});
