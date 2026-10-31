@@ -38,10 +38,14 @@ module.exports = async function ({cdp,url,evalPage,waitFor,clickElement,check,sc
     await evalPage(cdp,'abortMessage.abort()',false,false);await waitFor(cdp,'window.abortDone',5000,'hủy sự kiện');
     check('hủy sự kiện dọn khung thoại và không chạy lệnh sau',await evalPage(cdp,'document.querySelector("#fnh-message").dataset.open==="false" && !FNHStandalonePreview.engine.state.switchValue(993)',false,false));
     await evalPage(cdp,'FNHStandalonePreview.engine.battle.setup(1,true,true);FNHStandalonePreview.engine.state.scene="battle"',false,false);
+    await evalPage(cdp,'FNHStandalonePreview.engine.screen.showGab("The guard approaches.")',false,false);
+    await waitFor(cdp,`document.querySelector('#fnh-battle-gab').getContext('2d').getImageData(20,580,1,1).data[3]>0`,5000,'thông báo trong trận');
+    check('thông báo sự kiện hiện trên bảng combat và không chặn điều khiển',await evalPage(cdp,`(()=>{const g=document.querySelector('#fnh-battle-gab'),combat=document.querySelector('#fnh-combat'),status=document.querySelector('#fnh-combat-status'),r=status.getBoundingClientRect(),s=g.getBoundingClientRect();return !combat.hidden && Number(getComputedStyle(g).zIndex)>0 && getComputedStyle(g).pointerEvents==='none' && r.bottom>s.top+s.height*580/624 && getComputedStyle(g).backgroundColor==='rgba(0, 0, 0, 0)';})()`,false,false));
     await run(['',0,0,2],'Dialogue during battle');
     check('thoại trong trận nằm trên bảng combat và tiếp tục bằng bàn phím',await evalPage(cdp,`(()=>{const r=document.querySelector('#fnh-next').getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2).id==='fnh-next';})()`,false,false));
     await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'z',code:'KeyZ'});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'z',code:'KeyZ'});await waitFor(cdp,'window.dialogDone',5000,'Z tiếp tục thoại');
     await evalPage(cdp,'FNHStandalonePreview.engine.battle.finish("escape");FNHStandalonePreview.engine.state.scene="map"',false,false);
+    await waitFor(cdp,`document.querySelector('#fnh-battle-gab').getContext('2d').getImageData(20,580,1,1).data[3]===0`,5000,'dọn lớp thông báo sau trận');
     await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     await run(['Actor1',1,0,2],'Mobile dialogue');
     check('hội thoại co cùng khung game trên điện thoại',await evalPage(cdp,'document.querySelector("#fnh-message").getBoundingClientRect().width<=390 && document.querySelector("#fnh-message").getBoundingClientRect().left>=0',false,false));

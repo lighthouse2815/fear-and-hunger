@@ -17,6 +17,11 @@
         this.canvas.width = options.width || 816;
         this.canvas.height = options.height || 624;
         this.context.imageSmoothingEnabled = false;
+        this.battleGabCanvas = options.battleGabCanvas || null;
+        if (this.battleGabCanvas) {
+            this.battleGabCanvas.width = this.canvas.width;
+            this.battleGabCanvas.height = this.canvas.height;
+        }
         this.frame = 0;
         this.hideCharacters = options.hideCharacters === true;
     }
@@ -457,6 +462,8 @@
 
     CanvasRenderer.prototype.drawScreenEffects = function (screen, state) {
         var context = this.context;
+        var gabContext = this.battleGabCanvas && this.battleGabCanvas.getContext('2d');
+        if (gabContext) gabContext.clearRect(0, 0, this.canvas.width, this.canvas.height);
         if (screen) {
             if (screen.brightness < 255) {
                 context.fillStyle = 'rgba(0,0,0,' + (1 - screen.brightness / 255) + ')';
@@ -467,7 +474,11 @@
                 context.fillStyle = 'rgba(' + [flash.red, flash.green, flash.blue, flash.opacity / 255].join(',') + ')';
                 context.fillRect(0, 0, this.canvas.width, this.canvas.height);
             }
-            this.drawGab(screen.gab, state);
+            if (gabContext && state.scene === 'battle') {
+                this.context = gabContext;
+                try { this.drawGab(screen.gab, state); }
+                finally { this.context = context; }
+            } else this.drawGab(screen.gab, state);
         }
     };
 

@@ -27,7 +27,7 @@
     var next = document.getElementById('fnh-next');
     var choicesPanel = document.getElementById('fnh-choices');
     var engine = new FNHStandaloneEngine.GameEngine({ baseUrl: '.', forceDashing: automaticEvents });
-    var renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { baseUrl: '.' });
+    var renderer = new FNHStandaloneCanvas.CanvasRenderer(canvas, { baseUrl: '.', battleGabCanvas: automaticEvents ? document.getElementById('fnh-battle-gab') : null });
     var textColors = [];
     var windowSkin;
     function drawWindowFrame(target) {
