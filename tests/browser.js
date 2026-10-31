@@ -402,6 +402,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if (process.env.FNH_BROWSER_SCOPE === 'door') {
+            await require('./browser-door')({cdp,url:process.env.FNH_DOOR_URL||running.url,evalPage,waitFor,check});
+            check('không có lỗi runtime khi mở cửa',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất '+passed+' kiểm tra âm thanh cửa.');return;
+        }
         if (process.env.FNH_BROWSER_SCOPE === 'settings') {
             await require('./browser-settings')({cdp,url:running.url,evalPage,waitFor,check});
             check('không có lỗi runtime trong cài đặt',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
@@ -468,6 +473,8 @@ async function main() {
             log('Hoàn tất ' + passed + ' kiểm tra combat.');
             return;
         }
+
+        await require('./browser-door')({cdp,url:running.url,evalPage,waitFor,check});
 
         const namespace = 'smoke-' + process.pid + '-' + Date.now().toString(36);
         const url = running.url + 'legacy.html?fnh_save_ns=' + encodeURIComponent(namespace);
