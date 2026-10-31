@@ -780,6 +780,12 @@
         message: showMessage,
         choice: showChoices,
         scrollText: showScrollingText,
+        prepareAnimation: function (id) {
+            var animation = engine.database.Animations[id];
+            return Promise.all([animation.animation1Name, animation.animation2Name].filter(Boolean).map(function (name) {
+                return renderer.loadImage('img/animations/' + name + '.png');
+            }));
+        },
         effect: async function (code, parameters, command, interpreter) {
             if (audio.handleEffect(code, parameters)) return;
             if (code === 303) return showName(parameters, interpreter);

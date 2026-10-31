@@ -44,7 +44,7 @@ const delay = () => new Promise(resolve => setImmediate(resolve));
     }
     sounds.length=0;await corpseChoice('Beat him');
     assert.deepEqual(started.map(args=>args.slice(0,3)),[[9,194,1],[9,194,1]],'hai cú đấm bám vào xác thật');
-    assert.ok(started.every(args=>args[4].silent && args[4].immediate));
+    assert.ok(started.every(args=>args[4].silent && args[4].immediate && args[4].normalBlend));
     assert.deepEqual(sounds,['smash_doublehand','smash_doublehand'],'giữ hai tiếng đánh gốc, không phát thêm tiếng animation');
     started.length=0;sounds.length=0;await corpseChoice('Leave him');
     assert.deepEqual(started,[],'nhánh khác không có hiệu ứng đánh');

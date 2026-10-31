@@ -569,7 +569,7 @@
             var context = renderer.context, mirror = entry.mirror ? -1 : 1;
             context.save();
             context.globalAlpha = Math.max(0, Math.min(1, Number(cell[6] == null ? 255 : cell[6]) / 255));
-            context.globalCompositeOperation = ['source-over', 'lighter', 'multiply', 'screen'][cell[7] || 0] || 'source-over';
+            context.globalCompositeOperation = entry.normalBlend ? 'source-over' : ['source-over', 'lighter', 'multiply', 'screen'][cell[7] || 0] || 'source-over';
             context.translate(x + Number(cell[1] || 0) * mirror, y + Number(cell[2] || 0));
             context.rotate(Number(cell[4] || 0) * Math.PI / 180 * mirror);
             context.scale((cell[5] ? -1 : 1) * mirror, 1);

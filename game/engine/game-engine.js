@@ -620,7 +620,12 @@
                     var branch = interpreter.commands[frame.startIndex - 1];
                     return branch && branch.code === 402 && /^beat him$/i.test(branch.parameters[1] || '');
                 })) {
-                engine.animations.start(interpreter.eventId, 194, interpreter.mapId, false, { silent: true, immediate: true });
+                var startBeat = function () {
+                    if (interpreter.signal && interpreter.signal.aborted) throw interpreter.signal.reason;
+                    engine.animations.start(interpreter.eventId, 194, interpreter.mapId, false, { silent: true, immediate: true, normalBlend: true });
+                    return effect ? effect(code, parameters, command, interpreter) : false;
+                };
+                return eventHandlers.prepareAnimation ? Promise.resolve(eventHandlers.prepareAnimation(194)).then(startBeat) : startBeat();
             }
             if (code === 356 && engine.lighting.handleCommand(parameters[0], engine.map)) return true;
             if (code === 356 && engine.filters.handleCommand(parameters[0])) return true;
