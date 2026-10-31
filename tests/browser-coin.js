@@ -38,4 +38,9 @@ module.exports=async function ({cdp,url,evalPage,waitFor,check}) {
     check('không có Lucky coin thì giữ Shift vẫn chỉ tung một đồng',!result.error && result.coins===0 && result.animations[0]===7,JSON.stringify(result));
     result=await runScenario({battle:true,shift:'held'});
     check('coin flip trong trận cũng dùng Lucky coin và animation hai đồng',!result.error && result.coins===0 && result.second===2 && result.animations[0]===267,JSON.stringify(result));
+    await evalPage(cdp,`(async()=>{const a=FNHStandalonePreview,e=a.engine;await e.restore({mapId:1,x:7,y:55,direction:8,party:[1]});e.battle.setup(1,true,true);e.state.scene='battle';e.state.setSwitch(16,true);e.random=()=>.1;window.coinSuccessChoices=0;window.coinSuccessDone=false;window.coinSuccessError=null;const handlers={...a.scheduler.handlers,choice(...args){coinSuccessChoices++;if(coinSuccessChoices>1)throw new Error('Tung xu bị lặp');return a.scheduler.handlers.choice(...args);}};e.createInterpreter(e.database.Troops[1].pages[11].list,0,handlers).run().then(()=>coinSuccessDone=true,error=>coinSuccessError=error.message);})()`,true,false);
+    await waitFor(cdp,`[...document.querySelectorAll('#fnh-choices button')].some(b=>b.textContent==='HEADS')`,10000,'chọn xu thành công trong trận');
+    await evalPage(cdp,`[...document.querySelectorAll('#fnh-choices button')].find(b=>b.textContent==='HEADS').click()`,false,false);
+    await waitFor(cdp,'coinSuccessDone || coinSuccessError',10000,'hoàn tất né đòn sau tung xu');
+    check('tung xu thành công trong trận chỉ hỏi một lần và tiếp tục',await evalPage(cdp,'coinSuccessDone && !coinSuccessError && coinSuccessChoices===1 && !FNHStandalonePreview.engine.state.switchValue(16)',false,false));
 };

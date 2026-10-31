@@ -526,9 +526,10 @@
 
     EventInterpreter.prototype.conditionElse = function (command) {
         var frame = this.conditionFrame(command.indent || 0);
-        if (frame && frame.passed) {
-            this.index = frame.endIndex < 0 ? this.commands.length : frame.endIndex + 1;
-            this.conditionFrames.splice(this.conditionFrames.indexOf(frame), 1);
+        if (!frame || frame.passed) {
+            var end = frame ? frame.endIndex : this.findCommand(412, command.indent || 0, this.index);
+            this.index = end < 0 ? this.commands.length : end + 1;
+            if (frame) this.conditionFrames.splice(this.conditionFrames.indexOf(frame), 1);
         }
     };
 

@@ -148,6 +148,18 @@ const watchdog = setTimeout(() => { console.error('Sự kiện troop không kế
     assert.equal(abortPage.state.switchValue(6009), true);
     assert.equal(abortPage.battle.battle.result, 'escape');
 
+    const coinGuard = await boot();
+    coinGuard.battle.setup(1, true, true); coinGuard.state.scene = 'battle'; coinGuard.state.setSwitch(16, true); coinGuard.random = () => 0.1;
+    let coinChoices = 0, dodgeMessage = '';
+    await coinGuard.createInterpreter(coinGuard.database.Troops[1].pages[11].list, 0, {
+        choice: () => { if (++coinChoices > 1) throw new Error('Tung xu bị lặp sau khi chọn đúng.'); return 1; },
+        afterCommand: () => { if (coinGuard.state.screen.gab) dodgeMessage = coinGuard.state.screen.gab.text; },
+        effect: () => true
+    }).run();
+    assert.equal(coinChoices, 1, 'chọn đúng TAILS chỉ hỏi một lần');
+    assert.equal(coinGuard.state.switchValue(16), false, 'nhánh né dọn điều kiện của sự kiện');
+    assert.match(dodgeMessage, /evading its grasp/i);
+
     const guard = await boot(), sounds = [];
     const handlers = { effect: (code, p) => { if (code === 250) { sounds.push(p[0]); return true; } return false; },
         message: () => {}, choice: () => 0 };
