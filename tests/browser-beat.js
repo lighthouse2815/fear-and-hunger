@@ -1,0 +1,13 @@
+'use strict';
+module.exports=async function ({cdp,url,evalPage,waitFor,check}) {
+    await cdp.send('Page.navigate',{url:url+'standalone.html?events=1&map=1'});
+    await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.engine.map && document.querySelector("#fnh-loading").hidden',30000,'khởi động map xác guard');
+    await evalPage(cdp,`(async()=>{const a=FNHStandalonePreview;a.scheduler.stop();await new Promise(r=>setTimeout(r,50));await a.engine.restore({mapId:1,x:49,y:55,direction:8,party:[1],switches:{23:true}});a.audio.setVolume('master',.05);window.beatImages=[];window.beatSounds=[];const draw=FNHStandaloneCanvas.CanvasRenderer.prototype.drawAnimationCells,play=a.audio.play;FNHStandaloneCanvas.CanvasRenderer.prototype.drawAnimationCells=function(animation,x,y){if(animation.entry.animationId===194 && animation.entry.targetId===9 && animation.second && animation.second.naturalWidth)beatImages.push({x,y,frame:Math.floor(animation.entry.elapsed/4)});return draw.call(this,animation,x,y);};a.audio.play=function(category,sound,...rest){if(category==='se' && ['smash_doublehand','hit_single','Wind7','Hammer'].includes(sound.name))beatSounds.push(sound.name);return play.call(this,category,sound,...rest);};window.beatDone=false;window.beatError=null;a.engine.runEvent(9,a.scheduler.handlers).then(()=>beatDone=true).catch(error=>beatError=error.message);})()`,true,false);
+    await waitFor(cdp,`[...document.querySelectorAll('#fnh-choices button')].some(button=>button.textContent==='Beat him')`,5000,'lựa chọn Beat him');
+    await evalPage(cdp,`[...document.querySelectorAll('#fnh-choices button')].find(button=>button.textContent==='Beat him').click()`,false,false);
+    await waitFor(cdp,`beatSounds.filter(name=>name==='smash_doublehand').length===2 && beatImages.length>0 && document.querySelector('#fnh-message-text').textContent.includes('No reaction')`,8000,'hai cú đánh và animation');
+    check('hai cú đánh phát âm thanh gốc và vẽ animation tại xác guard',await evalPage(cdp,`(()=>{const e=FNHStandalonePreview.engine,v=e.map.viewport(e.state,816,624),target=e.map.eventById(9),x=(e.map.screenX(target.x,v.startX)+.5)*48;return beatSounds.join(',')==='smash_doublehand,smash_doublehand' && beatImages.every(image=>Math.abs(image.x-x)<1) && beatImages.some(image=>image.frame>=0);})()`,false,false));
+    await evalPage(cdp,`document.querySelector('#fnh-next').click()`,false,false);
+    await waitFor(cdp,'window.beatDone || window.beatError',5000,'kết thúc lời thoại');
+    check('đánh xác hoàn tất sự kiện và không phát sinh lỗi',await evalPage(cdp,'beatDone && !beatError && FNHStandalonePreview.errors.length===0',false,false));
+};

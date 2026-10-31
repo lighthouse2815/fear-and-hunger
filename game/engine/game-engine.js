@@ -607,6 +607,13 @@
         };
         var effect = eventHandlers.effect;
         eventHandlers.effect = function (code, parameters, command, interpreter) {
+            if (code === 250 && parameters[0] && parameters[0].name === 'smash_doublehand' && engine.state.scene === 'map' &&
+                engine.characterFor(0, interpreter) && interpreter.choiceFrames.some(function (frame) {
+                    var branch = interpreter.commands[frame.startIndex - 1];
+                    return branch && branch.code === 402 && /^beat him$/i.test(branch.parameters[1] || '');
+                })) {
+                engine.animations.start(interpreter.eventId, 194, interpreter.mapId, false, { silent: true, immediate: true });
+            }
             if (code === 356 && engine.lighting.handleCommand(parameters[0], engine.map)) return true;
             if (code === 356 && engine.filters.handleCommand(parameters[0])) return true;
             if (code === 339) return engine.forceBattleAction(parameters, handlers, interpreter.signal);

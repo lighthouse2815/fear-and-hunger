@@ -33,6 +33,22 @@ const delay = () => new Promise(resolve => setImmediate(resolve));
     engine.advanceRoutes(100); await target;
     await engine.loadMap(1); assert.equal(engine.animations.entries.length, 0, 'đổi map dọn animation cũ');
     await engine.loadMap(74);
+    await engine.restore({mapId:1,x:49,y:55,direction:8,party:[1],switches:{23:true}});
+    const started=[], originalStart=engine.animations.start.bind(engine.animations);
+    engine.animations.start=function (...args) {started.push(args);return originalStart(...args);};
+    async function corpseChoice(label) {
+        let finished=false, failure;
+        const run=engine.runEvent(9,{message:()=>{},choice:choices=>{const index=choices.indexOf(label);return index<0?choices.length-1:index;},effect:(code,parameters)=>{if(code===250)sounds.push(parameters[0].name);return true;}}).catch(error=>{failure=error;}).finally(()=>{finished=true;});
+        for(let frame=0;frame<500 && !finished;frame++){engine.advanceRoutes(1);await delay();}
+        await run;if(failure)throw failure;assert.ok(finished);
+    }
+    sounds.length=0;await corpseChoice('Beat him');
+    assert.deepEqual(started.map(args=>args.slice(0,3)),[[9,194,1],[9,194,1]],'hai cú đấm bám vào xác thật');
+    assert.ok(started.every(args=>args[4].silent && args[4].immediate));
+    assert.deepEqual(sounds,['smash_doublehand','smash_doublehand'],'giữ hai tiếng đánh gốc, không phát thêm tiếng animation');
+    started.length=0;sounds.length=0;await corpseChoice('Leave him');
+    assert.deepEqual(started,[],'nhánh khác không có hiệu ứng đánh');
+    await engine.loadMap(74);
     await assert.rejects(engine.createInterpreter([{ code: 212, parameters: [-1, 999, true] }], 1).run(), /Không tìm thấy animation/);
     assert.throws(() => engine.animations.start(-1, 999, 74), /Không tìm thấy animation/);
     let count = 0;

@@ -11,8 +11,8 @@
         this.waiters = new Map();
         this.revision = 0;
     }
-    AnimationRuntime.prototype.start = function (targetId, animationId, mapId, mirror) {
-        return this.enqueue({ targetId: targetId, animationId: animationId, mapId: mapId, mirror: !!mirror });
+    AnimationRuntime.prototype.start = function (targetId, animationId, mapId, mirror, options) {
+        return this.enqueue(Object.assign({ targetId: targetId, animationId: animationId, mapId: mapId, mirror: !!mirror }, options));
     };
     AnimationRuntime.prototype.startBattle = function (targetId, animationId, mirror, targetType) {
         return this.enqueue({ targetId: targetId, animationId: animationId, scope: 'battle',
@@ -21,7 +21,8 @@
     AnimationRuntime.prototype.enqueue = function (entry) {
         var data = this.engine.database.Animations[entry.animationId];
         if (!data) throw new Error('Không tìm thấy animation ' + entry.animationId);
-        Object.assign(entry, { elapsed: -8, lastFrame: -1, flash: null, remaining: data.frames.length * 4 + 9 });
+        var delay = entry.immediate ? 0 : 8;
+        Object.assign(entry, { elapsed: -delay, lastFrame: -1, flash: null, remaining: data.frames.length * 4 + delay + 1 });
         this.entries.push(entry); this.revision++;
         return this.waitFor(entry);
     };
@@ -56,7 +57,7 @@
             var end = Math.max(-1, Math.min(data.frames.length - 1, Math.floor(entry.elapsed / 4)));
             for (var frame = entry.lastFrame + 1; frame <= end; frame++) {
                 data.timings.filter(function (timing) { return timing.frame === frame; }).forEach(function (timing) {
-                    if (timing.se && timing.se.name) {
+                    if (!entry.silent && timing.se && timing.se.name) {
                         if (!engine.onRouteEffect) throw new Error('Chưa có bộ phát âm thanh cho animation.');
                         Promise.resolve(engine.onRouteEffect(250, [timing.se])).catch(function (error) { engine.routeErrors.push(error); });
                     }
