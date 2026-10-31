@@ -5,6 +5,7 @@
     }
     function render(ui,actorId) {
         var engine=ui.engine,state=engine.state,db=engine.database,system=db.System,actor=actorId && state.actor(actorId),content=ui.content;
+        var t=ui.options.settings.translate.bind(ui.options.settings);
         var view=ui.gameMenu || (ui.gameMenu={}), previous=document.activeElement;
         var focusKey=content.contains(previous) && previous.dataset.menuKey;
         content.replaceChildren();content.dataset.menuPage=ui.tab;
@@ -15,11 +16,11 @@
             if(columns) {panel.dataset.columns=columns;panel.classList.add('fnh-menu-list');panel.style.gridTemplateColumns='repeat('+columns+',minmax(0,1fr))';}
             return panel;
         }
-        function help(text) {if(ui.options.richText)ui.options.richText(helpPanel,text||'');else helpPanel.textContent=root.FNHStandaloneText.formatText(text||'',state);}
+        function help(text) {text=t(text||'');if(ui.options.richText)ui.options.richText(helpPanel,text||'');else helpPanel.textContent=root.FNHStandaloneText.formatText(text||'',state);}
         function button(parent,text,key,action,description,enabled) {
-            var b=node('button');if(text)b.appendChild(node('span',text));b.type='button';b.dataset.menuKey=key;b.disabled=ui.busy || enabled===false;
+            var b=node('button');if(text)b.appendChild(node('span',t(text)));b.type='button';b.dataset.menuKey=key;b.disabled=ui.busy || enabled===false;
             b.onclick=function () {if(!b.disabled)action();};
-            b.onfocus=function () {parent.querySelectorAll('button').forEach(function (other) {other.dataset.selected=String(other===b);});help(typeof description==='function'?description():description);};
+            b.onfocus=function () {parent.querySelectorAll('button').forEach(function (other) {other.dataset.selected=String(other===b);});var r=b.getBoundingClientRect(),p=parent.getBoundingClientRect();if(r.bottom>p.bottom)parent.scrollTop+=r.bottom-p.bottom;else if(r.top<p.top)parent.scrollTop+=r.top-p.top;help(typeof description==='function'?description():description);};
             b.onpointermove=function () {if(!b.disabled && document.activeElement!==b)b.focus({preventScroll:true});};
             parent.appendChild(b);return b;
         }
@@ -40,7 +41,7 @@
             image.style.backgroundPosition=member.faceIndex%4/3*100+'% '+Math.floor(member.faceIndex/4)*100+'%';parent.appendChild(image);
         }
         function gauge(parent,label,value,max,kind) {
-            var row=node('div',null,'fnh-game-menu-gauge '+kind);row.append(node('span',label),node('span',value+' / '+max));
+            var row=node('div',null,'fnh-game-menu-gauge '+kind);row.append(node('span',t(label)),node('span',value+' / '+max));
             var bar=node('meter');bar.min=0;bar.max=Math.max(1,max);bar.value=value;bar.setAttribute('aria-label',label);row.appendChild(bar);parent.appendChild(row);
         }
         function status(panel,member) {
@@ -70,14 +71,14 @@
         } else if(ui.tab==='equipment' && actor) {
             var stats=frame('equipment-status',0,108,312,288),commands=frame('equipment-command',312,108,504,72,3),slots=frame('equipment-slots',312,180,504,216,1),items=frame('equipment-items',0,396,816,228,2);
             button(stats,actor.name,'actor',function () {ui.actorSelect.value=state.party[(state.party.indexOf(actorId)+1)%state.party.length];view.equipSlot=null;refresh('actor');},actor.nickname);
-            for(var param=2;param<8;param++) {var row=node('div',null,'fnh-game-menu-param');row.append(node('span',system.terms.params[param]),node('span',state.actorParam(actorId,param)),node('span','→'),node('span',''));row.dataset.param=param;stats.appendChild(row);}
+            for(var param=2;param<8;param++) {var row=node('div',null,'fnh-game-menu-param');row.append(node('span',t(system.terms.params[param])),node('span',state.actorParam(actorId,param)),node('span','→'),node('span',''));row.dataset.param=param;stats.appendChild(row);}
             button(commands,system.terms.commands[15],'equip',function () {first(slots);});
             button(commands,system.terms.commands[16],'optimize',function () {ui.act(function () {engine.optimizeMenuEquipment(actorId);});}).dataset.equipmentAction='optimize';
             button(commands,system.terms.commands[17],'clear',function () {ui.act(function () {engine.clearMenuEquipment(actorId);});}).dataset.equipmentAction='clear';
             actor.equips.forEach(function (equipped,slot) {
                 var table=db[slot===0?'Weapons':'Armors'],item=table[equipped];
                 var b=button(slots,'','slot-'+slot,function () {view.equipSlot=slot;refresh('equipment-'+equipped);},item&&item.description,engine.canChangeMenuEquipment(actorId,slot));b.dataset.slot=slot;
-                b.appendChild(node('span',system.equipTypes[slot+1],'fnh-game-menu-slot-name'));if(item)b.append(icon(item.iconIndex),node('span',item.name));
+                b.appendChild(node('span',t(system.equipTypes[slot+1]),'fnh-game-menu-slot-name'));if(item)b.append(icon(item.iconIndex),node('span',item.name));
                 b.onfocus=function () {help(item&&item.description);if(view.equipSlot!==slot){view.equipSlot=slot;refresh('slot-'+slot);}};
             });
             if(view.equipSlot!=null) {
@@ -119,7 +120,7 @@
                 totalRecipes+=count;if(state.itemCount(entry[1]+'s',item.id)>0)collected+=count;
                 if(/<Synthesis Ingredients>/i.test(note))totals[entry[1]]++;
             });});
-            function synthesisCount(label,count,total) {var row=node('div',null,'fnh-game-menu-summary');row.append(node('span',label),node('span',count+'/'+total),node('span',Math.floor(count/Math.max(1,total)*100)+'%'));summary.appendChild(row);}
+            function synthesisCount(label,count,total) {var row=node('div',null,'fnh-game-menu-summary');row.append(node('span',t(label)),node('span',count+'/'+total),node('span',Math.floor(count/Math.max(1,total)*100)+'%'));summary.appendChild(row);}
             synthesisCount('Collected Recipes',collected,totalRecipes);
             ['item','weapon','armor'].forEach(function (kind) {synthesisCount('Crafted '+{item:'Items',weapon:'Weapons',armor:'Armors'}[kind],Object.keys(state.synthesis.crafted[kind+'s']).length,totals[kind]);});
             gold.appendChild(node('span',state.gold,'fnh-game-menu-gold'));
@@ -128,7 +129,7 @@
                     if(!engine.canSynthesize(recipe))return;
                     ui.act(async function () {engine.synthesize(recipe);if(ui.handlers.effect)await ui.handlers.effect(250,[{name:'fnh_choice2',volume:100,pitch:100,pan:0}]);});
                 },recipe.known?recipe.item.description:'This item has not been crafted yet.');b.dataset.synthesis=recipe.kind+':'+recipe.id;b.classList.toggle('fnh-menu-unusable',!engine.canSynthesize(recipe));
-                var focus=b.onfocus;b.onfocus=function () {focus();ingredients.replaceChildren(node('div','Ingredients','fnh-game-menu-system'));recipe.ingredients.forEach(function (entry) {
+                var focus=b.onfocus;b.onfocus=function () {focus();ingredients.replaceChildren(node('div',t('Ingredients'),'fnh-game-menu-system'));recipe.ingredients.forEach(function (entry) {
                     var table=db[{item:'Items',weapon:'Weapons',armor:'Armors'}[entry.kind]],name=entry.kind==='gold'?'Gold':table[entry.id].name,amount=entry.kind==='gold'?state.gold:state.itemCount(entry.kind+'s',entry.id);
                     ingredients.appendChild(node('div',name+'  '+amount+'/'+entry.amount));
                 });};
@@ -137,6 +138,14 @@
             var categories=frame('options-category',0,108,240,516,1),options=frame('options',240,108,576,516,1),category=view.optionCategory||'All',settings=ui.options.settings;
             ['All','General','Audio','Controls','Exit'].forEach(function (name) {var b=button(categories,name,'options-'+name,function () {if(name==='Exit')ui.focusCommand();else first(options);},name==='All'?"A list of all of the game's settings.":name+' settings.');b.dataset.selected=String(category===name);b.onfocus=function () {if(name!=='Exit' && view.optionCategory!==name)changeCategory('optionCategory',name);};});
             if(category==='All'||category==='General') {
+                function setLanguage() {
+                    var before=settings.language;settings.language=before==='en'?'vi':'en';
+                    try {settings.save();document.documentElement.lang=settings.language;refresh('option-language');}
+                    catch(error) {settings.language=before;ui.message.textContent=error.message;}
+                }
+                var languageButton=button(options,'Language','option-language',setLanguage,'Language');
+                languageButton.appendChild(node('span',settings.language==='vi'?'Tiếng Việt':'English','fnh-game-menu-amount'));
+                languageButton.onkeydown=function (event) {var action=ui.options.input(event.key);if(action==='left'||action==='right'){event.preventDefault();event.stopPropagation();setLanguage();}};
                 var widths=['small','medium','large'],widthLabels=['Small','Medium','Large'];
                 function setWidth(step) {
                     var before=settings.screenWidth,index=widths.indexOf(before);
@@ -145,13 +154,13 @@
                     catch(error) {settings.screenWidth=before;ui.message.textContent=error.message;}
                 }
                 var widthButton=button(options,'Screen Size','option-screenWidth',function () {setWidth(1);},'Change the size of the game screen.');
-                widthButton.appendChild(node('span',widthLabels[widths.indexOf(settings.screenWidth)],'fnh-game-menu-amount'));
+                widthButton.appendChild(node('span',t(widthLabels[widths.indexOf(settings.screenWidth)]),'fnh-game-menu-amount'));
                 widthButton.onkeydown=function (event) {var action=ui.options.input(event.key);if(action==='left'||action==='right'){event.preventDefault();event.stopPropagation();setWidth(action==='left'?-1:1);}};
                 [['commandRemember','Command Remember'],['filterEffects','Filter Effects']].forEach(function (entry) {
                     function setOption(value) {var before=settings[entry[0]];settings[entry[0]]=value;try{settings.save();if(entry[0]==='filterEffects')state.setSwitch(3520,settings.filterEffects);refresh('option-'+entry[0]);}catch(error){settings[entry[0]]=before;ui.message.textContent=error.message;}}
                     var b=button(options,entry[1],'option-'+entry[0],function () {setOption(!settings[entry[0]]);},entry[0]==='commandRemember'?'Game remembers the last command selected during battle.':'Enable or disable the Filter Effects.');
                     var values=node('span',null,'fnh-game-menu-toggle');
-                    [false,true].forEach(function (value) {var text=node('span',value?'ON':'OFF');text.dataset.selected=String(settings[entry[0]]===value);values.appendChild(text);});b.appendChild(values);
+                    [false,true].forEach(function (value) {var text=node('span',t(value?'ON':'OFF'));text.dataset.selected=String(settings[entry[0]]===value);values.appendChild(text);});b.appendChild(values);
                     b.onkeydown=function (event) {var action=ui.options.input(event.key);if(action==='left'||action==='right'){event.preventDefault();event.stopPropagation();setOption(action==='right');}};
                 });
                 options.appendChild(node('div','\u00a0'));

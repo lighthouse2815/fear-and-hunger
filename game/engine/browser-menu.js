@@ -22,13 +22,14 @@
         var previous=document.activeElement;
         if(container.contains(previous) && previous.matches('.fnh-save-file')) {options.focus=true;options.selected=Number(previous.dataset.slot);}
         container.replaceChildren(); container.classList.add('fnh-save-screen');
-        var help = node('div',options.mode === 'save' ? 'Save to which file?' : 'Load which file?'); help.className='fnh-save-help';
+        var t=options.settings ? options.settings.translate.bind(options.settings) : function (text) {return text;};
+        var help = node('div',t(options.mode === 'save' ? 'Save to which file?' : 'Load which file?')); help.className='fnh-save-help';
         var list = node('div'); list.className='fnh-save-list'; list.setAttribute('aria-label',options.mode==='save'?'Save files':'Load files');
         var rows=node('div');rows.className='fnh-save-rows';list.appendChild(rows);
         options.windowBackground(help,816,72); options.windowBackground(list,816,552);
         for (var slot=1;slot<=20;slot++) {
             var row=node('button');row.type='button';row.className='fnh-save-file';row.dataset.slot=slot;
-            var label=node('span','File '+slot);label.className='fnh-save-id';row.appendChild(label);
+            var label=node('span',t('File')+' '+slot);label.className='fnh-save-id';row.appendChild(label);
             try {
                 var payload=store.read(slot);
                 if(payload) {
@@ -193,6 +194,7 @@
                 var term = {inventory:4, equipment:6, skills:5, options:11, gameEnd:10}[tab];
                 if (term != null) button.textContent = engine.database.System.terms.commands[term];
                 else if (tab === 'synthesis') button.textContent = 'Synthesis';
+                button.textContent = ui.options.settings.translate(button.textContent);
             }
             button.hidden = gameplay &&
                 (state.scene === 'save' ? tab !== 'system' : tab === 'status' || flag != null && engine.database.System.menuCommands[flag] === false);
@@ -246,12 +248,12 @@
                 });card.appendChild(icons);
                 [['HP',member.hp,state.actorParam(id,0)],['MP',member.mp,state.actorParam(id,1)]].forEach(function (entry) {
                     var label=node('label',entry[0]+': '+entry[1]+'/'+entry[2]),bar=node('meter');
-                    if (gameplay) label.textContent = (entry[0] === 'HP' ? 'Body' : 'Mind') + ' ' + entry[1];
+                    if (gameplay) label.textContent = ui.options.settings.translate(entry[0] === 'HP' ? 'Body' : 'Mind') + ' ' + entry[1];
                     label.className='fnh-party-'+entry[0].toLowerCase();
                     bar.min=0;bar.max=Math.max(1,entry[2]);bar.value=entry[1];bar.setAttribute('aria-label',entry[0]+' '+member.name);
                     label.appendChild(bar);card.appendChild(label);
                 });
-                var hunger=node('label',status.nextExp==null?'':'Hunger: '+status.nextExp),gauge=node('meter');
+                var hunger=node('label',status.nextExp==null?'':ui.options.settings.translate('Hunger')+': '+status.nextExp),gauge=node('meter');
                 hunger.className='fnh-party-hunger';
                 gauge.min=0;gauge.max=1;gauge.value=status.hunger;gauge.dataset.hungerActor=id;gauge.setAttribute('aria-label','Hunger '+member.name);
                 hunger.appendChild(gauge);card.appendChild(hunger);overview.appendChild(card);
@@ -424,7 +426,7 @@
             content.append(title,cancel);
         } else if (this.tab === 'system') {
             if (gameplay) {
-                renderSaveFiles(content,ui.saveStore,{engine:engine,renderer:ui.options.renderer,windowBackground:ui.options.windowBackground,input:ui.options.input,mode:'save',selected:ui.saveSlot,focus:opening,
+                renderSaveFiles(content,ui.saveStore,{engine:engine,settings:ui.options.settings,renderer:ui.options.renderer,windowBackground:ui.options.windowBackground,input:ui.options.input,mode:'save',selected:ui.saveSlot,focus:opening,
                     confirm:function (slot) {
                         if(ui.busy && !(engine.menuWaiters && engine.menuWaiters.size))return;
                         try {ui.saveSlot=slot;engine.saveMenuTo(ui.saveStore,slot);ui.close();}

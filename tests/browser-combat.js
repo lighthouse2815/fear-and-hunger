@@ -20,10 +20,13 @@ module.exports = async function ({cdp,url,evalPage,waitFor,clickElement,check,sc
             document.querySelectorAll('.fnh-combat-member').length===2 && document.querySelector('#fnh-combat-status').textContent.includes('Body');
     })()`,false,false));
     await screenshot('combat-commands');
+    await evalPage(cdp,"FNHStandalonePreview.settings.language='vi'",false,false);
     await clickElement(cdp,'#fnh-combat-commands button:nth-child(2)');
-    check('Skills mở danh sách thật và có mô tả',await evalPage(cdp,'!document.querySelector("#fnh-combat-list").hidden && document.querySelectorAll("#fnh-combat-list button").length>1',false,false));
+    check('giao diện danh sách chiến đấu dùng tiếng Việt',await evalPage(cdp,`!document.querySelector('#fnh-combat-list').hidden && document.querySelector('#fnh-combat-list').textContent.includes('Hủy') && document.querySelector('#fnh-combat-status').textContent.includes('Thể lực')`,false,false));
     await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});
     await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'});
+    check('lệnh chiến đấu được dịch sang tiếng Việt',await evalPage(cdp,`document.querySelector('#fnh-combat-commands').textContent.includes('Tấn công')`,false,false));
+    await evalPage(cdp,"FNHStandalonePreview.settings.language='en'",false,false);
     await clickElement(cdp,'#fnh-combat-commands button:nth-child(4)');
     check('Item đọc Blue vial từ túi thay bộ chọn HTML',await evalPage(cdp,'document.querySelector("#fnh-combat-list").textContent.includes("Blue vial") && !document.querySelector("#fnh-combat select")',false,false));
     await clickElement(cdp,'#fnh-combat-list button');

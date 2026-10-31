@@ -11,6 +11,7 @@
             'mousedown','mouseup','mousemove','mouseover','mouseout','mouseenter','mouseleave','click','dblclick','contextmenu','wheel'].forEach(function (type) {
             window.addEventListener(type,function (event) {
                 if(event.pointerType && event.pointerType!=='mouse' || event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents)return;
+                if(event.target && event.target.closest && event.target.closest('#fnh-title-settings, #fnh-open-settings'))return;
                 // Click do bàn phím hoặc luồng UI gọi vẫn xác nhận được.
                 if(type==='click' && event.detail===0 && !event.pointerType)return;
                 event.preventDefault();event.stopImmediatePropagation();
@@ -40,6 +41,7 @@
     }
     var saveStore = new FNHStandaloneSave.SaveStore({ prefix: 'FNH_STANDALONE_PREVIEW:' });
     var settings = new FNHStandaloneSettings.PlayerSettings({ key: 'FNH_STANDALONE_PREVIEW_SETTINGS' });
+    document.documentElement.lang = settings.language;
     function applyScreenWidth() {
         document.documentElement.style.setProperty('--fnh-screen-width', { small: 640, medium: 816, large: 1088 }[settings.screenWidth] + 'px');
     }
@@ -257,6 +259,8 @@
         if (endScene === scene) return;
         endScene = scene;
         panel.dataset.scene = scene;
+        document.getElementById('fnh-title-settings').hidden = true;
+        document.getElementById('fnh-open-settings').hidden = scene !== 'title';
         document.getElementById('fnh-title-frame').hidden = scene !== 'title';
         document.getElementById('fnh-end-save-panel').hidden = true;
         document.getElementById('fnh-end-actions').hidden = false;
@@ -264,9 +268,10 @@
         FNHStandaloneMenu.fillSaveSlots(slots, saveStore, Number(slots.value) || 1);
         document.getElementById('fnh-end-load').textContent = 'Tải ô ' + slots.value;
         var system = engine.database.System;
-        document.getElementById('fnh-new-game').textContent = system.terms.commands[18];
+        document.getElementById('fnh-new-game').textContent = settings.translate(system.terms.commands[18]);
         var continueButton = document.getElementById('fnh-continue');
-        continueButton.textContent = system.terms.commands[19];
+        continueButton.textContent = settings.translate(system.terms.commands[19]);
+        document.getElementById('fnh-open-settings').textContent = settings.translate('Settings');
         continueButton.disabled = scene === 'title' && !Array.from({ length: 20 }, function (_, index) { return index + 1; }).some(function (slot) { return saveStore.exists(slot); });
         document.getElementById('fnh-new-game').dataset.selected = String(continueButton.disabled || scene !== 'title');
         continueButton.dataset.selected = String(!continueButton.disabled && scene === 'title');
@@ -1068,7 +1073,7 @@
         document.getElementById('fnh-end-save-panel').hidden = false;
         document.getElementById('fnh-end-error').textContent = '';
         FNHStandaloneMenu.renderSaveFiles(document.getElementById('fnh-end-file-list'),saveStore,{
-            engine:engine,renderer:renderer,windowBackground:windowBackground,input:inputName,mode:'load',focus:true,
+            engine:engine,settings:settings,renderer:renderer,windowBackground:windowBackground,input:inputName,mode:'load',focus:true,
             selected:Number(document.getElementById('fnh-end-save-slot').value)||1,
             confirm:function (slot) {
                 document.getElementById('fnh-end-save-slot').value=slot;
@@ -1086,11 +1091,54 @@
         document.getElementById('fnh-end-actions').hidden = false;
         document.getElementById('fnh-continue').focus();
     });
+    var titleSettings = document.getElementById('fnh-title-settings');
+    function closeTitleSettings() {
+        titleSettings.hidden = true;
+        document.getElementById('fnh-end-actions').hidden = false;
+        document.getElementById('fnh-open-settings').focus({preventScroll:true});
+    }
+    function renderTitleSettings(focusKey) {
+        var list=document.getElementById('fnh-title-settings-list'), t=settings.translate.bind(settings);
+        list.replaceChildren();
+        var entries=[['language','Language'],['screenWidth','Screen Size'],['master','Master Volume'],['bgm','BGM Volume'],['bgs','BGS Volume'],['me','ME Volume'],['se','SE Volume'],['back','Back']];
+        entries.forEach(function (entry) {
+            var key=entry[0],button=document.createElement('button'),label=document.createElement('span'),value=document.createElement('span');
+            button.type='button';button.dataset.setting=key;label.textContent=t(entry[1]);
+            value.textContent=key==='language'?(settings.language==='vi'?'Tiếng Việt':'English'):key==='screenWidth'?t({small:'Small',medium:'Medium',large:'Large'}[settings.screenWidth]):key==='back'?'':settings.volumes[key]+'%';
+            button.append(label,value);button.onclick=function () {adjustTitleSetting(key,1,true);};list.appendChild(button);
+        });
+        var selected=list.querySelector('[data-setting="'+(focusKey||'language')+'"]');if(selected)selected.focus();
+    }
+    function adjustTitleSetting(key,step,wrap) {
+        if(key==='back') {closeTitleSettings();return;}
+        var before=settings[key];
+        try {
+            if(key==='language') {settings.language=settings.language==='en'?'vi':'en';settings.save();document.documentElement.lang=settings.language;}
+            else if(key==='screenWidth') {var widths=['small','medium','large'];settings.screenWidth=widths[(widths.indexOf(before)+step+widths.length)%widths.length];settings.save();applyScreenWidth();}
+            else {var volume=settings.volumes[key]+step*20;updateVolume(key,wrap && volume>100?0:Math.max(0,Math.min(100,volume)));}
+            document.getElementById('fnh-new-game').textContent=settings.translate('New Game');
+            document.getElementById('fnh-continue').textContent=settings.translate('Continue');
+            document.getElementById('fnh-open-settings').textContent=settings.translate('Settings');
+            document.getElementById('fnh-title-settings-error').textContent='';renderTitleSettings(key);
+        } catch(error) {if(key==='language'||key==='screenWidth')settings[key]=before;document.getElementById('fnh-title-settings-error').textContent=error.message;}
+    }
+    document.getElementById('fnh-open-settings').addEventListener('click', function () {
+        document.getElementById('fnh-end-actions').hidden=true;titleSettings.hidden=false;renderTitleSettings();
+    });
+    titleSettings.addEventListener('keydown',function (event) {
+        var action=inputName(event.key),buttons=Array.from(titleSettings.querySelectorAll('button')),index=buttons.indexOf(document.activeElement);
+        if(action==='cancel')closeTitleSettings();
+        else if(action==='up'||action==='down')buttons[(index+(action==='up'?-1:1)+buttons.length)%buttons.length].focus();
+        else if(action==='left'||action==='right')adjustTitleSetting(document.activeElement.dataset.setting,action==='left'?-1:1);
+        else if(action==='ok' && !event.repeat)document.activeElement.click();
+        else return;
+        event.preventDefault();event.stopPropagation();
+    });
     function handleEndKey(event) {
         var action = inputName(event.key);
         if (action === 'cancel' && !document.getElementById('fnh-end-save-panel').hidden) document.getElementById('fnh-end-save-back').click();
         else if (!document.getElementById('fnh-end-actions').hidden && ['up', 'down'].includes(action)) {
-            var buttons = Array.from(document.querySelectorAll('#fnh-end-actions > button:enabled'));
+            var buttons = Array.from(document.querySelectorAll('#fnh-end-actions > button:enabled:not([hidden])'));
             var index = buttons.findIndex(function (button) { return button.dataset.selected === 'true'; });
             buttons[(index + (action === 'up' ? -1 : 1) + buttons.length) % buttons.length].focus();
         } else if (action === 'ok' && !document.getElementById('fnh-end-actions').hidden) {

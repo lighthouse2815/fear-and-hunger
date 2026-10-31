@@ -55,7 +55,10 @@ nguyền vũ khí hiện đủ 19 mục, chọn đúng nhánh và không hỏi l
 Phím T đốt đuốc qua common event 289, C dùng Phase qua common event 257. Các
 nút **Đốt đuốc**/**Kỹ năng** gọi cùng luồng trên điện thoại. Z xác nhận/tương tác,
 X hủy/mở menu; phím tắt chỉ chạy trên bản đồ khi không có sự kiện đang chờ.
-Tab **Tùy chọn** chỉnh âm lượng tổng và từng nhóm, dùng WASD hoặc tự gán/bỏ
+Mục **Settings** ở màn hình chính chỉnh âm lượng tổng và từng nhóm, chọn ba mức
+kích thước màn hình và ngôn ngữ giao diện Anh/Việt. Nội dung game và hội thoại
+vẫn dùng tiếng Anh gốc. Tab **Tùy chọn** trong game cũng có các thiết lập này,
+cho phép dùng WASD hoặc tự gán/bỏ
 phím cho từng hành động. Cấu hình được lưu riêng trong trình duyệt và giữ khi
 tải lại trang; đặt lại bàn phím không đổi âm lượng. Âm lượng tổng và từng nhóm
 điều chỉnh 0–100%, giữ nguyên mức đã lưu khi chơi bình thường. Giảm âm lượng

@@ -98,12 +98,16 @@
         #fnh-end-actions label { display: block; font-size: .7em; }
         #fnh-end-title { margin: 0 0 8px; font: inherit; text-shadow: 1px 1px #000; }
         #fnh-end-screen { container-type: inline-size; }
-        #fnh-end-screen[data-scene='title'] #fnh-end-actions { width: 29.4118%; height: 17.3077%; bottom: 15.3846%; padding: 2.2059cqw; background: #000b; border: 0; box-shadow: none; color: white; font: 3.4314cqw/4.4118cqw GameFont, serif; text-shadow: 1px 1px 2px #000, -1px -1px 2px #000; }
+        #fnh-end-screen[data-scene='title'] #fnh-end-actions { width: 29.4118%; height: 23.0769%; bottom: 15.3846%; padding: 2.2059cqw; background: #000b; border: 0; box-shadow: none; color: white; font: 3.4314cqw/4.4118cqw GameFont, serif; text-shadow: 1px 1px 2px #000, -1px -1px 2px #000; }
         #fnh-title-frame { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent; pointer-events: none; }
         #fnh-end-screen[data-scene='title'] #fnh-end-actions > button { height: 4.4118cqw; padding: 0 .49cqw; text-align: left; outline: none; color: inherit; text-shadow: inherit; }
         #fnh-end-actions > button:focus-visible { outline: 1px solid #ded3bb; }
         #fnh-end-screen[data-scene='title'] #fnh-end-actions > button[data-selected='true'] { background: #b99aaa59; box-shadow: inset 0 0 0 1px #eee8; }
         #fnh-end-screen [hidden], #fnh-end-actions button[hidden] { display: none; }
+        #fnh-title-settings { position: absolute; inset: 8% 12%; box-sizing: border-box; padding: 2.2059cqw; overflow-y: auto; background: #080808f0; color: white; font: 3.4314cqw/4.4118cqw GameFont, serif; }
+        #fnh-title-settings button { display: flex; justify-content: space-between; width: 100%; height: 5.2cqw; margin: 0; padding: 0 .49cqw; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
+        #fnh-title-settings button:focus { outline: none; background: #b99aaa59; box-shadow: inset 0 0 0 1px #eee8; }
+        #fnh-title-settings-error:empty { display: none; }
         #fnh-end-save-panel { position: absolute; inset: 12% 10%; padding: 24px; background: #080808f5; border: 1px solid #a9a49a; font: clamp(16px, 3vw, 26px) GameFont, serif; }
         #fnh-end-save-panel select { display: block; width: 100%; margin: 20px 0; font: inherit; }
         #fnh-end-save-panel button { font: inherit; }
@@ -291,11 +295,13 @@
             <img id="fnh-end-background" alt="">
             <img id="fnh-end-overlay" alt="" hidden>
             <div id="fnh-end-actions">
-                <canvas id="fnh-title-frame" width="240" height="108" aria-hidden="true" hidden></canvas>
+                <canvas id="fnh-title-frame" width="240" height="144" aria-hidden="true" hidden></canvas>
                 <h2 id="fnh-end-title"></h2>
                 <button id="fnh-new-game" type="button">Chơi mới</button>
                 <button id="fnh-continue" type="button">Continue</button>
+                <button id="fnh-open-settings" type="button">Settings</button>
             </div>
+            <section id="fnh-title-settings" hidden aria-label="Settings"><div id="fnh-title-settings-list"></div><p id="fnh-title-settings-error" role="status"></p></section>
             <section id="fnh-end-save-panel" hidden aria-label="Load game">
                 <div id="fnh-end-file-list"></div>
                 <label for="fnh-end-save-slot">Ô lưu</label><select id="fnh-end-save-slot"></select>

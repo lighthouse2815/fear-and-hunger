@@ -402,6 +402,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if (process.env.FNH_BROWSER_SCOPE === 'settings') {
+            await require('./browser-settings')({cdp,url:running.url,evalPage,waitFor,check});
+            check('không có lỗi runtime trong cài đặt',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất '+passed+' kiểm tra cài đặt.');return;
+        }
         if (process.env.FNH_BROWSER_SCOPE === 'party') {
             await require('./browser-party')({cdp,url:running.url,evalPage,waitFor,clickElement,check,screenshot});
             check('không có lỗi runtime khi tuyển và hiển thị đồng đội',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
@@ -3244,11 +3249,11 @@ async function main() {
             'document.querySelector("#fnh-end-title").textContent === FNHStandalonePreview.engine.database.System.gameTitle && document.querySelector("#fnh-new-game").getBoundingClientRect().width > 0', false, false));
         check('tiêu đề tôn trọng cấu hình không vẽ tên chồng lên ảnh', await evalPage(cdp,
             '!FNHStandalonePreview.engine.database.System.optDrawTitle && document.querySelector("#fnh-end-title").hidden && document.querySelector("#fnh-end-actions").getBoundingClientRect().width > 0', false, false));
-        check('tiêu đề giữ hai lệnh và tách màn tải theo bản gốc', await evalPage(cdp,`(()=>{
+        check('tiêu đề có ba lệnh và màn tải riêng', await evalPage(cdp,`(()=>{
             const panel=document.querySelector('#fnh-end-actions'),rect=panel.getBoundingClientRect(),stage=document.querySelector('.fnh-stage').getBoundingClientRect();
-            return Array.from(panel.querySelectorAll('button')).map(button=>button.textContent).join(',')==='New Game,Continue' &&
+            return Array.from(panel.querySelectorAll('button:not([hidden])')).map(button=>button.textContent).join(',')==='New Game,Continue,Settings' &&
                 document.querySelector('#fnh-end-save-panel').hidden && Math.abs(rect.width/stage.width*816-240)<1 &&
-                Math.abs(rect.height/stage.height*624-108)<1 && !document.querySelector('#fnh-title-frame').hidden;
+                Math.abs(rect.height/stage.height*624-144)<1 && !document.querySelector('#fnh-title-frame').hidden;
         })()`,false,false));
         await evalPage(cdp, `(() => {
             const state=new FNHStandaloneState.GameState({mapId:74,x:8,y:8,direction:8,party:[1],switches:{246:true},variables:{121:1,8235:72}},FNHStandalonePreview.engine.database);

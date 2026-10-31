@@ -79,6 +79,9 @@ module.exports=async function ({cdp,url,evalPage,waitFor,clickElement,check,scre
     await focusTab('options');await clickElement(cdp,'[data-menu-key=options-Audio]');await evalPage(cdp,'document.querySelector("[data-volume=bgm]").focus()',false,false);await key('ArrowLeft','ArrowLeft');
     check('Options chỉnh âm lượng bằng trái/phải và cập nhật số/thanh',await evalPage(cdp,'FNHStandalonePreview.settings.volumes.bgm===80 && document.querySelector("[data-volume=bgm]").textContent.includes("80%")',false,false));
     await clickElement(cdp,'[data-menu-key=options-General]');
+    await clickElement(cdp,'[data-menu-key=option-language]');
+    check('đổi ngôn ngữ cập nhật menu và lưu tiếng Việt',await evalPage(cdp,`FNHStandalonePreview.settings.language==='vi' && document.querySelector('[data-menu-key=option-screenWidth]').textContent.includes('Cỡ màn hình') && document.querySelector('[data-menu-tab=options]').getAttribute('aria-label')==='Cài đặt' && JSON.parse(localStorage.getItem('FNH_STANDALONE_PREVIEW_SETTINGS')).language==='vi'`,false,false));
+    await clickElement(cdp,'[data-menu-key=option-language]');
     await clickElement(cdp,'[data-menu-key=option-screenWidth]');
     check('chọn màn hình lớn đổi kích thước và lưu lại',await evalPage(cdp,`FNHStandalonePreview.settings.screenWidth==='large' && getComputedStyle(document.documentElement).getPropertyValue('--fnh-screen-width').trim()==='1088px' && JSON.parse(localStorage.getItem('FNH_STANDALONE_PREVIEW_SETTINGS')).screenWidth==='large'`,false,false));
     await clickElement(cdp,'[data-menu-key=option-screenWidth]');

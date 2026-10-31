@@ -54,6 +54,7 @@
     };
     BattleUi.prototype.render = function (focus) {
         var ui = this, engine = this.engine, battle = engine.battle.battle;
+        var t=this.options.settings.translate.bind(this.options.settings);
         var previousFocus=!focus && this.panel.contains(document.activeElement) ? document.activeElement.textContent : null;
         var previousTarget=previousFocus!==null && document.activeElement.dataset.target;
         this.panel.hidden = !battle || engine.state.scene !== 'battle' || !!battle.result;
@@ -74,7 +75,7 @@
             var name = document.createElement('span'); name.textContent = actor.name; row.appendChild(name);
             [['Body',actor.hp,engine.state.actorParam(actor.id,0)],['Mind',actor.mp,engine.state.actorParam(actor.id,1)]].forEach(function (entry) {
                 var label = document.createElement('span'), meter = document.createElement('meter');
-                label.textContent = entry[0] + ' ' + entry[1]; meter.min = 0; meter.max = Math.max(1,entry[2]); meter.value = entry[1];
+                label.textContent = t(entry[0]) + ' ' + entry[1]; meter.min = 0; meter.max = Math.max(1,entry[2]); meter.value = entry[1];
                 meter.setAttribute('aria-label', entry[0] + ' ' + actor.name); label.appendChild(meter); row.appendChild(label);
             });
             var icons = document.createElement('span'); icons.className = 'fnh-combat-icons';
@@ -88,9 +89,9 @@
         commands.replaceChildren(); list.replaceChildren(); targets.replaceChildren();
         commands.hidden = this.mode !== 'command' && this.mode !== 'party';
         list.hidden = !['skill','item'].includes(this.mode); targets.hidden = this.mode !== 'target';
-        var help = document.getElementById('fnh-combat-help'); help.textContent = battle.extraTurn ? 'Extra turn' : battle.escapeFailed ? 'Could not escape!' : '';
+        var help = document.getElementById('fnh-combat-help'); help.textContent = t(battle.extraTurn ? 'Extra turn' : battle.escapeFailed ? 'Could not escape!' : '');
         function button(parent, text, enabled, action, description) {
-            var node = document.createElement('button'); node.type = 'button'; node.textContent = text; node.disabled = !active || !enabled;
+            var node = document.createElement('button'); node.type = 'button'; node.textContent = t(text); node.disabled = !active || !enabled;
             node.onclick = action; node.onfocus = node.onmouseenter = function () {
                 parent.querySelectorAll('button').forEach(function (other) { other.dataset.selected = String(other === node); });
                 if (description) help.textContent = root.FNHStandaloneText.formatText(description, engine.state);
@@ -146,7 +147,7 @@
                     }).catch(function (error) { help.textContent = error.message; });
                 }
             });
-            help.textContent = data.name + ' — Select a target';
+            help.textContent = data.name + ' — ' + t('Select a target');
         }
         if (focus || previousFocus!==null) {
             var first = this.panel.querySelector('#fnh-combat-commands:not([hidden]) button:enabled, #fnh-combat-list:not([hidden]) button:enabled, #fnh-combat-targets:not([hidden]) button:enabled');

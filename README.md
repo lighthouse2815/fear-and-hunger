@@ -31,8 +31,9 @@ sự kiện, hội thoại và tài nguyên.
 
 Menu hiện ngay khi mở web. Nhạc bật sau lần bấm phím/chuột đầu tiên.
 Dùng phím mũi tên để di chuyển, Enter/Z để xác nhận/tương tác, Esc/X để quay lại
-hoặc mở menu. Nút **⚙ Cài đặt** chỉnh âm lượng tổng, nhạc và hiệu ứng; lựa chọn
-được lưu tự động. Hộp thoại nằm phía dưới vùng game.
+hoặc mở menu. Chọn **Settings** ở màn hình chính để chỉnh âm lượng, chọn ba mức
+kích thước màn hình và đổi ngôn ngữ giao diện Anh/Việt; lựa chọn được lưu tự động.
+Hội thoại và nội dung game vẫn dùng tiếng Anh gốc.
 
 Save nằm trong localStorage; giữ cùng trình duyệt và địa chỉ/cổng để tiếp tục save.
 Có thể copy nguyên thư mục `game/` sang nơi khác rồi chạy `npm start` trong đó.
