@@ -451,7 +451,14 @@
                     setRichText(help, details.help[index] || '');
                     if (details.message[index]) setRichText(message, details.message[index]);
                 };
-                button.onclick = function () {
+                button.onclick = function (event) {
+                    if (interpreter) {
+                        delete interpreter.coinChoiceShift;
+                        if (choices.some(function (choice) { return /^heads$/i.test(choice.trim()); }) &&
+                            choices.some(function (choice) { return /^tails$/i.test(choice.trim()); })) {
+                            interpreter.coinChoiceShift = engine.buttons.has('shift') || event.shiftKey;
+                        }
+                    }
                     close();
                     resolve(index);
                 };
@@ -906,6 +913,9 @@
     document.addEventListener('keydown', function (event) {
         finishSelectionSound();
         var action=inputName(event.key);
+        if (action === 'shift' && engine.messageRunning && !document.querySelector('dialog[open]')) {
+            heldKeys.set(event.code || event.key.toLowerCase(), action);engine.buttons.add(action);
+        }
         if (!['up','down','left','right','pageup','pagedown'].includes(action)) return;
         var before=selectionIdentity(event.target);
         if (!before) return;

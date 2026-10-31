@@ -584,7 +584,15 @@
                 var enemy = engine.battle.enemy(parameters[1]);
                 return !!enemy && (parameters[2] === 0 ? enemy.alive && !enemy.hidden : enemy.states.includes(parameters[3]));
             }
-            if (parameters[0] === 11) return engine.buttons.has(parameters[1]);
+            if (parameters[0] === 11) {
+                var previous=interpreter.commands[interpreter.index-2], before=interpreter.commands[interpreter.index-3];
+                // Sự kiện gốc kiểm tra Lucky coin rồi Shift sau khi người chơi đã xác nhận.
+                if (parameters[1] === 'shift' && interpreter.coinChoiceShift !== undefined && previous && before &&
+                    previous.code === 111 && previous.parameters[0] === 8 && previous.parameters[1] === 201 && before.code === 404) {
+                    var held=interpreter.coinChoiceShift;delete interpreter.coinChoiceShift;return held;
+                }
+                return engine.buttons.has(parameters[1]);
+            }
             if (parameters[0] === 6) {
                 var character = engine.characterFor(parameters[1], interpreter);
                 return !!character && character.direction === parameters[2];

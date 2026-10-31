@@ -402,6 +402,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if (process.env.FNH_BROWSER_SCOPE === 'coin') {
+            await require('./browser-coin')({cdp,url:running.url,evalPage,waitFor,check});
+            check('không có lỗi runtime khi tung đồng xu',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất '+passed+' kiểm tra đồng xu.');return;
+        }
         if (process.env.FNH_BROWSER_SCOPE === 'beat') {
             await require('./browser-beat')({cdp,url:running.url,evalPage,waitFor,check});
             check('không có lỗi runtime khi đánh xác',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
@@ -481,6 +486,7 @@ async function main() {
 
         await require('./browser-door')({cdp,url:running.url,evalPage,waitFor,check});
         await require('./browser-beat')({cdp,url:running.url,evalPage,waitFor,check});
+        await require('./browser-coin')({cdp,url:running.url,evalPage,waitFor,check});
 
         const namespace = 'smoke-' + process.pid + '-' + Date.now().toString(36);
         const url = running.url + 'legacy.html?fnh_save_ns=' + encodeURIComponent(namespace);
