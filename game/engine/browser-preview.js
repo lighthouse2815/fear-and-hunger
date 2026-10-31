@@ -934,6 +934,21 @@
     });
     document.addEventListener('keydown', function (event) {
         audio.unlock();
+        var state=engine.state, picture=state && state.screen.pictures[1];
+        if (ready && automaticEvents && state && state.scene === 'map' && state.mapId === 10 &&
+            picture && picture.name === 'character_select_bg' && !state.switchValue(214) &&
+            !state.selfSwitchValue(10,1,'A') && !engine.eventRunning && !engine.messageRunning &&
+            !document.querySelector('dialog[open]') && inputName(event.key) === 'cancel') {
+            event.preventDefault();
+            if (!event.repeat) {
+                clearInput(); state.scene = 'title'; titleFlow = true;
+                if (scheduler) scheduler.tick();
+                renderEndScreen(); renderTimer();
+                var cancelSound=engine.database.System.sounds[2];
+                if (cancelSound && cancelSound.name) audio.play('se',cancelSound);
+            }
+            return;
+        }
         if (presentationInput()) {
             if(!videoPlay.hidden && inputName(event.key)==='ok') {event.preventDefault();if(!event.repeat)videoPlay.click();return;}
             if (engine.state.scene === 'title' && !document.getElementById('fnh-end-screen').contains(event.target)) handleEndKey(event);
