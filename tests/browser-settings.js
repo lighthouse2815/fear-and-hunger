@@ -15,6 +15,7 @@ module.exports=async function ({cdp,url,evalPage,waitFor,check}) {
     await key('ArrowRight');
     check('tiếng Việt cập nhật ngay giao diện cài đặt',await evalPage(cdp,`document.documentElement.lang==='vi' && document.querySelector('[data-setting=screenWidth]').textContent.includes('Cỡ màn hình') && document.querySelector('#fnh-open-settings').textContent==='Cài đặt'`,false,false));
     await key('ArrowDown');await key('ArrowRight');await key('ArrowDown');
+    check('ảnh tiêu đề và chân dung giữ cạnh sắc khi phóng lớn',await evalPage(cdp,`(()=>{const title=document.querySelector('#fnh-end-overlay'),face=document.querySelector('#fnh-name-face');return title.naturalWidth===816 && getComputedStyle(title).imageRendering==='pixelated' && getComputedStyle(face).imageRendering==='pixelated' && getComputedStyle(document.querySelector('#fnh-loading')).imageRendering==='pixelated';})()`,false,false));
     await waitFor(cdp,'cursorSounds.length===5',2000,'âm thanh điều hướng cài đặt');
     await evalPage(cdp,'window.cursorBeforeBoundary=cursorSounds.length',false,false);await key('ArrowRight');
     await evalPage(cdp,'new Promise(resolve=>setTimeout(resolve,30))',true,false);
