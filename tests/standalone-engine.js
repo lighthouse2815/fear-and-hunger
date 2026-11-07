@@ -99,5 +99,15 @@ async function fetchFromGame(relativeUrl) {
     assert.match(counterMessages[0], /faint sound/, 'event cửa thật phía sau quầy nhận tương tác');
     assert.equal(counterDoor.choices[0].selected, 3);
     assert.deepEqual([engine.state.x, engine.state.y], [16, 63]);
+    for (const y of [69, 70, 71]) {
+        await engine.restore({ mapId: 51, x: 54, y, direction: 4, party: [1] });
+        assert.equal(engine.move(4), false, 'không đi xuyên tường trang trí ở Map051 ô 53,' + y);
+        assert.deepEqual([engine.state.x, engine.state.y], [54, y]);
+    }
+    await engine.restore({ mapId: 51, x: 53, y: 69, direction: 6, party: [1] });
+    assert.equal(engine.move(6), true, 'nhân vật đã kẹt trong tường vẫn đi ra hành lang được');
+    assert.deepEqual([engine.state.x, engine.state.y], [54, 69]);
+    await engine.restore({ mapId: 51, x: 54, y: 70, direction: 8, party: [1] });
+    assert.equal(engine.move(8), true, 'hành lang cạnh tường vẫn đi lại được');
     console.log('ĐẠT: game engine độc lập boot, di chuyển, chạy event và save/restore.');
 })().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });
