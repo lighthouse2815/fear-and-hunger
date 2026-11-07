@@ -483,7 +483,7 @@
     };
 
     CanvasRenderer.prototype.drawLighting = function (runtime, sources, player, viewport, map) {
-        if (!runtime.definitions.length) return;
+        if (!runtime.definitions.length || player.hasPartyNameCheat()) return;
         if (!this.lightCanvas) this.lightCanvas = document.createElement('canvas');
         var mask = this.lightCanvas;
         if (mask.width !== this.canvas.width) mask.width = this.canvas.width;
