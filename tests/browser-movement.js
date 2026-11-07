@@ -53,4 +53,11 @@ module.exports=async function ({cdp,url,evalPage,waitFor,check,screenshot}) {
         await key('keyUp','t','KeyT');await key('keyUp','ArrowRight','ArrowRight');await drive(1,40);
         await evalPage(cdp,'FNHStandalonePreview.engine.database.CommonEvents[289]=savedTorchEvent',false,false);
     }
+    await evalPage(cdp,`(async()=>{const e=FNHStandalonePreview.engine;
+        await e.restore({mapId:16,x:35,y:39,party:[1],alwaysDash:false});e.autonomousEnabled=false;
+        e.buttons.clear();walkTrace=[];document.querySelector('#fnh-canvas').focus();})()`,true,false);
+    await key('keyDown','ArrowRight','ArrowRight');await drive(1,1);await key('keyUp','ArrowRight','ArrowRight');await drive(1,20);
+    check('đến đúng ô đầu thang trên Map016',await evalPage(cdp,'FNHStandalonePreview.engine.state.x===36 && FNHStandalonePreview.engine.state.y===39',false,false));
+    await key('keyDown','ArrowDown','ArrowDown');await drive(1,64);await key('keyUp','ArrowDown','ArrowDown');await drive(1,20);
+    check('đi xuống thang Map016 bằng bàn phím qua tile sự kiện',await evalPage(cdp,'FNHStandalonePreview.engine.state.x===36 && FNHStandalonePreview.engine.state.y===43',false,false));
 };

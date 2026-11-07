@@ -215,8 +215,15 @@
     };
 
     GameMap.prototype.tilePassable = function (x, y, bit) {
+        var tiles = [];
+        this.eventAt(x, y).forEach(function (event) {
+            var page = this.eventPage(event);
+            if (page && event.tileId > 0 && event.priorityType === 0 && !event.through) tiles.push(event.tileId);
+        }, this);
         for (var z = 3; z >= 0; z -= 1) {
-            var tileId = this.tileId(x, y, z);
+            tiles.push(this.tileId(x, y, z));
+        }
+        for (var tileId of tiles) {
             var flag = this.tileset.flags && this.tileset.flags[tileId] || 0;
             if ((flag & 0x10) !== 0) continue;
             return (flag & bit) === 0;

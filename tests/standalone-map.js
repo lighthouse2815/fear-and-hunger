@@ -49,6 +49,39 @@ assert.equal(directional.isPassable(0, 0, 6), true, 'tile star không chặn đ�
 layers[7] = 3;
 assert.equal(directional.isPassable(0, 0, 6), false, 'kiểm tra cả hướng đi vào ô đích');
 
+// Sự kiện tile dưới nhân vật được xét trước các lớp bản đồ, kể cả sau đổi trang/vị trí.
+const eventFlags = [16, 0, 15, 16];
+const eventLayers = Array(12).fill(0);
+eventLayers[0] = eventLayers[1] = 1;
+const tileEventMap = new GameMap({ id: 2, width: 2, height: 1, data: eventLayers, events: [{
+    id: 1, x: 1, y: 0, pages: [
+        { conditions: {}, image: { tileId: 2 }, priorityType: 0, through: false },
+        { conditions: { switch1Valid: true, switch1Id: 2 }, image: { tileId: 3 }, priorityType: 0, through: false }
+    ]
+}] }, { flags: eventFlags }, state);
+assert.equal(tileEventMap.isPassable(0, 0, 6), false, 'tile sự kiện chặn lối trên nền đi được');
+tileEventMap.eventById(1).through = true;
+assert.equal(tileEventMap.isPassable(0, 0, 6), true, 'bỏ qua tile sự kiện bật xuyên qua');
+tileEventMap.eventById(1).through = false;
+tileEventMap.eventById(1).priorityType = 1;
+assert.equal(tileEventMap.isPassable(0, 0, 6), true, 'không xét tile sự kiện cùng lớp nhân vật');
+tileEventMap.eventById(1).priorityType = 0;
+tileEventMap.locateEvent(1, 0, 0);
+assert.equal(tileEventMap.isPassable(0, 0, 6), false, 'tile sự kiện chặn cả ô đang đứng');
+state.setSwitch(2, true);
+assert.equal(tileEventMap.isPassable(0, 0, 6), true, 'trang mới có tile star không chặn đường');
+state.setSwitch(2, false);
+tileEventMap.eventById(1).erased = true;
+assert.equal(tileEventMap.isPassable(0, 0, 6), true, 'bỏ qua sự kiện đã xóa');
+
+const villageData = read('Map016.json');
+const village = new GameMap(Object.assign({ id: 16 }, villageData), tilesets[villageData.tilesetId], state);
+assert.equal(village.isPassable(35, 39, 2), false, 'phía trái thang vẫn bị chặn như game gốc');
+for (const y of [39, 40, 41, 42]) {
+    assert.equal(village.isPassable(36, y, 2), true, 'đi xuống thang thật ở Map016, hàng ' + y);
+    assert.equal(village.isPassable(36, y + 1, 8), true, 'đi lên thang thật ở Map016, hàng ' + (y + 1));
+}
+
 directional.events.push({ id: 1, x: 1, y: 0, pages: [
     { conditions: { switch1Valid: true, switch1Id: 1 }, priorityType: 1, through: false }
 ] });
