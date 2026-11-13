@@ -898,7 +898,7 @@
     }
     document.addEventListener('pointerdown', function () { audio.unlock(); });
     function inputName(key) {
-        return settings.actionFor(key);
+        return key.indexOf('fnh-touch-') === 0 ? key.slice(10) : settings.actionFor(key);
     }
     var selectionPanels = '#fnh-end-actions, #fnh-title-settings, #fnh-end-file-list, #fnh-choices, #fnh-name-dialog, #fnh-menu-dialog, #fnh-combat';
     function selectionIdentity(element) {
@@ -938,6 +938,7 @@
     }
     function clearInput() {
         engine.buttons.clear(); inputPulses.clear(); commonKeys.clear(); heldPointers.clear(); heldKeys.clear();
+        resetMobileInput();
     }
     function releaseButton(name) {
         if (!inputPulses.has(name) && !Array.from(heldPointers.values()).includes(name) && !Array.from(heldKeys.values()).includes(name)) engine.buttons.delete(name);
@@ -1056,12 +1057,104 @@
         if (direction) perform(function () { return step(direction); });
         else perform(interact);
     });
-    var touchMenuBack = document.getElementById('fnh-touch-menu-back'), menuFocusBeforeTouch;
-    touchMenuBack.addEventListener('pointerdown', function () { menuFocusBeforeTouch = document.activeElement; });
-    touchMenuBack.addEventListener('click', function () {
-        if (menuFocusBeforeTouch && menuUi.dialog.contains(menuFocusBeforeTouch)) menuFocusBeforeTouch.focus({preventScroll:true});
-        menuFocusBeforeTouch = null; menuUi.back();
+    var mobile = document.getElementById('fnh-mobile'), joystick = document.getElementById('fnh-joystick');
+    var knob = document.getElementById('fnh-joystick-knob'), mobileAction = document.getElementById('fnh-mobile-action');
+    var joystickPointer = null, joystickDirection = '', joystickRepeat = null, actionPointer = null, actionTimer = null, actionHeld = false;
+    function resetMobileInput() {
+        clearInterval(joystickRepeat); clearTimeout(actionTimer);
+        joystickRepeat = actionTimer = null; joystickPointer = actionPointer = null; joystickDirection = ''; actionHeld = false;
+        if (knob) knob.style.transform = '';
+    }
+    document.querySelector('#fnh-mobile-start button').addEventListener('click', function () {
+        document.body.classList.add('fnh-mobile-started');
+        var request = document.documentElement.requestFullscreen;
+        if (!request) return;
+        try {
+            Promise.resolve(request.call(document.documentElement)).then(function () {
+                if (screen.orientation && screen.orientation.lock) return screen.orientation.lock('landscape');
+            }).catch(function () {});
+        } catch (_) {}
     });
+    function updateMobileLayout() {
+        var stage = document.querySelector('.fnh-stage');
+        var landscape = window.matchMedia('(pointer: coarse) and (orientation: landscape)').matches;
+        stage.style.setProperty('--fnh-mobile-scale-x', landscape && stage.offsetWidth ? window.innerWidth / stage.offsetWidth : 1);
+        if (!landscape && window.matchMedia('(pointer: coarse)').matches) clearInput();
+    }
+    window.addEventListener('resize', updateMobileLayout);
+    updateMobileLayout();
+    new MutationObserver(function () {
+        var dialog = document.querySelector('dialog[open]');
+        var parent = dialog || document.querySelector('main');
+        if (mobile.parentNode !== parent) parent.appendChild(mobile);
+    }).observe(document.body, {subtree:true, attributes:true, attributeFilter:['open']});
+    function virtualKey(name) {
+        var target = document.activeElement || canvas;
+        var key = document.getElementById('fnh-name-dialog').open ?
+            {up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',ok:'Enter',cancel:'Escape'}[name] : 'fnh-touch-'+name;
+        target.dispatchEvent(new KeyboardEvent('keydown', {key:key, bubbles:true, cancelable:true}));
+        target.dispatchEvent(new KeyboardEvent('keyup', {key:key, bubbles:true, cancelable:true}));
+    }
+    function mobileSelection() {
+        return !!document.querySelector('dialog[open]') || presentationInput() || engine.state.scene === 'battle' || !!cancelChoice;
+    }
+    function setJoystickDirection(name) {
+        if (name === joystickDirection) return;
+        var old = joystickDirection; joystickDirection = name;
+        clearInterval(joystickRepeat); joystickRepeat = null;
+        heldPointers.delete(joystickPointer); if (old) releaseButton(old);
+        if (!name || !ready) return;
+        if (mobileSelection()) {
+            virtualKey(name);
+            joystickRepeat = setInterval(function () { virtualKey(name); }, 220);
+        } else if (engine.state.scene === 'map' && !engine.messageRunning) {
+            heldPointers.set(joystickPointer,name); engine.buttons.add(name);
+            if (pictureInput()) inputPulses.set(name,{remaining:3});
+            else perform(function () { return step({down:2,left:4,right:6,up:8}[name]); });
+        }
+    }
+    function moveJoystick(event) {
+        var rect = joystick.getBoundingClientRect(), radius = rect.width / 2;
+        var x = event.clientX - rect.left - radius, y = event.clientY - rect.top - radius;
+        var distance = Math.hypot(x,y), limit = radius * .55, scale = distance > limit ? limit / distance : 1;
+        knob.style.transform = 'translate(calc(-50% + ' + x * scale + 'px), calc(-50% + ' + y * scale + 'px))';
+        var name = distance < radius * .2 ? '' : Math.abs(x) > Math.abs(y) ? (x < 0 ? 'left' : 'right') : (y < 0 ? 'up' : 'down');
+        setJoystickDirection(name);
+    }
+    joystick.addEventListener('pointerdown', function (event) {
+        if (!ready || joystickPointer !== null || event.button !== 0) return;
+        event.preventDefault(); joystickPointer = event.pointerId; joystick.setPointerCapture(event.pointerId); moveJoystick(event);
+    });
+    joystick.addEventListener('pointermove', function (event) { if (event.pointerId === joystickPointer) moveJoystick(event); });
+    function stopJoystick(event) {
+        if (event.pointerId !== joystickPointer) return;
+        setJoystickDirection(''); joystickPointer = null; knob.style.transform = '';
+    }
+    ['pointerup','pointercancel','lostpointercapture'].forEach(function (type) { joystick.addEventListener(type,stopJoystick); });
+    function mobileCancel() {
+        if (document.getElementById('fnh-menu-dialog').open) menuUi.back();
+        else if (cancelChoice) cancelChoice();
+        else if (canCancelCharacterSelection()) cancelCharacterSelection();
+        else if (mobileSelection()) virtualKey('cancel');
+        else if (!scrollAnimation && !pictureInput() && !engine.eventRunning && !engine.messageRunning && engine.openMenu()) menuUi.render();
+    }
+    function mobileConfirm() {
+        if (mobileSelection()) virtualKey('ok');
+        else if (!next.hidden) next.click();
+        else controls.querySelector('[data-direction="0"]').click();
+    }
+    mobileAction.addEventListener('pointerdown', function (event) {
+        if (!ready || actionPointer !== null || event.button !== 0) return;
+        event.preventDefault(); actionPointer = event.pointerId; actionHeld = false; mobileAction.setPointerCapture(event.pointerId);
+        actionTimer = setTimeout(function () { actionTimer = null; actionHeld = true; mobileCancel(); }, 550);
+    });
+    function finishMobileAction(event) {
+        if (event.pointerId !== actionPointer) return;
+        clearTimeout(actionTimer); actionTimer = null; actionPointer = null;
+        if (event.type === 'pointerup' && !actionHeld) mobileConfirm();
+        actionHeld = false;
+    }
+    ['pointerup','pointercancel','lostpointercapture'].forEach(function (type) { mobileAction.addEventListener(type,finishMobileAction); });
     document.getElementById('fnh-save').addEventListener('click', function () {
         if (presentationInput()) return;
         perform(function () {

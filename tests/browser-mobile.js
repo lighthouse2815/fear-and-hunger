@@ -1,52 +1,73 @@
 'use strict';
 module.exports = async function ({cdp,url,evalPage,waitFor,check}) {
-    await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true,screenOrientation:{type:'portraitPrimary',angle:0}});
     await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:2});
     await cdp.send('Page.navigate',{url:url+'standalone.html?events=1&map=74'});
     await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.scheduler && document.querySelector("#fnh-loading").hidden',30000,'khởi động game trên điện thoại');
     await evalPage(cdp,`(()=>{const a=FNHStandalonePreview;a.scheduler.stop();a.engine.state.x=4;a.engine.state.y=0;a.engine.state.through=true;})()`,false,false);
-    async function point(selector) {
-        return evalPage(cdp,`(async()=>{
-            const button=document.querySelector(${JSON.stringify(selector)});button.scrollIntoView({block:'center',behavior:'instant'});
-            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-            const rect=button.getBoundingClientRect();return {x:rect.x+rect.width/2,y:rect.y+rect.height/2,id:1};
-        })()`,true,false);
+    async function point(selector, x=0.5, y=0.5) {
+        return evalPage(cdp,`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:r.left+r.width*${x},y:r.top+r.height*${y},id:1};})()`,false,false);
     }
-    async function tap(selector) {
-        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[await point(selector)]});
+    async function press(selector, duration=0, x=0.5, y=0.5) {
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[await point(selector,x,y)]});
+        if(duration) await new Promise(resolve=>setTimeout(resolve,duration));
         await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     }
-    check('nút điều khiển cảm ứng đủ lớn và hiển thị trong game',await evalPage(cdp,`(()=>{
-        const controls=document.querySelector('#fnh-controls');
-        return getComputedStyle(controls).display==='grid' && [...controls.querySelectorAll('button')].every(button=>button.getBoundingClientRect().height>=44);
+    check('màn hình đầu yêu cầu nằm ngang và toàn màn hình',await evalPage(cdp,'getComputedStyle(document.querySelector("#fnh-mobile-start")).display!=="none"',false,false));
+    await press('#fnh-mobile-start button');
+    check('chạm bắt đầu yêu cầu toàn màn hình',await evalPage(cdp,'document.fullscreenElement===document.documentElement',false,false));
+    check('màn hình dọc chặn điều khiển và yêu cầu xoay máy',await evalPage(cdp,'getComputedStyle(document.querySelector("#fnh-mobile-rotate")).display!=="none" && getComputedStyle(document.querySelector("#fnh-mobile-controls")).display==="none"',false,false));
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:844,height:390,deviceScaleFactor:1,mobile:true,screenOrientation:{type:'landscapePrimary',angle:90}});
+    await waitFor(cdp,'getComputedStyle(document.querySelector("#fnh-mobile-rotate")).display==="none"',5000,'xoay ngang');
+    await waitFor(cdp,'Math.abs(document.querySelector(".fnh-stage").getBoundingClientRect().right-innerWidth)<1',5000,'khung game phủ chiều ngang');
+    check('cần tròn bên trái và nút OK bên phải nằm trên khung game',await evalPage(cdp,`(()=>{
+        const stage=document.querySelector('.fnh-stage').getBoundingClientRect(),j=document.querySelector('#fnh-joystick').getBoundingClientRect(),a=document.querySelector('#fnh-mobile-action').getBoundingClientRect();
+        return getComputedStyle(document.querySelector('#fnh-controls')).display==='none' && Math.abs(stage.left)<1 && Math.abs(stage.right-innerWidth)<1 && j.width>=76 && a.width>=76 && Math.abs(j.width-j.height)<1 && j.left>=stage.left && a.right<=stage.right && j.right<a.left && j.bottom<=stage.bottom && a.bottom<=stage.bottom;
     })()`,false,false));
-    const right=await point('#fnh-controls [data-direction="6"]');
+    const right=await point('#fnh-joystick',.85,.5);
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[right]});
-    await waitFor(cdp,'FNHStandalonePreview.engine.state.x>=6',5000,'giữ nút để di chuyển');
+    await waitFor(cdp,'FNHStandalonePreview.engine.state.x>=6',5000,'giữ cần sang phải');
+    const action={...await point('#fnh-mobile-action'),id:2};
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[right,action]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[action]});
+    check('chạm OK không làm mất hướng cần đang giữ',await evalPage(cdp,'FNHStandalonePreview.engine.buttons.has("right")',false,false));
     await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-    await waitFor(cdp,'!FNHStandalonePreview.engine.buttons.has("right") && !FNHStandalonePreview.engine.state.moveFrames',5000,'thả nút dừng di chuyển');
-    check('giữ và thả nút cảm ứng di chuyển rồi dừng',await evalPage(cdp,'FNHStandalonePreview.engine.state.x>=6 && !FNHStandalonePreview.engine.buttons.has("right")',false,false));
-    await tap('#fnh-controls [data-action="cancel"]');
-    await waitFor(cdp,'document.querySelector("#fnh-menu-dialog").open',5000,'mở menu bằng cảm ứng');
-    check('nút quay lại hiện trong menu điện thoại',await evalPage(cdp,'document.querySelector("#fnh-touch-menu-back").getBoundingClientRect().height>=44',false,false));
-    await tap('#fnh-touch-menu-back');
-    await waitFor(cdp,'!document.querySelector("#fnh-menu-dialog").open',5000,'đóng menu bằng cảm ứng');
-    await evalPage(cdp,`(()=>{
-        window.__mobileChoice=null;
-        FNHStandalonePreview.scheduler.handlers.choice(['Một','Hai'],-2,null,
-            {disabled:[],help:[],message:[],defaultIndex:0}).then(value=>window.__mobileChoice=value);
-    })()`,false,false);
+    await waitFor(cdp,'!FNHStandalonePreview.engine.buttons.has("right") && !FNHStandalonePreview.engine.state.moveFrames',5000,'thả cần dừng');
+    check('giữ và thả cần di chuyển rồi dừng',await evalPage(cdp,'FNHStandalonePreview.engine.state.x>=6 && !FNHStandalonePreview.engine.buttons.has("right")',false,false));
+    await press('#fnh-mobile-action',700);
+    await waitFor(cdp,'document.querySelector("#fnh-menu-dialog").open',5000,'giữ OK mở menu');
+    check('hai nút vẫn có thể chạm trong menu',await evalPage(cdp,`(()=>{const b=document.querySelector('#fnh-mobile-action'),r=b.getBoundingClientRect();return document.querySelector('#fnh-menu-dialog').contains(b) && document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b;})()`,false,false));
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true,screenOrientation:{type:'portraitPrimary',angle:0}});
+    check('xoay dọc khi đang mở menu vẫn khóa màn hình',await evalPage(cdp,`(()=>{const r=document.querySelector('#fnh-mobile-rotate');return getComputedStyle(r).display!=='none' && r.contains(document.elementFromPoint(innerWidth/2,innerHeight/2));})()`,false,false));
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:844,height:390,deviceScaleFactor:1,mobile:true,screenOrientation:{type:'landscapePrimary',angle:90}});
+    await press('#fnh-mobile-action',700);
+    await waitFor(cdp,'!document.querySelector("#fnh-menu-dialog").open',5000,'giữ OK đóng menu');
+    await evalPage(cdp,`(()=>{window.__mobileConfirm=null;FNHStandalonePreview.scheduler.handlers.choice(['Một','Hai'],-2,null,{disabled:[],help:[],message:[],defaultIndex:0}).then(value=>window.__mobileConfirm=value);})()`,false,false);
     await waitFor(cdp,'document.querySelectorAll("#fnh-choices button").length===2',5000,'mở lựa chọn');
-    await tap('#fnh-controls [data-action="cancel"]');
-    await waitFor(cdp,'window.__mobileChoice!==null',5000,'hủy lựa chọn bằng cảm ứng');
-    check('nút quay lại hủy đúng nhánh lựa chọn',await evalPage(cdp,'window.__mobileChoice===-2',false,false));
+    await press('#fnh-joystick',60,.5,.85);
+    await press('#fnh-mobile-action');
+    await waitFor(cdp,'window.__mobileConfirm!==null',5000,'xác nhận lựa chọn');
+    check('cần và OK chọn được mục trong hộp lựa chọn',await evalPage(cdp,'window.__mobileConfirm===1',false,false));
+    await evalPage(cdp,`(()=>{window.__mobileChoice=null;FNHStandalonePreview.scheduler.handlers.choice(['Một','Hai'],-2,null,{disabled:[],help:[],message:[],defaultIndex:0}).then(value=>window.__mobileChoice=value);})()`,false,false);
+    await waitFor(cdp,'document.querySelectorAll("#fnh-choices button").length===2',5000,'mở lựa chọn');
+    await press('#fnh-mobile-action',700);
+    await waitFor(cdp,'window.__mobileChoice!==null',5000,'hủy lựa chọn');
+    check('giữ OK hủy đúng nhánh lựa chọn',await evalPage(cdp,'window.__mobileChoice===-2',false,false));
+    await evalPage(cdp,`(()=>{window.__mobileName=false;FNHStandalonePreview.scheduler.handlers.effect(303,[1,10],null,null).then(()=>window.__mobileName=true);})()`,false,false);
+    await waitFor(cdp,'document.querySelector("#fnh-name-dialog").open',5000,'mở màn đặt tên');
+    await press('#fnh-joystick',60,.85,.5);
+    check('cần điều hướng hoạt động trong màn đặt tên',await evalPage(cdp,'document.activeElement.parentElement.id==="fnh-name-grid" && document.activeElement.dataset.selected==="true"',false,false));
+    await press('#fnh-mobile-action');
+    check('OK nhập ký tự trong màn đặt tên',await evalPage(cdp,'document.querySelector("#fnh-name-input").value.length>0',false,false));
+    await evalPage(cdp,'document.querySelector("#fnh-name-form").requestSubmit()',false,false);
+    await waitFor(cdp,'window.__mobileName',5000,'đóng màn đặt tên');
     await cdp.send('Page.navigate',{url:url+'standalone.html?events=1&map=10'});
     await waitFor(cdp,'window.FNHStandalonePreview && FNHStandalonePreview.engine.state && FNHStandalonePreview.engine.state.switchValue(296)',30000,'màn chọn nhân vật');
-    check('màn chọn nhân vật hiện nút hướng',await evalPage(cdp,'getComputedStyle(document.querySelector("#fnh-controls")).display==="grid"',false,false));
-    await tap('#fnh-controls [data-direction="6"]');
+    await press('#fnh-mobile-start button');
+    await press('#fnh-joystick',80,.85,.5);
     await waitFor(cdp,'FNHStandalonePreview.engine.state.variableValue(9)===2',5000,'chạm chọn nhân vật');
-    check('chạm hướng phải đổi nhân vật',await evalPage(cdp,'FNHStandalonePreview.engine.state.screen.pictures[7].name==="text_knight"',false,false));
-    await tap('#fnh-controls [data-action="cancel"]');
+    check('cần điều hướng đổi nhân vật',await evalPage(cdp,'FNHStandalonePreview.engine.state.screen.pictures[7].name==="text_knight"',false,false));
+    await press('#fnh-mobile-action',700);
     await waitFor(cdp,'FNHStandalonePreview.engine.state.scene==="title"',5000,'quay về tiêu đề');
-    check('nút quay lại thoát màn chọn nhân vật',await evalPage(cdp,'!document.querySelector("#fnh-end-screen").hidden',false,false));
+    check('giữ OK thoát màn chọn nhân vật',await evalPage(cdp,'!document.querySelector("#fnh-end-screen").hidden',false,false));
 };

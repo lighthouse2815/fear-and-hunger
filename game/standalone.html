@@ -268,21 +268,41 @@
         #fnh-name-grid button { position: absolute; width: 9.4595%; height: 11.1111%; margin: 0; padding: 0; border: 0; background: transparent; color: white; text-shadow: 1px 1px 2px #000; font: 3.4314cqw/4.4118cqw GameFont, serif; outline: none; }
         #fnh-name-grid button[data-selected='true'] { background: #b99aaa59; box-shadow: inset 0 0 0 1px #eee8; }
         #fnh-name-form > label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-        .fnh-touch-back, #fnh-controls [data-action="cancel"] { display: none; }
+        #fnh-mobile { display: none; }
+        #fnh-controls [data-action="cancel"] { display: none; }
         @media (pointer: coarse) {
-            body.fnh-gameplay { display: block; }
-            .fnh-gameplay main { margin: 0 auto; }
-            .fnh-gameplay #fnh-controls:not([hidden]) { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 8px; }
-            .fnh-gameplay #fnh-controls button { min-height: 44px; margin: 0; touch-action: manipulation; }
-            .fnh-gameplay #fnh-controls button[data-direction] { touch-action: none; }
-            .fnh-gameplay #fnh-controls [data-action="cancel"] { display: block; }
-            .fnh-touch-back, #fnh-end-save-panel #fnh-end-save-back { display: block; position: absolute; right: 4px; top: 4px; z-index: 20; min-width: 44px; min-height: 44px; margin: 0; font: 16px system-ui, sans-serif; }
+            body.fnh-gameplay { display: grid; width: 100vw; height: 100dvh; min-height: 0; overflow: hidden; }
+            .fnh-gameplay main { width: min(100vw, calc(100dvh * 816 / 624)); }
+            .fnh-gameplay .fnh-stage { transform: scaleX(var(--fnh-mobile-scale-x, 1)); }
+            .fnh-gameplay #fnh-controls { display: none; }
+            .fnh-gameplay #fnh-mobile { display: block; position: fixed; inset: 0; z-index: 100; pointer-events: none; }
+            #fnh-mobile-start, #fnh-mobile-rotate { position: absolute; inset: 0; display: grid; place-content: center; gap: 16px; padding: 24px; text-align: center; background: #080706f5; color: #e7ddca; font: 18px system-ui, sans-serif; pointer-events: auto; }
+            #fnh-mobile-start button { min-height: 48px; font: inherit; }
+            .fnh-mobile-started #fnh-mobile-start, #fnh-mobile-rotate { display: none; }
+            #fnh-mobile-controls { position: absolute; inset: 0; }
+            #fnh-joystick, #fnh-mobile-action { position: absolute; bottom: max(14px, env(safe-area-inset-bottom)); width: clamp(76px, 20vh, 132px); height: clamp(76px, 20vh, 132px); box-sizing: border-box; border: 2px solid #eee9; border-radius: 50%; background: #17120f88; color: white; touch-action: none; user-select: none; -webkit-user-select: none; pointer-events: auto; }
+            #fnh-joystick { left: max(14px, env(safe-area-inset-left)); }
+            #fnh-joystick-knob { position: absolute; left: 50%; top: 50%; width: 42%; height: 42%; border: 1px solid #fffa; border-radius: 50%; background: #e7ddca88; transform: translate(-50%, -50%); pointer-events: none; }
+            #fnh-mobile-action { right: max(14px, env(safe-area-inset-right)); margin: 0; padding: 0; font: 600 16px system-ui, sans-serif; }
+            #fnh-mobile-action:active { background: #e7ddca99; color: #17120f; }
+            @media (orientation: portrait) {
+                .fnh-mobile-started #fnh-mobile-rotate { display: grid; }
+                #fnh-mobile-controls { display: none; }
+            }
         }
 
     </style>
 </head>
 <body class="fnh-gameplay">
 <main>
+    <div id="fnh-mobile">
+        <div id="fnh-mobile-controls" aria-label="Điều khiển cảm ứng">
+            <div id="fnh-joystick" role="application" aria-label="Cần điều hướng"><span id="fnh-joystick-knob"></span></div>
+            <button id="fnh-mobile-action" type="button" aria-label="Tương tác; giữ để quay lại hoặc mở menu">OK</button>
+        </div>
+        <div id="fnh-mobile-start"><p>Xoay ngang điện thoại để chơi</p><button type="button">Bắt đầu toàn màn hình</button><small>Nhấn giữ OK để mở menu hoặc quay lại</small></div>
+        <div id="fnh-mobile-rotate"><p>Hãy xoay ngang điện thoại để tiếp tục chơi</p></div>
+    </div>
     <div class="fnh-stage">
         <canvas id="fnh-canvas" width="816" height="624" tabindex="0" aria-label="Bản đồ game"></canvas>
         <div id="fnh-loading" role="status"><p>Đang tải…</p></div>
@@ -342,7 +362,6 @@
         </form>
     </dialog>
     <dialog id="fnh-menu-dialog" aria-labelledby="fnh-menu-title">
-        <button class="fnh-touch-back" id="fnh-touch-menu-back" type="button">Quay lại</button>
         <h2 id="fnh-menu-title">Menu</h2>
         <button id="fnh-menu-close" type="button">Đóng</button>
         <label for="fnh-menu-actor">Nhân vật</label><select id="fnh-menu-actor"></select>
