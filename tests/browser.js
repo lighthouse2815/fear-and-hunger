@@ -402,6 +402,11 @@ async function main() {
         await cdp.send('Runtime.enable');
         await cdp.send('Page.enable');
         await cdp.send('Log.enable');
+        if (process.env.FNH_BROWSER_SCOPE === 'mobile') {
+            await require('./browser-mobile')({cdp,url:running.url,evalPage,waitFor,check});
+            check('không có lỗi runtime khi điều khiển cảm ứng',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
+            log('Hoàn tất '+passed+' kiểm tra cảm ứng.');return;
+        }
         if (process.env.FNH_BROWSER_SCOPE === 'coin') {
             await require('./browser-coin')({cdp,url:running.url,evalPage,waitFor,check});
             check('không có lỗi runtime khi tung đồng xu',runtimeErrors.length===0,JSON.stringify(runtimeErrors));
@@ -489,6 +494,9 @@ async function main() {
             return;
         }
 
+        await require('./browser-mobile')({cdp,url:running.url,evalPage,waitFor,check});
+        await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:false});
+        await cdp.send('Emulation.clearDeviceMetricsOverride');
         await require('./browser-audio')({cdp,url:running.url,evalPage,waitFor,check});
         await require('./browser-door')({cdp,url:running.url,evalPage,waitFor,check});
         await require('./browser-beat')({cdp,url:running.url,evalPage,waitFor,check});

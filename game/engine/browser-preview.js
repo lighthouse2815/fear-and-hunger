@@ -402,6 +402,7 @@
     function showChoices(choices, cancelType, interpreter, details) {
         return queueUi(function () { return choiceDialog(choices, cancelType, interpreter, details); }, interpreter);
     }
+    var cancelChoice = null;
     function choiceDialog(choices, cancelType, interpreter, details) {
         engine.messageRunning = true;
         return new Promise(function (resolve, reject) {
@@ -435,6 +436,7 @@
                     choicesPanel.removeAttribute('style'); help.removeAttribute('style'); hideMessage();
                 }
                 choicesPanel.onkeydown = null;
+                cancelChoice = null;
                 choicesPanel.replaceChildren();
                 help.textContent = '';
                 if (signal) signal.removeEventListener('abort', abort);
@@ -466,6 +468,7 @@
             }
             choices.forEach(addChoice);
             if (!originalStyle && cancelType !== -1) addChoice('Quay lại', cancelType >= 0 ? cancelType : -1);
+            cancelChoice = function () { if (cancelType !== -1) { close(); resolve(cancelType); } };
             choicesPanel.onkeydown = function (event) {
                 var action = inputName(event.key);
                 if (action === 'up' || action === 'down' || action === 'left' || action === 'right') {
@@ -476,7 +479,7 @@
                 } else if (action === 'ok') {
                     if (!event.repeat && document.activeElement && !document.activeElement.disabled) document.activeElement.click();
                 } else if (action === 'cancel') {
-                    if (!event.repeat && cancelType !== -1) { close(); resolve(cancelType); }
+                    if (!event.repeat) cancelChoice();
                 } else return;
                 event.preventDefault();
                 event.stopPropagation();
@@ -949,21 +952,25 @@
         if (document.hidden) clearInput();
         else audio.resume();
     });
-    document.addEventListener('keydown', function (event) {
-        audio.unlock();
-        var state=engine.state, picture=state && state.screen.pictures[1];
-        if (ready && automaticEvents && state && state.scene === 'map' && state.mapId === 10 &&
+    function canCancelCharacterSelection() {
+        var state = engine.state, picture = state && state.screen.pictures[1];
+        return ready && automaticEvents && state && state.scene === 'map' && state.mapId === 10 &&
             picture && picture.name === 'character_select_bg' && !state.switchValue(214) &&
             !state.selfSwitchValue(10,1,'A') && !engine.eventRunning && !engine.messageRunning &&
-            !document.querySelector('dialog[open]') && inputName(event.key) === 'cancel') {
+            !document.querySelector('dialog[open]');
+    }
+    function cancelCharacterSelection() {
+        clearInput(); engine.state.scene = 'title'; titleFlow = true;
+        if (scheduler) scheduler.tick();
+        renderEndScreen(); renderTimer();
+        var sound = engine.database.System.sounds[2];
+        if (sound && sound.name) audio.play('se', sound);
+    }
+    document.addEventListener('keydown', function (event) {
+        audio.unlock();
+        if (inputName(event.key) === 'cancel' && canCancelCharacterSelection()) {
             event.preventDefault();
-            if (!event.repeat) {
-                clearInput(); state.scene = 'title'; titleFlow = true;
-                if (scheduler) scheduler.tick();
-                renderEndScreen(); renderTimer();
-                var cancelSound=engine.database.System.sounds[2];
-                if (cancelSound && cancelSound.name) audio.play('se',cancelSound);
-            }
+            if (!event.repeat) cancelCharacterSelection();
             return;
         }
         if (presentationInput()) {
@@ -1025,6 +1032,13 @@
     ['pointerup','pointercancel','lostpointercapture'].forEach(function (type) { controls.addEventListener(type,releasePointer); });
     controls.addEventListener('click', function (event) {
         if (presentationInput()) return;
+        if (event.target.closest('button[data-action="cancel"]')) {
+            if (cancelChoice) cancelChoice();
+            else if (canCancelCharacterSelection()) cancelCharacterSelection();
+            else if (engine.state.scene === 'battle' && !engine.messageRunning) combatUi.back();
+            else if (!scrollAnimation && !pictureInput() && !engine.eventRunning && !engine.messageRunning && engine.openMenu()) menuUi.render();
+            return;
+        }
         var shortcut = event.target.closest('button[data-common-event]');
         if (shortcut) {
             perform(async function () { await engine.runCommonEvent(Number(shortcut.dataset.commonEvent), eventHandlers); await draw(); });
@@ -1041,6 +1055,12 @@
         }
         if (direction) perform(function () { return step(direction); });
         else perform(interact);
+    });
+    var touchMenuBack = document.getElementById('fnh-touch-menu-back'), menuFocusBeforeTouch;
+    touchMenuBack.addEventListener('pointerdown', function () { menuFocusBeforeTouch = document.activeElement; });
+    touchMenuBack.addEventListener('click', function () {
+        if (menuFocusBeforeTouch && menuUi.dialog.contains(menuFocusBeforeTouch)) menuFocusBeforeTouch.focus({preventScroll:true});
+        menuFocusBeforeTouch = null; menuUi.back();
     });
     document.getElementById('fnh-save').addEventListener('click', function () {
         if (presentationInput()) return;
